@@ -1,0 +1,421 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Copilot - Dashboard</title>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+</head>
+<body>
+<button class="mobile-toggle" id="mobileToggle">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+</button>
+
+<div class="page-wrapper">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-mark">HR</div>
+        <!-- TODO: replace with org name from backend -->
+        VooVr
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Command Center</div>
+      <a href="dashboard.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="nav-item" data-section="alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Alerts
+        <span class="nav-badge" id="alertCount">5</span>
+      </a>
+
+      <div class="nav-section">Workspace</div>
+      <a href="sync.html?employee=Priya%20Sharma" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Sync Rooms
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        Reports
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar" id="userAvatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">User</div>
+        <div class="user-role" id="userRole">Admin</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div>
+          <div class="page-title">Workforce Command Center</div>
+          <div class="breadcrumb"><span>Dashboard</span> / Overview</div>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <div class="lang-toggle">
+          <button class="lang-btn active" data-lang-switch="en">EN</button>
+          <button class="lang-btn" data-lang-switch="hi">Hinglish</button>
+        </div>
+        <button class="icon-btn" title="Notifications">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot"></span>
+        </button>
+        <button class="icon-btn" id="signOutBtn" title="Sign Out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <!-- STATS -->
+      <div class="stats-row fade-in">
+        <div class="stat-card">
+          <div class="stat-label" data-lang="en">Active Employees</div>
+          <div class="stat-label" data-lang="hi">Active Employees</div>
+          <div class="stat-value">247</div>
+          <div class="stat-change up">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/></svg>
+            +3 this week
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label" data-lang="en">High Burnout Risk</div>
+          <div class="stat-label" data-lang="hi">High Burnout Risk</div>
+          <div class="stat-value">12</div>
+          <div class="stat-change down">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23,18 13.5,8.5 8.5,13.5 1,6"/></svg>
+            +2 from last week
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label" data-lang="en">Pending Syncs</div>
+          <div class="stat-label" data-lang="hi">Pending Syncs</div>
+          <div class="stat-value">8</div>
+          <div class="stat-change">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+            3 overdue
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label" data-lang="en">Wellness Score</div>
+          <div class="stat-label" data-lang="hi">Wellness Score</div>
+          <div class="stat-value">72%</div>
+          <div class="stat-change up">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/></svg>
+            +5% avg improvement
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD GRID -->
+      <div class="dash-grid">
+        <!-- CRITICAL ALERTS -->
+        <div class="card fade-in fade-in-d1">
+          <div class="card-header">
+            <div>
+              <div class="eyebrow" data-lang="en">Urgent Attention</div>
+              <div class="eyebrow" data-lang="hi">Urgent Attention</div>
+              <h3 class="card-title" data-lang="en">Workforce Alerts</h3>
+              <h3 class="card-title" data-lang="hi">Workforce Alerts</h3>
+            </div>
+          </div>
+          <div class="alert-list" id="alertList">
+            <div class="alert-item" data-employee="Rohan Mehta">
+              <div class="alert-severity critical"></div>
+              <div class="alert-body">
+                <div class="alert-name">Rohan Mehta</div>
+                <div class="alert-desc" data-lang="en">Burnout index 92/100 - consecutive overtime for 3 weeks</div>
+                <div class="alert-desc" data-lang="hi">Burnout index 92/100 - 3 hafte se lagatar overtime</div>
+              </div>
+              <span class="badge critical">Critical</span>
+              <div class="alert-action" data-lang="en">Initiate Sync</div>
+              <div class="alert-action" data-lang="hi">Sync Shuru Karein</div>
+            </div>
+            <div class="alert-item" data-employee="Priya Sharma">
+              <div class="alert-severity critical"></div>
+              <div class="alert-body">
+                <div class="alert-name">Priya Sharma</div>
+                <div class="alert-desc" data-lang="en">Performance dropped 40% in last quarter</div>
+                <div class="alert-desc" data-lang="hi">Last quarter mein performance 40% gir gayi</div>
+              </div>
+              <span class="badge critical">Critical</span>
+              <div class="alert-action" data-lang="en">Initiate Sync</div>
+              <div class="alert-action" data-lang="hi">Sync Shuru Karein</div>
+            </div>
+            <div class="alert-item" data-employee="Amit Verma">
+              <div class="alert-severity warning"></div>
+              <div class="alert-body">
+                <div class="alert-name">Amit Verma</div>
+                <div class="alert-desc" data-lang="en">Absent 4 days this month - pattern emerging</div>
+                <div class="alert-desc" data-lang="hi">Is mahine 4 din absent - pattern ban raha hai</div>
+              </div>
+              <span class="badge warning">Warning</span>
+              <div class="alert-action" data-lang="en">Initiate Sync</div>
+              <div class="alert-action" data-lang="hi">Sync Shuru Karein</div>
+            </div>
+            <div class="alert-item" data-employee="Neha Gupta">
+              <div class="alert-severity warning"></div>
+              <div class="alert-body">
+                <div class="alert-name">Neha Gupta</div>
+                <div class="alert-desc" data-lang="en">Missed 2 consecutive deadlines</div>
+                <div class="alert-desc" data-lang="hi">2 lagatar deadlines miss ki</div>
+              </div>
+              <span class="badge warning">Warning</span>
+              <div class="alert-action" data-lang="en">Initiate Sync</div>
+              <div class="alert-action" data-lang="hi">Sync Shuru Karein</div>
+            </div>
+            <div class="alert-item" data-employee="Vikash Kumar">
+              <div class="alert-severity info"></div>
+              <div class="alert-body">
+                <div class="alert-name">Vikash Kumar</div>
+                <div class="alert-desc" data-lang="en">Wellness survey flagged low engagement</div>
+                <div class="alert-desc" data-lang="hi">Wellness survey mein low engagement dikha</div>
+              </div>
+              <span class="badge healthy">Monitor</span>
+              <div class="alert-action" data-lang="en">View Details</div>
+              <div class="alert-action" data-lang="hi">Dekhein</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EMPLOYEE DIRECTORY -->
+        <div class="card fade-in fade-in-d2">
+          <div class="card-header">
+            <div>
+              <div class="eyebrow" data-lang="en">Directory</div>
+              <div class="eyebrow" data-lang="hi">Directory</div>
+              <h3 class="card-title" data-lang="en">Employee Overview</h3>
+              <h3 class="card-title" data-lang="hi">Employee Overview</h3>
+            </div>
+          </div>
+          <table class="emp-table">
+            <thead>
+              <tr>
+                <th data-lang="en">Employee</th><th data-lang="hi">Employee</th>
+                <th data-lang="en">Dept</th><th data-lang="hi">Dept</th>
+                <th data-lang="en">Wellness</th><th data-lang="hi">Wellness</th>
+                <th data-lang="en">Status</th><th data-lang="hi">Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="emp-name">Rohan Mehta</span></td>
+                <td><span class="emp-dept">Engineering</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <div class="index-bar" style="width:80px;"><div class="fill low" style="width:18%;"></div></div>
+                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--red);">18</span>
+                  </div>
+                </td>
+                <td><span class="badge critical">At Risk</span></td>
+                <td><button class="btn btn-sm btn-primary" data-employee="Rohan Mehta">Sync</button></td>
+              </tr>
+              <tr>
+                <td><span class="emp-name">Priya Sharma</span></td>
+                <td><span class="emp-dept">Design</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <div class="index-bar" style="width:80px;"><div class="fill low" style="width:32%;"></div></div>
+                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--red);">32</span>
+                  </div>
+                </td>
+                <td><span class="badge critical">At Risk</span></td>
+                <td><button class="btn btn-sm btn-primary" data-employee="Priya Sharma">Sync</button></td>
+              </tr>
+              <tr>
+                <td><span class="emp-name">Amit Verma</span></td>
+                <td><span class="emp-dept">Marketing</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <div class="index-bar" style="width:80px;"><div class="fill medium" style="width:48%;"></div></div>
+                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--amber);">48</span>
+                  </div>
+                </td>
+                <td><span class="badge warning">Watch</span></td>
+                <td><button class="btn btn-sm btn-primary" data-employee="Amit Verma">Sync</button></td>
+              </tr>
+              <tr>
+                <td><span class="emp-name">Neha Gupta</span></td>
+                <td><span class="emp-dept">Sales</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <div class="index-bar" style="width:80px;"><div class="fill medium" style="width:55%;"></div></div>
+                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--amber);">55</span>
+                  </div>
+                </td>
+                <td><span class="badge warning">Watch</span></td>
+                <td><button class="btn btn-sm btn-primary" data-employee="Neha Gupta">Sync</button></td>
+              </tr>
+              <tr>
+                <td><span class="emp-name">Vikash Kumar</span></td>
+                <td><span class="emp-dept">Operations</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <div class="index-bar" style="width:80px;"><div class="fill medium" style="width:62%;"></div></div>
+                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--amber);">62</span>
+                  </div>
+                </td>
+                <td><span class="badge healthy">Healthy</span></td>
+                <td><button class="btn btn-sm" data-employee="Vikash Kumar">View</button></td>
+              </tr>
+              <tr>
+                <td><span class="emp-name">Deepak Joshi</span></td>
+                <td><span class="emp-dept">Finance</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <div class="index-bar" style="width:80px;"><div class="fill high" style="width:81%;"></div></div>
+                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--teal);">81</span>
+                  </div>
+                </td>
+                <td><span class="badge healthy">Healthy</span></td>
+                <td><button class="btn btn-sm">View</button></td>
+              </tr>
+              <tr>
+                <td><span class="emp-name">Sneha Reddy</span></td>
+                <td><span class="emp-dept">Engineering</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <div class="index-bar" style="width:80px;"><div class="fill high" style="width:89%;"></div></div>
+                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--teal);">89</span>
+                  </div>
+                </td>
+                <td><span class="badge healthy">Healthy</span></td>
+                <td><button class="btn btn-sm">View</button></td>
+              </tr>
+              <tr>
+                <td><span class="emp-name">Rajesh Nair</span></td>
+                <td><span class="emp-dept">Product</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <div class="index-bar" style="width:80px;"><div class="fill high" style="width:76%;"></div></div>
+                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--teal);">76</span>
+                  </div>
+                </td>
+                <td><span class="badge healthy">Healthy</span></td>
+                <td><button class="btn btn-sm">View</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- RECENT ACTIVITY -->
+        <div class="card fade-in fade-in-d3 full-width">
+          <div class="card-header">
+            <div>
+              <div class="eyebrow" data-lang="en">Activity Log</div>
+              <div class="eyebrow" data-lang="hi">Activity Log</div>
+              <h3 class="card-title" data-lang="en">Recent Sync Activity</h3>
+              <h3 class="card-title" data-lang="hi">Recent Sync Activity</h3>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:0.8rem;">
+            <div style="display:flex;align-items:center;gap:1rem;padding:0.8rem 1rem;border:1px solid var(--border);">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--teal);flex-shrink:0;"></div>
+              <div style="flex:1;">
+                <div style="font-size:0.85rem;font-weight:600;">Sync completed with Arjun Singh</div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;color:var(--ivory-faint);letter-spacing:0.08em;text-transform:uppercase;margin-top:0.15rem;">Step 5 Complete - Recency Wrap-up | 2 hours ago</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:1rem;padding:0.8rem 1rem;border:1px solid var(--border);">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;"></div>
+              <div style="flex:1;">
+                <div style="font-size:0.85rem;font-weight:600;">Email brief sent for Kavita's sync</div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;color:var(--ivory-faint);letter-spacing:0.08em;text-transform:uppercase;margin-top:0.15rem;">Consent-gated deliverable | 5 hours ago</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:1rem;padding:0.8rem 1rem;border:1px solid var(--border);">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--violet);flex-shrink:0;"></div>
+              <div style="flex:1;">
+                <div style="font-size:0.85rem;font-weight:600;">Sync initiated with Priya Sharma</div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;color:var(--ivory-faint);letter-spacing:0.08em;text-transform:uppercase;margin-top:0.15rem;">Step 1 - Establishing Safety | Yesterday</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:1rem;padding:0.8rem 1rem;border:1px solid var(--border);">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;"></div>
+              <div style="flex:1;">
+                <div style="font-size:0.85rem;font-weight:600;">Alert triggered: Rohan Mehta burnout spike</div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;color:var(--ivory-faint);letter-spacing:0.08em;text-transform:uppercase;margin-top:0.15rem;">Automated wellness detection | 2 days ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+window.addEventListener('load', function() {
+  var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+  var sidebar = document.querySelector('.sidebar');
+  gsap.set(sidebar, { x: -260, opacity: 0 });
+  tl.to(sidebar, { x: 0, opacity: 1, duration: 0.6 });
+
+  var statCards = document.querySelectorAll('.stat-card');
+  gsap.set(statCards, { opacity: 0, y: 30 });
+  tl.to(statCards, { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 }, '-=0.3');
+
+  // Counter-up animation for stat values
+  var statValues = document.querySelectorAll('.stat-value');
+  statValues.forEach(function(el) {
+    var raw = el.textContent.trim();
+    var pct = raw.includes('%');
+    var plus = raw.includes('+');
+    var num = parseInt(raw.replace(/[^0-9]/g, ''));
+    if (isNaN(num)) return;
+    var obj = { val: 0 };
+    el.textContent = (pct ? '0%' : plus ? '0+' : '0');
+    gsap.to(obj, {
+      val: num, duration: 1.4, ease: 'power2.out', delay: 0.3,
+      onUpdate: function() {
+        el.textContent = Math.round(obj.val) + (pct ? '%' : plus ? '+' : '');
+      }
+    });
+  });
+
+  var cards = document.querySelectorAll('.card');
+  gsap.set(cards, { opacity: 0, y: 40 });
+  tl.to(cards, { opacity: 1, y: 0, duration: 0.6, stagger: 0.12 }, '-=0.6');
+
+  var alerts = document.querySelectorAll('.alert-item');
+  gsap.set(alerts, { opacity: 0, x: -20 });
+  gsap.to(alerts, { opacity: 1, x: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out', delay: 0.8 });
+
+  var rows = document.querySelectorAll('.emp-table tbody tr');
+  gsap.set(rows, { opacity: 0, x: -12 });
+  gsap.to(rows, { opacity: 1, x: 0, duration: 0.35, stagger: 0.04, ease: 'power2.out', delay: 1.0 });
+
+  var activityItems = document.querySelectorAll('.full-width [style*="border:1px solid var(--border)"]');
+  gsap.set(activityItems, { opacity: 0, y: 12 });
+  gsap.to(activityItems, { opacity: 1, y: 0, duration: 0.35, stagger: 0.06, ease: 'power2.out', delay: 1.2 });
+
+  var fills = document.querySelectorAll('.index-bar .fill');
+  fills.forEach(function(fill) {
+    var targetWidth = fill.style.width;
+    fill.style.width = '0%';
+    gsap.to(fill, { width: targetWidth, duration: 1.0, ease: 'power2.out', delay: 1.2 });
+  });
+});
+</script>
+</body>
+</html>

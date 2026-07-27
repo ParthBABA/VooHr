@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VooVr — The operating system for modern HR teams</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   ROOT / DESIGN TOKENS
+============================================================ */
+:root{
+  --bg:#09090B;
+  --surface:#111113;
+  --surface-2:#17171a;
+  --line:#212125;
+  --primary:#6E56FF;
+  --secondary:#4D9FFF;
+  --accent:#A78BFA;
+  --white:#F5F5F7;
+  --muted:#8A8A93;
+  --muted-2:#57575f;
+
+  --grad-primary: linear-gradient(135deg, var(--primary), var(--secondary));
+  --grad-accent: linear-gradient(135deg, var(--accent), var(--primary));
+  --grad-radial: radial-gradient(circle at 30% 20%, rgba(110,86,255,.25), transparent 60%);
+
+  --font-head: 'Space Grotesk', sans-serif;
+  --font-body: 'Manrope', sans-serif;
+  --font-num: 'IBM Plex Sans', sans-serif;
+
+  --container: 1240px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html{background:var(--bg);}
+html.lenis, html.lenis body{height:auto;}
+body{
+  background:var(--bg);
+  color:var(--white);
+  font-family:var(--font-body);
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  line-height:1.5;
+}
+::selection{background:var(--primary); color:#fff;}
+a{color:inherit; text-decoration:none;}
+button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit;}
+img{max-width:100%; display:block;}
+ul{list-style:none;}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+}
+
+::-webkit-scrollbar{width:10px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--line); border-radius:10px;}
+
+.container{
+  width:100%;
+  max-width:var(--container);
+  margin:0 auto;
+  padding:0 32px;
+}
+
+.eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-family:var(--font-num);
+  font-size:12px;
+  font-weight:500;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--accent);
+}
+.eyebrow::before{
+  content:'';
+  width:6px; height:6px;
+  border-radius:50%;
+  background:var(--grad-primary);
+  box-shadow:0 0 12px rgba(110,86,255,.9);
+}
+
+h1,h2,h3,h4{
+  font-family:var(--font-head);
+  font-weight:600;
+  letter-spacing:-.02em;
+  color:var(--white);
+}
+
+.muted{color:var(--muted);}
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:14px 26px;
+  border-radius:999px;
+  font-size:14.5px;
+  font-weight:600;
+  letter-spacing:-.01em;
+  white-space:nowrap;
+  transition:transform .4s cubic-bezier(.16,1,.3,1), box-shadow .4s ease;
+  will-change:transform;
+}
+.btn-primary{
+  background:var(--grad-primary);
+  color:#fff;
+  box-shadow:0 8px 30px -8px rgba(110,86,255,.65);
+}
+.btn-primary:hover{ box-shadow:0 12px 40px -6px rgba(110,86,255,.85); }
+.btn-ghost{
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--line);
+  color:var(--white);
+  backdrop-filter:blur(8px);
+}
+.btn-ghost:hover{ background:rgba(255,255,255,.06); border-color:#33333a; }
+
+.magnetic{ position:relative; }
+
+.section{ position:relative; padding:160px 0; }
+.section-tight{ padding:120px 0; }
+
+.glass{
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.07);
+  backdrop-filter:blur(20px);
+}
+
+/* ============================================================
+   NAVBAR
+============================================================ */
+.navbar{
+  position:sticky; top:0; z-index:50;
+  padding:18px 0;
+  transition:padding .35s ease, background .35s ease, border .35s ease;
+}
+.navbar.scrolled{
+  padding:12px 0;
+  background:rgba(9,9,11,.72);
+  backdrop-filter:blur(16px) saturate(140%);
+  border-bottom:1px solid var(--line);
+}
+.nav-inner{
+  display:flex; align-items:center; justify-content:space-between;
+}
+.logo{
+  display:flex; align-items:center; gap:10px;
+  font-family:var(--font-head); font-weight:700; font-size:19px; letter-spacing:-.01em;
+}
+.logo-mark{
+  width:28px; height:28px; border-radius:8px;
+  background:var(--grad-primary);
+  position:relative;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset;
+}
+.logo-mark::after{
+  content:'';
+  position:absolute; inset:7px;
+  border-radius:3px;
+  background:var(--bg);
+  clip-path:polygon(0 0,100% 0,0 100%);
+}
+.nav-links{ display:flex; align-items:center; gap:38px; }
+.nav-links a{
+  font-size:14px; color:var(--muted); font-weight:500;
+  position:relative; padding:4px 0;
+  transition:color .3s ease;
+}
+.nav-links a::after{
+  content:''; position:absolute; left:0; bottom:0;
+  width:0; height:1px; background:var(--white);
+  transition:width .35s cubic-bezier(.16,1,.3,1);
+}
+.nav-links a:hover{ color:var(--white); }
+.nav-links a:hover::after{ width:100%; }
+.nav-cta{ display:flex; align-items:center; gap:16px; }
+.nav-cta a.sign-in{ font-size:14px; color:var(--muted); font-weight:500; }
+.nav-cta a.sign-in:hover{ color:var(--white); }
+.nav-burger{ display:none; }
+
+/* ============================================================
+   HERO
+============================================================ */
+.hero{
+  position:relative;
+  padding:120px 0 80px;
+  overflow:hidden;
+}
+.hero::before{
+  content:'';
+  position:absolute; inset:0;
+  background:var(--grad-radial);
+  pointer-events:none;
+  opacity:.9;
+}
+.hero-grid-overlay{
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(ellipse 60% 50% at 50% 0%, black, transparent 75%);
+  pointer-events:none;
+}
+.hero-grid{
+  position:relative; z-index:2;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:60px;
+  align-items:center;
+}
+.hero-inner{
+  max-width:520px;
+}
+.hero-inner .eyebrow{ margin-bottom:22px; }
+.hero-inner h1{
+  font-size:clamp(38px, 4.4vw, 60px);
+  line-height:1.05;
+  margin-bottom:22px;
+}
+.hero-inner h1 .grad{
+  background:var(--grad-primary);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+}
+.hero-inner p{
+  font-size:17px;
+  color:var(--muted);
+  max-width:460px;
+  margin:0 0 36px;
+  line-height:1.65;
+}
+.hero-cta{ display:flex; align-items:center; justify-content:flex-start; gap:14px; }
+
+/* ============================================================
+   HERO — LIVE PRODUCT DEMO
+============================================================ */
+.hero-demo-wrap{ position:relative; perspective:1600px; }
+.demo-panel{
+  position:relative;
+  border-radius:20px;
+  background:linear-gradient(180deg, var(--surface), #0d0d0f);
+  border:1px solid var(--line);
+  box-shadow:0 40px 120px -20px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.02) inset;
+  overflow:hidden;
+  transform-style:preserve-3d;
+}
+.demo-header{
+  display:flex; align-items:center; gap:8px;
+  padding:16px 20px;
+  border-bottom:1px solid var(--line);
+  font-size:12px; font-weight:500; color:var(--muted);
+  font-family:var(--font-num);
+}
+.demo-live-dot{
+  width:7px; height:7px; border-radius:50%;
+  background:#5EE6A0; box-shadow:0 0 10px #5EE6A0;
+  animation:livePulse 1.8s ease-in-out infinite;
+}
+@keyframes livePulse{
+  0%,100%{ opacity:1; transform:scale(1); }
+  50%{ opacity:.5; transform:scale(.8); }
+}
+.demo-body{
+  display:grid;
+  grid-template-columns:1fr 200px;
+  min-height:440px;
+}
+.demo-stage{
+  position:relative;
+  padding:26px 24px;
+  overflow:hidden;
+}
+.demo-layer{
+  position:absolute; inset:26px 24px;
+  display:flex; flex-direction:column;
+  opacity:0;
+}
+
+/* --- Scene 1: employee profile exists --- */
+.profile-hero{
+  border:1px solid var(--line); border-radius:12px;
+  padding:20px; height:100%;
+  display:flex; flex-direction:column; justify-content:center; gap:16px;
+  position:relative;
+}
+.profile-hero-top{ display:flex; align-items:center; gap:14px; }
+.profile-hero-avatar{
+  width:52px; height:52px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-head); font-weight:600; font-size:18px; color:#fff;
+  background:linear-gradient(135deg, var(--accent), var(--primary));
+}
+.profile-hero-name{ font-size:16px; font-weight:600; color:var(--white); }
+.profile-hero-role{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+.profile-hero-meta{ display:flex; gap:10px; flex-wrap:wrap; }
+.profile-hero-meta span{
+  font-size:10.5px; font-family:var(--font-num); font-weight:500;
+  padding:6px 11px; border-radius:999px;
+  border:1px solid var(--line); color:var(--muted);
+  background:rgba(255,255,255,.02);
+}
+.sync-badge{
+  position:absolute; top:16px; right:16px;
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:10.5px; font-family:var(--font-num); font-weight:500;
+  padding:6px 11px; border-radius:999px;
+  border:1px solid rgba(110,86,255,.35);
+  background:rgba(110,86,255,.08); color:var(--accent);
+  opacity:0;
+}
+.sync-badge .chip-glow{
+  width:6px; height:6px; border-radius:50%;
+  background:var(--grad-primary); box-shadow:0 0 8px rgba(110,86,255,.9);
+}
+
+/* --- Scene 2: AI monitors engagement, satisfaction & attrition risk --- */
+.monitor-card{
+  border:1px solid var(--line); border-radius:12px;
+  padding:18px; height:100%;
+  display:flex; flex-direction:column; gap:16px;
+  position:relative;
+}
+.monitor-card h5{
+  font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--muted-2); font-weight:600; margin-bottom:2px;
+}
+.metric-block{ opacity:0; }
+.metric-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px; }
+.metric-head .m-label{ font-size:12.5px; color:var(--white); font-weight:500; }
+.metric-head .m-value{ font-family:var(--font-num); font-size:13px; font-weight:600; color:var(--accent); }
+.metric-track{
+  width:100%; height:6px; border-radius:999px;
+  background:rgba(255,255,255,.06); overflow:hidden;
+}
+.metric-fill{
+  height:100%; width:0%; border-radius:999px;
+  background:var(--grad-primary);
+}
+
+/* --- Scene 3: psychological insight + tags --- */
+.ai-chip{
+  position:absolute; left:24px; bottom:20px;
+  display:inline-flex; align-items:center; gap:7px;
+  padding:8px 14px; border-radius:999px;
+  border:1px solid rgba(110,86,255,.35);
+  background:rgba(110,86,255,.08);
+  font-size:11.5px; font-weight:600; color:var(--accent);
+  opacity:0; z-index:2;
+}
+.ai-chip .chip-glow{
+  width:7px; height:7px; border-radius:50%;
+  background:var(--grad-primary);
+  box-shadow:0 0 10px rgba(110,86,255,.9);
+  animation:chipGlow 1.4s ease-in-out infinite;
+}
+@keyframes chipGlow{
+  0%,100%{ opacity:1; }
+  50%{ opacity:.4; }
+}
+.tag-row{
+  position:absolute; left:24px; right:24px; bottom:56px;
+  display:flex; flex-wrap:wrap; gap:7px;
+  z-index:2;
+}
+.tag-row .tag{
+  font-size:10.5px; font-family:var(--font-num); font-weight:500;
+  padding:5px 11px; border-radius:999px;
+  border:1px solid var(--line); color:var(--muted);
+  background:rgba(255,255,255,.02);
+  opacity:0; transform:scale(.7);
+}
+
+/* --- Scene 4: recommended follow-up --- */
+.recommend-card{
+  position:absolute; left:24px; right:24px; top:24px;
+  display:flex; flex-direction:column; gap:4px;
+  padding:14px 16px; border-radius:12px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.02);
+  opacity:0; z-index:2;
+}
+.recommend-card .r-label{
+  font-size:10px; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--muted-2); font-weight:600;
+}
+.recommend-card .r-text{ font-size:13px; color:var(--white); font-weight:500; }
+
+/* --- Scene 5: AI routes the recommendation to the right destination --- */
+.route-center{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  display:inline-flex; align-items:center; gap:6px;
+  padding:9px 16px; border-radius:999px;
+  border:1px solid rgba(110,86,255,.4);
+  background:rgba(110,86,255,.1);
+  font-size:11.5px; font-weight:600; color:var(--accent);
+  white-space:nowrap; z-index:3;
+}
+.route-dest{
+  position:absolute;
+  display:inline-flex; align-items:center;
+  padding:7px 12px; border-radius:999px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.02);
+  font-size:10.5px; font-family:var(--font-num); font-weight:500;
+  color:var(--muted); white-space:nowrap;
+  transition:border-color .4s ease, background .4s ease, color .4s ease;
+}
+.route-dest.lit{
+  border-color:rgba(110,86,255,.45);
+  background:rgba(110,86,255,.08);
+  color:var(--white);
+}
+.route-dest.d-tl{ top:2%; left:0; }
+.route-dest.d-tr{ top:2%; right:0; }
+.route-dest.d-mr{ top:50%; right:0; transform:translateY(-50%); }
+.route-dest.d-bl{ bottom:2%; left:0; }
+.route-dest.d-br{ bottom:2%; right:0; }
+.route-packet{
+  position:absolute; width:6px; height:6px; border-radius:50%;
+  background:var(--grad-primary);
+  box-shadow:0 0 10px rgba(110,86,255,.8);
+  opacity:0; z-index:4;
+}
+
+/* --- Notification toast: fires when the manager is alerted --- */
+.demo-toast{
+  position:absolute; top:18px; right:18px;
+  display:inline-flex; align-items:center; gap:8px;
+  padding:9px 14px; border-radius:12px;
+  border:1px solid var(--line);
+  background:rgba(17,17,19,.92);
+  backdrop-filter:blur(10px);
+  font-size:11.5px; color:var(--white); font-weight:500;
+  opacity:0; z-index:5; white-space:nowrap;
+  box-shadow:0 12px 30px -10px rgba(0,0,0,.5);
+  transform:translateY(-6px);
+}
+.demo-toast .dot{
+  width:6px; height:6px; border-radius:50%;
+  background:#5EE6A0; box-shadow:0 0 8px #5EE6A0; flex-shrink:0;
+}
+
+/* --- Side: employee profile & live KPIs --- */
+.demo-side{
+  border-left:1px solid var(--line);
+  padding:24px 18px;
+  display:flex; flex-direction:column; gap:14px;
+}
+.demo-side h5{
+  font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--muted-2); font-weight:600;
+}
+.side-profile{ display:flex; align-items:center; gap:10px; }
+.side-profile .avatar{
+  width:30px; height:30px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-head); font-weight:600; font-size:11.5px; color:#fff;
+  background:linear-gradient(135deg, var(--accent), var(--primary));
+}
+.side-profile .info{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.side-profile .name{ font-size:12.5px; font-weight:600; color:var(--white); }
+.side-profile .role{ font-size:10.5px; color:var(--muted-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.side-stats{ display:flex; gap:8px; }
+.side-stat{
+  flex:1; min-width:0; border:1px solid var(--line); border-radius:10px;
+  padding:9px 10px; background:rgba(255,255,255,.015);
+}
+.side-stat .num{ font-family:var(--font-num); font-size:15px; font-weight:600; color:var(--white); }
+.side-stat .label{ font-size:9px; color:var(--muted-2); text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+.record-item{
+  font-size:12.5px; color:var(--muted);
+  display:flex; align-items:center; gap:8px;
+  padding:9px 10px; border-radius:8px;
+  border:1px solid var(--line); background:rgba(255,255,255,.015);
+  opacity:0;
+}
+.record-item .check{
+  color:#5EE6A0; font-weight:700; flex-shrink:0;
+  transform:scale(0);
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+}
+.record-item.done .check{ transform:scale(1); }
+
+/* --- Final: complete flow strip --- */
+.demo-complete{
+  position:absolute; left:24px; right:24px; bottom:24px;
+  display:flex; align-items:center; flex-wrap:wrap; gap:8px;
+  font-size:11.5px; color:var(--muted-2); font-family:var(--font-num);
+  opacity:0;
+}
+.demo-complete .node{ color:var(--white); }
+.demo-complete .arrow{ color:var(--muted-2); }
+.demo-complete .done-tag{
+  color:#5EE6A0; font-weight:600; display:inline-flex; align-items:center; gap:5px;
+}
+
+/* --- Ambient floating info cards around the hero demo panel --- */
+.hero-float-card{
+  position:absolute;
+  display:inline-flex; align-items:center; gap:8px;
+  padding:10px 14px; border-radius:999px;
+  border:1px solid var(--line);
+  background:rgba(17,17,19,.78);
+  backdrop-filter:blur(12px);
+  font-size:12px; font-family:var(--font-num); font-weight:500;
+  color:var(--muted); white-space:nowrap;
+  box-shadow:0 20px 50px -20px rgba(0,0,0,.6);
+  z-index:3;
+}
+.hero-float-card .dot{
+  width:6px; height:6px; border-radius:50%;
+  background:var(--grad-primary); box-shadow:0 0 10px rgba(110,86,255,.8);
+  flex-shrink:0;
+}
+.hero-float-card.fc1{ top:-18px; left:-16px; }
+.hero-float-card.fc2{ bottom:-18px; right:20px; }
+
+/* ============================================================
+   TRUSTED BY
+============================================================ */
+.trusted{ padding:70px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.trusted p{ text-align:center; font-size:12.5px; color:var(--muted-2); letter-spacing:.1em; text-transform:uppercase; margin-bottom:36px; }
+.logo-row{
+  display:flex; align-items:center; justify-content:space-between; gap:40px;
+  flex-wrap:wrap;
+}
+.logo-ph{
+  font-family:var(--font-head); font-weight:600; font-size:19px;
+  color:var(--muted-2); opacity:.55; letter-spacing:-.01em;
+  transition:opacity .4s ease, color .4s ease;
+}
+.logo-ph:hover{ opacity:1; color:var(--muted); }
+
+/* ============================================================
+   PRODUCT SHOWCASE
+============================================================ */
+.showcase-head{ text-align:center; max-width:640px; margin:0 auto 100px; }
+.showcase-head h2{ font-size:clamp(30px,4vw,46px); margin-bottom:16px; }
+.showcase-head p{ color:var(--muted); font-size:16.5px; }
+
+.showcase-row{
+  display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:center;
+  margin-bottom:150px;
+}
+.showcase-row:last-child{ margin-bottom:0; }
+.showcase-row.reverse .sc-media{ order:2; }
+.showcase-row.reverse .sc-text{ order:1; }
+
+.sc-text .index{
+  font-family:var(--font-num); font-size:12px; color:var(--muted-2);
+  letter-spacing:.1em; margin-bottom:14px; display:block;
+}
+.sc-text h3{ font-size:30px; margin-bottom:16px; }
+.sc-text p{ color:var(--muted); font-size:15.5px; line-height:1.7; margin-bottom:22px; }
+.sc-text ul{ display:flex; flex-direction:column; gap:10px; }
+.sc-text li{
+  display:flex; align-items:center; gap:10px;
+  font-size:14px; color:var(--white);
+}
+.sc-text li::before{
+  content:''; width:5px; height:5px; border-radius:50%;
+  background:var(--grad-primary); flex-shrink:0;
+}
+
+.sc-media{
+  position:relative;
+  border-radius:var(--radius-lg);
+  border:1px solid var(--line);
+  background:linear-gradient(160deg, var(--surface), #0c0c0e);
+  aspect-ratio:4/3.1;
+  overflow:hidden;
+  box-shadow:0 30px 80px -30px rgba(0,0,0,.6);
+}
+.sc-media .glow{
+  position:absolute; width:260px; height:260px; border-radius:50%;
+  filter:blur(90px); opacity:.35; pointer-events:none;
+}
+.sc-media.m1 .glow{ background:var(--primary); top:-60px; left:-40px; }
+.sc-media.m2 .glow{ background:var(--secondary); bottom:-60px; right:-40px; }
+.sc-media.m3 .glow{ background:var(--accent); top:20%; right:10%; }
+
+.sc-media-img{
+  position:relative; z-index:2;
+  width:100%; height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.sc-mini-ui{ position:relative; z-index:2; padding:26px; height:100%; display:flex; flex-direction:column; gap:12px; }
+.mini-row{ display:flex; gap:10px; align-items:center; }
+.mini-avatar{ width:30px; height:30px; border-radius:50%; background:var(--grad-primary); flex-shrink:0; }
+.mini-bar{ height:9px; border-radius:5px; background:rgba(255,255,255,.06); }
+.mini-card{
+  border:1px solid var(--line); border-radius:10px; padding:12px;
+  background:rgba(255,255,255,.02); font-size:11px; color:var(--muted);
+}
+
+/* ============================================================
+   WORKFLOW / TIMELINE
+============================================================ */
+.workflow{ position:relative; }
+.workflow-head{ text-align:center; max-width:600px; margin:0 auto 110px; }
+.workflow-head h2{ font-size:clamp(30px,4vw,46px); margin-bottom:16px; }
+.workflow-head p{ color:var(--muted); font-size:16.5px; }
+
+.timeline{
+  position:relative; max-width:640px; margin:0 auto;
+}
+.timeline-line{
+  position:absolute; left:27px; top:0; bottom:0; width:2px;
+  background:var(--line);
+}
+.timeline-progress{
+  position:absolute; left:27px; top:0; width:2px; height:0;
+  background:var(--grad-primary);
+  box-shadow:0 0 16px rgba(110,86,255,.7);
+}
+.tl-step{
+  position:relative;
+  display:flex; gap:26px;
+  padding-bottom:70px;
+  opacity:0;
+}
+.tl-step:last-child{ padding-bottom:0; }
+.tl-node{
+  width:56px; height:56px; border-radius:50%;
+  background:var(--surface); border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; position:relative; z-index:2;
+  font-family:var(--font-num); font-size:12px; color:var(--muted); font-weight:600;
+}
+.tl-step.lit .tl-node{
+  border-color:var(--primary);
+  box-shadow:0 0 0 4px rgba(110,86,255,.12), 0 0 24px rgba(110,86,255,.4);
+  color:var(--white);
+}
+.tl-content h4{ font-size:18px; margin-bottom:6px; }
+.tl-content p{ color:var(--muted); font-size:14.5px; max-width:400px; }
+
+/* ============================================================
+   BENEFITS BENTO
+============================================================ */
+.bento{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  grid-template-rows:repeat(2, 220px);
+  gap:20px;
+}
+.bento-item{
+  border-radius:var(--radius-lg);
+  border:1px solid var(--line);
+  background:linear-gradient(160deg, var(--surface), #0c0c0e);
+  padding:28px;
+  position:relative;
+  overflow:hidden;
+  display:flex; flex-direction:column; justify-content:flex-end;
+}
+.bento-item h4{ position:relative; z-index:3; font-size:19px; margin-bottom:8px; }
+.bento-item p{ position:relative; z-index:3; font-size:13.5px; color:var(--muted); line-height:1.6; }
+.bento-item.b1{ grid-column:span 2; grid-row:span 2; }
+.bento-item.b2{ grid-column:span 2; grid-row:span 1; }
+.bento-item.b3{ grid-column:span 1; grid-row:span 1; }
+.bento-item.b4{ grid-column:span 1; grid-row:span 1; }
+.bento-item.b5{ grid-column:span 2; grid-row:span 1; }
+.bento-bg{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  object-fit:cover;
+  z-index:0;
+  opacity:.5;
+}
+.bento-item::before{
+  content:'';
+  position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(9,9,11,.1) 0%, rgba(9,9,11,.55) 55%, rgba(9,9,11,.94) 100%);
+  z-index:1;
+  pointer-events:none;
+}
+.bento-glow{
+  position:absolute; width:220px; height:220px; border-radius:50%;
+  filter:blur(80px); opacity:.3; top:-40px; right:-40px;
+  z-index:2;
+}
+.b1 .bento-glow{ background:var(--primary); }
+.b2 .bento-glow{ background:var(--secondary); }
+.b3 .bento-glow{ background:var(--accent); }
+.b4 .bento-glow{ background:var(--primary); }
+.b5 .bento-glow{ background:var(--secondary); }
+.bento-item .decor{ position:absolute; top:24px; left:28px; display:flex; gap:6px; z-index:3; }
+.bento-dot{ width:6px; height:6px; border-radius:50%; background:var(--line); }
+.bento-item.b1 .decor .bento-dot:nth-child(1){ background:var(--primary); }
+
+/* ============================================================
+   SECURITY
+============================================================ */
+.security{
+  border-top:1px solid var(--line);
+  background:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(77,159,255,.06), transparent 70%);
+}
+.security-grid{
+  display:grid; grid-template-columns:.9fr 1.1fr; gap:70px; align-items:center;
+}
+.security-text h2{ font-size:clamp(28px,3.6vw,42px); margin-bottom:18px; }
+.security-text p{ color:var(--muted); font-size:16px; margin-bottom:30px; line-height:1.7; }
+.security-badges{ display:flex; flex-wrap:wrap; gap:10px; }
+.sec-badge{
+  font-size:12.5px; font-family:var(--font-num); font-weight:500;
+  padding:8px 14px; border-radius:999px;
+  border:1px solid var(--line); color:var(--muted);
+}
+.security-panel{
+  border-radius:var(--radius-lg); border:1px solid var(--line);
+  background:linear-gradient(160deg,var(--surface),#0c0c0e);
+  padding:32px; display:flex; flex-direction:column; gap:18px;
+}
+.sec-row{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; border-radius:10px;
+  border:1px solid var(--line); background:rgba(255,255,255,.015);
+}
+.sec-row .name{ font-size:13.5px; color:var(--white); font-weight:500; }
+.sec-row .status{
+  font-size:11px; font-family:var(--font-num); color:#5EE6A0;
+  display:flex; align-items:center; gap:6px;
+}
+.sec-row .status::before{ content:''; width:6px; height:6px; border-radius:50%; background:#5EE6A0; box-shadow:0 0 8px #5EE6A0; }
+
+/* ============================================================
+   CTA
+============================================================ */
+.cta-section{ text-align:center; }
+.cta-box{
+  border-radius:var(--radius-xl);
+  border:1px solid var(--line);
+  background:linear-gradient(160deg, var(--surface), #0a0a0c);
+  padding:100px 40px;
+  position:relative; overflow:hidden;
+}
+.cta-box::before{
+  content:''; position:absolute; inset:0;
+  background:var(--grad-radial); opacity:.7;
+}
+.cta-box h2{
+  position:relative; z-index:2;
+  font-size:clamp(32px,5vw,54px);
+  max-width:680px; margin:0 auto 20px;
+  line-height:1.08;
+}
+.cta-box p{ position:relative; z-index:2; color:var(--muted); font-size:17px; margin-bottom:38px; }
+.cta-box .hero-cta{ position:relative; z-index:2; }
+
+/* ============================================================
+   FOOTER
+============================================================ */
+.footer{ border-top:1px solid var(--line); padding-top:80px; }
+.footer-top{
+  display:grid; grid-template-columns:1.4fr repeat(4,1fr); gap:40px;
+  padding-bottom:70px;
+}
+.footer-brand p{ color:var(--muted); font-size:14px; margin-top:16px; max-width:260px; line-height:1.6; }
+.footer-col h5{ font-size:13px; color:var(--white); margin-bottom:18px; font-weight:600; }
+.footer-col a{ display:block; font-size:13.5px; color:var(--muted); margin-bottom:12px; transition:color .3s; }
+.footer-col a:hover{ color:var(--white); }
+.footer-bottom{
+  border-top:1px solid var(--line);
+  padding:26px 0 40px;
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:12.5px; color:var(--muted-2);
+}
+.footer-socials{ display:flex; gap:18px; }
+.footer-socials a{ color:var(--muted-2); }
+.footer-socials a:hover{ color:var(--white); }
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+@media (max-width:980px){
+  .hero-grid{ grid-template-columns:1fr; gap:50px; }
+  .hero-inner{ max-width:100%; text-align:center; margin:0 auto; }
+  .hero-inner p{ margin-left:auto; margin-right:auto; }
+  .hero-inner .hero-cta{ justify-content:center; }
+  .hero-demo-wrap{ max-width:560px; margin:0 auto; }
+  .demo-body{ grid-template-columns:1fr; }
+  .demo-side{ display:none; }
+  .showcase-row{ grid-template-columns:1fr; gap:40px; }
+  .showcase-row.reverse .sc-media{ order:1; }
+  .showcase-row.reverse .sc-text{ order:2; }
+  .bento{ grid-template-columns:repeat(2,1fr); grid-template-rows:repeat(4,200px); }
+  .bento-item.b1{ grid-column:span 2; grid-row:span 1; }
+  .bento-item.b5{ grid-column:span 2; }
+  .security-grid{ grid-template-columns:1fr; }
+  .footer-top{ grid-template-columns:repeat(2,1fr); }
+}
+@media (max-width:720px){
+  .nav-links{ display:none; }
+  .container{ padding:0 20px; }
+  .section{ padding:100px 0; }
+  .footer-top{ grid-template-columns:1fr 1fr; }
+  .logo-row{ justify-content:center; gap:28px; }
+  .hero-cta{ flex-direction:column; width:100%; }
+  .hero-cta .btn{ width:100%; }
+}
+
+/* Supplementary responsive rule for the new ambient hero floating cards */
+@media (max-width:980px){
+  .hero-float-card{ display:none; }
+}
+
+/* Loader */
+.loader{
+  position:fixed; inset:0; z-index:999;
+  background:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+}
+.loader-mark{
+  width:44px; height:44px; border-radius:12px;
+  background:var(--grad-primary);
+  position:relative;
+}
+
+
+</style>
+</head>
+<body>
+
+<div class="loader" id="loader"><div class="loader-mark"></div></div>
+
+<!-- NAVBAR -->
+<header class="navbar" id="navbar">
+  <div class="container nav-inner">
+    <div class="logo"><span class="logo-mark"></span>VooVr</div>
+    <nav class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#solutions">Solutions</a>
+      <a href="#security">Security</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#about">About</a>
+    </nav>
+    <div class="nav-cta">
+      <a href="signin.html" class="sign-in">Sign in</a>
+      <a href="onboarding.html" class="btn btn-primary magnetic">Get Started</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid-overlay"></div>
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-inner">
+        <span class="eyebrow" data-reveal>AI Employee Intelligence Platform</span>
+        <h1 data-reveal>The AI operating system<br>for <span class="grad">employee intelligence.</span></h1>
+        <p data-reveal>One platform for employee records, AI insights, psychological analysis, follow-ups and workforce intelligence — so HR understands people, not just paperwork.</p>
+        <div class="hero-cta" data-reveal>
+          <a href="onboarding.html" class="btn btn-primary magnetic">Get Started</a>
+          <a href="#" class="btn btn-ghost magnetic">Book Demo</a>
+        </div>
+      </div>
+
+      <div class="hero-demo-wrap" id="demoWrap">
+        <span class="hero-float-card fc1"><span class="dot"></span>Attrition risk flagged 6 weeks early</span>
+
+        <div class="demo-panel" id="demoPanel">
+          <div class="demo-header"><span class="demo-live-dot"></span>Live product demo</div>
+          <div class="demo-body">
+
+            <div class="demo-stage">
+              <!-- Scene 1: employee profile exists -->
+              <div class="demo-layer" id="layerProfile">
+                <div class="profile-hero">
+                  <div class="sync-badge" id="syncBadge"><span class="chip-glow"></span>3 meetings synced</div>
+                  <div class="profile-hero-top">
+                    <div class="profile-hero-avatar">A</div>
+                    <div>
+                      <div class="profile-hero-name">Aman Verma</div>
+                      <div class="profile-hero-role">Product Design · Joined 14 months ago</div>
+                    </div>
+                  </div>
+                  <div class="profile-hero-meta">
+                    <span>Team: Product</span>
+                    <span>Manager: Priya</span>
+                    <span>Last review: 6 mo ago</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Scene 2: AI monitors engagement and detects a change -->
+              <div class="demo-layer" id="layerMonitor">
+                <div class="monitor-card">
+                  <h5>AI Monitoring</h5>
+                  <div class="metric-block" data-m>
+                    <div class="metric-head"><span class="m-label">Satisfaction Score</span><span class="m-value" id="satValue">82</span></div>
+                    <div class="metric-track"><div class="metric-fill" id="satFill"></div></div>
+                  </div>
+                  <div class="metric-block" data-m>
+                    <div class="metric-head"><span class="m-label">Attrition Risk</span><span class="m-value" id="riskValue">18%</span></div>
+                    <div class="metric-track"><div class="metric-fill" id="riskFill"></div></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Scene 3: psychological insight — tags generated dynamically -->
+              <div class="tag-row" id="tagRow">
+                <span class="tag">Engagement Drop</span>
+                <span class="tag">Burnout Signal</span>
+                <span class="tag">Retention Risk</span>
+              </div>
+              <div class="ai-chip" id="aiChip"><span class="chip-glow"></span>Psychological Insight…</div>
+
+              <!-- Scene 4: recommendation -->
+              <div class="recommend-card" id="recommendCard">
+                <span class="r-label">Recommended Follow-up</span>
+                <span class="r-text">Schedule a 1:1 check-in with Aman this week</span>
+              </div>
+
+              <!-- Scene 5: AI routes the recommendation to the right destination -->
+              <div class="demo-layer" id="layerRouting">
+                <span class="route-dest d-tl" id="destTimeline">Timeline Updated</span>
+                <span class="route-dest d-tr" id="destKB">Knowledge Base</span>
+                <span class="route-dest d-mr" id="destManager">Manager Alert</span>
+                <span class="route-dest d-bl" id="destEmail">Email Scheduled</span>
+                <span class="route-dest d-br" id="destWhatsapp">WhatsApp Scheduled</span>
+                <div class="route-center" id="routeCenter"><span class="chip-glow"></span>Routing</div>
+                <span class="route-packet" id="routePacket"></span>
+              </div>
+
+              <!-- Notification toast, fires when the manager is alerted -->
+              <div class="demo-toast" id="demoToast"><span class="dot"></span>Manager alerted: risk is high</div>
+
+              <!-- Scene 6: complete flow strip -->
+              <div class="demo-complete" id="demoComplete">
+                <span class="node">Profile</span><span class="arrow">→</span>
+                <span class="node">AI Insight</span><span class="arrow">→</span>
+                <span class="node">Recommendation</span><span class="arrow">→</span>
+                <span class="node">Action Taken</span><span class="arrow">→</span>
+                <span class="done-tag">Complete ✓</span>
+              </div>
+            </div>
+
+            <!-- Everything updates automatically — employee KPIs, in real time -->
+            <div class="demo-side">
+              <h5>Employee Profile</h5>
+              <div class="side-profile">
+                <div class="avatar">A</div>
+                <div class="info">
+                  <span class="name">Aman Verma</span>
+                  <span class="role">Product Design · 14 mo tenure</span>
+                </div>
+              </div>
+              <div class="side-stats">
+                <div class="side-stat"><div class="num" id="statSatNum">82</div><div class="label">Satisfaction</div></div>
+                <div class="side-stat"><div class="num" id="statRiskNum">18%</div><div class="label">Attrition Risk</div></div>
+              </div>
+              <div class="record-item" data-r id="recTimeline"><span class="check">✓</span>Timeline Updated</div>
+              <div class="record-item" data-r id="recKB"><span class="check">✓</span>Knowledge Base Updated</div>
+              <div class="record-item" data-r id="recEmail"><span class="check">✓</span>Email Scheduled</div>
+              <div class="record-item" data-r id="recWhatsapp"><span class="check">✓</span>WhatsApp Scheduled</div>
+            </div>
+
+          </div>
+        </div>
+
+        <span class="hero-float-card fc2"><span class="dot"></span>Synced across your HR stack</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUSTED BY -->
+<section class="trusted">
+  <div class="container">
+    <p>Trusted by people teams at fast-growing companies</p>
+    <div class="logo-row">
+      <span class="logo-ph">Northwind</span>
+      <span class="logo-ph"> 目 Kaida</span>
+      <span class="logo-ph">Fernhall</span>
+      <span class="logo-ph">Orbital</span>
+      <span class="logo-ph">Halcyon</span>
+      <span class="logo-ph">Rivet</span>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCT SHOWCASE -->
+<section class="section" id="features">
+  <div class="container">
+    <div class="showcase-head">
+      <span class="eyebrow" data-reveal>Product</span>
+      <h2 data-reveal style="margin-top:14px;">Every HR moment, understood by AI.</h2>
+      <p data-reveal>From the meeting to the record to the insight — VooVr connects the entire employee lifecycle.</p>
+    </div>
+
+    <div class="showcase-row" data-showcase>
+      <div class="sc-text">
+        <span class="index">01 / ATTRITION INTELLIGENCE</span>
+        <h3>Predict Attrition Before It Happens</h3>
+        <p>Continuously monitor employee satisfaction, engagement and workplace trends to identify employees who may require HR attention before resignation risks increase.</p>
+        <ul>
+          <li>Attrition Risk: Medium</li>
+          <li>Satisfaction: 82%</li>
+          <li>Engagement: Stable</li>
+          <li>AI Alert Active</li>
+        </ul>
+      </div>
+      <div class="sc-media m1">
+        <div class="glow"></div>
+        <img src="product-1.png" alt="Attrition Intelligence dashboard showing employee attrition risk, satisfaction, and engagement scores" class="sc-media-img">
+      </div>
+    </div>
+
+    <div class="showcase-row reverse" data-showcase>
+      <div class="sc-text">
+        <span class="index">02 / WORKFORCE PSYCHOLOGY</span>
+        <h3>Workforce Psychology</h3>
+        <p>Gain AI-powered psychological insights from employee interactions, behaviour patterns and workplace trends to better understand well-being, motivation and organizational health.</p>
+        <ul>
+          <li>Behaviour Analysis</li>
+          <li>Well-being Score</li>
+          <li>Stress Indicator</li>
+          <li>AI Recommendation</li>
+        </ul>
+      </div>
+      <div class="sc-media m2">
+        <div class="glow"></div>
+        <img src="product-2.png" alt="Workforce Psychology dashboard showing behaviour analysis, well-being score, stress indicator, and AI recommendations" class="sc-media-img">
+      </div>
+    </div>
+
+    <div class="showcase-row" data-showcase>
+      <div class="sc-text">
+        <span class="index">03 / SMART FOLLOW-UPS</span>
+        <h3>Smart Follow-ups</h3>
+        <p>Automatically organize personalized Gmail and WhatsApp follow-ups, reminders and employee timelines, helping HR maintain meaningful engagement without missing important actions.</p>
+        <ul>
+          <li>Gmail Ready</li>
+          <li>WhatsApp Scheduled</li>
+          <li>Reminder Created</li>
+          <li>Timeline Updated</li>
+        </ul>
+      </div>
+      <div class="sc-media m3">
+        <div class="glow"></div>
+        <img src="product-3.png" alt="Abstract visualization of Smart Follow-ups connecting an employee profile to Gmail, WhatsApp, and reminder notifications" class="sc-media-img">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WORKFLOW TIMELINE -->
+<section class="section section-tight workflow" id="solutions">
+  <div class="container">
+    <div class="workflow-head">
+      <span class="eyebrow" data-reveal>How it works</span>
+      <h2 data-reveal style="margin-top:14px;">AI-powered HR intelligence, end to end.</h2>
+      <p data-reveal>VooVr transforms employee interactions, records and behavioral signals into intelligent workforce insights for modern HR teams.</p>
+    </div>
+
+    <div class="timeline" id="timeline">
+      <div class="timeline-line"></div>
+      <div class="timeline-progress" id="tlProgress"></div>
+
+      <div class="tl-step" data-step><div class="tl-node">01</div><div class="tl-content"><h4>Employee Profile</h4><p>Every employee has a centralized profile with personal details, department, role, documents, meeting history and performance records.</p></div></div>
+      <div class="tl-step" data-step><div class="tl-node">02</div><div class="tl-content"><h4>Continuous Employee Insights</h4><p>Meetings, feedback, attendance, interactions and HR activities continuously enrich each employee's profile with real-time data.</p></div></div>
+      <div class="tl-step" data-step><div class="tl-node">03</div><div class="tl-content"><h4>AI Workforce Intelligence</h4><p>AI analyzes satisfaction, engagement, behavioral patterns and workplace signals to identify trends before they become problems.</p></div></div>
+      <div class="tl-step" data-step><div class="tl-node">04</div><div class="tl-content"><h4>Attrition & Risk Detection</h4><p>VooVr identifies employees who may be at risk of disengagement or resignation by analyzing multiple workplace indicators.</p></div></div>
+      <div class="tl-step" data-step><div class="tl-node">05</div><div class="tl-content"><h4>Smart Follow-ups</h4><p>AI recommends personalized HR actions and automatically schedules Gmail and WhatsApp follow-ups to maintain engagement.</p></div></div>
+      <div class="tl-step" data-step><div class="tl-node">06</div><div class="tl-content"><h4>Smarter HR Decisions</h4><p>HR teams receive actionable insights, psychological analysis, workforce trends and employee recommendations from a single unified platform.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- BENEFITS BENTO -->
+<section class="section section-tight">
+  <div class="container">
+    <div class="showcase-head">
+      <span class="eyebrow" data-reveal>Why VooVr</span>
+      <h2 data-reveal style="margin-top:14px;">Built for how HR actually works.</h2>
+    </div>
+    <div class="bento" data-bento>
+      <div class="bento-item b1">
+        <img src="security-bg.png" alt="" class="bento-bg">
+        <div class="bento-glow"></div>
+        <div class="decor"><span class="bento-dot"></span><span class="bento-dot"></span></div>
+        <h4>Security by design.</h4>
+        <p>VooVr is built on enterprise-grade infrastructure with end-to-end encryption, strict access controls and comprehensive audit trails. Employee data is protected at every layer of the platform.</p>
+      </div>
+      <div class="bento-item b2">
+        <img src="aes-bg.png" alt="" class="bento-bg">
+        <div class="bento-glow"></div>
+        <h4>AES-256 protected records</h4>
+        <p>Every employee record is encrypted using AES-256 standards at rest and in transit. Your data remains yours, secured by bank-grade cryptography.</p>
+      </div>
+      <div class="bento-item b3">
+        <img src="access-bg.png" alt="" class="bento-bg">
+        <div class="bento-glow"></div>
+        <h4>Role-based access control</h4>
+        <p>Granular permissions ensure HR admins, managers and executives see only what they need. No overexposure, no blind spots.</p>
+      </div>
+      <div class="bento-item b4">
+        <img src="audit-bg.png" alt="" class="bento-bg">
+        <div class="bento-glow"></div>
+        <h4>Audit logs & activity tracking</h4>
+        <p>Every view, edit and action is logged with timestamps and identity markers. Full transparency for compliance and internal reviews.</p>
+      </div>
+      <div class="bento-item b5">
+        <img src="privacy-bg.png" alt="" class="bento-bg">
+        <div class="bento-glow"></div>
+        <h4>Privacy-first HR platform</h4>
+        <p>Employee trust is non-negotiable. VooVr is designed with data minimization principles, giving employees visibility into their own information and how it is used.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECURITY -->
+<section class="section security" id="security">
+  <div class="container security-grid">
+    <div class="security-text">
+      <span class="eyebrow" data-reveal>Security</span>
+      <h2 data-reveal style="margin-top:14px;">Enterprise-grade, by default.</h2>
+      <p data-reveal>Employee data is the most sensitive data your company holds. VooVr is built with encryption, access controls and audit trails from the ground up.</p>
+      <div class="security-badges" data-reveal>
+        <span class="sec-badge">SOC 2 Type II</span>
+        <span class="sec-badge">GDPR Ready</span>
+        <span class="sec-badge">SSO / SCIM</span>
+        <span class="sec-badge">Data Encryption at Rest</span>
+        <span class="sec-badge">Role-Based Access</span>
+      </div>
+    </div>
+    <div class="security-panel" data-reveal>
+      <div class="sec-row"><span class="name">Data encryption (AES-256)</span><span class="status">Active</span></div>
+      <div class="sec-row"><span class="name">Single sign-on</span><span class="status">Active</span></div>
+      <div class="sec-row"><span class="name">Audit logging</span><span class="status">Active</span></div>
+      <div class="sec-row"><span class="name">Access reviews</span><span class="status">Active</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section cta-section" id="pricing">
+  <div class="container">
+    <div class="cta-box">
+      <h2 data-reveal>Give your HR team an operating system, not another tool.</h2>
+      <p data-reveal>Set up VooVr in an afternoon. See the difference in a week.</p>
+      <div class="hero-cta" data-reveal>
+        <a href="onboarding.html" class="btn btn-primary magnetic">Get Started</a>
+        <a href="#" class="btn btn-ghost magnetic">Book Demo</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer" id="about">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="logo"><span class="logo-mark"></span>VooVr</div>
+        <p>The operating system for modern HR teams. Meetings, records and insight, connected.</p>
+      </div>
+      <div class="footer-col">
+        <h5>Product</h5>
+        <a href="#">Meetings</a>
+        <a href="#">Directory</a>
+        <a href="#">Reviews</a>
+        <a href="#">Reports</a>
+      </div>
+      <div class="footer-col">
+        <h5>Company</h5>
+        <a href="#">About</a>
+        <a href="#">Careers</a>
+        <a href="#">Blog</a>
+      </div>
+      <div class="footer-col">
+        <h5>Resources</h5>
+        <a href="#">Documentation</a>
+        <a href="#">Security</a>
+        <a href="#">Status</a>
+      </div>
+      <div class="footer-col">
+        <h5>Legal</h5>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 VooVr, Inc. All rights reserved.</span>
+      <div class="footer-socials">
+        <a href="#">X</a><a href="#">LinkedIn</a><a href="#">GitHub</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+if (typeof Lenis !== 'undefined') {
+  var lenis = new Lenis({ duration: 1.1, smoothWheel: true });
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add(function(time){ lenis.raf(time*1000); });
+  gsap.ticker.lagSmoothing(0);
+} else {
+  console.warn('Lenis failed to load — falling back to native scroll.');
+}
+
+var navbar = document.getElementById('navbar');
+ScrollTrigger.create({
+  start: 20, end: 99999,
+  onUpdate: function(self){ navbar.classList.toggle('scrolled', self.scroll() > 20); }
+});
+
+var demoEls = {
+  profile:     document.getElementById('layerProfile'),
+  syncBadge:   document.getElementById('syncBadge'),
+  monitor:     document.getElementById('layerMonitor'),
+  aiChip:      document.getElementById('aiChip'),
+  recommend:   document.getElementById('recommendCard'),
+  routing:     document.getElementById('layerRouting'),
+  routeCenter: document.getElementById('routeCenter'),
+  toast:       document.getElementById('demoToast'),
+  complete:    document.getElementById('demoComplete'),
+};
+var metrics = gsap.utils.toArray('.metric-block');
+var tags    = gsap.utils.toArray('.tag');
+var records = gsap.utils.toArray('.record-item');
+var packet  = document.getElementById('routePacket');
+var satValue  = document.getElementById('satValue');
+var riskValue = document.getElementById('riskValue');
+var satFill   = document.getElementById('satFill');
+var riskFill  = document.getElementById('riskFill');
+var statSatNum  = document.getElementById('statSatNum');
+var statRiskNum = document.getElementById('statRiskNum');
+var destPillsEls = {
+  timeline: document.getElementById('destTimeline'),
+  kb:       document.getElementById('destKB'),
+  manager:  document.getElementById('destManager'),
+  email:    document.getElementById('destEmail'),
+  whatsapp: document.getElementById('destWhatsapp'),
+};
+
+function getRelPos(el, containerEl){
+  var c = containerEl.getBoundingClientRect();
+  var r = el.getBoundingClientRect();
+  return { x: r.left + r.width/2 - c.left, y: r.top + r.height/2 - c.top };
+}
+
+function animateMetric(numEl, fillEl, from, to, suffix, dur){
+  var obj = { val: from };
+  gsap.to(obj, {
+    val:to, duration:dur || .9, ease:'power1.inOut',
+    onUpdate:function(){ numEl.textContent = Math.round(obj.val) + (suffix || ''); }
+  });
+  if (fillEl) gsap.to(fillEl, { width: to + '%', duration:dur || .9, ease:'power1.inOut' });
+}
+
+function markRecord(idx){
+  records[idx].classList.add('done');
+  gsap.to(records[idx], { opacity:1, y:0, duration:.4 });
+}
+
+function resetDemo(){
+  gsap.set([demoEls.profile, demoEls.monitor, demoEls.aiChip, demoEls.recommend, demoEls.routing, demoEls.complete], { opacity:0, filter:'blur(0px)' });
+  gsap.set(demoEls.syncBadge, { opacity:0 });
+  gsap.set(tags, { opacity:0, scale:.7 });
+  gsap.set(metrics, { opacity:0 });
+  gsap.set(records, { opacity:0, y:8 });
+  gsap.set(packet, { opacity:0 });
+  gsap.set(demoEls.toast, { opacity:0, y:-6 });
+  records.forEach(function(r){ r.classList.remove('done'); });
+  Object.values(destPillsEls).forEach(function(p){ p.classList.remove('lit'); });
+  satValue.textContent = '82';
+  riskValue.textContent = '18%';
+  gsap.set(satFill, { width:'82%' });
+  gsap.set(riskFill, { width:'18%' });
+  statSatNum.textContent = '82';
+  statRiskNum.textContent = '18%';
+}
+resetDemo();
+
+var demoTl = gsap.timeline({ repeat:-1, defaults:{ ease:'power2.out' } });
+
+function routeTo(destEl, onArrive){
+  demoTl
+    .call(function(){
+      var c = getRelPos(demoEls.routeCenter, demoEls.routing);
+      gsap.set(packet, { left:c.x, top:c.y, opacity:1 });
+    }, null, '+=.15')
+    .to(packet, {
+      left: function(){ return getRelPos(destEl, demoEls.routing).x; },
+      top:  function(){ return getRelPos(destEl, demoEls.routing).y; },
+      duration:.55, ease:'power2.inOut'
+    })
+    .call(function(){
+      destEl.classList.add('lit');
+      gsap.to(packet, { opacity:0, duration:.2 });
+      if (onArrive) onArrive();
+    });
+}
+
+demoTl
+  .addLabel('profile')
+  .to(demoEls.profile, { opacity:1, duration:.6 })
+  .to(demoEls.syncBadge, { opacity:1, duration:.4 }, '+=.3')
+  .to({}, { duration:.6 })
+  .to(demoEls.syncBadge, { opacity:0, duration:.4 })
+  .addLabel('toMonitor', '+=.1')
+  .to(demoEls.profile, { opacity:0, filter:'blur(6px)', duration:.5 }, 'toMonitor')
+  .to(demoEls.monitor, { opacity:1, duration:.5 }, 'toMonitor')
+  .to(metrics[0], { opacity:1, duration:.4 }, '+=.2')
+  .call(function(){ animateMetric(satValue, satFill, 82, 61, '', 1); })
+  .to(metrics[1], { opacity:1, duration:.4 }, '+=.15')
+  .call(function(){ animateMetric(riskValue, riskFill, 18, 64, '%', 1); })
+  .call(function(){ animateMetric(statSatNum, null, 82, 61, '', 1); })
+  .call(function(){ animateMetric(statRiskNum, null, 18, 64, '%', 1); })
+  .to({}, { duration:1.2 })
+  .addLabel('toInsight', '+=.1')
+  .to(demoEls.monitor, { opacity:0, duration:.4 }, 'toInsight')
+  .to(demoEls.aiChip, { opacity:1, duration:.4 }, 'toInsight+=.1')
+  .to(tags, { opacity:1, scale:1, duration:.3, stagger:.1 }, '-=.1')
+  .to({}, { duration:.5 })
+  .addLabel('toRecommend', '+=.1')
+  .to([demoEls.aiChip].concat(Array.from(tags)), { opacity:0, duration:.35 }, 'toRecommend')
+  .to(demoEls.recommend, { opacity:1, duration:.5 }, 'toRecommend+=.1')
+  .to({}, { duration:.6 })
+  .addLabel('toRouting', '+=.1')
+  .to(demoEls.recommend, { opacity:0, duration:.4 }, 'toRouting')
+  .to(demoEls.routing, { opacity:1, duration:.5 }, 'toRouting+=.1');
+
+routeTo(destPillsEls.timeline, function(){ markRecord(0); });
+routeTo(destPillsEls.kb,       function(){ markRecord(1); });
+routeTo(destPillsEls.email,    function(){ markRecord(2); });
+routeTo(destPillsEls.whatsapp, function(){ markRecord(3); });
+routeTo(destPillsEls.manager,  function(){
+  gsap.timeline()
+    .to(demoEls.toast, { opacity:1, y:0, duration:.4 })
+    .to(demoEls.toast, { opacity:0, duration:.4 }, '+=1.1');
+});
+
+demoTl
+  .to({}, { duration:.4 })
+  .to(demoEls.routing, { opacity:0, duration:.5 }, '+=.1')
+  .to(demoEls.complete, { opacity:1, duration:.5 }, '-=.1')
+  .to({}, { duration:2 })
+  .call(resetDemo);
+
+gsap.to('#demoPanel', { y:-6, duration:3.6, ease:'sine.inOut', yoyo:true, repeat:-1 });
+gsap.to('.hero-float-card.fc1', { y:-8, duration:3.2, ease:'sine.inOut', yoyo:true, repeat:-1 });
+gsap.to('.hero-float-card.fc2', { y:8, duration:3.6, ease:'sine.inOut', yoyo:true, repeat:-1, delay:.4 });
+
+window.addEventListener('load', function() {
+  var tl = gsap.timeline({ defaults:{ ease:'power3.out' } });
+
+  tl.to('#loader', { opacity:0, duration:.6, onComplete:function(){ document.getElementById('loader').style.display='none'; } })
+    .from('.navbar', { y:-30, opacity:0, duration:.7 }, .1)
+    .from('.hero-inner .eyebrow', { opacity:0, y:16, duration:.7, clearProps:'all' }, .25)
+    .from('.hero-inner h1', { opacity:0, y:26, filter:'blur(10px)', duration:.9, clearProps:'all' }, .35)
+    .from('.hero-inner p', { opacity:0, y:20, duration:.8, clearProps:'all' }, .55)
+    .from('.hero-cta .btn', { opacity:0, y:16, stagger:.1, duration:.7, clearProps:'all' }, .68)
+    .from('#demoWrap', { opacity:0, y:60, rotateX:8, duration:1.2, transformOrigin:'center top', clearProps:'all' }, .8);
+});
+
+document.querySelectorAll('.magnetic').forEach(function(el){
+  el.addEventListener('mousemove', function(e){
+    var r = el.getBoundingClientRect();
+    var x = e.clientX - r.left - r.width/2;
+    var y = e.clientY - r.top - r.height/2;
+    gsap.to(el, { x:x*0.3, y:y*0.5, duration:.5, ease:'power3.out' });
+  });
+  el.addEventListener('mouseleave', function(){
+    gsap.to(el, { x:0, y:0, duration:.6, ease:'elastic.out(1,.4)' });
+  });
+});
+
+document.querySelectorAll('[data-reveal]:not(.hero-inner [data-reveal])').forEach(function(el){
+  gsap.from(el, {
+    opacity:0, y:24, filter:'blur(6px)', duration:1,
+    ease:'power3.out',
+    scrollTrigger:{ trigger:el, start:'top 88%' }
+  });
+});
+
+document.querySelectorAll('[data-showcase]').forEach(function(row){
+  var text = row.querySelector('.sc-text');
+  var media = row.querySelector('.sc-media');
+  var fromX = row.classList.contains('reverse') ? 40 : -40;
+  gsap.from(text, {
+    opacity:0, x:fromX, duration:1, ease:'power3.out',
+    scrollTrigger:{ trigger:row, start:'top 75%' }
+  });
+  gsap.from(media, {
+    opacity:0, scale:.94, filter:'blur(10px)', duration:1.1, ease:'power3.out',
+    scrollTrigger:{ trigger:row, start:'top 75%' }
+  });
+});
+
+var steps = gsap.utils.toArray('[data-step]');
+steps.forEach(function(step){
+  gsap.to(step, {
+    opacity:1, duration:.6, ease:'power2.out',
+    scrollTrigger:{ trigger:step, start:'top 80%', toggleActions:'play none none reverse' },
+    onStart:function(){ step.classList.add('lit'); },
+    onReverseComplete:function(){ step.classList.remove('lit'); }
+  });
+});
+gsap.to('#tlProgress', {
+  height:'100%', ease:'none',
+  scrollTrigger:{
+    trigger:'#timeline', start:'top 60%', end:'bottom 70%', scrub:.6
+  }
+});
+
+gsap.from('[data-bento] .bento-item', {
+  opacity:0, y:30, scale:.97, stagger:.08, duration:.8, ease:'power3.out',
+  scrollTrigger:{ trigger:'[data-bento]', start:'top 78%' }
+});
+
+gsap.from('.logo-ph', {
+  opacity:0, y:10, stagger:.08, duration:.7, ease:'power2.out',
+  scrollTrigger:{ trigger:'.trusted', start:'top 85%' }
+});
+
+gsap.from('.sec-row', {
+  opacity:0, x:20, stagger:.12, duration:.7, ease:'power3.out',
+  scrollTrigger:{ trigger:'.security-panel', start:'top 78%' }
+});
+
+</script>
+</body>
+</html>

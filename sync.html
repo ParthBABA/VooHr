@@ -1,0 +1,471 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Copilot - Sync Room</title>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+</head>
+<body>
+<button class="mobile-toggle" id="mobileToggle">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+</button>
+
+<div class="page-wrapper">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-mark">HR</div>
+        HR Copilot
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Command Center</div>
+      <a href="dashboard.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <div class="nav-section">Workspace</div>
+      <a href="sync.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        Sync Room
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        Reports
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar" id="userAvatar">K</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">Kavita Sharma</div>
+        <div class="user-role" id="userRole">HR Admin</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div>
+          <div class="page-title" id="syncTitle">Sync Room - Priya Sharma</div>
+          <div class="breadcrumb"><span>Dashboard</span> / <span>Sync</span> / <span id="syncBreadcrumb">Priya Sharma</span></div>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <div class="lang-toggle">
+          <button class="lang-btn active" data-lang-switch="en">EN</button>
+          <button class="lang-btn" data-lang-switch="hi">Hinglish</button>
+        </div>
+        <button class="icon-btn" id="signOutBtn" title="Sign Out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <div class="sync-layout">
+        <!-- LEFT: JOURNEY -->
+        <div class="journey-main">
+          <!-- STEP PROGRESS -->
+          <div class="journey-progress fade-in" id="journeyProgress">
+            <div class="step-node active" data-step="1">
+              <div class="step-dot">1</div>
+              <div class="step-label" data-lang="en">Psychological Safety</div>
+              <div class="step-label" data-lang="hi">Psychological Safety</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-node locked" data-step="2">
+              <div class="step-dot">2</div>
+              <div class="step-label" data-lang="en">Soft Opener</div>
+              <div class="step-label" data-lang="hi">Soft Opener</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-node locked" data-step="3">
+              <div class="step-dot">3</div>
+              <div class="step-label" data-lang="en">State the Gap</div>
+              <div class="step-label" data-lang="hi">State the Gap</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-node locked" data-step="4">
+              <div class="step-dot">4</div>
+              <div class="step-label" data-lang="en">Co-Create Solution</div>
+              <div class="step-label" data-lang="hi">Co-Create Solution</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-node locked" data-step="5">
+              <div class="step-dot">5</div>
+              <div class="step-label" data-lang="en">Recency Wrap-up</div>
+              <div class="step-label" data-lang="hi">Recency Wrap-up</div>
+            </div>
+          </div>
+
+          <!-- STEP CONTENT: STEP 1 -->
+          <div class="step-content scale-in" id="stepContent">
+            <div class="step-header">
+              <div class="step-number">Step 1 of 5</div>
+              <h2 class="step-title">Establish Psychological Safety</h2>
+              <p class="step-desc" data-lang="en">Set the tone before any performance discussion. The employee must feel secure that this conversation is about growth, not punishment.</p>
+              <p class="step-desc" data-lang="hi" style="display:none;">Kisi bhi performance discussion se pehle mahaul set karein. Employee ko safe feel hona chahiye ki ye baat growth ke baare mein hai, sazaa ke nahi.</p>
+            </div>
+
+            <div class="script-block">
+              <div class="script-text" data-lang="en">"I want you to know that this conversation is about how we can support you. Your role here is valued, and I want to understand what you have been going through."</div>
+              <div class="script-text" data-lang="hi" style="display:none;">"Main chahta hoon ki tum jaano ki ye baat is baare mein hai ki hum tumhari kaise madad kar sakte hain. Yahan tumhariValue hai, aur main samajhna chahta hoon ki tum kya face kar rahe ho."</div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0;">
+              <div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:0.6rem;">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span data-lang="en"> Do This</span><span data-lang="hi" style="display:none;"> Ye Karo</span>
+                </div>
+                <div class="guidelines">
+                  <div class="guideline" data-anim="do-0">
+                    <div class="g-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg></div>
+                    <span data-lang="en">Maintain open body language</span>
+                    <span data-lang="hi" style="display:none;">Khuli body language rakho</span>
+                  </div>
+                  <div class="guideline" data-anim="do-1">
+                    <div class="g-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg></div>
+                    <span data-lang="en">Use their first name</span>
+                    <span data-lang="hi" style="display:none;">Unka pehla naam lo</span>
+                  </div>
+                  <div class="guideline" data-anim="do-2">
+                    <div class="g-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg></div>
+                    <span data-lang="en">Make eye contact naturally</span>
+                    <span data-lang="hi" style="display:none;">Aankh se aankh milaao</span>
+                  </div>
+                  <div class="guideline" data-anim="do-3">
+                    <div class="g-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg></div>
+                    <span data-lang="en">Speak in a calm, steady tone</span>
+                    <span data-lang="hi" style="display:none;">Shaant, steady awaaz mein bolo</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  <span data-lang="en"> Avoid This</span><span data-lang="hi" style="display:none;"> Ye Mat Karo</span>
+                </div>
+                <div class="guidelines">
+                  <div class="guideline" data-anim="dont-0">
+                    <div class="g-icon avoid"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+                    <span data-lang="en">Do NOT start with the problem</span>
+                    <span data-lang="hi" style="display:none;">Problem se mat shuru karo</span>
+                  </div>
+                  <div class="guideline" data-anim="dont-1">
+                    <div class="g-icon avoid"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+                    <span data-lang="en">Avoid phrases like "We need to talk"</span>
+                    <span data-lang="hi" style="display:none;">"Humhe baat karni hai" jaise words mat bolo</span>
+                  </div>
+                  <div class="guideline" data-anim="dont-2">
+                    <div class="g-icon avoid"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+                    <span data-lang="en">Never threaten job security</span>
+                    <span data-lang="hi" style="display:none;">Kabhi job ka risk mat do</span>
+                  </div>
+                  <div class="guideline" data-anim="dont-3">
+                    <div class="g-icon avoid"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+                    <span data-lang="en">Do not have this in a public space</span>
+                    <span data-lang="hi" style="display:none;">Public jagah pe ye mat karo</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="guideline tip" style="border-left:3px solid var(--amber);background:var(--amber-soft);">
+              <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
+              <div>
+                <span data-lang="en">Duration: 2-3 minutes. This step is the foundation. If the employee is still defensive, slow down and revisit before proceeding.</span>
+                <span data-lang="hi" style="display:none;">Duration: 2-3 minute. Ye step neev hai. Agar employee abhi bhi defensive hai, toh ruko aur fir se samjhaao.</span>
+              </div>
+            </div>
+
+            <div style="margin-top:2rem;">
+              <label class="form-label">Manager Notes for This Step</label>
+              <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_1"></textarea>
+            </div>
+
+            <div class="step-nav">
+              <div></div>
+              <div style="display:flex;gap:0.8rem;">
+                <button class="btn btn-primary btn-sm">Save &amp; Continue</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: SIDEBAR -->
+        <div class="journey-sidebar">
+          <!-- EMPLOYEE CONTEXT CARD -->
+          <div class="card fade-in fade-in-d1" style="margin-bottom:1rem;">
+            <div class="card-header">
+              <div class="card-title" data-lang="en">Employee Context</div>
+              <div class="card-title" data-lang="hi">Employee Context</div>
+            </div>
+            <div id="employeeContext">
+              <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1.2rem;">
+                <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--amber));display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:0.8rem;font-weight:700;color:var(--void);flex-shrink:0;">PS</div>
+                <div>
+                  <div style="font-weight:600;">Priya Sharma</div>
+                  <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);">Design Lead</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                  <span style="color:var(--ivory-dim);">Department</span><span>Design</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                  <span style="color:var(--ivory-dim);">Tenure</span><span>2y 4m</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                  <span style="color:var(--ivory-dim);">Wellness Index</span>
+                  <span style="color:var(--red);font-weight:600;">32/100</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                  <span style="color:var(--ivory-dim);">Performance</span>
+                  <span style="color:var(--red);font-weight:600;">-40% QoQ</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                  <span style="color:var(--ivory-dim);">Last Sync</span><span>Never</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                  <span style="color:var(--ivory-dim);">Alert Reason</span>
+                  <span style="color:var(--amber);font-weight:600;">Performance Drop</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MANAGER CHEATSHEET -->
+          <div class="card cheatsheet-glow fade-in fade-in-d2">
+            <div class="card-header">
+              <div class="card-title" data-lang="en">Cheatsheet</div>
+              <div class="card-title" data-lang="hi">Cheatsheet</div>
+            </div>
+            <div class="cheatsheet" id="cheatsheet">
+              <div class="cheat-point">
+                <div class="cheat-point-head"><span class="c-dot" style="background:var(--teal);"></span> Active Listening</div>
+                <div class="cheat-point-body">
+                  <p><strong>Reflect:</strong> "What I'm hearing is..."</p>
+                  <p><strong>Clarify:</strong> "Can you tell me more about...?"</p>
+                  <p><strong>Validate:</strong> "That makes sense because..."</p>
+                  <p><strong>Pause:</strong> Allow 3-5 seconds of silence after they speak.</p>
+                </div>
+              </div>
+              <div class="cheat-point">
+                <div class="cheat-point-head"><span class="c-dot" style="background:var(--amber);"></span> Cognitive Reframing</div>
+                <div class="cheat-point-body">
+                  <p><strong>Shift:</strong> Move from blame to curiosity.</p>
+                  <p><strong>Reframe:</strong> "What obstacles made this difficult?" instead of "Why didn't you...?"</p>
+                  <p><strong>Focus:</strong> Behavior and outcomes, never character.</p>
+                </div>
+              </div>
+              <div class="cheat-point">
+                <div class="cheat-point-head"><span class="c-dot" style="background:var(--violet);"></span> Pygmalion Effect</div>
+                <div class="cheat-point-body">
+                  <p><strong>Belief:</strong> Express genuine confidence in their ability.</p>
+                  <p><strong>Expectation:</strong> Set high but achievable targets.</p>
+                  <p><strong>Feedback:</strong> Reinforce progress, not just completion.</p>
+                </div>
+              </div>
+            </div>
+            <button class="cheatsheet-expander" id="openDrawerBtn">
+              Click to Expand Strategy Guide
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- DRAWER BACKDROP -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+<!-- STRATEGY GUIDE DRAWER -->
+<div class="cheatsheet-drawer" id="strategyDrawer">
+  <div class="drawer-header">
+    <div class="drawer-title">Strategy Guide</div>
+    <button class="drawer-close" id="drawerCloseBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-section">
+      <div class="drawer-section-title">1. Active Listening Framework</div>
+      <div class="drawer-tip">
+        <strong>Core Principle:</strong> People don't care how much you know until they know how much you care. Listening is the single highest-leverage management skill.
+      </div>
+      <div class="drawer-text"><strong>The HEAR Model:</strong></div>
+      <ul class="drawer-checklist">
+        <li><strong>Halt</strong> — Stop what you are doing. Give full, undivided attention. Close your laptop. Put your phone away.</li>
+        <li><strong>Empathize</strong> — Try to understand their emotional state. Use phrases like "I can see this has been weighing on you."</li>
+        <li><strong>Anticipate</strong> — Don't plan your response while they speak. Let silence do the work.</li>
+        <li><strong>Respond</strong> — Paraphrase what you heard. "So what I'm hearing is..." Confirm before moving on.</li>
+      </ul>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">2. Cognitive Reframing Techniques</div>
+      <div class="drawer-tip">
+        <strong>Why it works:</strong> When employees label themselves ("I'm just not good enough"), performance spirals downward. Reframing breaks the cycle.
+      </div>
+      <div class="drawer-text"><strong>Reframing Patterns:</strong></div>
+      <ul class="drawer-checklist">
+        <li><strong>Blame → Curiosity:</strong> Replace "Why did you miss the deadline?" with "What obstacles got in the way?"</li>
+        <li><strong>Character → Behavior:</strong> Replace "You're careless" with "The last two reports had data errors."</li>
+        <li><strong>Fixed → Growth:</strong> Replace "I can't do this" with "I haven't figured this out yet."</li>
+        <li><strong>Threat → Challenge:</strong> Frame difficult tasks as opportunities to demonstrate capability.</li>
+      </ul>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">3. Pygmalion Effect in Practice</div>
+      <div class="drawer-tip">
+        <strong>The Research:</strong> Rosenthal & Jacobson (1968) proved that manager expectations directly influence employee performance. Belief precedes achievement.
+      </div>
+      <ul class="drawer-checklist">
+        <li><strong>Set clear, high expectations</strong> — "I know you can deliver this at the Q3 standard."</li>
+        <li><strong>Reference past successes</strong> — "Remember when you led the rebrand? Same capability applies here."</li>
+        <li><strong>Provide scaffolding, not rescue</strong> — Guide the path, don't walk it for them.</li>
+        <li><strong>Celebrate micro-wins</strong> — Reinforce progress at every stage to build momentum.</li>
+      </ul>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">4. Difficult Conversation Checklist</div>
+      <div class="drawer-text"><strong>Before the sync:</strong></div>
+      <ul class="drawer-checklist">
+        <li>Review the employee's last 90 days of performance data.</li>
+        <li>Identify 2-3 specific, factual observations (not opinions).</li>
+        <li>Prepare your opening psychological safety statement.</li>
+        <li>Choose a private, neutral space — never your corner office.</li>
+      </ul>
+      <div class="drawer-text"><strong>During the sync:</strong></div>
+      <ul class="drawer-checklist">
+        <li>Follow the 5-step journey: Safety → Opener → Gap → Solution → Wrap-up.</li>
+        <li>Keep your talk-to-listen ratio below 40:60.</li>
+        <li>Use the employee's first name at least 3 times.</li>
+        <li>If emotions escalate, return to Step 1 language immediately.</li>
+      </ul>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">5. Post-Sync Follow-up Protocol</div>
+      <div class="drawer-tip">
+        <strong>24-Hour Rule:</strong> Send the email summary within 24 hours. Delayed follow-up signals that the conversation wasn't important.
+      </div>
+      <ul class="drawer-checklist">
+        <li>Draft and send the email brief within 24 hours.</li>
+        <li>Schedule the follow-up sync for 7-10 days later.</li>
+        <li>Send the WhatsApp nudge at Day 7 if consented.</li>
+        <li>Document action items in the HRIS system.</li>
+        <li>Set calendar reminders for each milestone.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- CONSENT MODAL -->
+<div class="modal-overlay" id="consentModal">
+  <div class="modal-box">
+    <button class="modal-close" id="consentCloseBtn">CLOSE</button>
+    <h3 class="modal-title" data-lang="en">Deliverables Consent</h3>
+    <h3 class="modal-title" data-lang="hi">Deliverables Consent</h3>
+    <p class="modal-text" data-lang="en">
+      After this sync session, the following items can be generated and delivered.
+      <strong>Employee consent is required</strong> before any outbound communication.
+    </p>
+    <p class="modal-text" data-lang="hi">
+      Is sync session ke baad, ye items banaye ja sakte hain.
+      <strong>Kisi bhi outbound communication ke liye employee consent zaroori hai.</strong>
+    </p>
+    <div class="consent-checks">
+      <div class="consent-check">
+        <input type="checkbox" id="consentEmail" checked>
+        <label for="consentEmail"><strong data-lang="en">Email Brief</strong><strong data-lang="hi">Email Brief</strong><br><span data-lang="en" style="color:var(--ivory-faint);font-size:0.82rem;">Professional summary for HR records and follow-up</span><span data-lang="hi" style="color:var(--ivory-faint);font-size:0.82rem;">HR records ke liye professional summary</span></label>
+      </div>
+      <div class="consent-check">
+        <input type="checkbox" id="consentWhatsapp">
+        <label for="consentWhatsapp"><strong data-lang="en">WhatsApp Nudge</strong><strong data-lang="hi">WhatsApp Nudge</strong><br><span data-lang="en" style="color:var(--ivory-faint);font-size:0.82rem;">Gentle check-in message after 7 days</span><span data-lang="hi" style="color:var(--ivory-faint);font-size:0.82rem;">7 din baad gentle check-in message</span></label>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.8rem;">
+      <button class="btn btn-primary btn-sm" id="consentConfirmBtn">Confirm & Generate</button>
+      <button class="btn btn-sm" id="consentLaterBtn">Later</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.addEventListener('load', function() {
+  var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+  var sidebar = document.querySelector('.sidebar');
+  gsap.set(sidebar, { x: -72, opacity: 0 });
+
+  var progress = document.getElementById('journeyProgress');
+  var stepNodes = progress.querySelectorAll('.step-node');
+  var connectors = progress.querySelectorAll('.step-connector');
+  gsap.set(stepNodes, { opacity: 0, y: -20 });
+  gsap.set(connectors, { scaleX: 0 });
+
+  var content = document.getElementById('stepContent');
+  var header = content.querySelector('.step-header');
+  var script = content.querySelector('.script-block');
+  var doItems = content.querySelectorAll('[data-anim^="do-"]');
+  var dontItems = content.querySelectorAll('[data-anim^="dont-"]');
+  var tip = content.querySelector('.guideline.tip');
+  var noteArea = content.querySelector('.note-area');
+  var nav = content.querySelector('.step-nav');
+  gsap.set(content, { opacity: 0, y: 20 });
+  gsap.set(header, { opacity: 0, y: 16 });
+  gsap.set(script, { opacity: 0, x: -20, borderLeftColor: 'var(--violet)' });
+  gsap.set(doItems, { opacity: 0, x: -16 });
+  gsap.set(dontItems, { opacity: 0, x: 16 });
+  if (tip) gsap.set(tip, { opacity: 0, y: 12 });
+  if (noteArea) gsap.set(noteArea, { opacity: 0, y: 12 });
+  if (nav) gsap.set(nav, { opacity: 0, y: 12 });
+
+  var sideCards = document.querySelectorAll('.journey-sidebar .card');
+  gsap.set(sideCards, { opacity: 0, x: 30 });
+
+  tl.to(sidebar, { x: 0, opacity: 1, duration: 0.5 })
+    .to(progress, { opacity: 1, duration: 0.3 }, '-=0.2')
+    .to(stepNodes, { opacity: 1, y: 0, duration: 0.4, stagger: 0.08 }, '-=0.2')
+    .to(connectors, { scaleX: 1, duration: 0.5, stagger: 0.06, ease: 'power2.out' }, '-=0.3')
+    .to(sideCards, { opacity: 1, x: 0, duration: 0.5, stagger: 0.1 }, '-=0.4')
+    .to(content, { opacity: 1, y: 0, duration: 0.5 }, '-=0.3')
+    .to(header, { opacity: 1, y: 0, duration: 0.4 }, '-=0.3')
+    .to(script, { opacity: 1, x: 0, duration: 0.5 }, '-=0.2')
+    .to(doItems, { opacity: 1, x: 0, duration: 0.35, stagger: 0.06 }, '-=0.3')
+    .to(dontItems, { opacity: 1, x: 0, duration: 0.35, stagger: 0.06 }, '-=0.4');
+  if (tip) tl.to(tip, { opacity: 1, y: 0, duration: 0.35 }, '-=0.2');
+  if (noteArea) tl.to(noteArea, { opacity: 1, y: 0, duration: 0.35 }, '-=0.15');
+  if (nav) tl.to(nav, { opacity: 1, y: 0, duration: 0.35 }, '-=0.15');
+
+  // Idle glow on the "Expand Strategy Guide" button — decorative only.
+  var drawerBtn = document.getElementById('openDrawerBtn');
+  if (drawerBtn) {
+    gsap.set(drawerBtn, {
+      boxShadow: '0 2px 10px rgba(59,130,246,0.20), inset 0 0 0 1px rgba(59,130,246,0.12)',
+      borderColor: 'rgba(59,130,246,0.35)'
+    });
+    gsap.to(drawerBtn, {
+      boxShadow: '0 4px 18px rgba(59,130,246,0.28), inset 0 0 0 1px rgba(59,130,246,0.18)',
+      borderColor: 'rgba(59,130,246,0.5)',
+      duration: 2, repeat: -1, yoyo: true, ease: 'sine.inOut'
+    });
+  }
+});
+</script>
+</body>
+</html>

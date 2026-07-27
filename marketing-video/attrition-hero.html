@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attrition Intelligence — Hero Animation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg:         #080A0F;
+  --panel:      #13171F;
+  --nested:     #1A2030;
+  --ivory:      #E8ECF4;
+  --muted:      #8893A8;
+  --violet:     #7B4FFF;
+  --amber:      #D4884A;
+  --teal:       #33A08F;
+  --border:     rgba(130,160,220,0.08);
+  --border-light: rgba(130,160,220,0.15);
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── CANVAS PARTICLES ── */
+#particles {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── AMBIENT GLOW ── */
+.ambient-glow {
+  position: fixed;
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(123,79,255,0.09) 0%, transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  pointer-events: none;
+  animation: glowDrift 10s ease-in-out infinite alternate;
+}
+@keyframes glowDrift {
+  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 0.7; }
+  100% { transform: translate(-48%, -52%) scale(1.15); opacity: 1; }
+}
+
+/* ── SCENE ── */
+.scene {
+  position: fixed; inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  perspective: 1200px;
+}
+
+/* ── PANEL CONTAINER (3D tilt) ── */
+.panel-wrap {
+  transform-style: preserve-3d;
+  animation: panelDrift 8s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes panelDrift {
+  0%   { transform: rotateY(-8deg) rotateX(3deg)  translateZ(0); }
+  50%  { transform: rotateY(-4deg) rotateX(1.5deg) translateZ(10px); }
+  100% { transform: rotateY(-8deg) rotateX(3deg)  translateZ(0); }
+}
+
+/* ── MAIN PANEL ── */
+.panel {
+  width: 680px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 36px 40px 32px;
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 4px 24px rgba(0,0,0,0.4),
+    0 20px 60px rgba(0,0,0,0.3),
+    0 0 120px rgba(123,79,255,0.04);
+}
+
+/* ── DIAGONAL LIGHT SWEEP ── */
+.light-sweep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  overflow: hidden;
+}
+.light-sweep::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -60%;
+  width: 40%; height: 200%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(130,160,220,0.03) 40%,
+    rgba(180,200,240,0.07) 50%,
+    rgba(130,160,220,0.03) 60%,
+    transparent 100%
+  );
+  animation: sweep 8s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes sweep {
+  0%, 10%  { transform: translateX(0); }
+  40%, 100% { transform: translateX(900px); }
+}
+
+/* ── HEADER ROW ── */
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.header-icon {
+  width: 20px; height: 20px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, var(--violet), #5C2FD4);
+  flex-shrink: 0;
+  position: relative;
+}
+.header-icon::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 2px;
+  border: 1.5px solid rgba(255,255,255,0.35);
+}
+.header-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── TITLE ── */
+.panel-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ivory);
+  line-height: 1.3;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+}
+
+/* ── SUBTEXT ── */
+.panel-subtext {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
+  margin-bottom: 28px;
+  max-width: 560px;
+}
+
+/* ── EMPLOYEE LIST ── */
+.employee-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.employee-row {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  background: var(--nested);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  gap: 14px;
+  position: relative;
+  transition: background 0.6s ease, border-color 0.6s ease;
+}
+.employee-row + .employee-row {
+  margin-top: 4px;
+}
+.employee-row.highlighted {
+  background: #1E2740;
+  border-color: var(--border-light);
+}
+
+/* ── AVATAR ── */
+.avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.avatar-inner {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ivory);
+}
+.avatar-1 .avatar-inner { background: linear-gradient(135deg, #2A3A5C, #1E2A44); }
+.avatar-2 .avatar-inner { background: linear-gradient(135deg, #3A2A5C, #2A1E44); }
+.avatar-3 .avatar-inner { background: linear-gradient(135deg, #1E3A44, #1A2E38); }
+
+/* ── EMPLOYEE NAME ── */
+.emp-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ivory);
+  min-width: 100px;
+  white-space: nowrap;
+}
+
+/* ── RISK PILL ── */
+.risk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.risk-pill.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+.risk-pill.amber {
+  color: var(--amber);
+  background: rgba(212,136,74,0.12);
+  border: 1px solid rgba(212,136,74,0.2);
+}
+.risk-pill.amber.pulse {
+  animation: pillPulse 2s ease-in-out infinite;
+}
+@keyframes pillPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+
+.risk-pill.teal {
+  color: var(--teal);
+  background: rgba(51,160,143,0.1);
+  border: 1px solid rgba(51,160,143,0.18);
+}
+
+/* ── SATISFACTION ── */
+.stat {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ivory);
+  white-space: nowrap;
+  min-width: 80px;
+  text-align: right;
+}
+.stat .label {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* ── ENGAGEMENT ── */
+.engagement {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ivory);
+  white-space: nowrap;
+}
+.teal-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+  animation: dotGlow 2s ease-in-out infinite;
+}
+@keyframes dotGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(51,160,143,0.4); }
+  50%      { box-shadow: 0 0 6px 2px rgba(51,160,143,0.3); }
+}
+
+/* ── AI ALERT BADGE ── */
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--violet);
+  background: rgba(123,79,255,0.1);
+  border: 1px solid rgba(123,79,255,0.22);
+  white-space: nowrap;
+  animation: badgePulse 3s ease-in-out infinite;
+}
+@keyframes badgePulse {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; }
+}
+.ai-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--violet);
+  animation: aiDotBlink 3s ease-in-out infinite;
+}
+@keyframes aiDotBlink {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+
+/* ── ROW STAGGER (initial reveal) ── */
+.employee-row {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: rowReveal 0.6s ease forwards;
+}
+.employee-row:nth-child(1) { animation-delay: 0.3s; }
+.employee-row:nth-child(2) { animation-delay: 0.55s; }
+.employee-row:nth-child(3) { animation-delay: 0.8s; }
+@keyframes rowReveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── GRAIN OVERLAY ── */
+.grain {
+  position: fixed; inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+
+/* ── COUNTER ── */
+.stat-val {
+  font-variant-numeric: tabular-nums;
+}
+</style>
+</head>
+<body>
+
+<!-- PARTICLES CANVAS -->
+<canvas id="particles"></canvas>
+
+<!-- AMBIENT GLOW -->
+<div class="ambient-glow"></div>
+
+<!-- GRAIN -->
+<div class="grain"></div>
+
+<!-- SCENE -->
+<div class="scene">
+  <div class="panel-wrap">
+    <div class="panel">
+      <!-- LIGHT SWEEP -->
+      <div class="light-sweep"></div>
+
+      <!-- HEADER -->
+      <div class="header-row">
+        <div class="header-icon"></div>
+        <span class="header-label">Attrition Intelligence</span>
+      </div>
+
+      <!-- TITLE -->
+      <div class="panel-title">
+        Predict Attrition Before<br>It Happens
+      </div>
+
+      <!-- SUBTEXT -->
+      <div class="panel-subtext">
+        Continuously monitor employee satisfaction, engagement and workplace
+        trends to identify employees who may require HR attention before
+        resignation risks increase.
+      </div>
+
+      <!-- EMPLOYEE LIST -->
+      <div class="employee-list">
+        <!-- ROW 1 -->
+        <div class="employee-row highlighted" id="row1">
+          <div class="avatar avatar-1"><div class="avatar-inner">SM</div></div>
+          <span class="emp-name">Sarah Mitchell</span>
+          <div class="risk-pill amber visible" id="pill1">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M5 3v2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Attrition Risk: Medium
+          </div>
+          <div class="stat"><span class="label">Satisfaction:</span> <span class="stat-val" id="sat1">0%</span></div>
+          <div class="engagement"><span class="teal-dot"></span> Stable</div>
+          <div class="ai-badge"><span class="ai-dot"></span> AI Alert Active</div>
+        </div>
+
+        <!-- ROW 2 -->
+        <div class="employee-row" id="row2">
+          <div class="avatar avatar-2"><div class="avatar-inner">JR</div></div>
+          <span class="emp-name">James Rodriguez</span>
+          <div class="risk-pill amber" id="pill2">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M5 3v2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Attrition Risk: Medium
+          </div>
+          <div class="stat"><span class="label">Satisfaction:</span> <span class="stat-val" id="sat2">0%</span></div>
+          <div class="engagement"><span class="teal-dot"></span> Stable</div>
+          <div class="ai-badge"><span class="ai-dot"></span> AI Alert Active</div>
+        </div>
+
+        <!-- ROW 3 -->
+        <div class="employee-row" id="row3">
+          <div class="avatar avatar-3"><div class="avatar-inner">AP</div></div>
+          <span class="emp-name">Aisha Patel</span>
+          <div class="risk-pill amber" id="pill3">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M5 3v2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Attrition Risk: Medium
+          </div>
+          <div class="stat"><span class="label">Satisfaction:</span> <span class="stat-val" id="sat3">0%</span></div>
+          <div class="engagement"><span class="teal-dot"></span> Stable</div>
+          <div class="ai-badge"><span class="ai-dot"></span> AI Alert Active</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── PARTICLES / BOKEH ──
+(function() {
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  const particles = [];
+  const COUNT = 40;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  for (let i = 0; i < COUNT; i++) {
+    particles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 3 + 1,
+      dx: (Math.random() - 0.5) * 0.15,
+      dy: (Math.random() - 0.5) * 0.12,
+      alpha: Math.random() * 0.06 + 0.02,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    for (const p of particles) {
+      p.x += p.dx;
+      p.y += p.dy;
+      if (p.x < -10) p.x = W + 10;
+      if (p.x > W + 10) p.x = -10;
+      if (p.y < -10) p.y = H + 10;
+      if (p.y > H + 10) p.y = -10;
+
+      const flicker = p.alpha + Math.sin(t * 0.001 + p.phase) * 0.015;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(130,155,220,${flicker})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ── SATISFACTION COUNTER ──
+(function() {
+  const targets = [
+    { el: document.getElementById('sat1'), from: 74, to: 82 },
+    { el: document.getElementById('sat2'), from: 68, to: 76 },
+    { el: document.getElementById('sat3'), from: 80, to: 88 }
+  ];
+  const duration = 2200;
+  const start = performance.now();
+
+  function tick(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    for (const t of targets) {
+      const val = Math.round(t.from + (t.to - t.from) * ease);
+      t.el.textContent = val + '%';
+    }
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+
+// ── ROW HIGHLIGHT + PILL ENTRANCE ──
+(function() {
+  const row2 = document.getElementById('row2');
+  const row3 = document.getElementById('row3');
+  const pill2 = document.getElementById('pill2');
+  const pill3 = document.getElementById('pill3');
+
+  setTimeout(() => {
+    row2.classList.add('highlighted');
+    pill2.classList.add('visible');
+  }, 3000);
+
+  setTimeout(() => {
+    row2.classList.remove('highlighted');
+    row3.classList.add('highlighted');
+    pill3.classList.add('visible');
+  }, 6500);
+
+  // loop highlight cycle
+  setInterval(() => {
+    row2.classList.remove('highlighted');
+    row3.classList.remove('highlighted');
+    setTimeout(() => row2.classList.add('highlighted'), 500);
+    setTimeout(() => { row2.classList.remove('highlighted'); row3.classList.add('highlighted'); }, 3500);
+    setTimeout(() => { row3.classList.remove('highlighted'); }, 6500);
+  }, 8000);
+})();
+</script>
+</body>
+</html>

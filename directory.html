@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Copilot - Employee Directory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Raleway:wght@600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+</head>
+<body>
+<button class="mobile-toggle" id="mobileToggle">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+</button>
+
+<div class="page-wrapper">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-mark">HR</div>
+        HR Copilot
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Command Center</div>
+      <a href="dashboard.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+
+      <div class="nav-section">Workspace</div>
+      <a href="directory.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Directory
+      </a>
+      <a href="sync.html?employee=Priya%20Sharma" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Sync Rooms
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        Reports
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar" id="userAvatar">K</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">Kavita Sharma</div>
+        <div class="user-role" id="userRole">HR Admin</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div>
+          <div class="dir-title" id="dirTitle">Employee Directory</div>
+          <div class="dir-subtitle" id="dirSubtitle">Search, manage and monitor employees across your organization.</div>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <button class="icon-btn" id="signOutBtn" title="Sign Out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <!-- SEARCH & FILTERS -->
+      <div class="dir-toolbar dir-anim">
+        <div class="dir-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="dirSearch" class="dir-search-input" placeholder="Search by name, department, or email...">
+        </div>
+        <div class="dir-filters">
+          <select id="dirDeptFilter" class="dir-select">
+            <option value="">All Departments</option>
+            <option value="Engineering">Engineering</option>
+            <option value="Design">Design</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Sales">Sales</option>
+            <option value="Operations">Operations</option>
+            <option value="Finance">Finance</option>
+            <option value="Product">Product</option>
+            <option value="HR">HR</option>
+          </select>
+          <select id="dirStatusFilter" class="dir-select">
+            <option value="">All Status</option>
+            <option value="At Risk">At Risk</option>
+            <option value="Watch">Watch</option>
+            <option value="Healthy">Healthy</option>
+          </select>
+        </div>
+        <div class="dir-count" id="dirCount">10 employees</div>
+      </div>
+
+      <!-- EMPLOYEE TABLE -->
+      <div class="card dir-anim" style="padding:0;overflow:hidden;">
+        <table class="emp-table dir-table-override" id="dirTable">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Department</th>
+              <th>Email</th>
+              <th>Wellness</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="dirTableBody">
+            <tr>
+              <td><span class="emp-name">Rohan Mehta</span></td>
+              <td><span class="emp-dept">Engineering</span></td>
+              <td><span style="font-size:0.8rem;color:var(--muted);">rohan@acme.com</span></td>
+              <td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill low" style="width:18%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:var(--red);">18</span></div></td>
+              <td><span class="badge critical">At Risk</span></td>
+              <td><button class="btn btn-sm btn-primary">Sync</button></td>
+            </tr>
+            <tr>
+              <td><span class="emp-name">Priya Sharma</span></td>
+              <td><span class="emp-dept">Design</span></td>
+              <td><span style="font-size:0.8rem;color:var(--muted);">priya@acme.com</span></td>
+              <td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill low" style="width:32%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:var(--red);">32</span></div></td>
+              <td><span class="badge critical">At Risk</span></td>
+              <td><button class="btn btn-sm btn-primary">Sync</button></td>
+            </tr>
+            <tr>
+              <td><span class="emp-name">Amit Verma</span></td>
+              <td><span class="emp-dept">Marketing</span></td>
+              <td><span style="font-size:0.8rem;color:var(--muted);">amit@acme.com</span></td>
+              <td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill medium" style="width:48%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:var(--amber);">48</span></div></td>
+              <td><span class="badge warning">Watch</span></td>
+              <td><button class="btn btn-sm btn-primary">Sync</button></td>
+            </tr>
+            <tr>
+              <td><span class="emp-name">Neha Gupta</span></td>
+              <td><span class="emp-dept">Sales</span></td>
+              <td><span style="font-size:0.8rem;color:var(--muted);">neha@acme.com</span></td>
+              <td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill medium" style="width:55%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:var(--amber);">55</span></div></td>
+              <td><span class="badge warning">Watch</span></td>
+              <td><button class="btn btn-sm btn-primary">Sync</button></td>
+            </tr>
+            <tr>
+              <td><span class="emp-name">Vikash Kumar</span></td>
+              <td><span class="emp-dept">Operations</span></td>
+              <td><span style="font-size:0.8rem;color:var(--muted);">vikash@acme.com</span></td>
+              <td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill medium" style="width:62%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:var(--amber);">62</span></div></td>
+              <td><span class="badge healthy">Healthy</span></td>
+              <td><button class="btn btn-sm">View</button></td>
+            </tr>
+            <tr>
+              <td><span class="emp-name">Deepak Joshi</span></td>
+              <td><span class="emp-dept">Finance</span></td>
+              <td><span style="font-size:0.8rem;color:var(--muted);">deepak@acme.com</span></td>
+              <td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill high" style="width:81%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:var(--teal);">81</span></div></td>
+              <td><span class="badge healthy">Healthy</span></td>
+              <td><button class="btn btn-sm">View</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- PAGINATION -->
+      <div class="dir-pagination dir-anim" id="dirPagination">
+        <button class="btn btn-sm btn-primary">1</button>
+        <button class="btn btn-sm">2</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+window.addEventListener('load', function() {
+  var anims = document.querySelectorAll('.dir-anim');
+  gsap.set(anims, { opacity: 0, y: 20 });
+  gsap.to(anims, {
+    opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power3.out', delay: 0.2
+  });
+
+  var rows = document.querySelectorAll('.emp-table tbody tr');
+  gsap.set(rows, { opacity: 0, x: -12 });
+  gsap.to(rows, {
+    opacity: 1, x: 0, duration: 0.35, stagger: 0.05, ease: 'power2.out', delay: 0.5
+  });
+
+  var fills = document.querySelectorAll('.index-bar .fill');
+  fills.forEach(function(fill) {
+    var targetWidth = fill.style.width;
+    fill.style.width = '0%';
+    gsap.to(fill, { width: targetWidth, duration: 1.0, ease: 'power2.out', delay: 0.7 });
+  });
+});
+</script>
+</body>
+</html>
