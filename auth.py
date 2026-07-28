@@ -3,7 +3,9 @@ from datetime import datetime, timezone
 from authlib.integrations.flask_client import OAuth
 from flask import Blueprint, redirect, session, url_for
 
+from blind_index import blind_index
 from extensions import get_db
+from field_encryption import decrypt_fields, encrypt_fields
 
 oauth = OAuth()
 auth_bp = Blueprint("auth", __name__)
@@ -61,7 +63,8 @@ def google_callback():
         if not pending_org:
             return redirect("/onboarding.html?error=session_expired")
 
-        existing_user = db.users.find_one({"email": email})
+        email_hash = blind_index(email)
+        existing_user = db.users.find_one({"email_hash": email_hash})
         if existing_user:
             # This email already has an account — don't silently create a
             # second org/session for it. Send them to sign in instead.
@@ -79,10 +82,17 @@ def google_callback():
         }
         org_id = db.organizations.insert_one(org_doc).inserted_id
 
+        # Encrypt PII fields with envelope encryption (AES-256-GCM + Cloud KMS)
+        encrypted_fields, wrapped_dek = encrypt_fields({
+            "name": name,
+            "email": email,
+        })
+
         user_doc = {
             "google_id": google_id,
-            "email": email,
-            "name": name,
+            "email_hash": email_hash,        # blind index for lookups
+            "encrypted": encrypted_fields,    # { name: "<base64>", email: "<base64>" }
+            "wrapped_dek": wrapped_dek,       # KMS-wrapped DEK
             "picture": picture,
             "org_id": org_id,
             "role": "admin",
@@ -97,7 +107,8 @@ def google_callback():
         return redirect("/onboarding-complete.html")
 
     # --- sign-in flow ---
-    user = db.users.find_one({"email": email})
+    email_hash = blind_index(email)
+    user = db.users.find_one({"email_hash": email_hash})
     if not user:
         return redirect("/signin.html?error=no_account")
 
@@ -105,8 +116,13 @@ def google_callback():
         {"_id": user["_id"]},
         {"$set": {"last_login": datetime.now(timezone.utc)}},
     )
+
+    # Decrypt PII for the session
+    pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
     session["user_id"] = str(user["_id"])
     session["org_id"] = str(user["org_id"])
+    session["user_name"] = pii.get("name", "")
+    session["user_email"] = pii.get("email", "")
     return redirect("/dashboard.html")
 
 

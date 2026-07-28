@@ -16,6 +16,16 @@ class Config:
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
+    # Google Cloud KMS (field-level envelope encryption)
+    GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
+    GCP_KMS_LOCATION = os.environ.get("GCP_KMS_LOCATION", "asia-south1")
+    GCP_KMS_KEY_RING = os.environ.get("GCP_KMS_KEY_RING", "voovr-keyring")
+    GCP_KMS_KEY = os.environ.get("GCP_KMS_KEY", "voovr-field-encryption-key")
+
+    # Blind-index & JWT secrets
+    HASH_INDEX_SECRET = os.environ.get("HASH_INDEX_SECRET")
+    JWT_SECRET = os.environ.get("JWT_SECRET")
+
     # Cookie/session behaviour
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

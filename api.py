@@ -3,6 +3,7 @@ from bson.errors import InvalidId
 from flask import Blueprint, jsonify, request, session
 
 from extensions import get_db
+from field_encryption import decrypt_fields
 
 api_bp = Blueprint("api", __name__)
 
@@ -47,11 +48,13 @@ def me():
 
     org = db.organizations.find_one({"_id": user["org_id"]})
 
+    pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
+
     return jsonify(
         {
             "id": str(user["_id"]),
-            "name": user["name"],
-            "email": user["email"],
+            "name": pii.get("name", ""),
+            "email": pii.get("email", ""),
             "role": user["role"],
             "picture": user.get("picture"),
             "just_registered": session.pop("just_registered", False),
