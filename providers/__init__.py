@@ -2,15 +2,23 @@ from flask import current_app
 
 
 def get_stt_provider():
-    name = current_app.config.get("STT_PROVIDER", "deepseek")
+    name = current_app.config.get("STT_PROVIDER", "openai")
+    if name == "openai":
+        from providers.openai_stt import OpenAIWhisperSTT
+        return OpenAIWhisperSTT()
     if name == "deepseek":
+        # NOTE: DeepSeek has no audio/transcription API — this will fail at
+        # request time. Kept only for reference; use STT_PROVIDER=openai.
         from providers.deepseek_stt import DeepSeekSTT
         return DeepSeekSTT()
     raise ValueError(f"Unknown STT provider: {name}")
 
 
 def get_llm_provider():
-    name = current_app.config.get("LLM_PROVIDER", "openai")
+    name = current_app.config.get("LLM_PROVIDER", "deepseek")
+    if name == "deepseek":
+        from providers.llm import DeepSeekLLM
+        return DeepSeekLLM()
     if name == "openai":
         from providers.llm import OpenAILLM
         return OpenAILLM()

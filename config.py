@@ -27,17 +27,22 @@ class Config:
     JWT_SECRET = os.environ.get("JWT_SECRET")
 
     # Provider configuration
-    STT_PROVIDER = os.environ.get("STT_PROVIDER", "deepseek")
-    LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "openai")
+    # STT: DeepSeek has no audio/transcription API, so audio -> text uses
+    # OpenAI Whisper. LLM: DeepSeek's chat API analyzes the transcript
+    # (summary/sentiment/risks) once we have text.
+    STT_PROVIDER = os.environ.get("STT_PROVIDER", "openai")
+    LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "deepseek")
     STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "local")
 
-    # OpenAI
+    # OpenAI (used for Whisper speech-to-text)
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_KEY", "")
     OPENAI_ANALYSIS_MODEL = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")
+    OPENAI_STT_MODEL = os.environ.get("OPENAI_STT_MODEL", "whisper-1")
 
-    # DeepSeek
+    # DeepSeek (used for transcript analysis)
     DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("DEEPSSEK_API", "")
-    DEEPSEEK_STT_URL = os.environ.get("DEEPSEEK_STT_URL", "https://api.deepseek.com/v1/audio/transcriptions")
+    DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+    DEEPSEEK_ANALYSIS_MODEL = os.environ.get("DEEPSEEK_ANALYSIS_MODEL", "deepseek-chat")
 
     # Audio storage
     AUDIO_STORAGE_PATH = os.environ.get("AUDIO_STORAGE_PATH", "static/audio/sessions")
