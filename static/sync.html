@@ -329,6 +329,7 @@ function loadSessions() {
 
         var item = document.createElement('div');
         item.className = 'card';
+        item.setAttribute('data-session-id', s.id);
         item.style.cssText = 'cursor:pointer;padding:0.8rem 1rem;border:1px solid var(--border);border-radius:8px;transition:all 0.2s;' + (selectedSessionId === s.id ? 'border-color:var(--violet);box-shadow:0 0 12px var(--violet-glow);' : '');
         item.innerHTML =
           '<div style="display:flex;align-items:center;justify-content:space-between;">' +
@@ -337,7 +338,7 @@ function loadSessions() {
               '<div style="min-width:0;">' +
                 '<div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + formatDate(s.created_at) + '</div>' +
                 '<div style="font-family:var(--font-m);font-size:0.55rem;color:var(--ivory-faint);margin-top:2px;">' +
-                  (s.word_count ? s.word_count + ' words' : '') +
+                  ((s.transcript && s.transcript.word_count) ? s.transcript.word_count + ' words' : '') +
                   (hasAnalysis ? ' · Analyzed' : '') +
                 '</div>' +
               '</div>' +
@@ -362,10 +363,12 @@ function selectSession(sessionId) {
     c.style.borderColor = 'var(--border)';
     c.style.boxShadow = 'none';
   });
-  var items = document.querySelectorAll('#sessionList .card');
-  for (var i = 0; i < items.length; i++) {
-    if (items[i].textContent.indexOf(formatDate(new Date())) > -1) continue;
-  }
+  document.querySelectorAll('#sessionList .card').forEach(function(c) {
+    if (c.getAttribute('data-session-id') === sessionId) {
+      c.style.borderColor = 'var(--violet)';
+      c.style.boxShadow = '0 0 12px var(--violet-glow)';
+    }
+  });
 
   fetch('/api/sessions/' + sessionId)
     .then(function(r) {
@@ -376,8 +379,8 @@ function selectSession(sessionId) {
       // Show transcript
       document.getElementById('transcriptSessionLabel').textContent = formatDate(s.created_at);
       var transcriptEl = document.getElementById('transcriptContent');
-      if (s.transcript) {
-        transcriptEl.textContent = s.transcript;
+      if (s.transcript && (s.transcript.edited || s.transcript.raw)) {
+        transcriptEl.textContent = s.transcript.edited || s.transcript.raw;
         transcriptEl.style.display = 'block';
         document.getElementById('transcriptEmpty').style.display = 'none';
       } else {
