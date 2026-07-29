@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Copilot - New Session</title>
+<script>
+(function(){
+  try {
+    var saved = localStorage.getItem('voohr-theme');
+    if (saved === 'light' || saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+  } catch (e) {}
+})();
+</script>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+</head>
+<body style="visibility:hidden">
+<script>
+fetch('/api/me').then(function(res){
+  if (!res.ok) { window.location.href = 'signin.html'; return null; }
+  return res.json();
+}).then(function(data){
+  if (!data) return;
+  var nameEl = document.getElementById('userName');
+  var roleEl = document.getElementById('userRole');
+  var avatarEl = document.getElementById('userAvatar');
+  if (nameEl) nameEl.textContent = data.name;
+  if (roleEl) roleEl.textContent = data.role === 'admin' ? 'HR Admin' : data.role;
+  if (avatarEl) avatarEl.textContent = (data.name || 'U').trim().charAt(0).toUpperCase();
+  document.body.style.visibility = 'visible';
+  loadEmployee();
+}).catch(function(){
+  window.location.href = 'signin.html';
+});
+
+var employeeId = new URLSearchParams(window.location.search).get('employee_id');
+var mediaRecorder = null;
+var audioChunks = [];
+var recordingTimer = null;
+var recordingSeconds = 0;
+var isRecording = false;
+
+function escHtml(str) {
+  if (!str) return '';
+  var d = document.createElement('div');
+  d.appendChild(document.createTextNode(str));
+  return d.innerHTML;
+}
+
+function loadEmployee() {
+  if (!employeeId) {
+    document.getElementById('sessionEmployeeName').textContent = 'No employee selected';
+    document.getElementById('sessionBreadcrumb').textContent = 'Select an employee from the list';
+    return;
+  }
+  fetch('/api/employees/' + employeeId)
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(emp) {
+      if (!emp) return;
+      document.getElementById('sessionEmployeeName').textContent = emp.name;
+      document.getElementById('sessionBreadcrumb').textContent = emp.employee_id + ' — ' + (emp.department || '');
+      var initials = (emp.name || '').trim().split(' ').map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2) || '?';
+      document.getElementById('sessionAvatar').textContent = initials;
+    });
+}
+
+function formatTime(sec) {
+  var m = Math.floor(sec / 60);
+  var s = sec % 60;
+  return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function updateTimer() {
+  document.getElementById('recordingTimer').textContent = formatTime(recordingSeconds);
+}
+
+function setStatus(text) {
+  document.getElementById('recordingStatus').textContent = text;
+}
+
+function updateWaveform(active) {
+  var bars = document.querySelectorAll('.wf-bar');
+  bars.forEach(function(bar, i) {
+    if (active) {
+      var h = 4 + Math.random() * 28;
+      bar.style.height = h + 'px';
+      bar.style.animationDelay = (i * 0.1) + 's';
+    } else {
+      bar.style.height = '4px';
+    }
+  });
+}
+
+function startRecording() {
+  if (isRecording) return;
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+    isRecording = true;
+    audioChunks = [];
+    recordingSeconds = 0;
+    updateTimer();
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    mediaRecorder.ondataavailable = function(e) {
+      if (e.data.size > 0) audioChunks.push(e.data);
+    };
+    mediaRecorder.onstop = function() {
+      stream.getTracks().forEach(function(t) { t.stop(); });
+      isRecording = false;
+      clearInterval(recordingTimer);
+      updateWaveform(false);
+      setStatus('Processing audio...');
+      document.getElementById('micBtn').classList.remove('recording');
+      processAudio();
+    };
+    mediaRecorder.start(250);
+    recordingTimer = setInterval(function() {
+      recordingSeconds++;
+      updateTimer();
+    }, 1000);
+    setStatus('Recording... tap to stop');
+    document.getElementById('micBtn').classList.add('recording');
+    updateWaveform(true);
+    document.getElementById('recordIcon').style.display = 'none';
+    document.getElementById('stopIcon').style.display = '';
+  }).catch(function(err) {
+    alert('Microphone access denied. Please allow microphone permissions.');
+  });
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+}
+
+function toggleRecording() {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+function processAudio() {
+  if (audioChunks.length === 0) {
+    setStatus('No audio recorded');
+    document.getElementById('recordIcon').style.display = '';
+    document.getElementById('stopIcon').style.display = 'none';
+    return;
+  }
+  var blob = new Blob(audioChunks, { type: 'audio/webm' });
+  var formData = new FormData();
+  formData.append('audio', blob, 'recording.webm');
+  fetch('/api/transcribe', {
+    method: 'POST',
+    body: formData,
+  }).then(function(r) {
+    if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'transcription failed'); });
+    return r.json();
+  }).then(function(data) {
+    document.getElementById('transcriptArea').value = data.text || '';
+    updateWordCount();
+    setStatus('Transcription ready — edit if needed');
+    document.getElementById('recordIcon').style.display = '';
+    document.getElementById('stopIcon').style.display = 'none';
+    document.getElementById('saveBtn').disabled = false;
+  }).catch(function(err) {
+    setStatus('Error: ' + err.message);
+    document.getElementById('recordIcon').style.display = '';
+    document.getElementById('stopIcon').style.display = 'none';
+  });
+}
+
+function updateWordCount() {
+  var text = document.getElementById('transcriptArea').value.trim();
+  var count = text ? text.split(/\s+/).length : 0;
+  document.getElementById('wordCount').textContent = count + ' words';
+}
+
+function saveSession() {
+  var text = document.getElementById('transcriptArea').value.trim();
+  if (!text) {
+    alert('Transcript is empty. Record something first.');
+    return;
+  }
+  document.getElementById('saveBtn').disabled = true;
+  document.getElementById('saveBtn').textContent = 'Saving...';
+  fetch('/api/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      employee_id: employeeId,
+      raw_text: text,
+      edited_text: text,
+      duration_seconds: recordingSeconds,
+      source: 'voice_dictation',
+      recording_device: 'browser',
+      recording_type: 'webm',
+    }),
+  }).then(function(r) {
+    if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'save failed'); });
+    return r.json();
+  }).then(function() {
+    showToast('Session saved successfully. Ready for AI Sync.');
+    setTimeout(function() {
+      window.location.href = 'dashboard.html';
+    }, 2000);
+  }).catch(function(err) {
+    document.getElementById('saveBtn').disabled = false;
+    document.getElementById('saveBtn').textContent = 'Save Session';
+    alert('Failed to save: ' + err.message);
+  });
+}
+
+function discardSession() {
+  if (document.getElementById('transcriptArea').value.trim()) {
+    if (!confirm('Discard this recording?')) return;
+  }
+  window.location.href = 'dashboard.html';
+}
+
+function showToast(msg) {
+  var toast = document.createElement('div');
+  toast.className = 'toast-notification';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  gsap.set(toast, { y: 60, opacity: 0 });
+  gsap.to(toast, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
+  setTimeout(function() {
+    gsap.to(toast, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { toast.remove(); }});
+  }, 4000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var backBtn = document.getElementById('backBtn');
+  if (backBtn) backBtn.addEventListener('click', function(e) { e.preventDefault(); discardSession(); });
+  document.getElementById('micBtn').addEventListener('click', toggleRecording);
+  document.getElementById('transcriptArea').addEventListener('input', updateWordCount);
+  document.getElementById('saveBtn').addEventListener('click', saveSession);
+  document.getElementById('discardBtn').addEventListener('click', discardSession);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') discardSession();
+    if (e.key === ' ' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+      e.preventDefault();
+      toggleRecording();
+    }
+  });
+});
+</script>
+
+<style>
+.dictation-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--void);
+}
+.dictation-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+.dictation-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+.dictation-header .emp-avatar-lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--violet), var(--amber));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-d);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--void);
+  margin: 0 auto 0.8rem;
+}
+.dictation-header h1 {
+  font-family: var(--font-d);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ivory);
+  margin: 0;
+}
+.dictation-header .breadcrumb {
+  font-family: var(--font-m);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ivory-faint);
+  margin-top: 0.3rem;
+}
+.recording-area {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+.mic-btn {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--ink);
+  color: var(--ivory-faint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+.mic-btn:hover {
+  border-color: var(--border-lit);
+  color: var(--ivory);
+  background: var(--ivory-ghost);
+}
+.mic-btn.recording {
+  border-color: var(--red);
+  color: var(--red);
+  box-shadow: 0 0 20px rgba(232,69,69,0.25);
+  animation: micPulse 1.5s ease-in-out infinite;
+}
+.mic-btn svg {
+  width: 32px;
+  height: 32px;
+}
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(232,69,69,0.25); }
+  50% { box-shadow: 0 0 36px rgba(232,69,69,0.45); }
+}
+.timer {
+  font-family: var(--font-m);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--ivory);
+  margin-top: 1rem;
+  letter-spacing: 0.05em;
+}
+.status-text {
+  font-family: var(--font-m);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ivory-faint);
+  margin-top: 0.6rem;
+}
+.waveform {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  height: 32px;
+  margin-top: 1rem;
+}
+.wf-bar {
+  width: 4px;
+  background: var(--amber);
+  border-radius: 2px;
+  transition: height 0.15s ease;
+  height: 4px;
+}
+.transcript-section {
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+.transcript-area {
+  width: 100%;
+  min-height: 120px;
+  background: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  font-family: var(--font-b);
+  font-size: 0.85rem;
+  color: var(--ivory);
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.transcript-area:focus {
+  border-color: var(--violet);
+}
+.transcript-meta {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.4rem;
+  font-family: var(--font-m);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ivory-faint);
+}
+.dictation-actions {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: center;
+}
+.dictation-actions .btn {
+  min-width: 140px;
+  justify-content: center;
+}
+</style>
+
+<div class="page-wrapper">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-mark">HR</div>
+        HR Copilot
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Command Center</div>
+      <a href="dashboard.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <div class="nav-section">Workspace</div>
+      <a href="directory.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Directory
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        Reports
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar" id="userAvatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">Loading...</div>
+        <div class="user-role" id="userRole">HR Admin</div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div>
+          <div class="page-title" id="sessionEmployeeName">New Session</div>
+          <div class="breadcrumb">
+            <a href="dashboard.html" style="color:var(--ivory-faint);text-decoration:none;">Dashboard</a>
+            <span style="color:var(--ivory-faint);margin:0 4px;">/</span>
+            <span id="sessionBreadcrumb">Select an employee</span>
+          </div>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <button class="icon-btn" id="backBtn" title="Back to Dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <div class="dictation-page">
+        <div class="dictation-main">
+          <div class="dictation-header">
+            <div class="emp-avatar-lg" id="sessionAvatar">?</div>
+            <h1 id="sessionEmployeeName">Loading...</h1>
+            <div class="breadcrumb" id="sessionBreadcrumb"></div>
+          </div>
+
+          <div class="recording-area">
+            <button class="mic-btn" id="micBtn" title="Tap to record">
+              <svg id="recordIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              <svg id="stopIcon" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none;"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            </button>
+            <div class="timer" id="recordingTimer">00:00</div>
+            <div class="status-text" id="recordingStatus">Tap to start recording</div>
+            <div class="waveform" id="waveform">
+              <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
+              <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
+              <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
+              <div class="wf-bar"></div>
+            </div>
+          </div>
+
+          <div class="transcript-section">
+            <textarea class="transcript-area" id="transcriptArea" placeholder="Transcribed text will appear here. You can edit it before saving."></textarea>
+            <div class="transcript-meta"><span id="wordCount">0 words</span></div>
+          </div>
+
+          <div class="dictation-actions">
+            <button class="btn btn-sm" id="discardBtn">Discard</button>
+            <button class="btn btn-primary btn-sm" id="saveBtn" disabled>Save Session</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

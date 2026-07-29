@@ -4,9 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HR Copilot - Employee Directory</title>
+<script>
+(function(){
+  try {
+    var saved = localStorage.getItem('voohr-theme');
+    if (saved === 'light' || saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+  } catch (e) {}
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Raleway:wght@600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Raleway:wght@600;700;800&family=Roboto+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -69,6 +79,10 @@
         </div>
       </div>
       <div class="top-bar-right">
+        <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle light/dark theme">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
         <button class="icon-btn" id="signOutBtn" title="Sign Out">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
@@ -76,6 +90,28 @@
     </div>
 
     <div class="content-area">
+      <!-- HEADER ACTIONS -->
+      <div class="card-header dir-anim" style="margin-bottom:1rem;flex-wrap:wrap;gap:0.8rem;">
+        <div class="card-header-left">
+          <h3 class="card-title" style="text-transform:none;font-size:1rem;">Employee Directory</h3>
+          <span class="badge healthy" id="dirHeaderCount">10 Employees</span>
+        </div>
+        <div class="card-header-actions">
+          <button class="btn btn-sm btn-outline" type="button" title="Filter options">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+            Filters
+          </button>
+          <button class="btn btn-sm btn-outline" type="button" title="Export directory">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+          <button class="btn btn-sm btn-gradient" type="button" title="Add a new employee">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Employee
+          </button>
+        </div>
+      </div>
+
       <!-- SEARCH & FILTERS -->
       <div class="dir-toolbar dir-anim">
         <div class="dir-search">
@@ -100,6 +136,7 @@
             <option value="Watch">Watch</option>
             <option value="Healthy">Healthy</option>
           </select>
+          <button class="dir-clear-btn" id="dirClearFilters" type="button">Clear</button>
         </div>
         <div class="dir-count" id="dirCount">10 employees</div>
       </div>
@@ -109,97 +146,175 @@
         <table class="emp-table dir-table-override" id="dirTable">
           <thead>
             <tr>
+              <th>Employee ID</th>
               <th>Employee</th>
               <th>Department</th>
-              <th>Email</th>
               <th>Wellness</th>
               <th>Status</th>
-              <th></th>
+              <th>Joining Date</th>
+                <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="dirTableBody">
-            <tr>
-              <td><span class="emp-name">Rohan Mehta</span></td>
-              <td><span class="emp-dept">Engineering</span></td>
-              <td><span style="font-size:0.8rem;color:var(--muted);">rohan@acme.com</span></td>
-              <td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill low" style="width:18%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:var(--red);">18</span></div></td>
-              <td><span class="badge critical">At Risk</span></td>
-              <td><button class="btn btn-sm btn-primary">Sync</button></td>
-            </tr>
-            <tr>
-              <td><span class="emp-name">Priya Sharma</span></td>
-              <td><span class="emp-dept">Design</span></td>
-              <td><span style="font-size:0.8rem;color:var(--muted);">priya@acme.com</span></td>
-              <td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill low" style="width:32%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:var(--red);">32</span></div></td>
-              <td><span class="badge critical">At Risk</span></td>
-              <td><button class="btn btn-sm btn-primary">Sync</button></td>
-            </tr>
-            <tr>
-              <td><span class="emp-name">Amit Verma</span></td>
-              <td><span class="emp-dept">Marketing</span></td>
-              <td><span style="font-size:0.8rem;color:var(--muted);">amit@acme.com</span></td>
-              <td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill medium" style="width:48%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:var(--amber);">48</span></div></td>
-              <td><span class="badge warning">Watch</span></td>
-              <td><button class="btn btn-sm btn-primary">Sync</button></td>
-            </tr>
-            <tr>
-              <td><span class="emp-name">Neha Gupta</span></td>
-              <td><span class="emp-dept">Sales</span></td>
-              <td><span style="font-size:0.8rem;color:var(--muted);">neha@acme.com</span></td>
-              <td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill medium" style="width:55%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:var(--amber);">55</span></div></td>
-              <td><span class="badge warning">Watch</span></td>
-              <td><button class="btn btn-sm btn-primary">Sync</button></td>
-            </tr>
-            <tr>
-              <td><span class="emp-name">Vikash Kumar</span></td>
-              <td><span class="emp-dept">Operations</span></td>
-              <td><span style="font-size:0.8rem;color:var(--muted);">vikash@acme.com</span></td>
-              <td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill medium" style="width:62%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:var(--amber);">62</span></div></td>
-              <td><span class="badge healthy">Healthy</span></td>
-              <td><button class="btn btn-sm">View</button></td>
-            </tr>
-            <tr>
-              <td><span class="emp-name">Deepak Joshi</span></td>
-              <td><span class="emp-dept">Finance</span></td>
-              <td><span style="font-size:0.8rem;color:var(--muted);">deepak@acme.com</span></td>
-              <td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill high" style="width:81%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:var(--teal);">81</span></div></td>
-              <td><span class="badge healthy">Healthy</span></td>
-              <td><button class="btn btn-sm">View</button></td>
-            </tr>
-          </tbody>
+          <tbody id="dirTableBody"></tbody>
         </table>
-      </div>
 
-      <!-- PAGINATION -->
-      <div class="dir-pagination dir-anim" id="dirPagination">
-        <button class="btn btn-sm btn-primary">1</button>
-        <button class="btn btn-sm">2</button>
+        <!-- PAGINATION -->
+        <div class="pagination-bar" id="dirPagination">
+          <span id="dirPaginationText">Showing 1 to 6 of 10 employees</span>
+          <div class="pagination-pages">
+            <button class="page-btn" disabled aria-label="Previous page">&lsaquo;</button>
+            <button class="page-btn active" data-page="1">1</button>
+            <button class="page-btn" data-page="2">2</button>
+            <button class="page-btn" aria-label="Next page">&rsaquo;</button>
+          </div>
+        </div>
       </div>
     </div>
   </main>
 </div>
 
 <script>
-window.addEventListener('load', function() {
-  var anims = document.querySelectorAll('.dir-anim');
-  gsap.set(anims, { opacity: 0, y: 20 });
-  gsap.to(anims, {
-    opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power3.out', delay: 0.2
-  });
+// Live search + department/status filters
+(function() {
+  var search = document.getElementById('dirSearch');
+  var deptFilter = document.getElementById('dirDeptFilter');
+  var statusFilter = document.getElementById('dirStatusFilter');
+  var clearBtn = document.getElementById('dirClearFilters');
+  var table = document.getElementById('dirTable');
+  var countEl = document.getElementById('dirCount');
+  var headerCountEl = document.getElementById('dirHeaderCount');
+  var paginationText = document.getElementById('dirPaginationText');
+  if (!table) return;
 
+  var statusValueMap = { 'At Risk': 'critical', 'Watch': 'warning', 'Healthy': 'healthy' };
+
+  window.dirApplyFilters = function() {
+    var allRows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+    var total = allRows.length;
+    var q = (search && search.value || '').trim().toLowerCase();
+    var dept = deptFilter && deptFilter.value || '';
+    var status = statusFilter && statusFilter.value || '';
+    var visible = 0;
+
+    allRows.forEach(function(row) {
+      var name = (row.querySelector('.emp-name') || {}).textContent || '';
+      var rowDept = (row.querySelector('.emp-dept') || {}).textContent || '';
+      var rowStatus = row.getAttribute('data-status') || '';
+      var wantedStatus = statusValueMap[status] || '';
+
+      var matchesQuery = !q || name.toLowerCase().indexOf(q) !== -1 || rowDept.toLowerCase().indexOf(q) !== -1;
+      var matchesDept = !dept || rowDept === dept;
+      var matchesStatus = !status || rowStatus === wantedStatus;
+      var show = matchesQuery && matchesDept && matchesStatus;
+
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    if (countEl) countEl.textContent = visible + ' of ' + total + ' employees';
+    if (headerCountEl) headerCountEl.textContent = total + ' Employees';
+    if (paginationText) paginationText.textContent = 'Showing ' + (visible ? 1 : 0) + ' to ' + visible + ' of ' + total + ' employees';
+  };
+
+  if (search) search.addEventListener('input', window.dirApplyFilters);
+  if (deptFilter) deptFilter.addEventListener('change', window.dirApplyFilters);
+  if (statusFilter) statusFilter.addEventListener('change', window.dirApplyFilters);
+  if (clearBtn) clearBtn.addEventListener('click', function() {
+    if (search) search.value = '';
+    if (deptFilter) deptFilter.value = '';
+    if (statusFilter) statusFilter.value = '';
+    window.dirApplyFilters();
+  });
+})();
+
+// Load employees from API
+function loadDirEmployees() {
+  fetch('/api/employees')
+    .then(function(r) {
+      if (!r.ok) throw new Error('Failed to load');
+      return r.json();
+    })
+    .then(function(data) {
+      var tbody = document.getElementById('dirTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      (data.employees || []).forEach(function(emp) {
+        var name = emp.name || '';
+        var initials = name.trim().split(' ').map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2) || '?';
+        var wellnessPct = emp.wellness_score || 0;
+        var fillClass = wellnessPct >= 70 ? 'high' : (wellnessPct >= 40 ? 'medium' : 'low');
+        var fillColor = wellnessPct >= 70 ? 'var(--teal)' : (wellnessPct >= 40 ? 'var(--amber)' : 'var(--red)');
+        var statusLabel = emp.wellness_status === 'critical' ? 'At Risk' : (emp.wellness_status === 'warning' ? 'Watch' : 'Healthy');
+        var statusTitle = emp.reasons && emp.reasons.length ? emp.reasons.join('; ') : '';
+
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-status', emp.wellness_status || 'healthy');
+        tr.innerHTML =
+          '<td><span class="emp-id">' + (emp.employee_id || '') + '</span></td>' +
+          '<td><div class="emp-cell"><div class="emp-avatar">' + initials + '</div><div class="emp-meta"><span class="emp-name">' + escHtml(name) + '</span><div class="emp-email">' + escHtml(emp.email || '') + '</div></div></div></td>' +
+          '<td><span class="emp-dept">' + escHtml(emp.department || '') + '</span></td>' +
+          '<td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill ' + fillClass + '" style="width:' + wellnessPct + '%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:' + fillColor + ';">' + wellnessPct + '</span></div></td>' +
+          '<td><span class="badge ' + (emp.wellness_status || 'healthy') + ' attention-glow ' + (emp.wellness_status || 'healthy') + '"' + (statusTitle ? ' title="' + escHtml(statusTitle) + '"' : '') + '>' + statusLabel + '</span></td>' +
+          '<td><span class="emp-date">' + escHtml(emp.joining_date || '') + '</span></td>' +
+          '<td style="display:flex;gap:6px;">' +
+            '<a href="dictation.html?employee_id=' + (emp.id || '') + '" class="btn-session" style="text-decoration:none;">' +
+              '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="16" x2="15" y2="16"/></svg>' +
+              'New Session' +
+            '</a>' +
+            '<a href="sync.html?employee_id=' + (emp.id || '') + '" class="btn-sync" style="text-decoration:none;">' +
+              '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>' +
+              'Sync' +
+            '</a>' +
+          '</td>';
+        tbody.appendChild(tr);
+      });
+
+      if (window.dirApplyFilters) window.dirApplyFilters();
+      animateDirRows();
+    })
+    .catch(function(err) {
+      console.error('Failed to load employees:', err);
+    });
+}
+
+function animateDirRows() {
   var rows = document.querySelectorAll('.emp-table tbody tr');
+  if (!rows.length) return;
   gsap.set(rows, { opacity: 0, x: -12 });
-  gsap.to(rows, {
-    opacity: 1, x: 0, duration: 0.35, stagger: 0.05, ease: 'power2.out', delay: 0.5
-  });
-
+  gsap.to(rows, { opacity: 1, x: 0, duration: 0.35, stagger: 0.05, ease: 'power2.out', delay: 0.3 });
   var fills = document.querySelectorAll('.index-bar .fill');
   fills.forEach(function(fill) {
     var targetWidth = fill.style.width;
     fill.style.width = '0%';
-    gsap.to(fill, { width: targetWidth, duration: 1.0, ease: 'power2.out', delay: 0.7 });
+    gsap.to(fill, { width: targetWidth, duration: 1.0, ease: 'power2.out', delay: 0.5 });
   });
-});
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  var d = document.createElement('div');
+  d.appendChild(document.createTextNode(str));
+  return d.innerHTML;
+}
+
+loadDirEmployees();
+
+// Light/dark theme toggle
+(function() {
+  var btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    var next = current === 'light' ? 'dark' : 'light';
+    if (next === 'dark') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+    try { localStorage.setItem('voohr-theme', next); } catch (e) {}
+  });
+})();
 </script>
 </body>
 </html>

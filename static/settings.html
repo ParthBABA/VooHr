@@ -1,0 +1,166 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="theme.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Copilot - Settings</title>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+</head>
+<body style="visibility:hidden">
+<script>
+(function(){
+  function populate(data){
+    var nameEl = document.getElementById('userName');
+    var roleEl = document.getElementById('userRole');
+    var avatarEl = document.getElementById('userAvatar');
+    if (nameEl) nameEl.textContent = data.name;
+    if (roleEl) roleEl.textContent = data.role === 'admin' ? 'HR Admin' : data.role;
+    if (avatarEl) avatarEl.textContent = (data.name || 'U').trim().charAt(0).toUpperCase();
+    document.body.style.visibility = 'visible';
+  }
+
+  fetch('/api/me').then(function(res){
+    if (!res.ok) { window.location.href = 'signin.html'; return null; }
+    return res.json();
+  }).then(function(data){
+    if (!data) return;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function(){ populate(data); });
+    } else {
+      populate(data);
+    }
+  }).catch(function(){
+    window.location.href = 'signin.html';
+  });
+})();
+</script>
+<button class="mobile-toggle" id="mobileToggle">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+</button>
+
+<div class="page-wrapper">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-mark">HR</div>
+        VooVr
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Command Center</div>
+      <a href="dashboard.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="nav-item" data-section="alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Alerts
+        <span class="nav-badge" id="alertCount">5</span>
+      </a>
+
+      <div class="nav-section">Workspace</div>
+      <a href="sync.html?employee=Priya%20Sharma" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Sync Rooms
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        Reports
+      </a>
+      <a href="settings.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar" id="userAvatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">User</div>
+        <div class="user-role" id="userRole">Admin</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div>
+          <div class="page-title">Settings</div>
+          <div class="breadcrumb"><span>Settings</span> / Appearance</div>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <button class="icon-btn" id="signOutBtn" title="Sign Out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <div class="card fade-in" style="max-width:520px;">
+        <div class="stat-label" style="margin-bottom:0.4rem;">Appearance</div>
+        <div style="font-family:var(--font-d);font-size:1.15rem;font-weight:600;margin-bottom:0.6rem;">Theme</div>
+        <div style="font-size:0.85rem;color:var(--ivory-dim);margin-bottom:1.4rem;line-height:1.6;">
+          Choose how VooVr looks on this device. This applies across the dashboard, directory, and sync rooms.
+        </div>
+
+        <div class="lang-toggle" id="themeToggle" style="width:fit-content;">
+          <button class="lang-btn" data-theme-switch="dark" style="padding:0.6rem 1.4rem;">Dark</button>
+          <button class="lang-btn" data-theme-switch="light" style="padding:0.6rem 1.4rem;">Light</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+document.getElementById('signOutBtn').addEventListener('click', async function(){
+  try { await fetch('/auth/logout', { method: 'POST' }); } catch (err) {}
+  window.location.href = 'signin.html';
+});
+
+(function(){
+  var buttons = document.querySelectorAll('#themeToggle [data-theme-switch]');
+
+  function syncActiveButton(){
+    var current = window.voovrGetTheme ? window.voovrGetTheme() : 'dark';
+    buttons.forEach(function(btn){
+      btn.classList.toggle('active', btn.getAttribute('data-theme-switch') === current);
+    });
+  }
+
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var theme = btn.getAttribute('data-theme-switch');
+      if (window.voovrSetTheme) window.voovrSetTheme(theme);
+      syncActiveButton();
+    });
+  });
+
+  syncActiveButton();
+})();
+
+window.addEventListener('load', function() {
+  var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+  var sidebar = document.querySelector('.sidebar');
+  gsap.set(sidebar, { x: -260, opacity: 0 });
+  tl.to(sidebar, { x: 0, opacity: 1, duration: 0.6 });
+
+  var pageTitle = document.querySelector('.page-title');
+  gsap.set(pageTitle, { opacity: 0, y: 16 });
+  tl.to(pageTitle, { opacity: 1, y: 0, duration: 0.5 }, '-=0.35');
+
+  var cards = document.querySelectorAll('.card');
+  gsap.set(cards, { opacity: 0, y: 30 });
+  tl.to(cards, { opacity: 1, y: 0, duration: 0.5 }, '-=0.2');
+});
+</script>
+</body>
+</html>

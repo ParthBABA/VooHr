@@ -4,8 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HR Copilot - Dashboard</title>
+<script>
+// Set theme before first paint to avoid a flash of the wrong theme.
+(function(){
+  try {
+    var saved = localStorage.getItem('voohr-theme');
+    if (saved === 'light' || saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+  } catch (e) {}
+})();
+</script>
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -28,10 +39,14 @@
     return res.json();
   }).then(function(data){
     if (!data) return;
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function(){ populate(data); });
-    } else {
+    function onReady() {
       populate(data);
+      loadEmployees();
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', onReady);
+    } else {
+      onReady();
     }
   }).catch(function(){
     window.location.href = 'signin.html';
@@ -101,6 +116,10 @@
           <button class="lang-btn active" data-lang-switch="en">EN</button>
           <button class="lang-btn" data-lang-switch="hi">Hinglish</button>
         </div>
+        <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle light/dark theme">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
         <button class="icon-btn" title="Notifications">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
           <span class="notif-dot"></span>
@@ -154,240 +173,231 @@
 
       <!-- DASHBOARD GRID -->
       <div class="dash-grid">
-        <!-- CRITICAL ALERTS -->
-        <div class="card fade-in fade-in-d1">
-          <div class="card-header">
-            <div>
-              <div class="eyebrow" data-lang="en">Urgent Attention</div>
-              <div class="eyebrow" data-lang="hi">Urgent Attention</div>
-              <h3 class="card-title" data-lang="en">Workforce Alerts</h3>
-              <h3 class="card-title" data-lang="hi">Workforce Alerts</h3>
+        <!-- UNIFIED EMPLOYEE DIRECTORY (replaces separate Alerts + Directory cards) -->
+        <div class="card fade-in fade-in-d1 full-width" style="padding:0;overflow:hidden;">
+          <div class="card-header" style="padding:1.5rem 1.5rem 0;flex-wrap:wrap;gap:0.8rem;">
+            <div class="card-header-left">
+              <div>
+                <div class="eyebrow" data-lang="en">Workforce</div>
+                <div class="eyebrow" data-lang="hi">Workforce</div>
+                <h3 class="card-title" data-lang="en">Employee Directory</h3>
+                <h3 class="card-title" data-lang="hi">Employee Directory</h3>
+              </div>
+              <span class="badge healthy" id="dashEmpCount">8 Employees</span>
+            </div>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-outline" type="button" title="Filter options">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+                Filters
+              </button>
+              <button class="btn btn-sm btn-outline" type="button" title="Export directory">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export
+              </button>
+              <button class="btn btn-sm btn-gradient" type="button" title="Add a new employee">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Employee
+              </button>
             </div>
           </div>
-          <div class="alert-list" id="alertList">
-            <div class="alert-item" data-employee="Rohan Mehta">
-              <div class="alert-severity critical"></div>
-              <div class="alert-body">
-                <div class="alert-name">Rohan Mehta</div>
-                <div class="alert-desc" data-lang="en">Burnout index 92/100 - consecutive overtime for 3 weeks</div>
-                <div class="alert-desc" data-lang="hi">Burnout index 92/100 - 3 hafte se lagatar overtime</div>
-              </div>
-              <span class="badge critical">Critical</span>
-              <div class="alert-action" data-lang="en">Initiate Sync</div>
-              <div class="alert-action" data-lang="hi">Sync Shuru Karein</div>
-            </div>
-            <div class="alert-item" data-employee="Priya Sharma">
-              <div class="alert-severity critical"></div>
-              <div class="alert-body">
-                <div class="alert-name">Priya Sharma</div>
-                <div class="alert-desc" data-lang="en">Performance dropped 40% in last quarter</div>
-                <div class="alert-desc" data-lang="hi">Last quarter mein performance 40% gir gayi</div>
-              </div>
-              <span class="badge critical">Critical</span>
-              <div class="alert-action" data-lang="en">Initiate Sync</div>
-              <div class="alert-action" data-lang="hi">Sync Shuru Karein</div>
-            </div>
-            <div class="alert-item" data-employee="Amit Verma">
-              <div class="alert-severity warning"></div>
-              <div class="alert-body">
-                <div class="alert-name">Amit Verma</div>
-                <div class="alert-desc" data-lang="en">Absent 4 days this month - pattern emerging</div>
-                <div class="alert-desc" data-lang="hi">Is mahine 4 din absent - pattern ban raha hai</div>
-              </div>
-              <span class="badge warning">Warning</span>
-              <div class="alert-action" data-lang="en">Initiate Sync</div>
-              <div class="alert-action" data-lang="hi">Sync Shuru Karein</div>
-            </div>
-            <div class="alert-item" data-employee="Neha Gupta">
-              <div class="alert-severity warning"></div>
-              <div class="alert-body">
-                <div class="alert-name">Neha Gupta</div>
-                <div class="alert-desc" data-lang="en">Missed 2 consecutive deadlines</div>
-                <div class="alert-desc" data-lang="hi">2 lagatar deadlines miss ki</div>
-              </div>
-              <span class="badge warning">Warning</span>
-              <div class="alert-action" data-lang="en">Initiate Sync</div>
-              <div class="alert-action" data-lang="hi">Sync Shuru Karein</div>
-            </div>
-            <div class="alert-item" data-employee="Vikash Kumar">
-              <div class="alert-severity info"></div>
-              <div class="alert-body">
-                <div class="alert-name">Vikash Kumar</div>
-                <div class="alert-desc" data-lang="en">Wellness survey flagged low engagement</div>
-                <div class="alert-desc" data-lang="hi">Wellness survey mein low engagement dikha</div>
-              </div>
-              <span class="badge healthy">Monitor</span>
-              <div class="alert-action" data-lang="en">View Details</div>
-              <div class="alert-action" data-lang="hi">Dekhein</div>
-            </div>
-          </div>
-        </div>
 
-        <!-- EMPLOYEE DIRECTORY -->
-        <div class="card fade-in fade-in-d2">
-          <div class="card-header">
-            <div>
-              <div class="eyebrow" data-lang="en">Directory</div>
-              <div class="eyebrow" data-lang="hi">Directory</div>
-              <h3 class="card-title" data-lang="en">Employee Overview</h3>
-              <h3 class="card-title" data-lang="hi">Employee Overview</h3>
+          <!-- TOOLBAR -->
+          <div class="dir-toolbar" style="padding:1.2rem 1.5rem;">
+            <div class="dir-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" id="dashDirSearch" class="dir-search-input" placeholder="Search employees by name, department, email...">
+            </div>
+            <div class="dir-filters">
+              <select id="dashDeptFilter" class="dir-select">
+                <option value="">All Departments</option>
+                <option value="Engineering">Engineering</option>
+                <option value="Design">Design</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Sales">Sales</option>
+                <option value="Operations">Operations</option>
+                <option value="Finance">Finance</option>
+                <option value="Product">Product</option>
+              </select>
+              <select id="dashStatusFilter" class="dir-select">
+                <option value="">All Status</option>
+                <option value="critical">At Risk</option>
+                <option value="warning">Watch</option>
+                <option value="healthy">Healthy</option>
+              </select>
+              <button class="dir-clear-btn" id="dashClearFilters" type="button">Clear</button>
             </div>
           </div>
-          <table class="emp-table">
+
+          <!-- TABLE -->
+          <table class="emp-table" id="dashEmpTable">
             <thead>
               <tr>
+                <th data-lang="en">Employee ID</th><th data-lang="hi">Employee ID</th>
                 <th data-lang="en">Employee</th><th data-lang="hi">Employee</th>
                 <th data-lang="en">Dept</th><th data-lang="hi">Dept</th>
                 <th data-lang="en">Wellness</th><th data-lang="hi">Wellness</th>
                 <th data-lang="en">Status</th><th data-lang="hi">Status</th>
-                <th></th>
+                <th data-lang="en">Joining Date</th><th data-lang="hi">Joining Date</th>
+                <th data-lang="en">Actions</th><th data-lang="hi">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td><span class="emp-name">Rohan Mehta</span></td>
-                <td><span class="emp-dept">Engineering</span></td>
-                <td>
-                  <div style="display:flex;align-items:center;gap:0.5rem;">
-                    <div class="index-bar" style="width:80px;"><div class="fill low" style="width:18%;"></div></div>
-                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--red);">18</span>
-                  </div>
-                </td>
-                <td><span class="badge critical">At Risk</span></td>
-                <td><button class="btn btn-sm btn-primary" data-employee="Rohan Mehta">Sync</button></td>
-              </tr>
-              <tr>
-                <td><span class="emp-name">Priya Sharma</span></td>
-                <td><span class="emp-dept">Design</span></td>
-                <td>
-                  <div style="display:flex;align-items:center;gap:0.5rem;">
-                    <div class="index-bar" style="width:80px;"><div class="fill low" style="width:32%;"></div></div>
-                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--red);">32</span>
-                  </div>
-                </td>
-                <td><span class="badge critical">At Risk</span></td>
-                <td><button class="btn btn-sm btn-primary" data-employee="Priya Sharma">Sync</button></td>
-              </tr>
-              <tr>
-                <td><span class="emp-name">Amit Verma</span></td>
-                <td><span class="emp-dept">Marketing</span></td>
-                <td>
-                  <div style="display:flex;align-items:center;gap:0.5rem;">
-                    <div class="index-bar" style="width:80px;"><div class="fill medium" style="width:48%;"></div></div>
-                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--amber);">48</span>
-                  </div>
-                </td>
-                <td><span class="badge warning">Watch</span></td>
-                <td><button class="btn btn-sm btn-primary" data-employee="Amit Verma">Sync</button></td>
-              </tr>
-              <tr>
-                <td><span class="emp-name">Neha Gupta</span></td>
-                <td><span class="emp-dept">Sales</span></td>
-                <td>
-                  <div style="display:flex;align-items:center;gap:0.5rem;">
-                    <div class="index-bar" style="width:80px;"><div class="fill medium" style="width:55%;"></div></div>
-                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--amber);">55</span>
-                  </div>
-                </td>
-                <td><span class="badge warning">Watch</span></td>
-                <td><button class="btn btn-sm btn-primary" data-employee="Neha Gupta">Sync</button></td>
-              </tr>
-              <tr>
-                <td><span class="emp-name">Vikash Kumar</span></td>
-                <td><span class="emp-dept">Operations</span></td>
-                <td>
-                  <div style="display:flex;align-items:center;gap:0.5rem;">
-                    <div class="index-bar" style="width:80px;"><div class="fill medium" style="width:62%;"></div></div>
-                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--amber);">62</span>
-                  </div>
-                </td>
-                <td><span class="badge healthy">Healthy</span></td>
-                <td><button class="btn btn-sm" data-employee="Vikash Kumar">View</button></td>
-              </tr>
-              <tr>
-                <td><span class="emp-name">Deepak Joshi</span></td>
-                <td><span class="emp-dept">Finance</span></td>
-                <td>
-                  <div style="display:flex;align-items:center;gap:0.5rem;">
-                    <div class="index-bar" style="width:80px;"><div class="fill high" style="width:81%;"></div></div>
-                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--teal);">81</span>
-                  </div>
-                </td>
-                <td><span class="badge healthy">Healthy</span></td>
-                <td><button class="btn btn-sm">View</button></td>
-              </tr>
-              <tr>
-                <td><span class="emp-name">Sneha Reddy</span></td>
-                <td><span class="emp-dept">Engineering</span></td>
-                <td>
-                  <div style="display:flex;align-items:center;gap:0.5rem;">
-                    <div class="index-bar" style="width:80px;"><div class="fill high" style="width:89%;"></div></div>
-                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--teal);">89</span>
-                  </div>
-                </td>
-                <td><span class="badge healthy">Healthy</span></td>
-                <td><button class="btn btn-sm">View</button></td>
-              </tr>
-              <tr>
-                <td><span class="emp-name">Rajesh Nair</span></td>
-                <td><span class="emp-dept">Product</span></td>
-                <td>
-                  <div style="display:flex;align-items:center;gap:0.5rem;">
-                    <div class="index-bar" style="width:80px;"><div class="fill high" style="width:76%;"></div></div>
-                    <span style="font-family:var(--font-m);font-size:0.65rem;color:var(--teal);">76</span>
-                  </div>
-                </td>
-                <td><span class="badge healthy">Healthy</span></td>
-                <td><button class="btn btn-sm">View</button></td>
-              </tr>
-            </tbody>
+            <tbody></tbody>
           </table>
-        </div>
-
-        <!-- RECENT ACTIVITY -->
-        <div class="card fade-in fade-in-d3 full-width">
-          <div class="card-header">
-            <div>
-              <div class="eyebrow" data-lang="en">Activity Log</div>
-              <div class="eyebrow" data-lang="hi">Activity Log</div>
-              <h3 class="card-title" data-lang="en">Recent Sync Activity</h3>
-              <h3 class="card-title" data-lang="hi">Recent Sync Activity</h3>
+          <div class="pagination-bar" id="dashEmpFooter">
+            <span id="dashEmpFooterText">Showing 1 to 8 of 8 employees</span>
+            <div class="pagination-pages">
+              <button class="page-btn" disabled aria-label="Previous page">&lsaquo;</button>
+              <button class="page-btn active">1</button>
+              <button class="page-btn" disabled aria-label="Next page">&rsaquo;</button>
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:0.8rem;">
-            <div style="display:flex;align-items:center;gap:1rem;padding:0.8rem 1rem;border:1px solid var(--border);">
-              <div style="width:8px;height:8px;border-radius:50%;background:var(--teal);flex-shrink:0;"></div>
-              <div style="flex:1;">
-                <div style="font-size:0.85rem;font-weight:600;">Sync completed with Arjun Singh</div>
-                <div style="font-family:var(--font-m);font-size:0.55rem;color:var(--ivory-faint);letter-spacing:0.08em;text-transform:uppercase;margin-top:0.15rem;">Step 5 Complete - Recency Wrap-up | 2 hours ago</div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ADD EMPLOYEE SIDE PANEL -->
+<div class="panel-overlay" id="addEmpOverlay">
+  <div class="add-emp-panel" id="addEmpPanel">
+    <div class="panel-header">
+      <div class="panel-header-top">
+        <h2 class="panel-title">Add Employee</h2>
+        <button class="panel-close" id="panelClose" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="step-indicator-bar">
+        <div class="step-indicator-steps">
+          <div class="si-step active" data-si="1">
+            <div class="si-dot">1</div>
+            <div class="si-label">Basic Details</div>
+          </div>
+          <div class="si-line"></div>
+          <div class="si-step" data-si="2">
+            <div class="si-dot">2</div>
+            <div class="si-label">Job Details</div>
+          </div>
+          <div class="si-line"></div>
+          <div class="si-step" data-si="3">
+            <div class="si-dot">3</div>
+            <div class="si-label">Finish</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-body" id="panelBody">
+      <!-- STEP 1: Basic Details -->
+      <div class="panel-step" data-step="1">
+        <div class="step-section">
+          <div class="step-section-title">Basic Information</div>
+          <div class="form-group">
+            <label class="form-label">Full Name <span class="required">*</span></label>
+            <input type="text" class="form-input" id="empName" placeholder="Enter full name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Work Email</label>
+            <input type="email" class="form-input" id="empEmail" placeholder="employee@company.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="tel" class="form-input" id="empPhone" placeholder="+1 234 567 890">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Profile Photo</label>
+            <div class="photo-upload" id="photoUpload">
+              <div class="photo-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+                <span class="photo-text">Click to upload photo</span>
               </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:1rem;padding:0.8rem 1rem;border:1px solid var(--border);">
-              <div style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;"></div>
-              <div style="flex:1;">
-                <div style="font-size:0.85rem;font-weight:600;">Email brief sent for Kavita's sync</div>
-                <div style="font-family:var(--font-m);font-size:0.55rem;color:var(--ivory-faint);letter-spacing:0.08em;text-transform:uppercase;margin-top:0.15rem;">Consent-gated deliverable | 5 hours ago</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:1rem;padding:0.8rem 1rem;border:1px solid var(--border);">
-              <div style="width:8px;height:8px;border-radius:50%;background:var(--violet);flex-shrink:0;"></div>
-              <div style="flex:1;">
-                <div style="font-size:0.85rem;font-weight:600;">Sync initiated with Priya Sharma</div>
-                <div style="font-family:var(--font-m);font-size:0.55rem;color:var(--ivory-faint);letter-spacing:0.08em;text-transform:uppercase;margin-top:0.15rem;">Step 1 - Establishing Safety | Yesterday</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:1rem;padding:0.8rem 1rem;border:1px solid var(--border);">
-              <div style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;"></div>
-              <div style="flex:1;">
-                <div style="font-size:0.85rem;font-weight:600;">Alert triggered: Rohan Mehta burnout spike</div>
-                <div style="font-family:var(--font-m);font-size:0.55rem;color:var(--ivory-faint);letter-spacing:0.08em;text-transform:uppercase;margin-top:0.15rem;">Automated wellness detection | 2 days ago</div>
+              <input type="file" id="empPhoto" accept="image/*" hidden>
+              <div class="photo-preview" id="photoPreview" style="display:none;">
+                <img id="photoImg" alt="Preview">
+                <button class="photo-remove" id="photoRemove" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- STEP 2: Job Details -->
+      <div class="panel-step" data-step="2" style="display:none;">
+        <div class="step-section">
+          <div class="step-section-title">Job Information</div>
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <select class="form-input" id="empDepartment">
+              <option value="">Select Department</option>
+              <option>Engineering</option>
+              <option>Design</option>
+              <option>Marketing</option>
+              <option>Sales</option>
+              <option>Operations</option>
+              <option>Finance</option>
+              <option>Product</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Designation</label>
+            <input type="text" class="form-input" id="empDesignation" placeholder="e.g. Senior Engineer">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reporting Manager</label>
+            <input type="text" class="form-input" id="empManager" placeholder="Enter manager's name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Joining Date</label>
+            <input type="date" class="form-input" id="empJoiningDate">
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Finish -->
+      <div class="panel-step" data-step="3" style="display:none;">
+        <div class="step-section">
+          <div class="step-section-title">Summary</div>
+          <div class="finish-card">
+            <div class="finish-row">
+              <span class="finish-label">Employee ID</span>
+              <span class="finish-value" id="empIdPreview">—</span>
+            </div>
+            <div class="finish-row">
+              <span class="finish-label">Status</span>
+              <span class="badge healthy">Active</span>
+            </div>
+            <div class="finish-row">
+              <span class="finish-label">AI Profile</span>
+              <span class="finish-value" style="font-size:0.7rem;color:var(--ivory-faint);">Will be initialized after creation</span>
+            </div>
+          </div>
+          <div class="ai-consent">
+            <label class="consent-checkbox">
+              <input type="checkbox" id="aiConsent" checked>
+              <span class="check-box"></span>
+              <span class="check-text">Initialize AI psychological profile after creation</span>
+            </label>
+            <p class="consent-note">Sends basic details to OpenAI to generate an initial engagement baseline, wellbeing risk assessment, and recommended sync cadence. You can regenerate anytime.</p>
+          </div>
+        </div>
+      </div>
     </div>
-  </main>
+
+    <div class="panel-footer">
+      <button class="btn btn-sm btn-outline" id="panelBack" type="button" style="visibility:hidden;">Back</button>
+      <div class="panel-footer-right">
+        <button class="btn btn-sm btn-outline" id="panelCancel" type="button">Cancel</button>
+        <button class="btn btn-sm btn-gradient" id="panelNext" type="button">Next Step</button>
+        <button class="btn btn-sm btn-gradient" id="panelSubmit" type="button" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M20 6L9 17l-5-5"/></svg>
+          Add Employee
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -429,25 +439,349 @@ window.addEventListener('load', function() {
   gsap.set(cards, { opacity: 0, y: 40 });
   tl.to(cards, { opacity: 1, y: 0, duration: 0.6, stagger: 0.12 }, '-=0.6');
 
-  var alerts = document.querySelectorAll('.alert-item');
-  gsap.set(alerts, { opacity: 0, x: -20 });
-  gsap.to(alerts, { opacity: 1, x: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out', delay: 0.8 });
+});
 
+// Unified directory table: live search + department/status filters
+(function() {
+  var search = document.getElementById('dashDirSearch');
+  var deptFilter = document.getElementById('dashDeptFilter');
+  var statusFilter = document.getElementById('dashStatusFilter');
+  var clearBtn = document.getElementById('dashClearFilters');
+  var table = document.getElementById('dashEmpTable');
+  var countBadge = document.getElementById('dashEmpCount');
+  var footerText = document.getElementById('dashEmpFooterText');
+  if (!table) return;
+
+  window.dashApplyFilters = function() {
+    var allRows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+    var total = allRows.length;
+    var q = (search && search.value || '').trim().toLowerCase();
+    var dept = deptFilter && deptFilter.value || '';
+    var status = statusFilter && statusFilter.value || '';
+    var visible = 0;
+
+    allRows.forEach(function(row) {
+      var name = (row.querySelector('.emp-name') || {}).textContent || '';
+      var rowDept = (row.querySelector('.emp-dept') || {}).textContent || '';
+      var rowStatus = row.getAttribute('data-status') || '';
+
+      var matchesQuery = !q || name.toLowerCase().indexOf(q) !== -1 || rowDept.toLowerCase().indexOf(q) !== -1;
+      var matchesDept = !dept || rowDept === dept;
+      var matchesStatus = !status || rowStatus === status;
+      var show = matchesQuery && matchesDept && matchesStatus;
+
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    if (footerText) footerText.textContent = 'Showing ' + (visible ? 1 : 0) + ' to ' + visible + ' of ' + total + ' employees';
+    if (countBadge) countBadge.textContent = total + ' Employees';
+  };
+
+  if (search) search.addEventListener('input', window.dashApplyFilters);
+  if (deptFilter) deptFilter.addEventListener('change', window.dashApplyFilters);
+  if (statusFilter) statusFilter.addEventListener('change', window.dashApplyFilters);
+  if (clearBtn) clearBtn.addEventListener('click', function() {
+    if (search) search.value = '';
+    if (deptFilter) deptFilter.value = '';
+    if (statusFilter) statusFilter.value = '';
+    window.dashApplyFilters();
+  });
+})();
+
+// Load employees from API and render table
+function loadEmployees() {
+  fetch('/api/employees')
+    .then(function(r) {
+      if (!r.ok) throw new Error('Failed to load');
+      return r.json();
+    })
+    .then(function(data) {
+      var tbody = document.querySelector('#dashEmpTable tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      (data.employees || []).forEach(function(emp) {
+        var name = emp.name || '';
+        var initials = name.trim().split(' ').map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2) || '?';
+        var wellnessPct = emp.wellness_score || 0;
+        var fillClass = wellnessPct >= 70 ? 'high' : (wellnessPct >= 40 ? 'medium' : 'low');
+        var fillColor = wellnessPct >= 70 ? 'var(--teal)' : (wellnessPct >= 40 ? 'var(--amber)' : 'var(--red)');
+        var statusLabel = emp.wellness_status === 'critical' ? 'At Risk' : (emp.wellness_status === 'warning' ? 'Watch' : 'Healthy');
+        var statusTitle = emp.reasons && emp.reasons.length ? emp.reasons.join('; ') : '';
+
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-status', emp.wellness_status || 'healthy');
+        tr.innerHTML =
+          '<td><span class="emp-id">' + (emp.employee_id || '') + '</span></td>' +
+          '<td><div class="emp-cell"><div class="emp-avatar">' + initials + '</div><div class="emp-meta"><span class="emp-name">' + escHtml(name) + '</span><div class="emp-email">' + escHtml(emp.email || '') + '</div></div></div></td>' +
+          '<td><span class="emp-dept">' + escHtml(emp.department || '') + '</span></td>' +
+          '<td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill ' + fillClass + '" style="width:' + wellnessPct + '%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:' + fillColor + ';">' + wellnessPct + '</span></div></td>' +
+          '<td><span class="badge ' + (emp.wellness_status || 'healthy') + ' attention-glow ' + (emp.wellness_status || 'healthy') + '"' + (statusTitle ? ' title="' + escHtml(statusTitle) + '"' : '') + '>' + statusLabel + '</span></td>' +
+          '<td><span class="emp-date">' + escHtml(emp.joining_date || '') + '</span></td>' +
+          '<td style="display:flex;gap:6px;">' +
+            '<a href="dictation.html?employee_id=' + (emp.id || '') + '" class="btn-session" style="text-decoration:none;">' +
+              '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="16" x2="15" y2="16"/></svg>' +
+              '<span data-lang="en">New Session</span><span data-lang="hi">New Session</span>' +
+            '</a>' +
+            '<a href="sync.html?employee_id=' + (emp.id || '') + '" class="btn-sync" style="text-decoration:none;">' +
+              '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>' +
+              '<span data-lang="en">Sync</span><span data-lang="hi">Sync</span>' +
+            '</a>' +
+          '</td>';
+        tbody.appendChild(tr);
+      });
+
+      if (window.dashApplyFilters) window.dashApplyFilters();
+      animateTableRows();
+    })
+    .catch(function(err) {
+      console.error('Failed to load employees:', err);
+    });
+}
+
+function animateTableRows() {
   var rows = document.querySelectorAll('.emp-table tbody tr');
+  if (!rows.length) return;
   gsap.set(rows, { opacity: 0, x: -12 });
-  gsap.to(rows, { opacity: 1, x: 0, duration: 0.35, stagger: 0.04, ease: 'power2.out', delay: 1.0 });
-
-  var activityItems = document.querySelectorAll('.full-width [style*="border:1px solid var(--border)"]');
-  gsap.set(activityItems, { opacity: 0, y: 12 });
-  gsap.to(activityItems, { opacity: 1, y: 0, duration: 0.35, stagger: 0.06, ease: 'power2.out', delay: 1.2 });
-
+  gsap.to(rows, { opacity: 1, x: 0, duration: 0.35, stagger: 0.04, ease: 'power2.out', delay: 0.3 });
   var fills = document.querySelectorAll('.index-bar .fill');
   fills.forEach(function(fill) {
     var targetWidth = fill.style.width;
     fill.style.width = '0%';
-    gsap.to(fill, { width: targetWidth, duration: 1.0, ease: 'power2.out', delay: 1.2 });
+    gsap.to(fill, { width: targetWidth, duration: 1.0, ease: 'power2.out', delay: 0.5 });
   });
-});
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  var d = document.createElement('div');
+  d.appendChild(document.createTextNode(str));
+  return d.innerHTML;
+}
+
+// Light/dark theme toggle
+(function() {
+  var btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    var next = current === 'light' ? 'dark' : 'light';
+    if (next === 'dark') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+    try { localStorage.setItem('voohr-theme', next); } catch (e) {}
+  });
+})();
+
+// ── ADD EMPLOYEE PANEL ──
+(function() {
+  var panel = document.getElementById('addEmpPanel');
+  var overlay = document.getElementById('addEmpOverlay');
+  var closeBtn = document.getElementById('panelClose');
+  var cancelBtn = document.getElementById('panelCancel');
+  var nextBtn = document.getElementById('panelNext');
+  var backBtn = document.getElementById('panelBack');
+  var submitBtn = document.getElementById('panelSubmit');
+  var steps = document.querySelectorAll('.panel-step');
+  var siSteps = document.querySelectorAll('.si-step');
+  var currentStep = 1;
+  var totalSteps = 3;
+  var openBtn = document.querySelector('[title="Add a new employee"]');
+
+  if (!panel || !overlay) return;
+
+  function showStep(num) {
+    steps.forEach(function(s) { s.style.display = 'none'; });
+    var el = document.querySelector('.panel-step[data-step="' + num + '"]');
+    if (el) el.style.display = '';
+
+    siSteps.forEach(function(s) {
+      var n = parseInt(s.getAttribute('data-si'));
+      s.classList.toggle('active', n === num);
+      s.classList.toggle('completed', n < num);
+    });
+
+    backBtn.style.visibility = num > 1 ? 'visible' : 'hidden';
+    if (num === totalSteps) {
+      nextBtn.style.display = 'none';
+      submitBtn.style.display = 'inline-flex';
+    } else {
+      nextBtn.style.display = 'inline-flex';
+      submitBtn.style.display = 'none';
+    }
+  }
+
+  function openPanel() {
+    overlay.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    currentStep = 1;
+    showStep(1);
+    // Reset form fields
+    var formInputs = document.querySelectorAll('#addEmpPanel input, #addEmpPanel select');
+    formInputs.forEach(function(el) { if (el.type !== 'file') el.value = ''; });
+    var preview = document.getElementById('photoPreview');
+    var placeholder = document.querySelector('.photo-placeholder');
+    if (preview) preview.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'flex';
+    gsap.set(overlay, { opacity: 0 });
+    gsap.set(panel, { x: '100%' });
+    gsap.to(overlay, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+    gsap.to(panel, { x: '0%', duration: 0.45, ease: 'power3.out' });
+  }
+
+  function closePanel() {
+    gsap.to(panel, { x: '100%', duration: 0.35, ease: 'power3.in' });
+    gsap.to(overlay, { opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: function() {
+      overlay.style.display = 'none';
+      document.body.style.overflow = '';
+    }});
+  }
+
+  function nextStep() {
+    if (currentStep === 1) {
+      var name = document.getElementById('empName').value.trim();
+      if (!name) {
+        var inp = document.getElementById('empName');
+        inp.focus();
+        inp.classList.add('input-error');
+        setTimeout(function() { inp.classList.remove('input-error'); }, 2000);
+        return;
+      }
+      // Preview employee ID on step 3
+      var email = document.getElementById('empEmail').value.trim();
+      var dept = document.getElementById('empDepartment').value || '—';
+      var desig = document.getElementById('empDesignation').value.trim() || '—';
+      var manager = document.getElementById('empManager').value.trim() || '—';
+      var joining = document.getElementById('empJoiningDate').value || '—';
+    }
+    if (currentStep < totalSteps) {
+      currentStep++;
+      showStep(currentStep);
+    }
+  }
+
+  function prevStep() {
+    if (currentStep > 1) {
+      currentStep--;
+      showStep(currentStep);
+    }
+  }
+
+  // Open
+  if (openBtn) openBtn.addEventListener('click', openPanel);
+
+  // Close
+  if (closeBtn) closeBtn.addEventListener('click', closePanel);
+  if (cancelBtn) cancelBtn.addEventListener('click', closePanel);
+
+  // Navigate
+  if (nextBtn) nextBtn.addEventListener('click', nextStep);
+  if (backBtn) backBtn.addEventListener('click', prevStep);
+
+  // Photo upload
+  (function() {
+    var upload = document.getElementById('photoUpload');
+    var fileInput = document.getElementById('empPhoto');
+    var preview = document.getElementById('photoPreview');
+    var img = document.getElementById('photoImg');
+    var removeBtn = document.getElementById('photoRemove');
+    var placeholder = upload && upload.querySelector('.photo-placeholder');
+    if (!upload || !fileInput) return;
+
+    upload.addEventListener('click', function(e) {
+      if (e.target.closest('.photo-remove') || e.target.closest('.photo-preview')) return;
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', function() {
+      var file = fileInput.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        img.src = e.target.result;
+        if (placeholder) placeholder.style.display = 'none';
+        preview.style.display = 'flex';
+      };
+      reader.readAsDataURL(file);
+    });
+    if (removeBtn) {
+      removeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        fileInput.value = '';
+        if (placeholder) placeholder.style.display = 'flex';
+        preview.style.display = 'none';
+      });
+    }
+  })();
+
+  // Submit
+  if (submitBtn) {
+    submitBtn.addEventListener('click', function() {
+      var name = document.getElementById('empName').value.trim();
+      var email = document.getElementById('empEmail').value.trim();
+      var phone = document.getElementById('empPhone').value.trim();
+      var department = document.getElementById('empDepartment').value;
+      var position = document.getElementById('empDesignation').value.trim();
+      var joining_date = document.getElementById('empJoiningDate').value;
+      var aiConsent = document.getElementById('aiConsent').checked;
+
+      if (!name) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating…';
+
+      var body = {
+        name: name,
+        email: email || undefined,
+        phone: phone || undefined,
+        department: department || undefined,
+        position: position || undefined,
+        joining_date: joining_date || undefined,
+      };
+
+      fetch('/api/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'failed'); });
+        return r.json();
+      }).then(function(emp) {
+        submitBtn.textContent = 'Created!';
+        submitBtn.style.background = 'var(--teal)';
+        setTimeout(function() {
+          closePanel();
+          loadEmployees();
+          // Show success toast
+          var toast = document.createElement('div');
+          toast.className = 'toast-notification';
+          toast.textContent = emp.name + ' added successfully — ' + emp.employee_id;
+          document.body.appendChild(toast);
+          gsap.set(toast, { y: 60, opacity: 0 });
+          gsap.to(toast, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
+          setTimeout(function() {
+            gsap.to(toast, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { toast.remove(); }});
+          }, 4000);
+          // Reset
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Add Employee';
+          submitBtn.style.background = '';
+        }, 800);
+      }).catch(function(err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add Employee';
+        alert('Failed: ' + err.message);
+      });
+    });
+  }
+
+  // Keyboard: Escape to close
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') closePanel();
+  });
+})();
 </script>
 </body>
 </html>

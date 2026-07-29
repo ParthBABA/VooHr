@@ -26,6 +26,22 @@ class Config:
     HASH_INDEX_SECRET = os.environ.get("HASH_INDEX_SECRET")
     JWT_SECRET = os.environ.get("JWT_SECRET")
 
+    # Provider configuration
+    STT_PROVIDER = os.environ.get("STT_PROVIDER", "deepseek")
+    LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "openai")
+    STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "local")
+
+    # OpenAI
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_KEY", "")
+    OPENAI_ANALYSIS_MODEL = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")
+
+    # DeepSeek
+    DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("DEEPSSEK_API", "")
+    DEEPSEEK_STT_URL = os.environ.get("DEEPSEEK_STT_URL", "https://api.deepseek.com/v1/audio/transcriptions")
+
+    # Audio storage
+    AUDIO_STORAGE_PATH = os.environ.get("AUDIO_STORAGE_PATH", "static/audio/sessions")
+
     # Cookie/session behaviour
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
