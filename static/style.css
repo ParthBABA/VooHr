@@ -5,7 +5,7 @@
    Dramatic shadows, zero warm charcoal
    ────────────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=Roboto+Condensed:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700;900&display=swap');
 :root {
   /* ── Core Surface Palette — 6 distinct depth layers ── */
   --void:#080A0F;        /* Page background — deepest blue-black */
@@ -36,7 +36,7 @@
   --shadow-lg:0 12px 40px rgba(0,0,0,0.55);
 
   /* ── Fonts & Easing (unchanged) ── */
-  --font-d:'Clash Display',sans-serif;--font-b:'Cabinet Grotesk',sans-serif;--font-m:'Space Mono',monospace;--font-rc:'Roboto Condensed',sans-serif;--font-lato:'Lato',sans-serif;
+  --font-d:'Clash Display',sans-serif;--font-b:'Cabinet Grotesk',sans-serif;--font-m:'Inter',sans-serif;--font-rc:'Inter',sans-serif;--font-lato:'Inter',sans-serif;
   --ease-out:cubic-bezier(0.16,1,0.3,1);--ease-spring:cubic-bezier(0.34,1.56,0.64,1);
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
@@ -347,7 +347,7 @@ h1,h2,h3,h4,h5,h6{font-family:var(--font-d);font-weight:600;text-transform:upper
 .step-node.completed .step-dot{border-color:var(--teal);color:var(--teal);background:var(--teal-soft);}
 .step-node.active .step-dot{border-color:var(--amber);color:var(--void);background:var(--amber);box-shadow:0 0 20px var(--amber-glow);transform:scale(1.15);}
 .step-node.locked .step-dot{opacity:0.4;}
-.step-label{font-family:var(--font-lato);font-weight:700;font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ivory-faint);text-align:center;max-width:90px;line-height:1.4;}
+.step-label{font-family:var(--font-m);font-weight:600;font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ivory-faint);text-align:center;max-width:90px;line-height:1.4;}
 .step-node.active .step-label{color:var(--amber);}
 .step-node.completed .step-label{color:var(--teal);}
 .step-connector{flex:1;height:1px;background:var(--border);position:relative;top:-14px;z-index:1;}

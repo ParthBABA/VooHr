@@ -34,7 +34,7 @@
   --shadow-lg:0 12px 40px rgba(0,0,0,0.55);
 
   /* ── Fonts & Easing (unchanged) ── */
-  --font-d:'Clash Display',sans-serif;--font-b:'Cabinet Grotesk',sans-serif;--font-m:'Space Mono',monospace;--font-rc:'Roboto Condensed',sans-serif;
+  --font-d:'Clash Display',sans-serif;--font-b:'Cabinet Grotesk',sans-serif;--font-m:'Inter',sans-serif;--font-rc:'Inter',sans-serif;
   --ease-out:cubic-bezier(0.16,1,0.3,1);--ease-spring:cubic-bezier(0.34,1.56,0.64,1);
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}

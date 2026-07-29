@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HR Copilot - Sync Room</title>
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -501,65 +500,108 @@ sessionPromise.then(function(s) {
   if (session && session.analysis) {
     var analysis = session.analysis;
 
-    // Add AI Insights banner above the step content
+    var S = function(label) {
+      return '<span style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);font-weight:600;">' + label + '</span>';
+    };
+    var cardStyle = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:0.8rem;';
+    var labelStyle = 'font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:2px;';
+    var textStyle = 'font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);line-height:1.5;';
+
     var aiBanner = document.createElement('div');
     aiBanner.id = 'aiInsightsBanner';
-    aiBanner.style.cssText = 'background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:12px;padding:1.2rem 1.5rem;margin-bottom:1.5rem;';
-    var aiHtml = '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">' +
+    aiBanner.style.cssText = 'background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:14px;padding:1.4rem 1.5rem;margin-bottom:1.5rem;';
+    var aiHtml = '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">' +
       '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--violet)" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-      '<span style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--violet);font-weight:600;">AI ANALYSIS INSIGHTS</span></div>';
+      '<span style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--violet);font-weight:600;">COACH ANALYSIS</span></div>';
 
+    // ── Summary ──
     if (analysis.summary) {
-      aiHtml += '<div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--ivory);line-height:1.6;margin-bottom:0.8rem;">' + escHtml(analysis.summary) + '</div>';
+      aiHtml += '<div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--ivory);line-height:1.6;margin-bottom:1.2rem;">' + escHtml(analysis.summary) + '</div>';
     }
 
-    if (analysis.psychology) {
+    // ── Sentiment ──
+    if (analysis.psychology && analysis.psychology.sentiment) {
       var psych = analysis.psychology;
-      aiHtml += '<div style="display:flex;gap:1.5rem;flex-wrap:wrap;">';
-      if (psych.sentiment) {
-        aiHtml += '<div><span style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Sentiment</span><div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--ivory);margin-top:2px;">' + escHtml(psych.sentiment) + (psych.sentiment_score != null ? ' (' + Math.round(psych.sentiment_score * 100) + '%)' : '') + '</div></div>';
-      }
-      if (psych.notes) {
-        aiHtml += '<div><span style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Psychology Notes</span><div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--ivory);margin-top:2px;">' + escHtml(psych.notes) + '</div></div>';
-      }
+      var sentColor = psych.sentiment_score != null
+        ? (psych.sentiment_score < 0.3 ? 'var(--red)' : psych.sentiment_score < 0.6 ? 'var(--amber)' : 'var(--teal)')
+        : 'var(--ivory)';
+      aiHtml += '<div style="display:flex;gap:0.6rem;align-items:center;margin-bottom:1.2rem;padding:0.5rem 0.8rem;background:var(--surface);border-radius:8px;border:1px solid var(--border);">' +
+        S('Sentiment') +
+        '<span style="font-family:var(--font-rc);font-size:0.82rem;color:' + sentColor + ';font-weight:600;">' + escHtml(psych.sentiment) +
+        (psych.sentiment_score != null ? ' (' + Math.round(psych.sentiment_score * 100) + '%)' : '') + '</span></div>';
+    }
+
+    // ── Behavioural Interpretation ──
+    if (analysis.psychology && analysis.psychology.behavioural_interpretation && analysis.psychology.behavioural_interpretation.length) {
+      aiHtml += '<div style="margin-top:1.2rem;"><div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);font-weight:600;margin-bottom:0.6rem;">Behavioural Interpretation</div>';
+      analysis.psychology.behavioural_interpretation.forEach(function(bi) {
+        aiHtml += '<div style="' + cardStyle + '">';
+        if (bi.observed_behaviour) { aiHtml += '<div style="margin-bottom:4px;"><div style="' + labelStyle + '">Observed</div><div style="' + textStyle + '">' + escHtml(bi.observed_behaviour) + '</div></div>'; }
+        if (bi.evidence) { aiHtml += '<div style="margin-bottom:4px;"><div style="' + labelStyle + '">Evidence</div><div style="' + textStyle + 'color:var(--ivory-dim);font-style:italic;">"' + escHtml(bi.evidence) + '"</div></div>'; }
+        if (bi.interpretation) { aiHtml += '<div style="margin-bottom:4px;"><div style="' + labelStyle + '">Interpretation</div><div style="' + textStyle + '">' + escHtml(bi.interpretation) + '</div></div>'; }
+        if (bi.confidence != null) { aiHtml += '<div style="margin-top:6px;"><span style="font-family:var(--font-m);font-size:0.5rem;color:' + (bi.confidence > 80 ? 'var(--teal)' : 'var(--amber)') + ';">Confidence ' + bi.confidence + '%</span></div>'; }
+        aiHtml += '</div>';
+      });
       aiHtml += '</div>';
     }
 
+    // ── Conversation Coach ──
+    if (analysis.conversation_coach && analysis.conversation_coach.length) {
+      aiHtml += '<div style="margin-top:1.2rem;"><div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:0.6rem;">Conversation Coach</div>';
+      analysis.conversation_coach.forEach(function(cc, idx) {
+        aiHtml += '<div style="' + cardStyle + 'border-left:3px solid var(--amber);">';
+        if (cc.immediate_response) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Immediate Response</div><div style="' + textStyle + '">' + escHtml(cc.immediate_response) + '</div></div>'; }
+        if (cc.better_follow_up_question) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Better Follow-up Question</div><div style="' + textStyle + '">' + escHtml(cc.better_follow_up_question) + '</div></div>'; }
+        if (cc.avoid_saying) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + 'color:var(--red);">Avoid Saying</div><div style="' + textStyle + 'color:var(--red-soft);">' + escHtml(cc.avoid_saying) + '</div></div>'; }
+        if (cc.why_it_works) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Why This Works</div><div style="' + textStyle + 'color:var(--ivory-dim);">' + escHtml(cc.why_it_works) + '</div></div>'; }
+        aiHtml += '</div>';
+      });
+      aiHtml += '</div>';
+    }
+
+    // ── Realistic Solutions ──
+    if (analysis.realistic_solutions) {
+      var sols = analysis.realistic_solutions;
+      var hasSol = sols.immediate || sols.this_week || sols.manager || sols.environment;
+      if (hasSol) {
+        aiHtml += '<div style="margin-top:1.2rem;"><div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);font-weight:600;margin-bottom:0.6rem;">Realistic Solutions</div>';
+        aiHtml += '<div style="display:grid;gap:0.6rem;">';
+        if (sols.immediate) { aiHtml += '<div style="' + cardStyle + 'border-left:3px solid var(--teal);"><div style="' + labelStyle + '">Immediate</div><div style="' + textStyle + '">' + escHtml(sols.immediate) + '</div></div>'; }
+        if (sols.this_week) { aiHtml += '<div style="' + cardStyle + 'border-left:3px solid var(--amber);"><div style="' + labelStyle + '">This Week</div><div style="' + textStyle + '">' + escHtml(sols.this_week) + '</div></div>'; }
+        if (sols.manager) { aiHtml += '<div style="' + cardStyle + 'border-left:3px solid var(--violet);"><div style="' + labelStyle + '">Manager</div><div style="' + textStyle + '">' + escHtml(sols.manager) + '</div></div>'; }
+        if (sols.environment) { aiHtml += '<div style="' + cardStyle + 'border-left:3px solid var(--ivory-faint);"><div style="' + labelStyle + '">Environment</div><div style="' + textStyle + '">' + escHtml(sols.environment) + '</div></div>'; }
+        aiHtml += '</div></div>';
+      }
+    }
+
+    // ── Next Conversation Plan ──
+    if (analysis.next_conversation_plan && analysis.next_conversation_plan.length) {
+      aiHtml += '<div style="margin-top:1.2rem;"><div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--violet);font-weight:600;margin-bottom:0.6rem;">Next Conversation Plan</div>';
+      analysis.next_conversation_plan.forEach(function(ncp) {
+        aiHtml += '<div style="' + cardStyle + 'border-left:3px solid var(--violet);">';
+        if (ncp.question) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Question</div><div style="' + textStyle + 'font-weight:600;">' + escHtml(ncp.question) + '</div></div>'; }
+        if (ncp.purpose) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Purpose</div><div style="' + textStyle + 'color:var(--ivory-dim);">' + escHtml(ncp.purpose) + '</div></div>'; }
+        if (ncp.possible_employee_response) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Possible Employee Response</div><div style="' + textStyle + 'font-style:italic;">"' + escHtml(ncp.possible_employee_response) + '"</div></div>'; }
+        if (ncp.suggested_hr_reply) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Suggested HR Reply</div><div style="' + textStyle + 'color:var(--teal);">' + escHtml(ncp.suggested_hr_reply) + '</div></div>'; }
+        aiHtml += '</div>';
+      });
+      aiHtml += '</div>';
+    }
+
+    // ── Risks ──
     if (analysis.risks) {
       var risks = analysis.risks;
-      aiHtml += '<div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid var(--border);">';
+      aiHtml += '<div style="margin-top:1.2rem;padding-top:0.8rem;border-top:1px solid var(--border);display:flex;gap:1.5rem;flex-wrap:wrap;">';
       if (risks.burnout_index != null) {
-        aiHtml += '<div><span style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Burnout Index</span><div style="font-family:var(--font-rc);font-size:0.85rem;color:' + (risks.burnout_index > 60 ? 'var(--red)' : 'var(--amber)') + ';margin-top:2px;">' + risks.burnout_index + '/100</div></div>';
+        aiHtml += '<div><span style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Burnout Index</span><div style="font-family:var(--font-rc);font-size:0.85rem;color:' + (risks.burnout_index > 60 ? 'var(--red)' : 'var(--amber)') + ';margin-top:2px;">' + risks.burnout_index + '/100</div></div>';
       }
       if (risks.attrition_risk_pct != null) {
-        aiHtml += '<div><span style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Attrition Risk</span><div style="font-family:var(--font-rc);font-size:0.85rem;color:' + (risks.attrition_risk_pct > 40 ? 'var(--red)' : 'var(--amber)') + ';margin-top:2px;">' + risks.attrition_risk_pct + '%</div></div>';
+        aiHtml += '<div><span style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Attrition Risk</span><div style="font-family:var(--font-rc);font-size:0.85rem;color:' + (risks.attrition_risk_pct > 40 ? 'var(--red)' : 'var(--amber)') + ';margin-top:2px;">' + risks.attrition_risk_pct + '%</div></div>';
       }
       if (risks.risk_factors && risks.risk_factors.length) {
-        aiHtml += '<div><span style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Risk Factors</span><div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--ivory);margin-top:2px;">' + risks.risk_factors.map(function(f) { return escHtml(f); }).join(', ') + '</div></div>';
+        aiHtml += '<div style="max-width:300px;"><span style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Risk Factors</span><div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);margin-top:2px;">' + risks.risk_factors.map(function(f) { return escHtml(f); }).join(', ') + '</div></div>';
       }
       aiHtml += '</div>';
-    }
-
-    if (analysis.action_items && analysis.action_items.length) {
-      aiHtml += '<div style="margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid var(--border);">';
-      aiHtml += '<div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);margin-bottom:0.4rem;">Action Items</div>';
-      aiHtml += '<ul style="margin:0;padding-left:1.2rem;font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);">';
-      analysis.action_items.forEach(function(item) {
-        var line = typeof item === 'string' ? item : (item.item || '');
-        aiHtml += '<li style="margin-bottom:4px;">' + escHtml(line) + '</li>';
-      });
-      aiHtml += '</ul></div>';
-    }
-
-    if (analysis.follow_ups && analysis.follow_ups.length) {
-      aiHtml += '<div style="margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid var(--border);">';
-      aiHtml += '<div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--amber);margin-bottom:0.4rem;">Follow-ups</div>';
-      aiHtml += '<ul style="margin:0;padding-left:1.2rem;font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);">';
-      analysis.follow_ups.forEach(function(fu) {
-        var line = typeof fu === 'string' ? fu : (fu.item || '');
-        aiHtml += '<li style="margin-bottom:4px;">' + escHtml(line) + '</li>';
-      });
-      aiHtml += '</ul></div>';
     }
 
     aiBanner.innerHTML = aiHtml;
