@@ -4,6 +4,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from flask import Blueprint, jsonify, request, session
 
+from employee_scoring import _status_for
 from employees import _require_auth
 from extensions import get_db
 from providers import get_llm_provider, get_storage_provider, get_stt_provider
@@ -242,6 +243,37 @@ def analyze_session(session_id: str):
                 }
             },
         )
+
+        # Roll the AI's read of this transcript into the employee's
+        # wellness score — this is what actually drives Directory/Dashboard
+        # now, instead of the old static default.
+        risks = analysis.get("risks") or {}
+        burnout_index = risks.get("burnout_index")
+        attrition_risk_pct = risks.get("attrition_risk_pct")
+
+        if burnout_index is not None or attrition_risk_pct is not None:
+            burnout_index = burnout_index if burnout_index is not None else 0
+            attrition_risk_pct = attrition_risk_pct if attrition_risk_pct is not None else 0
+            ai_wellness_score = round(100 - ((burnout_index + attrition_risk_pct) / 2))
+            ai_wellness_score = max(0, min(100, ai_wellness_score))
+
+            db.employees.update_one(
+                {"_id": s["employee_id"]},
+                {
+                    "$set": {
+                        "ai_wellness": {
+                            "score": ai_wellness_score,
+                            "status": _status_for(ai_wellness_score),
+                            "attrition_risk_pct": attrition_risk_pct,
+                            "burnout_index": burnout_index,
+                            "risk_factors": risks.get("risk_factors", []),
+                            "source_session_id": str(session_id),
+                            "updated_at": now,
+                        },
+                        "updated_at": now,
+                    }
+                },
+            )
     except Exception as e:
         db.sessions.update_one(
             {"_id": ObjectId(session_id)},

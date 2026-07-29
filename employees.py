@@ -41,13 +41,42 @@ def _next_employee_id(db, org_id: str) -> str:
 def _employee_to_json(emp) -> dict:
     pii = decrypt_fields(emp.get("encrypted"), emp.get("wrapped_dek", ""))
     signals = emp.get("signals") or {}
-    result = score_employee(
-        overtime_hours_last_3w=signals.get("overtime_hours_last_3w", 0),
-        absences_last_30d=signals.get("absences_last_30d", 0),
-        performance_delta_pct=signals.get("performance_delta_pct", 0),
-        missed_deadlines_last_30d=signals.get("missed_deadlines_last_30d", 0),
-        engagement_survey_score=signals.get("engagement_survey_score"),
-    )
+    ai = emp.get("ai_wellness")
+
+    has_real_signals = any(
+        v not in (0, None) for v in signals.values()
+    ) if signals else False
+
+    if ai:
+        # Wellness score derived from the AI's reading of an actual HR
+        # conversation transcript — this takes priority once it exists.
+        wellness_score = ai.get("score")
+        wellness_status = ai.get("status")
+        attrition_risk_pct = ai.get("attrition_risk_pct")
+        reasons = ai.get("risk_factors", [])
+        wellness_source = "ai_transcript_analysis"
+    elif has_real_signals:
+        result = score_employee(
+            overtime_hours_last_3w=signals.get("overtime_hours_last_3w", 0),
+            absences_last_30d=signals.get("absences_last_30d", 0),
+            performance_delta_pct=signals.get("performance_delta_pct", 0),
+            missed_deadlines_last_30d=signals.get("missed_deadlines_last_30d", 0),
+            engagement_survey_score=signals.get("engagement_survey_score"),
+        )
+        wellness_score = result.wellness_score
+        wellness_status = result.status
+        attrition_risk_pct = result.attrition_risk_pct
+        reasons = result.reasons
+        wellness_source = "hr_signals"
+    else:
+        # No transcript analyzed yet and no HR signals entered — don't
+        # invent a score (previously this silently defaulted to 100).
+        wellness_score = None
+        wellness_status = "not_assessed"
+        attrition_risk_pct = None
+        reasons = []
+        wellness_source = None
+
     return {
         "id": str(emp["_id"]),
         "employee_id": emp.get("employee_id"),
@@ -58,10 +87,11 @@ def _employee_to_json(emp) -> dict:
         "position": emp.get("position", ""),
         "joining_date": emp.get("joining_date", ""),
         "status": emp.get("status", "active"),
-        "wellness_score": result.wellness_score,
-        "wellness_status": result.status,
-        "attrition_risk_pct": result.attrition_risk_pct,
-        "reasons": result.reasons,
+        "wellness_score": wellness_score,
+        "wellness_status": wellness_status,
+        "attrition_risk_pct": attrition_risk_pct,
+        "wellness_source": wellness_source,
+        "reasons": reasons,
         "signals": signals,
         "created_at": emp.get("created_at").isoformat() if emp.get("created_at") else None,
         "updated_at": emp.get("updated_at").isoformat() if emp.get("updated_at") else None,

@@ -222,6 +222,7 @@ h1,h2,h3,h4,h5,h6{font-family:var(--font-d);font-weight:600;text-transform:upper
 .badge.healthy{color:var(--teal);border-color:rgba(51,160,143,0.28);background:var(--teal-soft);}
 .badge.info{color:var(--violet);border-color:rgba(107,70,193,0.28);background:var(--violet-soft);}
 .badge.draft{color:var(--ivory-faint);border-color:var(--border);background:var(--surface);}
+.badge.not-assessed{color:var(--ivory-faint);border-color:var(--border);background:var(--surface);}
 
 /* ── Attention Glow — pulsing highlight for rows/badges needing special attention ──
    Mirrors the "urgent attention" signal that used to live in a separate alerts

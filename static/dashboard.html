@@ -504,20 +504,21 @@ function loadEmployees() {
       (data.employees || []).forEach(function(emp) {
         var name = emp.name || '';
         var initials = name.trim().split(' ').map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2) || '?';
-        var wellnessPct = emp.wellness_score || 0;
+        var hasScore = emp.wellness_score !== null && emp.wellness_score !== undefined;
+        var wellnessPct = hasScore ? emp.wellness_score : 0;
         var fillClass = wellnessPct >= 70 ? 'high' : (wellnessPct >= 40 ? 'medium' : 'low');
         var fillColor = wellnessPct >= 70 ? 'var(--teal)' : (wellnessPct >= 40 ? 'var(--amber)' : 'var(--red)');
-        var statusLabel = emp.wellness_status === 'critical' ? 'At Risk' : (emp.wellness_status === 'warning' ? 'Watch' : 'Healthy');
+        var statusLabel = !hasScore ? 'Not Assessed' : emp.wellness_status === 'critical' ? 'At Risk' : (emp.wellness_status === 'warning' ? 'Watch' : 'Healthy');
         var statusTitle = emp.reasons && emp.reasons.length ? emp.reasons.join('; ') : '';
 
         var tr = document.createElement('tr');
-        tr.setAttribute('data-status', emp.wellness_status || 'healthy');
+        tr.setAttribute('data-status', emp.wellness_status || 'not_assessed');
         tr.innerHTML =
           '<td><span class="emp-id">' + (emp.employee_id || '') + '</span></td>' +
           '<td><div class="emp-cell"><div class="emp-avatar">' + initials + '</div><div class="emp-meta"><span class="emp-name">' + escHtml(name) + '</span><div class="emp-email">' + escHtml(emp.email || '') + '</div></div></div></td>' +
           '<td><span class="emp-dept">' + escHtml(emp.department || '') + '</span></td>' +
-          '<td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill ' + fillClass + '" style="width:' + wellnessPct + '%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:' + fillColor + ';">' + wellnessPct + '</span></div></td>' +
-          '<td><span class="badge ' + (emp.wellness_status || 'healthy') + ' attention-glow ' + (emp.wellness_status || 'healthy') + '"' + (statusTitle ? ' title="' + escHtml(statusTitle) + '"' : '') + '>' + statusLabel + '</span></td>' +
+          '<td>' + (hasScore ? '<div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill ' + fillClass + '" style="width:' + wellnessPct + '%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:' + fillColor + ';">' + wellnessPct + '</span></div>' : '<span style="font-family:var(--font-m);font-size:0.65rem;color:var(--ivory-faint);">--</span>') + '</td>' +
+          '<td><span class="badge ' + (hasScore ? emp.wellness_status : 'not-assessed') + ' attention-glow ' + (hasScore ? emp.wellness_status : '') + '"' + (statusTitle ? ' title="' + escHtml(statusTitle) + '"' : '') + '>' + statusLabel + '</span></td>' +
           '<td><span class="emp-date">' + escHtml(emp.joining_date || '') + '</span></td>' +
           '<td style="display:flex;gap:6px;">' +
             '<a href="dictation.html?employee_id=' + (emp.id || '') + '" class="btn-session" style="text-decoration:none;">' +
