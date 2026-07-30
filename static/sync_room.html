@@ -115,8 +115,9 @@
             </div>
 
             <div class="script-block">
-              <div class="script-text" data-lang="en">"I want you to know that this conversation is about how we can support you. Your role here is valued, and I want to understand what you have been going through."</div>
-              <div class="script-text" data-lang="hi" style="display:none;">"Main chahta hoon ki tum jaano ki ye baat is baare mein hai ki hum tumhari kaise madad kar sakte hain. Yahan tumhariValue hai, aur main samajhna chahta hoon ki tum kya face kar rahe ho."</div>
+              <div class="script-text" data-lang="en" id="psychSafetyScriptEn">"I want you to know that this conversation is about how we can support you. Your role here is valued, and I want to understand what you have been going through."</div>
+              <div class="script-text" data-lang="hi" style="display:none;" id="psychSafetyScriptHi">"Main chahta hoon ki tum jaano ki ye baat is baare mein hai ki hum tumhari kaise madad kar sakte hain. Yahan tumhariValue hai, aur main samajhna chahta hoon ki tum kya face kar rahe ho."</div>
+              <div id="psychSafetyBadge" style="display:none;margin-top:0.5rem;font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--violet);">Personalized from this employee's last sync</div>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0;">
@@ -125,7 +126,7 @@
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                   <span data-lang="en"> Do This</span><span data-lang="hi" style="display:none;"> Ye Karo</span>
                 </div>
-                <div class="guidelines">
+                <div class="guidelines" id="psychSafetyDoList">
                   <div class="guideline" data-anim="do-0">
                     <div class="g-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg></div>
                     <span data-lang="en">Maintain open body language</span>
@@ -153,7 +154,7 @@
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                   <span data-lang="en"> Avoid This</span><span data-lang="hi" style="display:none;"> Ye Mat Karo</span>
                 </div>
-                <div class="guidelines">
+                <div class="guidelines" id="psychSafetyDontList">
                   <div class="guideline" data-anim="dont-0">
                     <div class="g-icon avoid"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
                     <span data-lang="en">Do NOT start with the problem</span>
@@ -181,9 +182,17 @@
             <div class="guideline tip" style="border-left:3px solid var(--amber);background:var(--amber-soft);">
               <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
               <div>
-                <span data-lang="en">Duration: 2-3 minutes. This step is the foundation. If the employee is still defensive, slow down and revisit before proceeding.</span>
-                <span data-lang="hi" style="display:none;">Duration: 2-3 minute. Ye step neev hai. Agar employee abhi bhi defensive hai, toh ruko aur fir se samjhaao.</span>
+                <span data-lang="en" id="psychSafetyTipEn">Duration: 2-3 minutes. This step is the foundation. If the employee is still defensive, slow down and revisit before proceeding.</span>
+                <span data-lang="hi" style="display:none;" id="psychSafetyTipHi">Duration: 2-3 minute. Ye step neev hai. Agar employee abhi bhi defensive hai, toh ruko aur fir se samjhaao.</span>
               </div>
+            </div>
+
+            <div id="aiCoachContainer" style="display:none;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);">
+              <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:0.8rem;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--amber)" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span data-lang="en"> AI Conversation Coach</span><span data-lang="hi" style="display:none;"> AI Conversation Coach</span>
+              </div>
+              <div id="aiCoachList"></div>
             </div>
 
             <div style="margin-top:2rem;">
@@ -194,7 +203,203 @@
             <div class="step-nav">
               <div></div>
               <div style="display:flex;gap:0.8rem;">
-                <button class="btn btn-primary btn-sm">Save &amp; Continue</button>
+                <button class="btn btn-primary btn-sm" onclick="goToStep(2)">Save &amp; Continue</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP CONTENT: STEP 2 -->
+          <div class="step-content scale-in" id="stepContent2" style="display:none;">
+            <div class="step-header">
+              <div class="step-number">Step 2 of 5</div>
+              <h2 class="step-title">Behavioural Intelligence</h2>
+              <p class="step-desc">Understand what behavioural patterns are visible in the conversation. This is NOT diagnosis — it explains observable behaviour only.</p>
+            </div>
+
+            <div class="script-block">
+              <div class="script-text" id="step2Script">Loading analysis...</div>
+            </div>
+
+            <div id="step2Cards"></div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0;">
+              <div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:0.6rem;">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span> Recommended Actions</span>
+                </div>
+                <div class="guidelines" id="step2Recommended"></div>
+              </div>
+              <div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  <span> Avoid Actions</span>
+                </div>
+                <div class="guidelines" id="step2Avoid"></div>
+              </div>
+            </div>
+
+            <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step2ManagerNotesContainer">
+              <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+              <div id="step2ManagerNotes"></div>
+            </div>
+
+            <div style="margin-top:2rem;">
+              <label class="form-label">Manager Notes for This Step</label>
+              <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_2"></textarea>
+            </div>
+
+            <div class="step-nav">
+              <button class="btn btn-sm" onclick="goToStep(1)">Back</button>
+              <div style="display:flex;gap:0.8rem;">
+                <button class="btn btn-primary btn-sm" onclick="goToStep(3)">Save &amp; Continue</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP CONTENT: STEP 3 -->
+          <div class="step-content scale-in" id="stepContent3" style="display:none;">
+            <div class="step-header">
+              <div class="step-number">Step 3 of 5</div>
+              <h2 class="step-title">Root Cause Analysis</h2>
+              <p class="step-desc">Understand WHY the AI believes the behaviour is occurring. Never diagnoses. Never claims certainty. Always explains reasoning using transcript evidence.</p>
+            </div>
+
+            <div class="script-block">
+              <div class="script-text" id="step3Script">Loading analysis...</div>
+            </div>
+
+            <div id="step3Cards"></div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0;">
+              <div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:0.6rem;">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span> Recommended Actions</span>
+                </div>
+                <div class="guidelines" id="step3Recommended"></div>
+              </div>
+              <div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  <span> Avoid Actions</span>
+                </div>
+                <div class="guidelines" id="step3Avoid"></div>
+              </div>
+            </div>
+
+            <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step3ManagerNotesContainer">
+              <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+              <div id="step3ManagerNotes"></div>
+            </div>
+
+            <div style="margin-top:2rem;">
+              <label class="form-label">Manager Notes for This Step</label>
+              <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_3"></textarea>
+            </div>
+
+            <div class="step-nav">
+              <button class="btn btn-sm" onclick="goToStep(2)">Back</button>
+              <div style="display:flex;gap:0.8rem;">
+                <button class="btn btn-primary btn-sm" onclick="goToStep(4)">Save &amp; Continue</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP CONTENT: STEP 4 -->
+          <div class="step-content scale-in" id="stepContent4" style="display:none;">
+            <div class="step-header">
+              <div class="step-number">Step 4 of 5</div>
+              <h2 class="step-title">Action Blueprint</h2>
+              <p class="step-desc">Generate realistic actions that can actually be implemented. Every recommendation includes WHY it works.</p>
+            </div>
+
+            <div class="script-block">
+              <div class="script-text" id="step4Script">Loading analysis...</div>
+            </div>
+
+            <div id="step4Cards"></div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0;">
+              <div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:0.6rem;">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span> Recommended Actions</span>
+                </div>
+                <div class="guidelines" id="step4Recommended"></div>
+              </div>
+              <div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  <span> Avoid Actions</span>
+                </div>
+                <div class="guidelines" id="step4Avoid"></div>
+              </div>
+            </div>
+
+            <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step4ManagerNotesContainer">
+              <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+              <div id="step4ManagerNotes"></div>
+            </div>
+
+            <div style="margin-top:2rem;">
+              <label class="form-label">Manager Notes for This Step</label>
+              <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_4"></textarea>
+            </div>
+
+            <div class="step-nav">
+              <button class="btn btn-sm" onclick="goToStep(3)">Back</button>
+              <div style="display:flex;gap:0.8rem;">
+                <button class="btn btn-primary btn-sm" onclick="goToStep(5)">Save &amp; Continue</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP CONTENT: STEP 5 -->
+          <div class="step-content scale-in" id="stepContent5" style="display:none;">
+            <div class="step-header">
+              <div class="step-number">Step 5 of 5</div>
+              <h2 class="step-title">Conversation Strategy</h2>
+              <p class="step-desc">Prepare for the next discussion. This page is about future conversation planning with the employee.</p>
+            </div>
+
+            <div class="script-block">
+              <div class="script-text" id="step5Script">Loading analysis...</div>
+            </div>
+
+            <div id="step5Cards"></div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0;">
+              <div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:0.6rem;">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span> Recommended Actions</span>
+                </div>
+                <div class="guidelines" id="step5Recommended"></div>
+              </div>
+              <div>
+                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  <span> Avoid Actions</span>
+                </div>
+                <div class="guidelines" id="step5Avoid"></div>
+              </div>
+            </div>
+
+            <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step5ManagerNotesContainer">
+              <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+              <div id="step5ManagerNotes"></div>
+            </div>
+
+            <div style="margin-top:2rem;">
+              <label class="form-label">Manager Notes for This Step</label>
+              <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_5"></textarea>
+            </div>
+
+            <div class="step-nav">
+              <button class="btn btn-sm" onclick="goToStep(4)">Back</button>
+              <div style="display:flex;gap:0.8rem;">
+                <button class="btn btn-primary btn-sm" id="completeSyncBtn">Complete Sync</button>
               </div>
             </div>
           </div>
@@ -431,6 +636,216 @@ function calcTenure(joinDate) {
   return years + 'y ' + months + 'm';
 }
 
+// ── Global analysis data store ──
+var analysisData = null;
+
+// ── Step navigation ──
+var currentStep = 1;
+function goToStep(n) {
+  if (n < 1 || n > 5) return;
+  document.getElementById('stepContent').style.display = n === 1 ? 'block' : 'none';
+  for (var i = 2; i <= 5; i++) {
+    var el = document.getElementById('stepContent' + i);
+    if (el) el.style.display = i === n ? 'block' : 'none';
+  }
+  // Update progress dots
+  var nodes = document.querySelectorAll('.step-node');
+  nodes.forEach(function(node, idx) {
+    var step = idx + 1;
+    node.classList.remove('active', 'completed', 'locked');
+    if (step === n) {
+      node.classList.add('active');
+    } else if (step < n) {
+      node.classList.add('completed');
+    } else {
+      node.classList.add('locked');
+    }
+  });
+  // Update connectors
+  var connectors = document.querySelectorAll('.step-connector');
+  connectors.forEach(function(conn, idx) {
+    var prevStep = idx + 1;
+    conn.classList.toggle('filled', prevStep < n);
+  });
+  currentStep = n;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Populate step if analysis available
+  if (analysisData) populateStep(n);
+}
+
+function populateStep(n) {
+  if (!analysisData) return;
+  switch (n) {
+    case 2: populateStep2(analysisData.step2_behavioural_intelligence || {}); break;
+    case 3: populateStep3(analysisData.step3_root_cause_analysis || {}); break;
+    case 4: populateStep4(analysisData.step4_action_blueprint || {}); break;
+    case 5: populateStep5(analysisData.step5_conversation_strategy || {}); break;
+  }
+}
+
+function buildGuidelineItems(list, containerId, isAvoid) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  if (!list || !list.length) {
+    container.innerHTML = '<div class="guideline"><span style="color:var(--ivory-dim);">Limited transcript evidence.</span></div>';
+    return;
+  }
+  list.forEach(function(text) {
+    var div = document.createElement('div');
+    div.className = 'guideline';
+    var iconSvg = isAvoid
+      ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>';
+    div.innerHTML = '<div class="g-icon' + (isAvoid ? ' avoid' : '') + '">' + iconSvg + '</div><span>' + escHtml(text) + '</span>';
+    container.appendChild(div);
+  });
+}
+
+function renderCard(label, value, extra) {
+  if (!value || value === 'Limited transcript evidence.') return '';
+  var labelColor = (extra && extra.labelColor) || 'var(--ivory-faint)';
+  var borderColor = (extra && extra.borderColor) || 'var(--violet)';
+  var valueColor = (extra && extra.valueColor) || 'var(--ivory)';
+  return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:0.8rem;border-left:3px solid ' + borderColor + ';">' +
+    '<div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:' + labelColor + ';margin-bottom:2px;">' + escHtml(label) + '</div>' +
+    '<div style="font-family:var(--font-rc);font-size:0.82rem;color:' + valueColor + ';line-height:1.5;">' + escHtml(value) + '</div></div>';
+}
+
+function renderConfidence(score) {
+  if (score == null || score === 0) return '';
+  var color = score > 80 ? 'var(--teal)' : score > 50 ? 'var(--amber)' : 'var(--red)';
+  return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.7rem 1rem;margin-bottom:0.8rem;display:flex;justify-content:space-between;align-items:center;">' +
+    '<span style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Confidence</span>' +
+    '<span style="font-family:var(--font-rc);font-size:0.82rem;font-weight:600;color:' + color + ';">' + score + '%</span></div>';
+}
+
+function renderListCard(label, items, opts) {
+  if (!items || !items.length) return '';
+  var borderColor = (opts && opts.borderColor) || 'var(--teal)';
+  var html = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:0.8rem;border-left:3px solid ' + borderColor + ';">' +
+    '<div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:4px;">' + escHtml(label) + '</div>' +
+    '<div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);line-height:1.6;">';
+  items.forEach(function(item) {
+    html += '<div style="padding:2px 0;">• ' + escHtml(item) + '</div>';
+  });
+  html += '</div></div>';
+  return html;
+}
+
+// ── Step 2 Population ──
+function populateStep2(d) {
+  var el = document.getElementById('step2Script');
+  if (el) el.textContent = d.suggested_script || 'Limited transcript evidence.';
+
+  var cards = document.getElementById('step2Cards');
+  if (cards) {
+    var html = '';
+    if (d.title_question) html += '<div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--violet);font-weight:600;margin-bottom:1rem;font-style:italic;">"' + escHtml(d.title_question) + '"</div>';
+    html += renderCard('Behaviour Summary', d.behaviour_summary, {borderColor:'var(--amber)'});
+    html += renderCard('Observed Behaviour', d.observed_behaviour, {borderColor:'var(--amber)'});
+    html += renderCard('Behaviour Pattern', d.behaviour_pattern);
+    html += renderCard('Supporting Evidence', d.supporting_evidence);
+    html += renderCard('AI Interpretation', d.ai_interpretation, {borderColor:'var(--teal)'});
+    html += renderCard('Alternative Interpretation', d.alternative_interpretation, {borderColor:'var(--ivory-faint)', valueColor:'var(--ivory-dim)'});
+    html += renderCard('Conversation Direction', d.conversation_direction, {borderColor:'var(--violet)'});
+    html += renderConfidence(d.confidence);
+    if (d.key_takeaway) html += '<div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:10px;padding:1rem;margin-top:0.5rem;"><div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--violet);margin-bottom:4px;">Key Takeaway</div><div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);font-style:italic;">' + escHtml(d.key_takeaway) + '</div></div>';
+    cards.innerHTML = html;
+  }
+
+  buildGuidelineItems(d.recommended_actions, 'step2Recommended', false);
+  buildGuidelineItems(d.avoid_actions, 'step2Avoid', true);
+
+  var mn = document.getElementById('step2ManagerNotes');
+  if (mn) mn.textContent = d.manager_notes || '';
+}
+
+// ── Step 3 Population ──
+function populateStep3(d) {
+  var el = document.getElementById('step3Script');
+  if (el) el.textContent = d.suggested_script || 'Limited transcript evidence.';
+
+  var cards = document.getElementById('step3Cards');
+  if (cards) {
+    var html = '';
+    if (d.title_question) html += '<div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--violet);font-weight:600;margin-bottom:1rem;font-style:italic;">"' + escHtml(d.title_question) + '"</div>';
+    html += renderCard('Primary Trigger', d.primary_trigger, {borderColor:'var(--red)'});
+    html += renderListCard('Secondary Contributors', d.secondary_contributors, {borderColor:'var(--amber)'});
+    html += renderListCard('Supporting Evidence', d.supporting_evidence, {borderColor:'var(--teal)'});
+    html += renderCard('Evidence Strength', d.evidence_strength, {borderColor:'var(--violet)'});
+    html += renderListCard('Missing Information', d.missing_information, {borderColor:'var(--ivory-faint)'});
+    html += renderCard('AI Reasoning', d.ai_reasoning, {borderColor:'var(--amber)'});
+    html += renderConfidence(d.confidence);
+    if (d.key_takeaway) html += '<div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:10px;padding:1rem;margin-top:0.5rem;"><div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--violet);margin-bottom:4px;">Key Takeaway</div><div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);font-style:italic;">' + escHtml(d.key_takeaway) + '</div></div>';
+    cards.innerHTML = html;
+  }
+
+  buildGuidelineItems(d.recommended_actions, 'step3Recommended', false);
+  buildGuidelineItems(d.avoid_actions, 'step3Avoid', true);
+
+  var mn = document.getElementById('step3ManagerNotes');
+  if (mn) mn.textContent = d.manager_notes || '';
+}
+
+// ── Step 4 Population ──
+function populateStep4(d) {
+  var el = document.getElementById('step4Script');
+  if (el) el.textContent = d.suggested_script || 'Limited transcript evidence.';
+
+  var cards = document.getElementById('step4Cards');
+  if (cards) {
+    var html = '';
+    if (d.title_question) html += '<div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--violet);font-weight:600;margin-bottom:1rem;font-style:italic;">"' + escHtml(d.title_question) + '"</div>';
+    html += renderCard('Immediate Action', d.immediate, {borderColor:'var(--teal)'});
+    html += renderCard('This Week', d.this_week, {borderColor:'var(--amber)'});
+    html += renderCard('Manager Action', d.manager_action, {borderColor:'var(--violet)'});
+    html += renderCard('Employee Action', d.employee_action, {borderColor:'var(--teal)'});
+    html += renderCard('Environment', d.environment, {borderColor:'var(--ivory-faint)'});
+    html += renderCard('Success Metric', d.success_metric, {borderColor:'var(--teal)'});
+    html += renderCard('Expected Outcome', d.expected_outcome, {borderColor:'var(--amber)'});
+    html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:0.8rem;border-left:3px solid var(--violet);">' +
+      '<div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:2px;">Why This Works</div>' +
+      '<div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory-dim);line-height:1.5;font-style:italic;">' + escHtml(d.why_it_works || '') + '</div></div>';
+    if (d.key_takeaway) html += '<div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:10px;padding:1rem;margin-top:0.5rem;"><div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--violet);margin-bottom:4px;">Key Takeaway</div><div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);font-style:italic;">' + escHtml(d.key_takeaway) + '</div></div>';
+    cards.innerHTML = html;
+  }
+
+  buildGuidelineItems(d.recommended_actions, 'step4Recommended', false);
+  buildGuidelineItems(d.avoid_actions, 'step4Avoid', true);
+
+  var mn = document.getElementById('step4ManagerNotes');
+  if (mn) mn.textContent = d.manager_notes || '';
+}
+
+// ── Step 5 Population ──
+function populateStep5(d) {
+  var el = document.getElementById('step5Script');
+  if (el) el.textContent = d.suggested_script || 'Limited transcript evidence.';
+
+  var cards = document.getElementById('step5Cards');
+  if (cards) {
+    var html = '';
+    if (d.title_question) html += '<div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--violet);font-weight:600;margin-bottom:1rem;font-style:italic;">"' + escHtml(d.title_question) + '"</div>';
+    html += renderCard('Conversation Goal', d.conversation_goal, {borderColor:'var(--violet)'});
+    html += renderCard('Conversation Focus', d.conversation_focus, {borderColor:'var(--amber)'});
+    html += renderCard('Opening Question', d.opening_question, {borderColor:'var(--teal)'});
+    html += renderCard('Follow-up Question', d.follow_up_question, {borderColor:'var(--amber)'});
+    html += renderCard('Possible Response', d.possible_response, {borderColor:'var(--ivory-dim)', valueColor:'var(--ivory-dim)'});
+    html += renderCard('Suggested HR Reply', d.suggested_reply, {borderColor:'var(--teal)'});
+    html += renderListCard('What to Listen For', d.what_to_listen_for, {borderColor:'var(--red)'});
+    html += renderCard('Success Indicator', d.success_indicator, {borderColor:'var(--teal)'});
+    if (d.key_takeaway) html += '<div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:10px;padding:1rem;margin-top:0.5rem;"><div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--violet);margin-bottom:4px;">Key Takeaway</div><div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);font-style:italic;">' + escHtml(d.key_takeaway) + '</div></div>';
+    cards.innerHTML = html;
+  }
+
+  buildGuidelineItems(d.recommended_actions, 'step5Recommended', false);
+  buildGuidelineItems(d.avoid_actions, 'step5Avoid', true);
+
+  var mn = document.getElementById('step5ManagerNotes');
+  if (mn) mn.textContent = d.manager_notes || '';
+}
+
 // ── Fetch & populate ──
 var employeePromise = employeeId
   ? fetch('/api/employees/' + employeeId).then(function(r) { return r.ok ? r.json() : null; })
@@ -499,114 +914,77 @@ sessionPromise.then(function(s) {
   // ── Analysis-driven context (AI Insights panel) ──
   if (session && session.analysis) {
     var analysis = session.analysis;
+    analysisData = analysis;
 
-    var S = function(label) {
-      return '<span style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);font-weight:600;">' + label + '</span>';
-    };
     var cardStyle = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:0.8rem;';
     var labelStyle = 'font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:2px;';
     var textStyle = 'font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);line-height:1.5;';
 
-    var aiBanner = document.createElement('div');
-    aiBanner.id = 'aiInsightsBanner';
-    aiBanner.style.cssText = 'background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:14px;padding:1.4rem 1.5rem;margin-bottom:1.5rem;';
-    var aiHtml = '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">' +
-      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--violet)" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-      '<span style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--violet);font-weight:600;">COACH ANALYSIS</span></div>';
+    // ── Personalize Step 1 "Establish Psychological Safety" using AI analysis ──
+    var ps = analysis.psychological_safety;
+    var INSUFFICIENT = 'Insufficient evidence to draw a reliable conclusion.';
+    if (ps && ps.statement && ps.statement !== INSUFFICIENT) {
+      var scriptEn = document.getElementById('psychSafetyScriptEn');
+      var scriptHi = document.getElementById('psychSafetyScriptHi');
+      if (scriptEn) scriptEn.textContent = '"' + ps.statement + '"';
+      if (scriptHi) scriptHi.textContent = '"' + ps.statement + '"';
 
-    // ── Summary ──
-    if (analysis.summary) {
-      aiHtml += '<div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--ivory);line-height:1.6;margin-bottom:1.2rem;">' + escHtml(analysis.summary) + '</div>';
+      var buildItem = function(text, isAvoid) {
+        var iconSvg = isAvoid
+          ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+          : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>';
+        var div = document.createElement('div');
+        div.className = 'guideline';
+        div.innerHTML = '<div class="g-icon' + (isAvoid ? ' avoid' : '') + '">' + iconSvg + '</div><span>' + escHtml(text) + '</span>';
+        return div;
+      };
+
+      if (ps.do && ps.do.length) {
+        var doList = document.getElementById('psychSafetyDoList');
+        if (doList) {
+          doList.innerHTML = '';
+          ps.do.forEach(function(t) { doList.appendChild(buildItem(t, false)); });
+        }
+      }
+      if (ps.dont && ps.dont.length) {
+        var dontList = document.getElementById('psychSafetyDontList');
+        if (dontList) {
+          dontList.innerHTML = '';
+          ps.dont.forEach(function(t) { dontList.appendChild(buildItem(t, true)); });
+        }
+      }
+      if (ps.tip && ps.tip !== INSUFFICIENT) {
+        var tipEn = document.getElementById('psychSafetyTipEn');
+        var tipHi = document.getElementById('psychSafetyTipHi');
+        if (tipEn) tipEn.textContent = ps.tip;
+        if (tipHi) tipHi.textContent = ps.tip;
+      }
+
+      var badge = document.getElementById('psychSafetyBadge');
+      if (badge) badge.style.display = 'block';
     }
 
-    // ── Sentiment ──
-    if (analysis.psychology && analysis.psychology.sentiment) {
-      var psych = analysis.psychology;
-      var sentColor = psych.sentiment_score != null
-        ? (psych.sentiment_score < 0.3 ? 'var(--red)' : psych.sentiment_score < 0.6 ? 'var(--amber)' : 'var(--teal)')
-        : 'var(--ivory)';
-      aiHtml += '<div style="display:flex;gap:0.6rem;align-items:center;margin-bottom:1.2rem;padding:0.5rem 0.8rem;background:var(--surface);border-radius:8px;border:1px solid var(--border);">' +
-        S('Sentiment') +
-        '<span style="font-family:var(--font-rc);font-size:0.82rem;color:' + sentColor + ';font-weight:600;">' + escHtml(psych.sentiment) +
-        (psych.sentiment_score != null ? ' (' + Math.round(psych.sentiment_score * 100) + '%)' : '') + '</span></div>';
-    }
-
-    // ── Behavioural Interpretation ──
-    if (analysis.psychology && analysis.psychology.behavioural_interpretation && analysis.psychology.behavioural_interpretation.length) {
-      aiHtml += '<div style="margin-top:1.2rem;"><div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);font-weight:600;margin-bottom:0.6rem;">Behavioural Interpretation</div>';
-      analysis.psychology.behavioural_interpretation.forEach(function(bi) {
-        aiHtml += '<div style="' + cardStyle + '">';
-        if (bi.observed_behaviour) { aiHtml += '<div style="margin-bottom:4px;"><div style="' + labelStyle + '">Observed</div><div style="' + textStyle + '">' + escHtml(bi.observed_behaviour) + '</div></div>'; }
-        if (bi.evidence) { aiHtml += '<div style="margin-bottom:4px;"><div style="' + labelStyle + '">Evidence</div><div style="' + textStyle + 'color:var(--ivory-dim);font-style:italic;">"' + escHtml(bi.evidence) + '"</div></div>'; }
-        if (bi.interpretation) { aiHtml += '<div style="margin-bottom:4px;"><div style="' + labelStyle + '">Interpretation</div><div style="' + textStyle + '">' + escHtml(bi.interpretation) + '</div></div>'; }
-        if (bi.confidence != null) { aiHtml += '<div style="margin-top:6px;"><span style="font-family:var(--font-m);font-size:0.5rem;color:' + (bi.confidence > 80 ? 'var(--teal)' : 'var(--amber)') + ';">Confidence ' + bi.confidence + '%</span></div>'; }
-        aiHtml += '</div>';
-      });
-      aiHtml += '</div>';
-    }
-
-    // ── Conversation Coach ──
+    // ── Render Conversation Coach inside Step 1 ──
     if (analysis.conversation_coach && analysis.conversation_coach.length) {
-      aiHtml += '<div style="margin-top:1.2rem;"><div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:0.6rem;">Conversation Coach</div>';
-      analysis.conversation_coach.forEach(function(cc, idx) {
-        aiHtml += '<div style="' + cardStyle + 'border-left:3px solid var(--amber);">';
-        if (cc.immediate_response) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Immediate Response</div><div style="' + textStyle + '">' + escHtml(cc.immediate_response) + '</div></div>'; }
-        if (cc.better_follow_up_question) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Better Follow-up Question</div><div style="' + textStyle + '">' + escHtml(cc.better_follow_up_question) + '</div></div>'; }
-        if (cc.avoid_saying) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + 'color:var(--red);">Avoid Saying</div><div style="' + textStyle + 'color:var(--red-soft);">' + escHtml(cc.avoid_saying) + '</div></div>'; }
-        if (cc.why_it_works) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Why This Works</div><div style="' + textStyle + 'color:var(--ivory-dim);">' + escHtml(cc.why_it_works) + '</div></div>'; }
-        aiHtml += '</div>';
-      });
-      aiHtml += '</div>';
-    }
-
-    // ── Realistic Solutions ──
-    if (analysis.realistic_solutions) {
-      var sols = analysis.realistic_solutions;
-      var hasSol = sols.immediate || sols.this_week || sols.manager || sols.environment;
-      if (hasSol) {
-        aiHtml += '<div style="margin-top:1.2rem;"><div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);font-weight:600;margin-bottom:0.6rem;">Realistic Solutions</div>';
-        aiHtml += '<div style="display:grid;gap:0.6rem;">';
-        if (sols.immediate) { aiHtml += '<div style="' + cardStyle + 'border-left:3px solid var(--teal);"><div style="' + labelStyle + '">Immediate</div><div style="' + textStyle + '">' + escHtml(sols.immediate) + '</div></div>'; }
-        if (sols.this_week) { aiHtml += '<div style="' + cardStyle + 'border-left:3px solid var(--amber);"><div style="' + labelStyle + '">This Week</div><div style="' + textStyle + '">' + escHtml(sols.this_week) + '</div></div>'; }
-        if (sols.manager) { aiHtml += '<div style="' + cardStyle + 'border-left:3px solid var(--violet);"><div style="' + labelStyle + '">Manager</div><div style="' + textStyle + '">' + escHtml(sols.manager) + '</div></div>'; }
-        if (sols.environment) { aiHtml += '<div style="' + cardStyle + 'border-left:3px solid var(--ivory-faint);"><div style="' + labelStyle + '">Environment</div><div style="' + textStyle + '">' + escHtml(sols.environment) + '</div></div>'; }
-        aiHtml += '</div></div>';
+      var coachContainer = document.getElementById('aiCoachContainer');
+      var coachList = document.getElementById('aiCoachList');
+      if (coachContainer && coachList) {
+        coachList.innerHTML = '';
+        analysis.conversation_coach.forEach(function(cc) {
+          var html = '<div style="' + cardStyle + 'border-left:3px solid var(--amber);">';
+          if (cc.immediate_response) { html += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Immediate Response</div><div style="' + textStyle + '">' + escHtml(cc.immediate_response) + '</div></div>'; }
+          if (cc.better_follow_up_question) { html += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Better Follow-up Question</div><div style="' + textStyle + '">' + escHtml(cc.better_follow_up_question) + '</div></div>'; }
+          if (cc.avoid_saying) { html += '<div style="margin-bottom:6px;"><div style="' + labelStyle + 'color:var(--red);">Avoid Saying</div><div style="' + textStyle + 'color:var(--red-soft);">' + escHtml(cc.avoid_saying) + '</div></div>'; }
+          if (cc.why_it_works) { html += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Why This Works</div><div style="' + textStyle + 'color:var(--ivory-dim);">' + escHtml(cc.why_it_works) + '</div></div>'; }
+          html += '</div>';
+          coachList.innerHTML += html;
+        });
+        coachContainer.style.display = 'block';
       }
     }
 
-    // ── Next Conversation Plan ──
-    if (analysis.next_conversation_plan && analysis.next_conversation_plan.length) {
-      aiHtml += '<div style="margin-top:1.2rem;"><div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--violet);font-weight:600;margin-bottom:0.6rem;">Next Conversation Plan</div>';
-      analysis.next_conversation_plan.forEach(function(ncp) {
-        aiHtml += '<div style="' + cardStyle + 'border-left:3px solid var(--violet);">';
-        if (ncp.question) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Question</div><div style="' + textStyle + 'font-weight:600;">' + escHtml(ncp.question) + '</div></div>'; }
-        if (ncp.purpose) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Purpose</div><div style="' + textStyle + 'color:var(--ivory-dim);">' + escHtml(ncp.purpose) + '</div></div>'; }
-        if (ncp.possible_employee_response) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Possible Employee Response</div><div style="' + textStyle + 'font-style:italic;">"' + escHtml(ncp.possible_employee_response) + '"</div></div>'; }
-        if (ncp.suggested_hr_reply) { aiHtml += '<div style="margin-bottom:6px;"><div style="' + labelStyle + '">Suggested HR Reply</div><div style="' + textStyle + 'color:var(--teal);">' + escHtml(ncp.suggested_hr_reply) + '</div></div>'; }
-        aiHtml += '</div>';
-      });
-      aiHtml += '</div>';
-    }
-
-    // ── Risks ──
-    if (analysis.risks) {
-      var risks = analysis.risks;
-      aiHtml += '<div style="margin-top:1.2rem;padding-top:0.8rem;border-top:1px solid var(--border);display:flex;gap:1.5rem;flex-wrap:wrap;">';
-      if (risks.burnout_index != null) {
-        aiHtml += '<div><span style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Burnout Index</span><div style="font-family:var(--font-rc);font-size:0.85rem;color:' + (risks.burnout_index > 60 ? 'var(--red)' : 'var(--amber)') + ';margin-top:2px;">' + risks.burnout_index + '/100</div></div>';
-      }
-      if (risks.attrition_risk_pct != null) {
-        aiHtml += '<div><span style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Attrition Risk</span><div style="font-family:var(--font-rc);font-size:0.85rem;color:' + (risks.attrition_risk_pct > 40 ? 'var(--red)' : 'var(--amber)') + ';margin-top:2px;">' + risks.attrition_risk_pct + '%</div></div>';
-      }
-      if (risks.risk_factors && risks.risk_factors.length) {
-        aiHtml += '<div style="max-width:300px;"><span style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Risk Factors</span><div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);margin-top:2px;">' + risks.risk_factors.map(function(f) { return escHtml(f); }).join(', ') + '</div></div>';
-      }
-      aiHtml += '</div>';
-    }
-
-    aiBanner.innerHTML = aiHtml;
-    var stepContent = document.getElementById('stepContent');
-    stepContent.parentNode.insertBefore(aiBanner, stepContent);
+    // ── Populate Steps 2-5 with analysis data ──
+    populateStep(currentStep);
   }
 
   // ── Now fire GSAP animation ──

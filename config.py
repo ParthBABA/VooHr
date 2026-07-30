@@ -44,6 +44,9 @@ class Config:
     DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
     DEEPSEEK_ANALYSIS_MODEL = os.environ.get("DEEPSEEK_ANALYSIS_MODEL", "deepseek-chat")
 
+    # V2 Behavioural Intelligence Framework toggle
+    USE_V2_FRAMEWORK = os.environ.get("USE_V2_FRAMEWORK", "false").lower() == "true"
+
     # Audio storage
     AUDIO_STORAGE_PATH = os.environ.get("AUDIO_STORAGE_PATH", "static/audio/sessions")
 
