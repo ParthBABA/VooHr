@@ -225,6 +225,22 @@ def analyze_session(session_id: str):
         llm = get_llm_provider()
         analysis = llm.analyze(transcript)
 
+        # ── DEBUG: Stage 9 — Analysis result from LLM ──
+        import sys
+        print("---", file=sys.stderr)
+        print("[DEBUG_SESSION] STAGE 9 — analysis dict from llm.analyze():", file=sys.stderr)
+        print("  type:", type(analysis).__name__, file=sys.stderr)
+        if isinstance(analysis, dict):
+            print("  keys:", list(analysis.keys()), file=sys.stderr)
+            for sk in ["step2_behavioural_intelligence", "step3_root_cause_analysis", "step4_action_blueprint", "step5_conversation_strategy"]:
+                step = analysis.get(sk)
+                if isinstance(step, dict):
+                    lte = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
+                    empty = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
+                    print(f"    {sk}: LTE={lte}  EMPTY={empty}", file=sys.stderr)
+                else:
+                    print(f"    {sk}: type={type(step).__name__}", file=sys.stderr)
+
         now = datetime.now(timezone.utc)
         db.sessions.update_one(
             {"_id": ObjectId(session_id)},
@@ -274,7 +290,28 @@ def analyze_session(session_id: str):
                     }
                 },
             )
+
+        # ── DEBUG: Stage 10 — Re-fetch from DB and check stored data ──
+        s_check = db.sessions.find_one({"_id": ObjectId(session_id)})
+        stored_analysis = (s_check or {}).get("analysis") or {}
+        print("---", file=sys.stderr)
+        print("[DEBUG_SESSION] STAGE 10 — analysis stored in MongoDB:", file=sys.stderr)
+        if isinstance(stored_analysis, dict):
+            for sk in ["step2_behavioural_intelligence", "step3_root_cause_analysis", "step4_action_blueprint", "step5_conversation_strategy"]:
+                step = stored_analysis.get(sk)
+                if isinstance(step, dict):
+                    lte = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
+                    empty = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
+                    print(f"    {sk}: LTE={lte}  EMPTY={empty}", file=sys.stderr)
+                else:
+                    print(f"    {sk}: type={type(step).__name__}", file=sys.stderr)
+        else:
+            print(f"    stored_analysis type: {type(stored_analysis).__name__}", file=sys.stderr)
+
     except Exception as e:
+        import traceback
+        print("[DEBUG_SESSION] EXCEPTION:", e, file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
         db.sessions.update_one(
             {"_id": ObjectId(session_id)},
             {"$set": {"status": "failed", "updated_at": datetime.now(timezone.utc)}},
@@ -282,7 +319,23 @@ def analyze_session(session_id: str):
         return jsonify({"error": f"analysis_failed: {str(e)}"}), 500
 
     s = db.sessions.find_one({"_id": ObjectId(session_id)})
-    return jsonify(_session_to_json(s))
+    result_json = _session_to_json(s)
+
+    # ── DEBUG: Stage 11 — JSON response sent to frontend ──
+    print("---", file=sys.stderr)
+    print("[DEBUG_SESSION] STAGE 11 — response JSON to frontend:", file=sys.stderr)
+    resp_analysis = result_json.get("analysis") or {}
+    if isinstance(resp_analysis, dict):
+        for sk in ["step2_behavioural_intelligence", "step3_root_cause_analysis", "step4_action_blueprint", "step5_conversation_strategy"]:
+            step = resp_analysis.get(sk)
+            if isinstance(step, dict):
+                lte = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
+                empty = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
+                print(f"    {sk}: LTE={lte}  EMPTY={empty}", file=sys.stderr)
+            else:
+                print(f"    {sk}: type={type(step).__name__}  value={repr(step)[:200]}", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    return jsonify(result_json)
 
 
 @sessions_bp.route("/transcribe", methods=["POST"])

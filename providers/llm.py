@@ -5,11 +5,24 @@ from abc import ABC, abstractmethod
 from flask import current_app
 
 
-def validate_analysis(result: dict) -> dict:
+def validate_analysis(result, depth=0):
     """Post-generation guardrails: validate and fix analysis JSON."""
+    import sys
     errors = []
 
-    # Ensure all top-level keys exist
+    # If AI returned a JSON array at top level, bail to safe fallback
+    if depth == 0 and not isinstance(result, dict):
+        print("[DEBUG_VALIDATE] Top-level response is NOT a dict — type:", type(result).__name__, file=sys.stderr)
+        result = dict(FALLBACK_ANALYSIS)
+        result["_validation_errors"] = ["Top-level response was not a JSON object"]
+        return result
+
+    # Lookup: keys that should be dicts vs lists
+    DICT_KEYS = {"psychological_safety", "risks", "realistic_solutions",
+                 "step2_behavioural_intelligence", "step3_root_cause_analysis",
+                 "step4_action_blueprint", "step5_conversation_strategy"}
+    PSYCHOLOGY_DEFAULTS = {"sentiment": "unknown", "sentiment_score": 0.0, "behavioural_interpretation": []}
+
     required = [
         "summary", "psychology", "conversation_coach", "realistic_solutions",
         "next_conversation_plan", "psychological_safety", "risks",
@@ -18,12 +31,18 @@ def validate_analysis(result: dict) -> dict:
     ]
     for key in required:
         if key not in result:
-            result[key] = {} if key in ("psychological_safety", "risks", "realistic_solutions",
-                                          "step2_behavioural_intelligence", "step3_root_cause_analysis",
-                                          "step4_action_blueprint", "step5_conversation_strategy") else []
-            if key in ("psychology",):
-                result[key] = {"sentiment": "unknown", "sentiment_score": 0.0, "behavioural_interpretation": []}
-        errors.append(f"Missing key: {key}")
+            result[key] = dict(PSYCHOLOGY_DEFAULTS) if key == "psychology" else ({} if key in DICT_KEYS else [])
+            errors.append(f"Missing key: {key}")
+        elif key in DICT_KEYS and not isinstance(result[key], dict):
+            print(f"[DEBUG_VALIDATE] WRONG TYPE for '{key}': expected dict, got {type(result[key]).__name__} = {repr(result[key])[:200]}", file=sys.stderr)
+            result[key] = {}
+            errors.append(f"Expected dict for '{key}', got {type(result[key]).__name__}")
+        elif key in ("psychology",) and not isinstance(result[key], dict):
+            result[key] = dict(PSYCHOLOGY_DEFAULTS)
+            errors.append(f"Expected dict for 'psychology', got {type(result[key]).__name__}")
+        elif key in ("conversation_coach", "next_conversation_plan") and not isinstance(result[key], list):
+            result[key] = []
+            errors.append(f"Expected list for '{key}', got {type(result[key]).__name__}")
 
     # Validate confidence fields (0-100 integer)
     confidence_paths = [
@@ -63,6 +82,7 @@ def validate_analysis(result: dict) -> dict:
             errors.append(f"Possible hallucination keyword: '{kw}'")
 
     # Validate evidence fields aren't empty
+    import sys
     evidence_fields = [
         ("step2_behavioural_intelligence", "supporting_evidence"),
         ("step3_root_cause_analysis", "supporting_evidence"),
@@ -74,6 +94,23 @@ def validate_analysis(result: dict) -> dict:
             errors.append(f"Empty evidence in {path[0]}.{path[1]}")
         elif isinstance(val, str) and (not val or val == "Limited transcript evidence."):
             pass  # explicit fallback is acceptable
+
+    # Detect "Limited transcript evidence." in ALL dict-typed step fields
+    LTE_FIELDS = {
+        "step2_behavioural_intelligence": ["behaviour_summary", "observed_behaviour", "behaviour_pattern", "supporting_evidence", "ai_interpretation", "alternative_interpretation", "conversation_direction", "suggested_script", "manager_notes", "key_takeaway"],
+        "step3_root_cause_analysis": ["primary_trigger", "evidence_strength", "ai_reasoning", "suggested_script", "manager_notes", "key_takeaway"],
+        "step4_action_blueprint": ["immediate", "this_week", "manager_action", "employee_action", "environment", "success_metric", "expected_outcome", "why_it_works", "suggested_script", "manager_notes", "key_takeaway"],
+        "step5_conversation_strategy": ["conversation_goal", "conversation_focus", "opening_question", "follow_up_question", "possible_response", "suggested_reply", "success_indicator", "suggested_script", "manager_notes", "key_takeaway"],
+    }
+    for step_key, fields in LTE_FIELDS.items():
+        step = result.get(step_key)
+        if isinstance(step, dict):
+            for f in fields:
+                v = step.get(f, "")
+                if isinstance(v, str) and v == "Limited transcript evidence.":
+                    errors.append(f"LTE in {step_key}.{f}")
+                elif isinstance(v, list) and len(v) == 0:
+                    errors.append(f"EMPTY LIST in {step_key}.{f}")
 
     result["_validation_errors"] = errors
     return result
@@ -116,7 +153,10 @@ GOLDEN RULES
 - Every conversation script must answer: Does this increase trust?
 - Never diagnose mental health. Never label personality.
 - Use probabilistic language: Possible, Likely, Appears, May indicate, Evidence suggests.
-- If evidence is weak, say "Limited transcript evidence." — never guess.
+- If there is no meaningful evidence for a conclusion, explicitly state: "Limited transcript evidence."
+- If there is moderate evidence, you MAY make a cautious inference using probabilistic language such as: "Evidence suggests...", "It appears...", "It is likely...", "This may indicate..."
+- Never present an inference as a confirmed fact.
+- Always distinguish observations from interpretations.
 - Manager Notes must be internal guidance only. Never repeat content shown elsewhere on the page.
 
 INTERNAL VERIFICATION (silently check before generating output):
@@ -358,7 +398,7 @@ Return ONLY valid JSON, no markdown formatting."""
             if use_v2:
                 result = validate_analysis(result)
             return result
-        except (json.JSONDecodeError, AttributeError, IndexError):
+        except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
             return dict(FALLBACK_ANALYSIS)
 
 
@@ -376,6 +416,7 @@ class DeepSeekLLM(BaseLLM):
         self.model = os.environ.get("DEEPSEEK_ANALYSIS_MODEL", "deepseek-chat")
 
     def analyze(self, transcript: str) -> dict:
+        import sys
         from openai import OpenAI
 
         client = OpenAI(api_key=self.api_key, base_url=self.base_url)
@@ -419,15 +460,96 @@ Return ONLY valid JSON, no markdown formatting, no code fences."""
             stream=False,
         )
 
-        content = resp.choices[0].message.content or ""
+        # ── DEBUG: Stage 1 — Raw LLM response ──
+        raw_content = resp.choices[0].message.content or ""
+        print("=" * 60, file=sys.stderr)
+        print("[DEBUG_DEEPSEEK] STAGE 1 — RAW LLM RESPONSE:", file=sys.stderr)
+        print(raw_content[:3000], file=sys.stderr)
+        print("...(truncated)" if len(raw_content) > 3000 else "", file=sys.stderr)
+        print("RAW LENGTH:", len(raw_content), file=sys.stderr)
+
         # DeepSeek doesn't support response_format=json_object on all models,
         # so strip markdown code fences defensively before parsing.
-        content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip())
+        content = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_content.strip())
+
+        # ── DEBUG: Stage 2 — Cleaned JSON string ──
+        print("---", file=sys.stderr)
+        print("[DEBUG_DEEPSEEK] STAGE 2 — CLEANED JSON STRING:", file=sys.stderr)
+        print(content[:3000], file=sys.stderr)
+        print("CLEANED LENGTH:", len(content), file=sys.stderr)
 
         try:
             result = json.loads(content)
-            if use_v2:
-                result = validate_analysis(result)
-            return result
-        except (json.JSONDecodeError, AttributeError, IndexError):
+        except json.JSONDecodeError as e:
+            print("[DEBUG_DEEPSEEK] JSON PARSE FAILED:", e, file=sys.stderr)
             return dict(FALLBACK_ANALYSIS)
+
+        # ── DEBUG: Stage 3 — Parsed JSON top-level type ──
+        print("---", file=sys.stderr)
+        print("[DEBUG_DEEPSEEK] STAGE 3 — PARSED JSON TYPE:", type(result).__name__, file=sys.stderr)
+        if isinstance(result, dict):
+            print("TOP-LEVEL KEYS:", list(result.keys()), file=sys.stderr)
+
+            # ── DEBUG: Stage 4 — Field types ──
+            print("---", file=sys.stderr)
+            print("[DEBUG_DEEPSEEK] STAGE 4 — FIELD TYPES:", file=sys.stderr)
+            for fname in ["psychological_safety", "step2_behavioural_intelligence", "step3_root_cause_analysis", "step4_action_blueprint", "step5_conversation_strategy"]:
+                val = result.get(fname)
+                t = type(val).__name__
+                print(f"  {fname}: {t}", end="", file=sys.stderr)
+                if isinstance(val, dict):
+                    print(f"  keys={list(val.keys())[:10]}", file=sys.stderr)
+                    lte_count = sum(1 for v in val.values() if isinstance(v, str) and v == "Limited transcript evidence.")
+                    empty_list_count = sum(1 for v in val.values() if isinstance(v, list) and len(v) == 0)
+                    print(f"  LTE_fields={lte_count}  empty_lists={empty_list_count}", file=sys.stderr)
+                elif isinstance(val, list):
+                    print(f"  len={len(val)}", file=sys.stderr)
+                else:
+                    print(file=sys.stderr)
+
+            # ── DEBUG: Stage 5 — "Limited transcript evidence." field-level scan ──
+            print("---", file=sys.stderr)
+            print("[DEBUG_DEEPSEEK] STAGE 5 — 'Limited transcript evidence.' SCAN:", file=sys.stderr)
+            step_keys = ["step2_behavioural_intelligence", "step3_root_cause_analysis", "step4_action_blueprint", "step5_conversation_strategy"]
+            for sk in step_keys:
+                step = result.get(sk)
+                if isinstance(step, dict):
+                    lte_fields = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
+                    empty_lists = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
+                    if lte_fields:
+                        print(f"  {sk} LTE fields: {lte_fields}", file=sys.stderr)
+                    if empty_lists:
+                        print(f"  {sk} EMPTY arrays: {empty_lists}", file=sys.stderr)
+                    if not lte_fields and not empty_lists:
+                        print(f"  {sk}: ALL POPULATED", file=sys.stderr)
+
+        if use_v2:
+            # ── DEBUG: Stage 6 — BEFORE validation ──
+            print("---", file=sys.stderr)
+            print("[DEBUG_DEEPSEEK] STAGE 6 — BEFORE validate_analysis():", file=sys.stderr)
+            if isinstance(result, dict):
+                for sk in step_keys:
+                    step = result.get(sk)
+                    if isinstance(step, dict):
+                        lte_fields = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
+                        print(f"  {sk}: LTE={lte_fields}", file=sys.stderr)
+
+            result = validate_analysis(result)
+
+            # ── DEBUG: Stage 7 — AFTER validation ──
+            print("---", file=sys.stderr)
+            print("[DEBUG_DEEPSEEK] STAGE 7 — AFTER validate_analysis():", file=sys.stderr)
+            print("  _validation_errors:", result.get("_validation_errors", []), file=sys.stderr)
+            if isinstance(result, dict):
+                for sk in step_keys:
+                    step = result.get(sk)
+                    if isinstance(step, dict):
+                        lte_fields = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
+                        empty_lists = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
+                        print(f"  {sk}: LTE={lte_fields}  EMPTY={empty_lists}", file=sys.stderr)
+
+        # ── DEBUG: Stage 8 — Final dict being returned ──
+        print("---", file=sys.stderr)
+        print("[DEBUG_DEEPSEEK] STAGE 8 — FINAL RETURN DICT keys:", list(result.keys()) if isinstance(result, dict) else type(result).__name__, file=sys.stderr)
+        print("=" * 60, file=sys.stderr)
+        return result
