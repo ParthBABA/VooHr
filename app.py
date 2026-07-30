@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 
 from api import api_bp
 from auth import auth_bp, register_google_oauth
@@ -13,6 +13,10 @@ from sessions import sessions_bp
 def create_app():
     app = Flask(__name__, static_folder="static", static_url_path="")
     app.config.from_object(Config)
+    # Without this, Flask's debug mode re-raises exceptions straight to the
+    # interactive Werkzeug debugger (an HTML page) instead of letting our
+    # errorhandler below turn it into JSON for API callers.
+    app.config["PROPAGATE_EXCEPTIONS"] = False
 
     init_db(app)
     register_google_oauth(app)
@@ -25,6 +29,21 @@ def create_app():
     @app.route("/")
     def index():
         return send_from_directory(app.static_folder, "login.html")
+
+    # Safety net: any unhandled exception (or 404/500) under /api/* must come
+    # back as JSON, never Flask/Werkzeug's HTML error/debugger page. Without
+    # this, frontend `fetch(...).then(r => r.json())` calls blow up with
+    # "Unexpected token '<', <!doctype ... is not valid JSON" whenever a bug
+    # slips through a route's own try/except (or the route itself 404s).
+    @app.errorhandler(Exception)
+    def handle_api_exception(e):
+        if not request.path.startswith("/api"):
+            raise e
+        from werkzeug.exceptions import HTTPException
+        if isinstance(e, HTTPException):
+            return jsonify({"error": e.name.lower().replace(" ", "_")}), e.code
+        app.logger.exception("Unhandled exception on %s", request.path)
+        return jsonify({"error": "internal_server_error"}), 500
 
     return app
 

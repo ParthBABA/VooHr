@@ -312,6 +312,38 @@ def analyze_session(session_id: str):
         else:
             print(f"    stored_analysis type: {type(stored_analysis).__name__}", file=sys.stderr)
 
+        # Build the response INSIDE the same try block so that any failure
+        # here (e.g. the session vanishing, or an unexpected shape) is caught
+        # below and returned as clean JSON instead of leaking an unhandled
+        # exception out to Flask's HTML debug page — which is what was
+        # causing "Unexpected token '<', <!doctype ... is not valid JSON"
+        # on the frontend.
+        s = db.sessions.find_one({"_id": ObjectId(session_id)})
+        if not s:
+            return jsonify({"error": "session_disappeared_after_analysis"}), 500
+        result_json = _session_to_json(s)
+
+        # ── DEBUG: Stage 11 — JSON response sent to frontend ──
+        print("---", file=sys.stderr)
+        print("[DEBUG_SESSION] STAGE 11 — response JSON to frontend:", file=sys.stderr)
+        resp_analysis = result_json.get("analysis") or {}
+        if isinstance(resp_analysis, dict):
+            for sk in ["step2_behavioural_intelligence", "step3_root_cause_analysis", "step4_action_blueprint", "step5_conversation_strategy"]:
+                step = resp_analysis.get(sk)
+                if isinstance(step, dict):
+                    lte = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
+                    empty = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
+                    print(f"    {sk}: LTE={lte}  EMPTY={empty}", file=sys.stderr)
+                    # Verify populated content — log fields with real values
+                    populated = [k for k, v in step.items() if isinstance(v, str) and v.strip() and v != "Limited transcript evidence."]
+                    non_empty_lists = [k for k, v in step.items() if isinstance(v, list) and len(v) > 0]
+                    if populated or non_empty_lists:
+                        print(f"    {sk}: POPULATED_fields={populated}  POPULATED_lists={non_empty_lists}", file=sys.stderr)
+                else:
+                    print(f"    {sk}: type={type(step).__name__}  value={repr(step)[:200]}", file=sys.stderr)
+        print("=" * 60, file=sys.stderr)
+        return jsonify(result_json)
+
     except Exception as e:
         import traceback
         print("[DEBUG_SESSION] EXCEPTION:", e, file=sys.stderr)
@@ -321,25 +353,6 @@ def analyze_session(session_id: str):
             {"$set": {"status": "failed", "updated_at": datetime.now(timezone.utc)}},
         )
         return jsonify({"error": f"analysis_failed: {str(e)}"}), 500
-
-    s = db.sessions.find_one({"_id": ObjectId(session_id)})
-    result_json = _session_to_json(s)
-
-    # ── DEBUG: Stage 11 — JSON response sent to frontend ──
-    print("---", file=sys.stderr)
-    print("[DEBUG_SESSION] STAGE 11 — response JSON to frontend:", file=sys.stderr)
-    resp_analysis = result_json.get("analysis") or {}
-    if isinstance(resp_analysis, dict):
-        for sk in ["step2_behavioural_intelligence", "step3_root_cause_analysis", "step4_action_blueprint", "step5_conversation_strategy"]:
-            step = resp_analysis.get(sk)
-            if isinstance(step, dict):
-                lte = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
-                empty = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
-                print(f"    {sk}: LTE={lte}  EMPTY={empty}", file=sys.stderr)
-            else:
-                print(f"    {sk}: type={type(step).__name__}  value={repr(step)[:200]}", file=sys.stderr)
-    print("=" * 60, file=sys.stderr)
-    return jsonify(result_json)
 
 
 @sessions_bp.route("/transcribe", methods=["POST"])

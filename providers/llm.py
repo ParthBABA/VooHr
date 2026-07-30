@@ -5,6 +5,119 @@ from abc import ABC, abstractmethod
 from flask import current_app
 
 
+# ── Canonical field names per step section (what the frontend expects) ──
+SECTION_FIELDS = {
+    "step2_behavioural_intelligence": {
+        "string": ["title_question", "behaviour_summary", "observed_behaviour", "behaviour_pattern",
+                    "supporting_evidence", "ai_interpretation", "alternative_interpretation",
+                    "conversation_direction", "suggested_script", "manager_notes", "key_takeaway"],
+        "list": ["recommended_actions", "avoid_actions"],
+        "numeric": ["confidence"],
+    },
+    "step3_root_cause_analysis": {
+        "string": ["title_question", "primary_trigger", "evidence_strength", "ai_reasoning",
+                    "suggested_script", "manager_notes", "key_takeaway"],
+        "list": ["secondary_contributors", "supporting_evidence", "missing_information",
+                  "recommended_actions", "avoid_actions"],
+        "numeric": ["confidence"],
+    },
+    "step4_action_blueprint": {
+        "string": ["title_question", "immediate", "this_week", "manager_action", "employee_action",
+                    "environment", "success_metric", "expected_outcome", "why_it_works",
+                    "suggested_script", "manager_notes", "key_takeaway"],
+        "list": ["recommended_actions", "avoid_actions"],
+        "numeric": ["confidence"],
+    },
+    "step5_conversation_strategy": {
+        "string": ["title_question", "conversation_goal", "conversation_focus", "opening_question",
+                    "follow_up_question", "possible_response", "suggested_reply", "success_indicator",
+                    "suggested_script", "manager_notes", "key_takeaway"],
+        "list": ["what_to_listen_for", "recommended_actions", "avoid_actions"],
+        "numeric": ["confidence"],
+    },
+}
+
+# ── Field name aliases the LLM might produce instead of canonical names ──
+FIELD_ALIASES = {
+    "behaviour_summary": ["behavior_summary", "summary"],
+    "observed_behaviour": ["observed_behavior", "behaviour", "behavior"],
+    "behaviour_pattern": ["behavior_pattern", "pattern"],
+    "supporting_evidence": ["evidence", "supporting_evidence_"],
+    "ai_interpretation": ["interpretation", "ai_analysis"],
+    "alternative_interpretation": ["alternative_explanation", "alt_interpretation"],
+    "conversation_direction": ["direction", "conversation_style"],
+    "secondary_contributors": ["secondary_contributor", "contributing_factors", "secondary_factors"],
+    "evidence_strength": ["strength", "evidence_quality"],
+    "missing_information": ["missing_info", "information_gaps", "gaps"],
+    "ai_reasoning": ["ai_reason", "reasoning"],
+    "primary_trigger": ["trigger", "root_trigger", "primary_cause"],
+    "immediate": ["immediate_action"],
+    "this_week": ["this_week_action"],
+    "manager_action": ["manager"],
+    "employee_action": ["employee"],
+    "success_metric": ["metric", "kpi"],
+    "expected_outcome": ["outcome", "expected_result"],
+    "why_it_works": ["rationale"],
+    "conversation_goal": ["goal", "objective"],
+    "conversation_focus": ["focus"],
+    "opening_question": ["opening_question", "opening"],
+    "follow_up_question": ["follow_up", "followup_question", "followup"],
+    "possible_response": ["possible_employee_response", "employee_response", "expected_response"],
+    "suggested_reply": ["suggested_hr_reply", "hr_reply"],
+    "what_to_listen_for": ["listen_for", "things_to_listen_for", "cues"],
+    "success_indicator": ["indicator"],
+    "title_question": ["title_question", "title"],
+    "key_takeaway": ["takeaway", "key_insight", "main_takeaway"],
+    "suggested_script": ["script", "conversation_script", "suggested_response"],
+    "recommended_actions": ["recommendations", "actions", "recommended"],
+    "avoid_actions": ["actions_to_avoid", "avoid", "avoid_list"],
+    "manager_notes": ["notes_for_manager", "internal_notes", "notes"],
+}
+
+# ── Build reverse alias → canonical mapping ──
+ALIAS_TO_CANONICAL = {}
+for canonical, aliases in FIELD_ALIASES.items():
+    for alias in aliases:
+        ALIAS_TO_CANONICAL[alias] = canonical
+
+
+def _has_meaningful_content(val):
+    """Check if a value has real content (not empty, not LTE)."""
+    if isinstance(val, str):
+        return bool(val.strip()) and val != "Limited transcript evidence."
+    if isinstance(val, list):
+        return len(val) > 0
+    if isinstance(val, (int, float)):
+        return True
+    return False
+
+
+def _normalize_step_fields(result, step_key):
+    """Map aliased field names to canonical names within a step section."""
+    step = result.get(step_key)
+    if not isinstance(step, dict):
+        return
+    canonical = SECTION_FIELDS.get(step_key)
+    if not canonical:
+        return
+
+    all_canonical = set(canonical["string"] + canonical["list"] + canonical["numeric"])
+    renamed = {}
+    for key in list(step.keys()):
+        if key in all_canonical:
+            continue
+        if key in ALIAS_TO_CANONICAL:
+            target = ALIAS_TO_CANONICAL[key]
+            if target not in step or not _has_meaningful_content(step.get(target)):
+                step[target] = step[key]
+            renamed[key] = target
+    for old_key in renamed:
+        del step[old_key]
+    if renamed:
+        import sys
+        print(f"[DEBUG_NORMALIZE] {step_key}: renamed {renamed}", file=sys.stderr)
+
+
 def validate_analysis(result, depth=0):
     """Post-generation guardrails: validate and fix analysis JSON."""
     import sys
@@ -13,9 +126,14 @@ def validate_analysis(result, depth=0):
     # If AI returned a JSON array at top level, bail to safe fallback
     if depth == 0 and not isinstance(result, dict):
         print("[DEBUG_VALIDATE] Top-level response is NOT a dict — type:", type(result).__name__, file=sys.stderr)
+        print("[DEBUG_FALLBACK] section=top_level reason=not_a_dict missing_fields=all", file=sys.stderr)
         result = dict(FALLBACK_ANALYSIS)
         result["_validation_errors"] = ["Top-level response was not a JSON object"]
         return result
+
+    # ── Step 0: Normalize field names before any validation ──
+    for step_key in SECTION_FIELDS:
+        _normalize_step_fields(result, step_key)
 
     # Lookup: keys that should be dicts vs lists
     DICT_KEYS = {"psychological_safety", "risks", "realistic_solutions",
@@ -34,9 +152,14 @@ def validate_analysis(result, depth=0):
             result[key] = dict(PSYCHOLOGY_DEFAULTS) if key == "psychology" else ({} if key in DICT_KEYS else [])
             errors.append(f"Missing key: {key}")
         elif key in DICT_KEYS and not isinstance(result[key], dict):
-            print(f"[DEBUG_VALIDATE] WRONG TYPE for '{key}': expected dict, got {type(result[key]).__name__} = {repr(result[key])[:200]}", file=sys.stderr)
-            result[key] = {}
-            errors.append(f"Expected dict for '{key}', got {type(result[key]).__name__}")
+            # If the step was returned as a list (e.g. [{...}]), try to extract content
+            if isinstance(result[key], list) and len(result[key]) > 0 and isinstance(result[key][0], dict):
+                result[key] = result[key][0]
+                errors.append(f"Coerced list→dict for '{key}' (extracted first element)")
+            else:
+                print(f"[DEBUG_VALIDATE] WRONG TYPE for '{key}': expected dict, got {type(result[key]).__name__} = {repr(result[key])[:200]}", file=sys.stderr)
+                result[key] = {}
+                errors.append(f"Expected dict for '{key}', got {type(result[key]).__name__}")
         elif key in ("psychology",) and not isinstance(result[key], dict):
             result[key] = dict(PSYCHOLOGY_DEFAULTS)
             errors.append(f"Expected dict for 'psychology', got {type(result[key]).__name__}")
@@ -81,36 +204,60 @@ def validate_analysis(result, depth=0):
         if kw in result_str:
             errors.append(f"Possible hallucination keyword: '{kw}'")
 
-    # Validate evidence fields aren't empty
-    import sys
-    evidence_fields = [
-        ("step2_behavioural_intelligence", "supporting_evidence"),
-        ("step3_root_cause_analysis", "supporting_evidence"),
-    ]
-    for path in evidence_fields:
-        obj = result.get(path[0], {})
-        val = obj.get(path[1], "") if isinstance(obj, dict) else ""
-        if isinstance(val, list) and len(val) == 0:
-            errors.append(f"Empty evidence in {path[0]}.{path[1]}")
-        elif isinstance(val, str) and (not val or val == "Limited transcript evidence."):
-            pass  # explicit fallback is acceptable
-
-    # Detect "Limited transcript evidence." in ALL dict-typed step fields
-    LTE_FIELDS = {
-        "step2_behavioural_intelligence": ["behaviour_summary", "observed_behaviour", "behaviour_pattern", "supporting_evidence", "ai_interpretation", "alternative_interpretation", "conversation_direction", "suggested_script", "manager_notes", "key_takeaway"],
-        "step3_root_cause_analysis": ["primary_trigger", "evidence_strength", "ai_reasoning", "suggested_script", "manager_notes", "key_takeaway"],
-        "step4_action_blueprint": ["immediate", "this_week", "manager_action", "employee_action", "environment", "success_metric", "expected_outcome", "why_it_works", "suggested_script", "manager_notes", "key_takeaway"],
-        "step5_conversation_strategy": ["conversation_goal", "conversation_focus", "opening_question", "follow_up_question", "possible_response", "suggested_reply", "success_indicator", "suggested_script", "manager_notes", "key_takeaway"],
-    }
-    for step_key, fields in LTE_FIELDS.items():
+    # ── Section-level content check for steps 2-5 ──
+    # Only trigger fallback when a section has ZERO meaningful content across
+    # all its string/list fields. Never replace individual non-empty fields.
+    for step_key, spec in SECTION_FIELDS.items():
         step = result.get(step_key)
-        if isinstance(step, dict):
-            for f in fields:
-                v = step.get(f, "")
-                if isinstance(v, str) and v == "Limited transcript evidence.":
-                    errors.append(f"LTE in {step_key}.{f}")
-                elif isinstance(v, list) and len(v) == 0:
-                    errors.append(f"EMPTY LIST in {step_key}.{f}")
+        if not isinstance(step, dict):
+            continue
+
+        string_fields = spec["string"]
+        list_fields = spec["list"]
+
+        # Check if this section has ANY meaningful content
+        has_content = False
+        for f in string_fields:
+            v = step.get(f, "")
+            if isinstance(v, str) and v.strip() and v != "Limited transcript evidence.":
+                has_content = True
+                break
+        if not has_content:
+            for f in list_fields:
+                v = step.get(f, [])
+                if isinstance(v, list) and len(v) > 0:
+                    has_content = True
+                    break
+
+        if has_content:
+            continue
+
+        # ── Section has NO meaningful content → log fallback details ──
+        missing_info = []
+        for f in string_fields:
+            v = step.get(f, "")
+            if not isinstance(v, str) or not v.strip() or v == "Limited transcript evidence.":
+                missing_info.append(f"{f}='{v}'" if v else f"{f}=<empty>")
+        for f in list_fields:
+            v = step.get(f, [])
+            if not isinstance(v, list) or len(v) == 0:
+                missing_info.append(f"{f}=[]")
+
+        print(f"[DEBUG_FALLBACK] section={step_key} reason=no_meaningful_content missing_fields={missing_info}", file=sys.stderr)
+
+    # Check for individual LTE/empty fields (informational, not replacing)
+    for step_key, spec in SECTION_FIELDS.items():
+        step = result.get(step_key)
+        if not isinstance(step, dict):
+            continue
+        for f in spec["string"]:
+            v = step.get(f, "")
+            if isinstance(v, str) and v == "Limited transcript evidence.":
+                errors.append(f"LTE in {step_key}.{f}")
+        for f in spec["list"]:
+            v = step.get(f, [])
+            if isinstance(v, list) and len(v) == 0:
+                errors.append(f"EMPTY LIST in {step_key}.{f}")
 
     result["_validation_errors"] = errors
     return result
