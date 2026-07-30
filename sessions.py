@@ -264,6 +264,10 @@ def analyze_session(session_id: str):
         # wellness score — this is what actually drives Directory/Dashboard
         # now, instead of the old static default.
         risks = analysis.get("risks") or {}
+        if not isinstance(risks, dict):
+            # Defensive fallback: the LLM occasionally returns "risks" as a
+            # list instead of an object. Never trust the shape blindly.
+            risks = {}
         burnout_index = risks.get("burnout_index")
         attrition_risk_pct = risks.get("attrition_risk_pct")
 

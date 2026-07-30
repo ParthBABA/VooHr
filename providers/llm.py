@@ -395,8 +395,11 @@ Return ONLY valid JSON, no markdown formatting."""
 
         try:
             result = json.loads(resp.choices[0].message.content)
-            if use_v2:
-                result = validate_analysis(result)
+            # Always run validation, not just in V2 mode — the model can return
+            # a field with the wrong type (e.g. "risks" as a list instead of a
+            # dict) regardless of which prompt was used, and downstream code
+            # assumes these fields are dicts/lists as documented.
+            result = validate_analysis(result)
             return result
         except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
             return dict(FALLBACK_ANALYSIS)
@@ -523,30 +526,34 @@ Return ONLY valid JSON, no markdown formatting, no code fences."""
                     if not lte_fields and not empty_lists:
                         print(f"  {sk}: ALL POPULATED", file=sys.stderr)
 
-        if use_v2:
-            # ── DEBUG: Stage 6 — BEFORE validation ──
-            print("---", file=sys.stderr)
-            print("[DEBUG_DEEPSEEK] STAGE 6 — BEFORE validate_analysis():", file=sys.stderr)
-            if isinstance(result, dict):
-                for sk in step_keys:
-                    step = result.get(sk)
-                    if isinstance(step, dict):
-                        lte_fields = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
-                        print(f"  {sk}: LTE={lte_fields}", file=sys.stderr)
+        # ── DEBUG: Stage 6 — BEFORE validation ──
+        print("---", file=sys.stderr)
+        print("[DEBUG_DEEPSEEK] STAGE 6 — BEFORE validate_analysis():", file=sys.stderr)
+        if isinstance(result, dict):
+            for sk in step_keys:
+                step = result.get(sk)
+                if isinstance(step, dict):
+                    lte_fields = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
+                    print(f"  {sk}: LTE={lte_fields}", file=sys.stderr)
 
-            result = validate_analysis(result)
+        # Always run validation, not just in V2 mode — the model can return a
+        # field with the wrong type (e.g. "risks" as a list instead of a dict)
+        # regardless of which prompt was used, and downstream code (sessions.py)
+        # assumes these fields are dicts/lists as documented. Skipping this in
+        # non-V2 mode was the cause of "'list' object has no attribute 'get'".
+        result = validate_analysis(result)
 
-            # ── DEBUG: Stage 7 — AFTER validation ──
-            print("---", file=sys.stderr)
-            print("[DEBUG_DEEPSEEK] STAGE 7 — AFTER validate_analysis():", file=sys.stderr)
-            print("  _validation_errors:", result.get("_validation_errors", []), file=sys.stderr)
-            if isinstance(result, dict):
-                for sk in step_keys:
-                    step = result.get(sk)
-                    if isinstance(step, dict):
-                        lte_fields = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
-                        empty_lists = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
-                        print(f"  {sk}: LTE={lte_fields}  EMPTY={empty_lists}", file=sys.stderr)
+        # ── DEBUG: Stage 7 — AFTER validation ──
+        print("---", file=sys.stderr)
+        print("[DEBUG_DEEPSEEK] STAGE 7 — AFTER validate_analysis():", file=sys.stderr)
+        print("  _validation_errors:", result.get("_validation_errors", []), file=sys.stderr)
+        if isinstance(result, dict):
+            for sk in step_keys:
+                step = result.get(sk)
+                if isinstance(step, dict):
+                    lte_fields = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
+                    empty_lists = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
+                    print(f"  {sk}: LTE={lte_fields}  EMPTY={empty_lists}", file=sys.stderr)
 
         # ── DEBUG: Stage 8 — Final dict being returned ──
         print("---", file=sys.stderr)
