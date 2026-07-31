@@ -40,7 +40,7 @@ SECTION_FIELDS = {
 # ── Field name aliases the LLM might produce instead of canonical names ──
 FIELD_ALIASES = {
     "behaviour_summary": ["behavior_summary", "summary"],
-    "observed_behaviour": ["observed_behavior", "behaviour", "behavior"],
+    "observed_behaviour": ["observed_behavior", "behaviour", "behavior", "observed"],
     "behaviour_pattern": ["behavior_pattern", "pattern"],
     "supporting_evidence": ["evidence", "supporting_evidence_"],
     "ai_interpretation": ["interpretation", "ai_analysis"],
@@ -118,6 +118,42 @@ def _normalize_step_fields(result, step_key):
         print(f"[DEBUG_NORMALIZE] {step_key}: renamed {renamed}", file=sys.stderr)
 
 
+CONFIDENCE_MAP = {
+    "low": 25,
+    "medium": 50,
+    "moderate": 50,
+    "high": 85,
+}
+
+def _parse_confidence(val):
+    """Safely convert any confidence value to an integer 0-100."""
+    if val is None:
+        return 0
+    if isinstance(val, (int, float)):
+        return min(max(int(round(val)), 0), 100)
+    if isinstance(val, str):
+        stripped = val.strip()
+        try:
+            num = float(stripped)
+            return min(max(int(round(num)), 0), 100)
+        except (ValueError, TypeError):
+            pass
+        return CONFIDENCE_MAP.get(stripped.lower(), 0)
+    return 0
+
+
+def _coerce_step_section(key, val):
+    """Coerce a wrongly-typed step section into a dict, preserving content."""
+    if isinstance(val, str) and val.strip():
+        result = {"raw_analysis": val}
+        return result
+    if isinstance(val, list):
+        if len(val) > 0 and isinstance(val[0], dict):
+            return val[0]
+        return {"raw_items": list(val)}
+    return None
+
+
 def validate_analysis(result, depth=0):
     """Post-generation guardrails: validate and fix analysis JSON."""
     import sys
@@ -152,14 +188,21 @@ def validate_analysis(result, depth=0):
             result[key] = dict(PSYCHOLOGY_DEFAULTS) if key == "psychology" else ({} if key in DICT_KEYS else [])
             errors.append(f"Missing key: {key}")
         elif key in DICT_KEYS and not isinstance(result[key], dict):
-            # If the step was returned as a list (e.g. [{...}]), try to extract content
-            if isinstance(result[key], list) and len(result[key]) > 0 and isinstance(result[key][0], dict):
-                result[key] = result[key][0]
-                errors.append(f"Coerced list→dict for '{key}' (extracted first element)")
+            val = result[key]
+            coerced = _coerce_step_section(key, val)
+            if coerced is not None:
+                result[key] = coerced
+                orig_type = type(val).__name__
+                new_type = "dict"
+                reason = "list_extracted_first_element" if (isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict)) else \
+                         "string_wrapped_to_raw_analysis" if isinstance(val, str) else \
+                         "list_wrapped_to_raw_items"
+                print(f"[TYPE_COERCION] section={key} original_type={orig_type} new_type={new_type} reason={reason}", file=sys.stderr)
+                errors.append(f"Coerced {orig_type}→dict for '{key}' (reason={reason})")
             else:
-                print(f"[DEBUG_VALIDATE] WRONG TYPE for '{key}': expected dict, got {type(result[key]).__name__} = {repr(result[key])[:200]}", file=sys.stderr)
+                print(f"[TYPE_COERCION] section={key} original_type={type(val).__name__} new_type=dict reason=unexpected_type_replaced_empty", file=sys.stderr)
                 result[key] = {}
-                errors.append(f"Expected dict for '{key}', got {type(result[key]).__name__}")
+                errors.append(f"Expected dict for '{key}', got {type(val).__name__}")
         elif key in ("psychology",) and not isinstance(result[key], dict):
             result[key] = dict(PSYCHOLOGY_DEFAULTS)
             errors.append(f"Expected dict for 'psychology', got {type(result[key]).__name__}")
@@ -180,19 +223,16 @@ def validate_analysis(result, depth=0):
                 obj = obj.get(part, {})
             elif isinstance(obj, list):
                 for item in obj:
-                    val = item.get(path[-1]) if isinstance(item, dict) else None
-                    if val is not None and (not isinstance(val, (int, float)) or val < 0 or val > 100):
-                        item[path[-1]] = min(max(int(val), 0), 100) if val else 0
+                    if isinstance(item, dict) and path[-1] in item:
+                        item[path[-1]] = _parse_confidence(item.get(path[-1]))
                 obj = {}
                 break
             else:
                 obj = {}
                 break
         else:
-            if isinstance(obj, dict):
-                val = obj.get(path[-1])
-                if val is not None and (not isinstance(val, (int, float)) or val < 0 or val > 100):
-                    obj[path[-1]] = min(max(int(val), 0), 100) if val else 0
+            if isinstance(obj, dict) and path[-1] in obj:
+                obj[path[-1]] = _parse_confidence(obj.get(path[-1]))
 
     # Check for hallucination keywords (diagnosis, labels)
     hallucination_keywords = [
@@ -300,8 +340,9 @@ GOLDEN RULES
 - Every conversation script must answer: Does this increase trust?
 - Never diagnose mental health. Never label personality.
 - Use probabilistic language: Possible, Likely, Appears, May indicate, Evidence suggests.
-- If there is no meaningful evidence for a conclusion, explicitly state: "Limited transcript evidence."
-- If there is moderate evidence, you MAY make a cautious inference using probabilistic language such as: "Evidence suggests...", "It appears...", "It is likely...", "This may indicate..."
+- Apply "Limited transcript evidence." PER FIELD, never per step: only mark an individual field this way if the transcript has literally zero relevant signal for that specific field. A weak or missing field must NOT cause you to blank out the rest of that step — populate every other field that has at least some supporting signal.
+- Short, casual, or code-mixed (e.g. Hindi-English) transcripts still count as evidence. Do not treat brevity, informal tone, or mixed language alone as "insufficient evidence" — judge only whether the content is relevant to the field.
+- Default to a cautious inference using probabilistic language ("Evidence suggests...", "It appears...", "It is likely...", "This may indicate...") whenever there is ANY relevant signal, however small. Reserve "Limited transcript evidence." for fields with genuinely no relevant signal at all.
 - Never present an inference as a confirmed fact.
 - Always distinguish observations from interpretations.
 - Manager Notes must be internal guidance only. Never repeat content shown elsewhere on the page.
@@ -430,7 +471,7 @@ Return a JSON object with these fields:
     "key_takeaway": "Single most important insight HR should remember from this step"
   }
 
-If transcript evidence is too thin for any step, set string fields to "Limited transcript evidence." and arrays to empty. Never invent generic advice.
+Judge every field independently. Only set a field to "Limited transcript evidence." (string fields) or an empty array (list fields) if that specific field truly has no relevant signal in the transcript. Do not blank out a whole step just because one field in it is weak — a typical transcript should leave most fields populated with a cautious, evidence-based answer. Never invent generic advice not grounded in the transcript.
 
 Return ONLY valid JSON, no markdown formatting, no code fences."""
 
@@ -504,29 +545,139 @@ Do NOT diagnose mental health. Do NOT generate generic HR summaries.
 
 STRICT RULES
 1. Never write generic statements like "Employee may be experiencing burnout", "Schedule a follow-up", "Consider flexible work", "HR is attentive", "Employee seems anxious", "Communication is important" — unless directly supported by transcript evidence.
-2. Every conclusion MUST be backed by transcript evidence. Each insight must contain: Observed, Evidence, Interpretation, Confidence.
+2. Every conclusion MUST be backed by transcript evidence.
 3. Never use absolute language. Use: Possible, Likely, Appears, May indicate, Evidence suggests.
 4. Every recommendation must be transcript-specific and explain WHY.
 5. Maximum paragraph length: 2 lines. No essays. Be concise.
 6. If transcript evidence is weak, explicitly say "Insufficient evidence to draw a reliable conclusion."
 7. Tone: 50% Professional, 30% Calm Stoic, 20% Casual Human. Never sound like therapy or corporate HR templates.
 
+INTERNAL VERIFICATION (silently check before generating output):
+- Evidence exists
+- Confidence assigned (0-100, evidence-based)
+- Alternative explanation considered where relevant
+- Recommendation is practical and measurable
+- Language is probabilistic, not diagnostic
+- No content repeated across steps
+
 Return a JSON object with these fields:
 - summary: Maximum 2-line summary of the conversation. Focus on the core issue, not generic recap.
-- psychology: { "sentiment": "positive|neutral|anxious|frustrated|engaged|disengaged", "sentiment_score": 0.0-1.0, "behavioural_interpretation": [ { "observed_behaviour": "...", "evidence": "...", "interpretation": "...", "confidence": 0-100 } ] }
-- conversation_coach: [ { "immediate_response": "...", "better_follow_up_question": "...", "avoid_saying": "...", "why_it_works": "..." } ]
-- realistic_solutions: { "immediate": "...", "this_week": "...", "manager": "...", "environment": "..." }
-- next_conversation_plan: [ { "question": "...", "purpose": "...", "possible_employee_response": "...", "suggested_hr_reply": "..." } ]
-- psychological_safety: { "statement": "...", "do": [...], "dont": [...], "tip": "..." }
-- risks: { "burnout_index": 0-100, "attrition_risk_pct": 0-100, "risk_factors": [...] }
-- step2_behavioural_intelligence: { ... }
-- step3_root_cause_analysis: { ... }
-- step4_action_blueprint: { ... }
-- step5_conversation_strategy: { ... }
+- psychology: {
+    "sentiment": "positive|neutral|anxious|frustrated|engaged|disengaged",
+    "sentiment_score": 0.0-1.0,
+    "behavioural_interpretation": [
+      {
+        "observed_behaviour": "What the employee actually did or said",
+        "evidence": "Direct quote or specific observation from transcript",
+        "interpretation": "What this behaviour likely indicates (use probabilistic language)",
+        "confidence": "Confidence level 0-100"
+      }
+    ]
+  }
+- conversation_coach: [
+    {
+      "immediate_response": "What HR should say right now in this conversation",
+      "better_follow_up_question": "A more probing question that builds on what was said",
+      "avoid_saying": "What HR should NOT say and why",
+      "why_it_works": "Explanation of why the suggested approach is effective"
+    }
+  ]
+- realistic_solutions: {
+    "immediate": "Something practical that can be done right now",
+    "this_week": "Actionable step for the coming week",
+    "manager": "What the manager can change in their approach",
+    "employee": "What the employee can do",
+    "environment": "Work environment or tooling adjustment"
+  }
+- next_conversation_plan: [
+    {
+      "question": "A specific question to ask in the next sync",
+      "purpose": "Why this question matters and what it reveals",
+      "possible_employee_response": "Likely employee reaction",
+      "suggested_hr_reply": "How HR should respond"
+    }
+  ]
+- psychological_safety: {
+    "statement": "A short opening line HR can say at the START of the NEXT conversation to establish psychological safety",
+    "do": ["3-4 short, specific behavioural cues for HR to follow"],
+    "dont": ["3-4 short, specific things HR should avoid saying/doing"],
+    "tip": "One short line on pacing/timing for this specific opener",
+    "safety_score": "0-100",
+    "openness": "Assessment of how openly the employee communicated",
+    "trust_level": "Assessment of trust signals",
+    "defensive_behaviour": "Description of any defensive patterns observed, or 'None observed'",
+    "communication_style": "e.g. direct, hesitant, emotional, analytical, passive",
+    "evidence": "Transcript evidence supporting the safety assessment",
+    "interpretation": "What the safety signals likely indicate",
+    "confidence": 0-100
+  }
+- risks: { "burnout_index": 0-100, "attrition_risk_pct": 0-100, "risk_factors": ["list of specific risk factors observed"] }
 
-If transcript evidence is too thin to personalize any step, set all string fields to "Limited transcript evidence." and arrays to empty rather than inventing generic advice.
+- step2_behavioural_intelligence: {
+    "title_question": "What behaviour stands out?",
+    "behaviour_summary": "1-line summary of observable patterns",
+    "observed_behaviour": "What the employee actually did or said",
+    "behaviour_pattern": "Recurring pattern detected (e.g. deflection, rationalisation, openness)",
+    "supporting_evidence": "Direct quote or specific observation from transcript",
+    "ai_interpretation": "What this pattern likely indicates (use probabilistic language)",
+    "alternative_interpretation": "A different plausible explanation if evidence is limited",
+    "conversation_direction": "exploratory | solution-seeking | emotional | defensive | uncertain",
+    "confidence": 0-100,
+    "suggested_script": "Transcript-specific follow-up response that helps HR explore the behaviour naturally",
+    "recommended_actions": ["3-5 behavioural exploration suggestions"],
+    "avoid_actions": ["3-5 common mistakes that could misinterpret behaviour"],
+    "manager_notes": "Internal guidance only. Never repeat content already shown on this page.",
+    "key_takeaway": "Single most important insight HR should remember from this step"
+  }
+- step3_root_cause_analysis: {
+    "title_question": "What most likely explains that behaviour?",
+    "primary_trigger": "The most likely root trigger observed in the transcript",
+    "secondary_contributors": ["List of contributing factors"],
+    "supporting_evidence": ["List of specific evidence points from transcript"],
+    "evidence_strength": "Strong | Moderate | Limited",
+    "missing_information": ["What information would improve confidence"],
+    "ai_reasoning": "Explain why AI believes this is the root cause, referencing transcript evidence",
+    "confidence": 0-100,
+    "suggested_script": "A question that helps HR validate the suspected cause",
+    "recommended_actions": ["3-5 practical investigation steps"],
+    "avoid_actions": ["3-5 assumptions HR should avoid"],
+    "manager_notes": "Internal guidance only. Never repeat content already shown on this page.",
+    "key_takeaway": "Single most important insight HR should remember from this step"
+  }
+- step4_action_blueprint: {
+    "title_question": "What action should HR take today?",
+    "immediate": "Something practical that can be done right now",
+    "this_week": "Actionable step for the coming week",
+    "manager_action": "What the manager can change in their approach",
+    "employee_action": "What the employee can do",
+    "environment": "Work environment or tooling adjustment",
+    "success_metric": "How to measure if the action worked",
+    "expected_outcome": "What improvement HR should realistically expect",
+    "why_it_works": "Explanation of why the suggested approach is effective",
+    "suggested_script": "How HR should present the action plan to the employee",
+    "recommended_actions": ["3-5 implementation recommendations"],
+    "avoid_actions": ["3-5 unrealistic actions or common implementation mistakes"],
+    "manager_notes": "Internal guidance only. Never repeat content already shown on this page.",
+    "key_takeaway": "Single most important insight HR should remember from this step"
+  }
+- step5_conversation_strategy: {
+    "title_question": "What should happen next?",
+    "conversation_goal": "What this next conversation should achieve",
+    "conversation_focus": "The single most important objective of the next discussion",
+    "opening_question": "The ideal opening question for the next meeting",
+    "follow_up_question": "A deeper probing question",
+    "possible_response": "Likely employee reaction",
+    "suggested_reply": "How HR should respond",
+    "what_to_listen_for": ["3-5 cues or red flags to watch for"],
+    "success_indicator": "How to know the conversation achieved its goal",
+    "suggested_script": "The ideal opening line for the next meeting",
+    "recommended_actions": ["3-5 conversation techniques"],
+    "avoid_actions": ["3-5 phrases/behaviours that may reduce trust"],
+    "manager_notes": "Internal guidance only. Never repeat content already shown on this page.",
+    "key_takeaway": "Single most important insight HR should remember from this step"
+  }
 
-Manager Notes must contain observations valuable for HR decision-making that should NOT be spoken directly to the employee.
+Judge each field on its own: only set an individual string field to "Limited transcript evidence." (or a list field to empty) if that specific field has no relevant signal in the transcript. Do not blank an entire step just because one field in it is weak — most fields should stay populated with a cautious, evidence-based answer. Short or code-mixed (e.g. Hindi-English) transcripts still count as evidence; never invent generic advice not grounded in the transcript.
 
 Return ONLY valid JSON, no markdown formatting."""
 
@@ -583,20 +734,139 @@ Do NOT diagnose mental health. Do NOT generate generic HR summaries.
 
 STRICT RULES
 1. Never write generic statements like "Employee may be experiencing burnout", "Schedule a follow-up", "Consider flexible work", "HR is attentive", "Employee seems anxious", "Communication is important" — unless directly supported by transcript evidence.
-2. Every conclusion MUST be backed by transcript evidence. Each insight must contain: Observed, Evidence, Interpretation, Confidence.
+2. Every conclusion MUST be backed by transcript evidence.
 3. Never use absolute language. Use: Possible, Likely, Appears, May indicate, Evidence suggests.
 4. Every recommendation must be transcript-specific and explain WHY.
 5. Maximum paragraph length: 2 lines. No essays. Be concise.
 6. If transcript evidence is weak, explicitly say "Insufficient evidence to draw a reliable conclusion."
 7. Tone: 50% Professional, 30% Calm Stoic, 20% Casual Human. Never sound like therapy or corporate HR templates.
 
-Return a JSON object with these fields:
-- summary, psychology, conversation_coach, realistic_solutions, next_conversation_plan
-- psychological_safety: { "statement": "...", "do": [...], "dont": [...], "tip": "..." }
-- risks
-- step2_behavioural_intelligence, step3_root_cause_analysis, step4_action_blueprint, step5_conversation_strategy
+INTERNAL VERIFICATION (silently check before generating output):
+- Evidence exists
+- Confidence assigned (0-100, evidence-based)
+- Alternative explanation considered where relevant
+- Recommendation is practical and measurable
+- Language is probabilistic, not diagnostic
+- No content repeated across steps
 
-If transcript evidence is too thin, set all string fields to "Limited transcript evidence." and arrays to empty.
+Return a JSON object with these fields:
+- summary: Maximum 2-line summary of the conversation. Focus on the core issue, not generic recap.
+- psychology: {
+    "sentiment": "positive|neutral|anxious|frustrated|engaged|disengaged",
+    "sentiment_score": 0.0-1.0,
+    "behavioural_interpretation": [
+      {
+        "observed_behaviour": "What the employee actually did or said",
+        "evidence": "Direct quote or specific observation from transcript",
+        "interpretation": "What this behaviour likely indicates (use probabilistic language)",
+        "confidence": "Confidence level 0-100"
+      }
+    ]
+  }
+- conversation_coach: [
+    {
+      "immediate_response": "What HR should say right now in this conversation",
+      "better_follow_up_question": "A more probing question that builds on what was said",
+      "avoid_saying": "What HR should NOT say and why",
+      "why_it_works": "Explanation of why the suggested approach is effective"
+    }
+  ]
+- realistic_solutions: {
+    "immediate": "Something practical that can be done right now",
+    "this_week": "Actionable step for the coming week",
+    "manager": "What the manager can change in their approach",
+    "employee": "What the employee can do",
+    "environment": "Work environment or tooling adjustment"
+  }
+- next_conversation_plan: [
+    {
+      "question": "A specific question to ask in the next sync",
+      "purpose": "Why this question matters and what it reveals",
+      "possible_employee_response": "Likely employee reaction",
+      "suggested_hr_reply": "How HR should respond"
+    }
+  ]
+- psychological_safety: {
+    "statement": "A short opening line HR can say at the START of the NEXT conversation to establish psychological safety",
+    "do": ["3-4 short, specific behavioural cues for HR to follow"],
+    "dont": ["3-4 short, specific things HR should avoid saying/doing"],
+    "tip": "One short line on pacing/timing for this specific opener",
+    "safety_score": "0-100",
+    "openness": "Assessment of how openly the employee communicated",
+    "trust_level": "Assessment of trust signals",
+    "defensive_behaviour": "Description of any defensive patterns observed, or 'None observed'",
+    "communication_style": "e.g. direct, hesitant, emotional, analytical, passive",
+    "evidence": "Transcript evidence supporting the safety assessment",
+    "interpretation": "What the safety signals likely indicate",
+    "confidence": 0-100
+  }
+- risks: { "burnout_index": 0-100, "attrition_risk_pct": 0-100, "risk_factors": ["list of specific risk factors observed"] }
+
+- step2_behavioural_intelligence: {
+    "title_question": "What behaviour stands out?",
+    "behaviour_summary": "1-line summary of observable patterns",
+    "observed_behaviour": "What the employee actually did or said",
+    "behaviour_pattern": "Recurring pattern detected (e.g. deflection, rationalisation, openness)",
+    "supporting_evidence": "Direct quote or specific observation from transcript",
+    "ai_interpretation": "What this pattern likely indicates (use probabilistic language)",
+    "alternative_interpretation": "A different plausible explanation if evidence is limited",
+    "conversation_direction": "exploratory | solution-seeking | emotional | defensive | uncertain",
+    "confidence": 0-100,
+    "suggested_script": "Transcript-specific follow-up response that helps HR explore the behaviour naturally",
+    "recommended_actions": ["3-5 behavioural exploration suggestions"],
+    "avoid_actions": ["3-5 common mistakes that could misinterpret behaviour"],
+    "manager_notes": "Internal guidance only. Never repeat content already shown on this page.",
+    "key_takeaway": "Single most important insight HR should remember from this step"
+  }
+- step3_root_cause_analysis: {
+    "title_question": "What most likely explains that behaviour?",
+    "primary_trigger": "The most likely root trigger observed in the transcript",
+    "secondary_contributors": ["List of contributing factors"],
+    "supporting_evidence": ["List of specific evidence points from transcript"],
+    "evidence_strength": "Strong | Moderate | Limited",
+    "missing_information": ["What information would improve confidence"],
+    "ai_reasoning": "Explain why AI believes this is the root cause, referencing transcript evidence",
+    "confidence": 0-100,
+    "suggested_script": "A question that helps HR validate the suspected cause",
+    "recommended_actions": ["3-5 practical investigation steps"],
+    "avoid_actions": ["3-5 assumptions HR should avoid"],
+    "manager_notes": "Internal guidance only. Never repeat content already shown on this page.",
+    "key_takeaway": "Single most important insight HR should remember from this step"
+  }
+- step4_action_blueprint: {
+    "title_question": "What action should HR take today?",
+    "immediate": "Something practical that can be done right now",
+    "this_week": "Actionable step for the coming week",
+    "manager_action": "What the manager can change in their approach",
+    "employee_action": "What the employee can do",
+    "environment": "Work environment or tooling adjustment",
+    "success_metric": "How to measure if the action worked",
+    "expected_outcome": "What improvement HR should realistically expect",
+    "why_it_works": "Explanation of why the suggested approach is effective",
+    "suggested_script": "How HR should present the action plan to the employee",
+    "recommended_actions": ["3-5 implementation recommendations"],
+    "avoid_actions": ["3-5 unrealistic actions or common implementation mistakes"],
+    "manager_notes": "Internal guidance only. Never repeat content already shown on this page.",
+    "key_takeaway": "Single most important insight HR should remember from this step"
+  }
+- step5_conversation_strategy: {
+    "title_question": "What should happen next?",
+    "conversation_goal": "What this next conversation should achieve",
+    "conversation_focus": "The single most important objective of the next discussion",
+    "opening_question": "The ideal opening question for the next meeting",
+    "follow_up_question": "A deeper probing question",
+    "possible_response": "Likely employee reaction",
+    "suggested_reply": "How HR should respond",
+    "what_to_listen_for": ["3-5 cues or red flags to watch for"],
+    "success_indicator": "How to know the conversation achieved its goal",
+    "suggested_script": "The ideal opening line for the next meeting",
+    "recommended_actions": ["3-5 conversation techniques"],
+    "avoid_actions": ["3-5 phrases/behaviours that may reduce trust"],
+    "manager_notes": "Internal guidance only. Never repeat content already shown on this page.",
+    "key_takeaway": "Single most important insight HR should remember from this step"
+  }
+
+Judge each field on its own: only set an individual string field to "Limited transcript evidence." (or a list field to empty) if that specific field has no relevant signal in the transcript. Do not blank an entire step just because one field in it is weak — most fields should stay populated with a cautious, evidence-based answer. Short or code-mixed (e.g. Hindi-English) transcripts still count as evidence; never invent generic advice not grounded in the transcript.
 
 Return ONLY valid JSON, no markdown formatting, no code fences."""
 
