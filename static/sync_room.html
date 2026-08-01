@@ -450,8 +450,8 @@
           <!-- MANAGER CHEATSHEET -->
           <div class="card cheatsheet-glow fade-in fade-in-d2">
             <div class="card-header">
-              <div class="card-title" data-lang="en">Cheatsheet</div>
-              <div class="card-title" data-lang="hi">Cheatsheet</div>
+              <div class="card-title shine-text" data-lang="en">Cheatsheet</div>
+              <div class="card-title shine-text" data-lang="hi">Cheatsheet</div>
             </div>
             <div class="cheatsheet" id="cheatsheet">
               <div class="cheat-point">
@@ -497,7 +497,7 @@
 <!-- STRATEGY GUIDE DRAWER -->
 <div class="cheatsheet-drawer" id="strategyDrawer">
   <div class="drawer-header">
-    <div class="drawer-title">Strategy Guide</div>
+    <div class="drawer-title shine-text">Strategy Guide</div>
     <button class="drawer-close" id="drawerCloseBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
@@ -1047,6 +1047,33 @@ sessionPromise.then(function(s) {
     });
   }
 });
+
+// ── Strategy Guide Drawer open/close ──
+(function() {
+  var openBtn = document.getElementById('openDrawerBtn');
+  var closeBtn = document.getElementById('drawerCloseBtn');
+  var drawer = document.getElementById('strategyDrawer');
+  var backdrop = document.getElementById('drawerBackdrop');
+
+  function openDrawer() {
+    if (drawer) drawer.classList.add('active');
+    if (backdrop) backdrop.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDrawer() {
+    if (drawer) drawer.classList.remove('active');
+    if (backdrop) backdrop.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  if (openBtn) openBtn.addEventListener('click', openDrawer);
+  if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  if (backdrop) backdrop.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDrawer();
+  });
+})();
 </script>
 </body>
 </html>

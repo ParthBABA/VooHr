@@ -11,6 +11,10 @@ from providers import get_llm_provider, get_storage_provider, get_stt_provider
 
 sessions_bp = Blueprint("sessions", __name__)
 
+# Number of recent completed sessions needed before the silent Risk Drift
+# Detection check fires. New employees with fewer analyzed syncs are skipped.
+DRIFT_WINDOW_SIZE = 3
+
 
 def _session_to_json(s) -> dict:
     return {
@@ -294,6 +298,78 @@ def analyze_session(session_id: str):
                     }
                 },
             )
+
+        # ── Silent background: Risk Drift Detection ──
+        # Fires automatically after the wellness update above, never on user
+        # action. It is best-effort: any failure here is logged to stderr and
+        # swallowed so it can't fail the /analyze response or roll back the
+        # ai_wellness update that already succeeded.
+        try:
+            import sys
+
+            # 1. Last N completed sessions (oldest-first) with a real analysis
+            #    and a non-empty transcript.
+            qualifying_sessions = list(
+                db.sessions.find(
+                    {
+                        "employee_id": s["employee_id"],
+                        "org_id": ObjectId(org_id),
+                        "status": "completed",
+                        "analysis": {"$ne": None},
+                        "$or": [
+                            {"transcript.edited": {"$nin": [None, ""]}},
+                            {"transcript.raw": {"$nin": [None, ""]}},
+                        ],
+                    }
+                ).sort("created_at", -1).limit(DRIFT_WINDOW_SIZE)
+            )
+            qualifying_sessions.reverse()
+
+            # 2. Not enough completed syncs yet — expected for new employees,
+            #    not an error. Skip quietly.
+            if len(qualifying_sessions) < DRIFT_WINDOW_SIZE:
+                print(f"[DEBUG_DRIFT] session={session_id} skipped: {len(qualifying_sessions)}/{DRIFT_WINDOW_SIZE} qualifying sessions", file=sys.stderr)
+            else:
+                emp = db.employees.find_one({"_id": s["employee_id"]})
+
+                # 3. Skip if this window was already processed (retries / re-analysis).
+                if not emp:
+                    print(f"[DEBUG_DRIFT] session={session_id} skipped: employee not found", file=sys.stderr)
+                elif emp.get("last_drift_check_session_id") == s["_id"]:
+                    print(f"[DEBUG_DRIFT] session={session_id} skipped: drift window already processed", file=sys.stderr)
+                else:
+                    # 4. Build the payload for explain_drift(): FULL transcripts,
+                    #    oldest first, not just the risk % numbers.
+                    sessions_payload = [
+                        {
+                            "date": sess["created_at"].isoformat() if sess.get("created_at") else None,
+                            "attrition_risk_pct": (sess["analysis"] or {}).get("risks", {}).get("attrition_risk_pct"),
+                            "burnout_index": (sess["analysis"] or {}).get("risks", {}).get("burnout_index"),
+                            "transcript": (sess.get("transcript") or {}).get("edited") or (sess.get("transcript") or {}).get("raw", ""),
+                        }
+                        for sess in qualifying_sessions
+                    ]
+
+                    # 5. LLM call — a failure here must never fail the /analyze
+                    #    response; the outer except swallows it.
+                    llm = get_llm_provider()
+                    drift = llm.explain_drift(sessions_payload)
+
+                    # 6. Persist the drift read and mark this window processed
+                    #    so re-runs don't duplicate the check.
+                    db.employees.update_one(
+                        {"_id": s["employee_id"]},
+                        {"$set": {
+                            "last_drift_check_session_id": s["_id"],
+                            "last_drift_check_at": datetime.now(timezone.utc),
+                            "drift_explanation": drift,
+                        }},
+                    )
+                    print(f"[DEBUG_DRIFT] session={session_id} drift check complete — is_genuine_pattern={drift.get('is_genuine_pattern')} confidence={drift.get('confidence')}", file=sys.stderr)
+        except Exception as e:
+            import traceback
+            print(f"[DEBUG_DRIFT] session={session_id} drift check failed: {e}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
 
         # ── DEBUG: Stage 10 — Re-fetch from DB and check stored data ──
         s_check = db.sessions.find_one({"_id": ObjectId(session_id)})

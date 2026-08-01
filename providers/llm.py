@@ -303,6 +303,61 @@ def validate_analysis(result, depth=0):
     return result
 
 
+DRIFT_STRING_FIELDS = [
+    "headline",
+    "summary",
+    "root_cause_thread",
+    "tone_shift",
+    "trigger_point",
+    "trajectory",
+    "reversibility",
+    "suggested_opening_script",
+]
+
+
+def validate_drift_explanation(result):
+    """Post-generation guardrails: validate and fix drift-explanation JSON."""
+    import sys
+    errors = []
+
+    if not isinstance(result, dict):
+        print("[DEBUG_VALIDATE] Drift explanation is NOT a dict — type:", type(result).__name__, file=sys.stderr)
+        result = dict(FALLBACK_DRIFT_EXPLANATION)
+        result["_validation_errors"] = ["Drift explanation was not a JSON object"]
+        return result
+
+    is_genuine = result.get("is_genuine_pattern", False)
+    if not isinstance(is_genuine, bool):
+        if isinstance(is_genuine, str):
+            result["is_genuine_pattern"] = is_genuine.strip().lower() in ("true", "yes", "1")
+            reason = f"string_parsed ('{is_genuine}')"
+        else:
+            result["is_genuine_pattern"] = bool(is_genuine)
+            reason = f"{type(is_genuine).__name__}_coerced"
+        print(f"[TYPE_COERCION] field=is_genuine_pattern original_type={type(is_genuine).__name__} new_type=bool reason={reason}", file=sys.stderr)
+        errors.append("Coerced non-bool for 'is_genuine_pattern'")
+
+    for field in DRIFT_STRING_FIELDS:
+        val = result.get(field, "")
+        if not isinstance(val, str):
+            result[field] = str(val) if val is not None else ""
+            print(f"[TYPE_COERCION] field={field} original_type={type(val).__name__} new_type=str reason=coerced", file=sys.stderr)
+            errors.append(f"Coerced {type(val).__name__}→str for '{field}'")
+
+    ev = result.get("escalation_evidence", [])
+    if not isinstance(ev, list):
+        result["escalation_evidence"] = [str(ev)] if ev is not None else []
+        print(f"[TYPE_COERCION] field=escalation_evidence original_type={type(ev).__name__} new_type=list reason=coerced", file=sys.stderr)
+        errors.append(f"Coerced {type(ev).__name__}→list for 'escalation_evidence'")
+    else:
+        result["escalation_evidence"] = [str(x) for x in ev]
+
+    result["confidence"] = _parse_confidence(result.get("confidence"))
+
+    result["_validation_errors"] = errors
+    return result
+
+
 def _build_v2_prompt() -> str:
     """Build the V2 Behavioural Intelligence Framework prompt."""
     return """You are an Executive Behavioural Intelligence Engine designed for HR professionals. Your purpose is NOT to diagnose people. Your purpose is to improve HR decision quality.
@@ -476,6 +531,52 @@ Judge every field independently. Only set a field to "Limited transcript evidenc
 Return ONLY valid JSON, no markdown formatting, no code fences."""
 
 
+def _build_drift_prompt(sessions) -> str:
+    """Format multiple sync sessions as labeled transcript blocks.
+
+    Each block shows the sync number, date, and risk scores followed by the
+    FULL transcript so the model can cross-reference actual conversation
+    content rather than just the trend lines.
+    """
+    blocks = []
+    for idx, sess in enumerate(sessions, start=1):
+        date = sess.get("date") or "?"
+        attrition = sess.get("attrition_risk_pct")
+        burnout = sess.get("burnout_index")
+        transcript = sess.get("transcript") or ""
+        blocks.append(
+            f"--- Sync {idx} ({date}) — attrition_risk_pct={attrition}, burnout_index={burnout} ---\n{transcript}"
+        )
+    return "\n\n".join(blocks)
+
+
+def _build_drift_system_prompt() -> str:
+    """Build the Risk Drift Detection system prompt."""
+    return """You are a Senior Organizational Psychologist advising HR. Your task is Risk Drift Detection: determine whether an employee's rising attrition/burnout risk across MULTIPLE recent syncs reflects a genuine, compounding multi-session pattern — or a single bad day / isolated context that does not yet signal a trend.
+
+STRICT RULES
+1. CROSS-REFERENCE the full transcripts against each other. Do NOT restate the risk percentages — they only tell you where to look; the transcripts tell you why.
+2. A genuine pattern must be visible in the CONTENT of at least two sessions: a recurring trigger, escalating wording, worsening self-report, growing withdrawal or resignation, repeated mention of the same stressor. Never infer a pattern from the trend line alone.
+3. Actively consider the alternative: one bad day, a one-off context (project crunch, a sick week, a data artifact), or a course correction mid-window. If the transcripts support that, set is_genuine_pattern = false.
+4. Never diagnose mental health. Use probabilistic language ONLY: Possible, Likely, Appears, May indicate, Evidence suggests.
+5. Be concise and evidence-grounded. Every item in escalation_evidence must be traceable to a specific session's content.
+
+Return ONLY valid JSON with EXACTLY these fields:
+- is_genuine_pattern: boolean — whether the cross-session evidence supports a genuine multi-session risk drift
+- headline: str — one crisp line HR can grasp in seconds
+- summary: str — 2-3 sentence overview of the drift
+- root_cause_thread: str — the single most likely thread connecting the sessions
+- escalation_evidence: list of str — specific, session-referenced evidence points supporting the pattern
+- tone_shift: str — how the employee's tone changed across sessions, or "No meaningful shift"
+- trigger_point: str — which session/event appears to be the inflection point, if any
+- trajectory: str — the possible/likely course if nothing changes
+- reversibility: str — how reversible this appears and what would change it
+- suggested_opening_script: str — one opening line for the next sync, grounded in THIS employee's own words
+- confidence: int 0-100 — overall confidence in this read
+
+Return ONLY valid JSON, no markdown formatting, no code fences."""
+
+
 FALLBACK_ANALYSIS = {
     "summary": "Analysis failed — could not parse AI response.",
     "psychology": {"sentiment": "unknown", "sentiment_score": 0.0, "behavioural_interpretation": []},
@@ -517,9 +618,35 @@ FALLBACK_ANALYSIS = {
 }
 
 
+FALLBACK_DRIFT_EXPLANATION = {
+    "is_genuine_pattern": False,
+    "headline": "",
+    "summary": "",
+    "root_cause_thread": "",
+    "escalation_evidence": [],
+    "tone_shift": "",
+    "trigger_point": "",
+    "trajectory": "",
+    "reversibility": "",
+    "suggested_opening_script": "",
+    "confidence": 0,
+}
+
+
 class BaseLLM(ABC):
     @abstractmethod
     def analyze(self, transcript: str) -> dict:
+        ...
+
+    @abstractmethod
+    def explain_drift(self, sessions: list) -> dict:
+        """Explain whether risk across multiple syncs forms a genuine pattern.
+
+        sessions: list of {date, attrition_risk_pct, burnout_index, transcript},
+        oldest first, minimum 3 entries (caller's responsibility to enforce).
+        Sends FULL transcripts together (not just the risk % numbers) so the
+        model can cross-reference actual conversation content, not just trend lines.
+        """
         ...
 
 
@@ -701,6 +828,34 @@ Return ONLY valid JSON, no markdown formatting."""
             return result
         except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
             return dict(FALLBACK_ANALYSIS)
+
+    def explain_drift(self, sessions: list) -> dict:
+        """
+        sessions: list of {date, attrition_risk_pct, burnout_index, transcript},
+        oldest first, minimum 3 entries (caller's responsibility to enforce).
+        Sends FULL transcripts together (not just the risk % numbers) so the
+        model can cross-reference actual conversation content, not just trend lines.
+        """
+        from openai import OpenAI
+
+        client = OpenAI(api_key=self.api_key)
+
+        resp = client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": _build_drift_system_prompt()},
+                {"role": "user", "content": _build_drift_prompt(sessions)},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+        )
+
+        try:
+            result = json.loads(resp.choices[0].message.content)
+            result = validate_drift_explanation(result)
+            return result
+        except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
+            return dict(FALLBACK_DRIFT_EXPLANATION)
 
 
 class DeepSeekLLM(BaseLLM):
@@ -976,4 +1131,45 @@ Return ONLY valid JSON, no markdown formatting, no code fences."""
         print("---", file=sys.stderr)
         print("[DEBUG_DEEPSEEK] STAGE 8 — FINAL RETURN DICT keys:", list(result.keys()) if isinstance(result, dict) else type(result).__name__, file=sys.stderr)
         print("=" * 60, file=sys.stderr)
+        return result
+
+    def explain_drift(self, sessions: list) -> dict:
+        """
+        sessions: list of {date, attrition_risk_pct, burnout_index, transcript},
+        oldest first, minimum 3 entries (caller's responsibility to enforce).
+        Sends FULL transcripts together (not just the risk % numbers) so the
+        model can cross-reference actual conversation content, not just trend lines.
+        """
+        import sys
+        from openai import OpenAI
+
+        client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+
+        resp = client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": _build_drift_system_prompt()},
+                {"role": "user", "content": _build_drift_prompt(sessions)},
+            ],
+            temperature=0.3,
+            stream=False,
+        )
+
+        # DeepSeek doesn't reliably support response_format=json_object, so
+        # strip markdown code fences defensively before parsing.
+        raw_content = resp.choices[0].message.content or ""
+        content = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_content.strip())
+
+        try:
+            result = json.loads(content)
+        except json.JSONDecodeError as e:
+            print("[DEBUG_DEEPSEEK_DRIFT] JSON PARSE FAILED:", e, file=sys.stderr)
+            return dict(FALLBACK_DRIFT_EXPLANATION)
+
+        result = validate_drift_explanation(result)
+        print(
+            f"[DEBUG_DEEPSEEK_DRIFT] is_genuine_pattern={result.get('is_genuine_pattern')} "
+            f"confidence={result.get('confidence')}",
+            file=sys.stderr,
+        )
         return result
