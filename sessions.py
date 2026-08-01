@@ -366,6 +366,44 @@ def analyze_session(session_id: str):
                         }},
                     )
                     print(f"[DEBUG_DRIFT] session={session_id} drift check complete — is_genuine_pattern={drift.get('is_genuine_pattern')} confidence={drift.get('confidence')}", file=sys.stderr)
+
+                    # 7. Surface genuine drift as a notification. Best-effort like
+                    #    everything else in this block: a write failure is logged
+                    #    and swallowed, never allowed to fail /analyze. False
+                    #    positives stay silent, exactly as before.
+                    if drift.get("is_genuine_pattern"):
+                        now = datetime.now(timezone.utc)
+                        existing = db.notifications.find_one(
+                            {"org_id": ObjectId(org_id), "source_session_id": s["_id"]}
+                        )
+                        if existing:
+                            print(f"[DEBUG_NOTIF] session={session_id} notification already exists ({existing['_id']}) — skipping", file=sys.stderr)
+                        else:
+                            db.notifications.insert_one(
+                                {
+                                    "org_id": ObjectId(org_id),
+                                    "employee_id": s["employee_id"],
+                                    "type": "risk_drift",
+                                    "headline": drift.get("headline", ""),
+                                    "summary": drift.get("summary", ""),
+                                    "confidence": drift.get("confidence", 0),
+                                    "source_session_id": s["_id"],
+                                    "drift_explanation": drift,
+                                    "sessions_window": [
+                                        {
+                                            "date": sess["created_at"].isoformat() if sess.get("created_at") else None,
+                                            "attrition_risk_pct": (sess["analysis"] or {}).get("risks", {}).get("attrition_risk_pct"),
+                                            "burnout_index": (sess["analysis"] or {}).get("risks", {}).get("burnout_index"),
+                                        }
+                                        for sess in qualifying_sessions
+                                    ],
+                                    "read": False,
+                                    "created_at": now,
+                                }
+                            )
+                            print(f"[DEBUG_NOTIF] session={session_id} notification created for employee={s['employee_id']}", file=sys.stderr)
+                    else:
+                        print(f"[DEBUG_NOTIF] session={session_id} is_genuine_pattern=False — no notification created", file=sys.stderr)
         except Exception as e:
             import traceback
             print(f"[DEBUG_DRIFT] session={session_id} drift check failed: {e}", file=sys.stderr)

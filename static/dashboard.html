@@ -120,10 +120,22 @@
           <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         </button>
-        <button class="icon-btn" title="Notifications">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-          <span class="notif-dot"></span>
-        </button>
+        <div class="notif-wrap" id="notifWrap">
+          <button class="icon-btn" id="notifBtn" title="Notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span class="notif-dot" id="notifDot" style="display:none;"></span>
+            <span class="notif-count" id="notifCount"></span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-dropdown-head">
+              <span class="notif-dropdown-title">Notifications</span>
+              <button class="notif-mark-all" id="notifMarkAll" type="button">Mark all read</button>
+            </div>
+            <div class="notif-dropdown-list" id="notifList"></div>
+            <div class="notif-dropdown-empty" id="notifEmpty" style="display:none;">No notifications yet</div>
+            <a class="notif-dropdown-footer" id="notifViewAll" href="/static/risk-drift.html">View all notifications</a>
+          </div>
+        </div>
         <button class="icon-btn" id="signOutBtn" title="Sign Out">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
@@ -782,6 +794,170 @@ function escHtml(str) {
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && overlay.style.display !== 'none') closePanel();
   });
+})();
+</script>
+
+<!-- ── LIVE NOTIFICATION BELL ── -->
+<script>
+(function() {
+  var wrap = document.getElementById('notifWrap');
+  var btn = document.getElementById('notifBtn');
+  var dropdown = document.getElementById('notifDropdown');
+  var dot = document.getElementById('notifDot');
+  var count = document.getElementById('notifCount');
+  var list = document.getElementById('notifList');
+  var empty = document.getElementById('notifEmpty');
+  var markAll = document.getElementById('notifMarkAll');
+  var open = false;
+
+  function showToast(msg) {
+    var t = document.createElement('div');
+    t.className = 'toast-notification';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    if (window.gsap) {
+      gsap.set(t, { y: 60, opacity: 0 });
+      gsap.to(t, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
+      setTimeout(function() {
+        gsap.to(t, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { t.remove(); } });
+      }, 4000);
+    } else {
+      setTimeout(function() { t.remove(); }, 4000);
+    }
+  }
+
+  function relTime(iso) {
+    if (!iso) return '';
+    var t = new Date(iso);
+    if (isNaN(t.getTime())) return '';
+    var diff = (Date.now() - t.getTime()) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function updateBadge(unread) {
+    if (dot) dot.style.display = unread > 0 ? '' : 'none';
+    if (count) {
+      count.style.display = unread > 0 ? '' : 'none';
+      count.textContent = unread > 99 ? '99+' : String(unread || 0);
+    }
+  }
+
+  function renderList(items) {
+    if (!list) return;
+    list.innerHTML = '';
+    if (!items || !items.length) {
+      if (empty) empty.style.display = '';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    items.forEach(function(n) {
+      var row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'alert-item notif-item';
+      row.setAttribute('data-id', n.id);
+
+      var sev = document.createElement('span');
+      sev.className = 'alert-severity ' + (n.read ? 'read' : 'critical');
+
+      var body = document.createElement('span');
+      body.className = 'alert-body';
+      var name = document.createElement('span');
+      name.className = 'alert-name';
+      name.textContent = n.employee_name || 'Employee';
+      var desc = document.createElement('span');
+      desc.className = 'alert-desc';
+      desc.textContent = n.headline || '';
+      var time = document.createElement('span');
+      time.className = 'alert-time';
+      time.textContent = relTime(n.created_at);
+      body.appendChild(name);
+      body.appendChild(desc);
+      body.appendChild(time);
+
+      var action = document.createElement('span');
+      action.className = 'alert-action';
+      action.textContent = 'View';
+
+      row.appendChild(sev);
+      row.appendChild(body);
+      row.appendChild(action);
+      row.addEventListener('click', function() { openNotification(n.id); });
+      list.appendChild(row);
+    });
+  }
+
+  function openNotification(id) {
+    // Fire-and-forget: optimistically mark read, then navigate.
+    fetch('/api/notifications/' + id + '/read', { method: 'PUT' }).catch(function() {});
+    closeDropdown();
+    window.location.href = '/static/risk-drift.html?notification=' + id;
+  }
+
+  function openDropdown() {
+    if (!dropdown || open) return;
+    open = true;
+    loadNotifications();
+    dropdown.style.display = '';
+    dropdown.classList.add('open');
+    if (window.gsap) {
+      gsap.fromTo(dropdown, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' });
+    } else {
+      dropdown.style.opacity = 1;
+    }
+  }
+
+  function closeDropdown() {
+    if (!dropdown || !open) return;
+    open = false;
+    if (window.gsap) {
+      gsap.to(dropdown, { opacity: 0, y: -8, duration: 0.18, ease: 'power2.in', onComplete: function() {
+        dropdown.style.display = 'none';
+        dropdown.classList.remove('open');
+      }});
+    } else {
+      dropdown.style.display = 'none';
+      dropdown.classList.remove('open');
+    }
+  }
+
+  function loadNotifications() {
+    fetch('/api/notifications?limit=5')
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
+      .then(function(data) {
+        updateBadge(data.unread_count || 0);
+        renderList(data.notifications || []);
+      })
+      .catch(function() {});
+  }
+
+  if (btn) btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (open) closeDropdown(); else openDropdown();
+  });
+
+  if (markAll) markAll.addEventListener('click', function() {
+    fetch('/api/notifications/read-all', { method: 'PUT' })
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
+      .then(function() {
+        updateBadge(0);
+        renderList([]);
+        showToast('All notifications marked as read');
+      })
+      .catch(function() {});
+  });
+
+  document.addEventListener('click', function(e) {
+    if (open && !(wrap && wrap.contains(e.target))) closeDropdown();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDropdown();
+  });
+
+  loadNotifications();
 })();
 </script>
 </body>

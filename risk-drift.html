@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Copilot - Risk Drift Insights</title>
+<script>
+// Set theme before first paint to avoid a flash of the wrong theme.
+(function(){
+  try {
+    var saved = localStorage.getItem('voohr-theme');
+    if (saved === 'light' || saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+  } catch (e) {}
+})();
+</script>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+</head>
+<body style="visibility:hidden">
+<script>
+(function(){
+  function populate(data){
+    var nameEl = document.getElementById('userName');
+    var roleEl = document.getElementById('userRole');
+    var avatarEl = document.getElementById('userAvatar');
+    if (nameEl) nameEl.textContent = data.name;
+    if (roleEl) roleEl.textContent = data.role === 'admin' ? 'HR Admin' : data.role;
+    if (avatarEl) avatarEl.textContent = (data.name || 'U').trim().charAt(0).toUpperCase();
+    document.body.style.visibility = 'visible';
+  }
+
+  fetch('/api/me').then(function(res){
+    if (!res.ok) { window.location.href = 'signin.html'; return null; }
+    return res.json();
+  }).then(function(data){
+    if (!data) return;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function(){
+        populate(data);
+        window.voohrInitRiskDrift && window.voohrInitRiskDrift();
+      });
+    } else {
+      populate(data);
+      window.voohrInitRiskDrift && window.voohrInitRiskDrift();
+    }
+  }).catch(function(){
+    window.location.href = 'signin.html';
+  });
+})();
+</script>
+<button class="mobile-toggle" id="mobileToggle">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+</button>
+
+<div class="page-wrapper">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-mark">HR</div>
+        <!-- TODO: replace with org name from backend -->
+        VooVr
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Command Center</div>
+      <a href="dashboard.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="nav-item" data-section="alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Alerts
+        <span class="nav-badge" id="alertCount">5</span>
+      </a>
+
+      <div class="nav-section">Workspace</div>
+      <a href="sync.html?employee=Priya%20Sharma" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Sync Rooms
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        Reports
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar" id="userAvatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">User</div>
+        <div class="user-role" id="userRole">Admin</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div>
+          <div class="page-title">Risk Drift Insights</div>
+          <div class="breadcrumb"><span>Dashboard</span> / Notifications</div>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <div class="lang-toggle">
+          <button class="lang-btn active" data-lang-switch="en">EN</button>
+          <button class="lang-btn" data-lang-switch="hi">Hinglish</button>
+        </div>
+        <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle light/dark theme">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+        <div class="notif-wrap" id="notifWrap">
+          <button class="icon-btn" id="notifBtn" title="Notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span class="notif-dot" id="notifDot" style="display:none;"></span>
+            <span class="notif-count" id="notifCount"></span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-dropdown-head">
+              <span class="notif-dropdown-title">Notifications</span>
+              <button class="notif-mark-all" id="notifMarkAll" type="button">Mark all read</button>
+            </div>
+            <div class="notif-dropdown-list" id="notifList"></div>
+            <div class="notif-dropdown-empty" id="notifEmpty" style="display:none;">No notifications yet</div>
+            <a class="notif-dropdown-footer" id="notifViewAll" href="risk-drift.html">View all notifications</a>
+          </div>
+        </div>
+        <button class="icon-btn" id="signOutBtn" title="Sign Out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <div class="drift-loading" id="driftLoading">Loading insight&hellip;</div>
+
+      <!-- DETAIL VIEW -->
+      <div id="driftDetail" style="display:none;">
+        <div class="drift-back-row">
+          <a href="risk-drift.html" class="drift-back">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            All notifications
+          </a>
+        </div>
+        <div class="card drift-hero-card">
+          <div class="drift-hero">
+            <div class="drift-avatar" id="driftAvatar">?</div>
+            <div class="drift-hero-main">
+              <div class="drift-eyebrow">Risk Drift Detection</div>
+              <h2 class="drift-headline" id="driftHeadline"></h2>
+              <div class="drift-hero-meta">
+                <span class="drift-conf" id="driftConf"></span>
+                <span class="drift-employee" id="driftEmployee"></span>
+                <span class="drift-time" id="driftTime"></span>
+              </div>
+            </div>
+          </div>
+          <p class="drift-summary" id="driftSummary"></p>
+        </div>
+
+        <div class="card drift-flow">
+          <div class="drift-flow-title">Session Window &mdash; Sync Timeline</div>
+          <div class="drift-flow-track" id="driftFlowTrack"></div>
+        </div>
+
+        <div class="card drift-evidence-card" id="driftEvidenceCard" style="display:none;">
+          <div class="drift-section-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Escalation Evidence
+          </div>
+          <div id="driftEvidence"></div>
+        </div>
+
+        <div class="drift-grid" id="driftGrid"></div>
+
+        <div class="card drift-script-card" id="driftScriptCard" style="display:none;">
+          <div class="drift-section-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            Suggested Opening for Next Sync
+          </div>
+          <blockquote class="drift-script" id="driftScript"></blockquote>
+        </div>
+      </div>
+
+      <!-- LIST VIEW -->
+      <div id="driftListWrap" style="display:none;">
+        <div class="drift-list-head">
+          <div class="eyebrow">Notifications</div>
+          <h2 class="drift-page-title">Risk Drift Alerts</h2>
+          <p class="dir-subtitle">Genuine multi-session risk patterns flagged across the workforce.</p>
+        </div>
+        <div class="drift-list" id="driftList"></div>
+        <div class="drift-empty" id="driftListEmpty" style="display:none;">No risk drift alerts yet. Alerts appear automatically after a genuine multi-session pattern is detected.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+document.getElementById('signOutBtn').addEventListener('click', async function(){
+  try { await fetch('/auth/logout', { method: 'POST' }); } catch (err) {}
+  window.location.href = 'signin.html';
+});
+
+// Light/dark theme toggle
+(function() {
+  var btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    var next = current === 'light' ? 'dark' : 'light';
+    if (next === 'dark') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+    try { localStorage.setItem('voohr-theme', next); } catch (e) {}
+  });
+})();
+</script>
+
+<!-- ── LIVE NOTIFICATION BELL ── -->
+<script>
+(function() {
+  var wrap = document.getElementById('notifWrap');
+  var btn = document.getElementById('notifBtn');
+  var dropdown = document.getElementById('notifDropdown');
+  var dot = document.getElementById('notifDot');
+  var count = document.getElementById('notifCount');
+  var list = document.getElementById('notifList');
+  var empty = document.getElementById('notifEmpty');
+  var markAll = document.getElementById('notifMarkAll');
+  var open = false;
+
+  function showToast(msg) {
+    var t = document.createElement('div');
+    t.className = 'toast-notification';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    if (window.gsap) {
+      gsap.set(t, { y: 60, opacity: 0 });
+      gsap.to(t, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
+      setTimeout(function() {
+        gsap.to(t, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { t.remove(); } });
+      }, 4000);
+    } else {
+      setTimeout(function() { t.remove(); }, 4000);
+    }
+  }
+
+  function relTime(iso) {
+    if (!iso) return '';
+    var t = new Date(iso);
+    if (isNaN(t.getTime())) return '';
+    var diff = (Date.now() - t.getTime()) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function updateBadge(unread) {
+    if (dot) dot.style.display = unread > 0 ? '' : 'none';
+    if (count) {
+      count.style.display = unread > 0 ? '' : 'none';
+      count.textContent = unread > 99 ? '99+' : String(unread || 0);
+    }
+  }
+
+  function renderList(items) {
+    if (!list) return;
+    list.innerHTML = '';
+    if (!items || !items.length) {
+      if (empty) empty.style.display = '';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    items.forEach(function(n) {
+      var row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'alert-item notif-item';
+      row.setAttribute('data-id', n.id);
+
+      var sev = document.createElement('span');
+      sev.className = 'alert-severity ' + (n.read ? 'read' : 'critical');
+
+      var body = document.createElement('span');
+      body.className = 'alert-body';
+      var name = document.createElement('span');
+      name.className = 'alert-name';
+      name.textContent = n.employee_name || 'Employee';
+      var desc = document.createElement('span');
+      desc.className = 'alert-desc';
+      desc.textContent = n.headline || '';
+      var time = document.createElement('span');
+      time.className = 'alert-time';
+      time.textContent = relTime(n.created_at);
+      body.appendChild(name);
+      body.appendChild(desc);
+      body.appendChild(time);
+
+      var action = document.createElement('span');
+      action.className = 'alert-action';
+      action.textContent = 'View';
+
+      row.appendChild(sev);
+      row.appendChild(body);
+      row.appendChild(action);
+      row.addEventListener('click', function() { openNotification(n.id); });
+      list.appendChild(row);
+    });
+  }
+
+  function openNotification(id) {
+    fetch('/api/notifications/' + id + '/read', { method: 'PUT' }).catch(function() {});
+    closeDropdown();
+    window.location.href = 'risk-drift.html?notification=' + id;
+  }
+
+  function openDropdown() {
+    if (!dropdown || open) return;
+    open = true;
+    loadNotifications();
+    dropdown.style.display = '';
+    dropdown.classList.add('open');
+    if (window.gsap) {
+      gsap.fromTo(dropdown, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' });
+    } else {
+      dropdown.style.opacity = 1;
+    }
+  }
+
+  function closeDropdown() {
+    if (!dropdown || !open) return;
+    open = false;
+    if (window.gsap) {
+      gsap.to(dropdown, { opacity: 0, y: -8, duration: 0.18, ease: 'power2.in', onComplete: function() {
+        dropdown.style.display = 'none';
+        dropdown.classList.remove('open');
+      }});
+    } else {
+      dropdown.style.display = 'none';
+      dropdown.classList.remove('open');
+    }
+  }
+
+  function loadNotifications() {
+    fetch('/api/notifications?limit=5')
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
+      .then(function(data) {
+        updateBadge(data.unread_count || 0);
+        renderList(data.notifications || []);
+      })
+      .catch(function() {});
+  }
+
+  if (btn) btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (open) closeDropdown(); else openDropdown();
+  });
+
+  if (markAll) markAll.addEventListener('click', function() {
+    fetch('/api/notifications/read-all', { method: 'PUT' })
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
+      .then(function() {
+        updateBadge(0);
+        renderList([]);
+        showToast('All notifications marked as read');
+      })
+      .catch(function() {});
+  });
+
+  document.addEventListener('click', function(e) {
+    if (open && !(wrap && wrap.contains(e.target))) closeDropdown();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDropdown();
+  });
+
+  loadNotifications();
+})();
+</script>
+
+<!-- ── RISK DRIFT PAGE LOGIC ── -->
+<script>
+window.voohrInitRiskDrift = function() {
+  var params = new URLSearchParams(window.location.search);
+  var nid = params.get('notification');
+
+  var loadingEl = document.getElementById('driftLoading');
+  var detailEl = document.getElementById('driftDetail');
+  var listWrap = document.getElementById('driftListWrap');
+  var listEmpty = document.getElementById('driftListEmpty');
+
+  if (nid) loadDetail(nid); else loadList();
+
+  function esc(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function relTime(iso) {
+    if (!iso) return '';
+    var t = new Date(iso);
+    if (isNaN(t.getTime())) return '';
+    var diff = (Date.now() - t.getTime()) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function initials(name) {
+    if (!name) return '?';
+    return name.trim().split(/\s+/).map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2);
+  }
+
+  function confClass(c) {
+    return c >= 70 ? 'high' : (c >= 40 ? 'medium' : 'low');
+  }
+
+  function riskColor(v) {
+    if (v === null || v === undefined) return 'var(--ivory-faint)';
+    if (v >= 70) return 'var(--red)';
+    if (v >= 40) return 'var(--amber)';
+    return 'var(--teal)';
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    var t = new Date(iso);
+    if (isNaN(t.getTime())) return esc(iso);
+    return t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function findTriggerIndex(text, len) {
+    if (!text || !len) return len - 1;
+    var m = String(text).match(/sync\s*#?\s*(\d+)/i);
+    if (m) {
+      var idx = parseInt(m[1], 10) - 1;
+      if (idx >= 0 && idx < len) return idx;
+    }
+    return len - 1;
+  }
+
+  function fail(msg) {
+    loadingEl.style.display = 'none';
+    listWrap.style.display = '';
+    if (listEmpty) { listEmpty.style.display = ''; listEmpty.textContent = msg; }
+  }
+
+  // ── Detail view ──
+  function loadDetail(id) {
+    fetch('/api/notifications/' + id)
+      .then(function(r) { if (!r.ok) throw new Error('not_found'); return r.json(); })
+      .then(function(n) {
+        // If opened via a direct link, mark it read in the background.
+        fetch('/api/notifications/' + id + '/read', { method: 'PUT' }).catch(function() {});
+        loadingEl.style.display = 'none';
+        detailEl.style.display = '';
+        renderDetail(n);
+        animateDetail();
+      })
+      .catch(function() { fail('Notification not found.'); });
+  }
+
+  function renderDetail(n) {
+    var name = n.employee_name || 'Employee';
+    document.getElementById('driftAvatar').textContent = initials(name);
+    document.getElementById('driftHeadline').textContent = n.headline || '';
+    var conf = document.getElementById('driftConf');
+    var c = n.confidence || 0;
+    conf.className = 'drift-conf ' + confClass(c);
+    conf.textContent = c != null ? c + '% confidence' : '';
+    document.getElementById('driftEmployee').textContent = name;
+    document.getElementById('driftTime').textContent = 'Detected ' + relTime(n.created_at);
+    document.getElementById('driftSummary').textContent = n.summary || '';
+
+    renderFlow(n);
+    renderEvidence(n);
+    renderGrid(n);
+    renderScript(n);
+  }
+
+  function renderFlow(n) {
+    var track = document.getElementById('driftFlowTrack');
+    var windowData = n.sessions_window || [];
+    if (!windowData.length) {
+      track.innerHTML = '<div class="drift-empty">No session window data available.</div>';
+      return;
+    }
+    var triggerIdx = findTriggerIndex(n.drift_explanation && n.drift_explanation.trigger_point, windowData.length);
+
+    var html = '';
+    windowData.forEach(function(sw, idx) {
+      if (idx > 0) {
+        html += '<div class="drift-connector"><span class="drift-connector-line"></span></div>';
+      }
+      var risk = Math.max(sw.attrition_risk_pct || 0, sw.burnout_index || 0);
+      var barColor = risk >= 70 ? 'var(--red)' : (risk >= 40 ? 'var(--amber)' : 'var(--teal)');
+      var flagged = idx === triggerIdx;
+      html +=
+        '<div class="drift-node' + (flagged ? ' trigger' : '') + '">' +
+          (flagged
+            ? '<span class="drift-flag"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Trigger</span>'
+            : '') +
+          '<div class="drift-node-num">Sync ' + (idx + 1) + '</div>' +
+          '<div class="drift-node-date">' + formatDate(sw.date) + '</div>' +
+          '<div class="drift-node-metrics">' +
+            '<div class="drift-metric"><span class="drift-metric-val" style="color:' + riskColor(sw.attrition_risk_pct) + '">' + (sw.attrition_risk_pct != null ? sw.attrition_risk_pct + '%' : '--') + '</span><span class="drift-metric-label">Risk</span></div>' +
+            '<div class="drift-metric"><span class="drift-metric-val" style="color:' + riskColor(sw.burnout_index) + '">' + (sw.burnout_index != null ? sw.burnout_index : '--') + '</span><span class="drift-metric-label">Burnout</span></div>' +
+          '</div>' +
+          '<div class="drift-node-bar"><div class="fill" style="background:' + barColor + ';width:' + Math.min(100, risk) + '%;"></div></div>' +
+        '</div>';
+    });
+    track.innerHTML = html;
+  }
+
+  function renderEvidence(n) {
+    var card = document.getElementById('driftEvidenceCard');
+    var list = document.getElementById('driftEvidence');
+    var items = (n.drift_explanation && n.drift_explanation.escalation_evidence) || [];
+    if (!items.length) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    var html = items.map(function(item, i) {
+      return '<div class="drift-evidence-item"><span class="drift-evidence-pin">' + (i + 1) + '</span><p>' + esc(item) + '</p></div>';
+    }).join('');
+    list.innerHTML = html;
+  }
+
+  function renderGrid(n) {
+    var grid = document.getElementById('driftGrid');
+    var ex = n.drift_explanation || {};
+    var ICONS = {
+      target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+      chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
+      trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+      rotate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>'
+    };
+    var cards = [
+      { key: 'root_cause_thread', title: 'Root Cause Thread', icon: ICONS.target },
+      { key: 'tone_shift', title: 'Tone Shift', icon: ICONS.chat },
+      { key: 'trajectory', title: 'Trajectory', icon: ICONS.trend },
+      { key: 'reversibility', title: 'Reversibility', icon: ICONS.rotate }
+    ];
+    var html = '';
+    cards.forEach(function(c) {
+      var val = ex[c.key];
+      if (val === null || val === undefined || !String(val).trim()) return;
+      html +=
+        '<div class="card drift-card">' +
+          '<div class="drift-card-head">' + c.icon + '<h3 class="card-title">' + c.title + '</h3></div>' +
+          '<p class="drift-card-text">' + esc(val) + '</p>' +
+        '</div>';
+    });
+    grid.innerHTML = html;
+  }
+
+  function renderScript(n) {
+    var card = document.getElementById('driftScriptCard');
+    var el = document.getElementById('driftScript');
+    var val = n.drift_explanation && n.drift_explanation.suggested_opening_script;
+    if (val === null || val === undefined || !String(val).trim()) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    el.textContent = val;
+  }
+
+  function animateDetail() {
+    if (!window.gsap) return;
+    var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    var sections = [].slice.call(document.querySelectorAll('#driftDetail .card'));
+    gsap.set(sections, { opacity: 0, y: 30 });
+    tl.to(sections, { opacity: 1, y: 0, duration: 0.55, stagger: 0.08 });
+    gsap.fromTo('.drift-node', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power3.out', delay: 0.4 });
+    gsap.fromTo('.drift-connector-line', { opacity: 0 }, { opacity: 1, duration: 0.5, stagger: 0.12, delay: 0.5 });
+    gsap.fromTo('.drift-evidence-item', { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out', delay: 0.3 });
+  }
+
+  // ── List view ──
+  function loadList() {
+    fetch('/api/notifications?limit=50')
+      .then(function(r) { if (!r.ok) throw new Error('failed'); return r.json(); })
+      .then(function(data) {
+        loadingEl.style.display = 'none';
+        listWrap.style.display = '';
+        var items = data.notifications || [];
+        renderListItems(items);
+        if (window.gsap) {
+          gsap.fromTo('.drift-list-item', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, ease: 'power3.out' });
+        }
+      })
+      .catch(function() { fail('Could not load notifications.'); });
+  }
+
+  function renderListItems(items) {
+    var list = document.getElementById('driftList');
+    if (!items.length) { listEmpty.style.display = ''; return; }
+    listEmpty.style.display = 'none';
+    items.forEach(function(n) {
+      var row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'alert-item drift-list-item';
+
+      var sev = document.createElement('span');
+      sev.className = 'alert-severity ' + (n.read ? 'read' : 'critical');
+
+      var body = document.createElement('span');
+      body.className = 'alert-body';
+      var name = document.createElement('span');
+      name.className = 'alert-name';
+      name.textContent = n.employee_name || 'Employee';
+      var desc = document.createElement('span');
+      desc.className = 'alert-desc';
+      desc.textContent = n.headline || '';
+      var time = document.createElement('span');
+      time.className = 'alert-time';
+      time.textContent = relTime(n.created_at);
+      body.appendChild(name);
+      body.appendChild(desc);
+      body.appendChild(time);
+
+      var conf = document.createElement('span');
+      conf.className = 'drift-conf ' + confClass(n.confidence || 0);
+      conf.textContent = n.confidence != null ? n.confidence + '%' : '';
+
+      row.appendChild(sev);
+      row.appendChild(body);
+      row.appendChild(conf);
+      row.addEventListener('click', function() {
+        window.location.href = 'risk-drift.html?notification=' + n.id;
+      });
+      list.appendChild(row);
+    });
+  }
+};
+</script>
+</body>
+</html>

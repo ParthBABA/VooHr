@@ -7,6 +7,7 @@ from auth import auth_bp, register_google_oauth
 from config import Config
 from employees import employees_bp
 from extensions import init_db
+from notifications import notifications_bp
 from sessions import sessions_bp
 
 
@@ -25,6 +26,7 @@ def create_app():
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(employees_bp, url_prefix="/api")
     app.register_blueprint(sessions_bp, url_prefix="/api")
+    app.register_blueprint(notifications_bp, url_prefix="/api")
 
     @app.route("/")
     def index():
