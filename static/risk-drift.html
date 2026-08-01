@@ -17,6 +17,7 @@
 </script>
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -132,7 +133,10 @@
               <button class="notif-mark-all" id="notifMarkAll" type="button">Mark all read</button>
             </div>
             <div class="notif-dropdown-list" id="notifList"></div>
-            <div class="notif-dropdown-empty" id="notifEmpty" style="display:none;">No notifications yet</div>
+            <div class="notif-dropdown-empty" id="notifEmpty" style="display:none;">
+              <span class="notif-dropdown-empty-title">No signals to review</span>
+              <span class="notif-dropdown-empty-body">Genuine risk patterns will appear here automatically.</span>
+            </div>
             <a class="notif-dropdown-footer" id="notifViewAll" href="risk-drift.html">View all notifications</a>
           </div>
         </div>
@@ -201,7 +205,14 @@
           <p class="dir-subtitle">Genuine multi-session risk patterns flagged across the workforce.</p>
         </div>
         <div class="drift-list" id="driftList"></div>
-        <div class="drift-empty" id="driftListEmpty" style="display:none;">No risk drift alerts yet. Alerts appear automatically after a genuine multi-session pattern is detected.</div>
+        <div class="drift-empty drift-empty-page" id="driftListEmpty" style="display:none;">
+          <div class="drift-empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          </div>
+          <h3 class="drift-empty-title">Nothing to flag yet</h3>
+          <p class="drift-empty-body">Nothing reaches this page until the signal is real &mdash; a genuine pattern traced across an employee&rsquo;s syncs, not a single rough session. What you&rsquo;ll find here is evidence-grounded insight about the people in your org, the kind worth acting on. It updates itself, so there&rsquo;s nothing to configure or check back on.</p>
+          <span class="drift-empty-meta">0 alerts &middot; updates automatically</span>
+        </div>
       </div>
     </div>
   </main>

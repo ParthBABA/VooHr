@@ -17,6 +17,7 @@
 </script>
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -132,8 +133,11 @@
               <button class="notif-mark-all" id="notifMarkAll" type="button">Mark all read</button>
             </div>
             <div class="notif-dropdown-list" id="notifList"></div>
-            <div class="notif-dropdown-empty" id="notifEmpty" style="display:none;">No notifications yet</div>
-            <a class="notif-dropdown-footer" id="notifViewAll" href="/static/risk-drift.html">View all notifications</a>
+            <div class="notif-dropdown-empty" id="notifEmpty" style="display:none;">
+              <span class="notif-dropdown-empty-title">No signals to review</span>
+              <span class="notif-dropdown-empty-body">Genuine risk patterns will appear here automatically.</span>
+            </div>
+            <a class="notif-dropdown-footer" id="notifViewAll" href="risk-drift.html">View all notifications</a>
           </div>
         </div>
         <button class="icon-btn" id="signOutBtn" title="Sign Out">
@@ -894,7 +898,7 @@ function escHtml(str) {
     // Fire-and-forget: optimistically mark read, then navigate.
     fetch('/api/notifications/' + id + '/read', { method: 'PUT' }).catch(function() {});
     closeDropdown();
-    window.location.href = '/static/risk-drift.html?notification=' + id;
+    window.location.href = 'risk-drift.html?notification=' + id;
   }
 
   function openDropdown() {
