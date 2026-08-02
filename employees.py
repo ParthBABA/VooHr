@@ -90,6 +90,7 @@ def _employee_to_json(emp) -> dict:
         "wellness_score": wellness_score,
         "wellness_status": wellness_status,
         "attrition_risk_pct": attrition_risk_pct,
+        "burnout_index": (ai or {}).get("burnout_index"),
         "wellness_source": wellness_source,
         "reasons": reasons,
         "signals": signals,

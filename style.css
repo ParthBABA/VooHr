@@ -161,6 +161,7 @@ h1,h2,h3,h4,h5,h6{font-family:var(--font-d);font-weight:600;text-transform:upper
 /* NOTIFICATION DROPDOWN */
 .notif-wrap{position:relative;}
 .notif-dropdown{position:absolute;top:calc(100% + 0.7rem);right:0;width:380px;max-width:calc(100vw - 2rem);background:var(--ink);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-md);z-index:200;overflow:hidden;display:none;}
+.notif-dropdown.open{display:block;}
 .notif-dropdown-head{display:flex;align-items:center;justify-content:space-between;gap:0.6rem;padding:1rem 1.2rem;border-bottom:1px solid var(--border);}
 .notif-dropdown-title{font-family:var(--font-d);font-size:0.75rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;}
 .notif-mark-all{font-family:var(--font-m);font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--amber);background:none;border:none;padding:0;cursor:pointer;white-space:nowrap;transition:color 0.2s;}

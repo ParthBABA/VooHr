@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Copilot - Conversation Workspace</title>
+<script>
+// Set theme before first paint to avoid a flash of the wrong theme.
+(function(){
+  try {
+    var saved = localStorage.getItem('voohr-theme');
+    if (saved === 'light' || saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+  } catch (e) {}
+})();
+</script>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+</head>
+<body style="visibility:hidden">
+<script>
+fetch('/api/me').then(function(res){
+  if (!res.ok) { window.location.href = 'signin.html'; return null; }
+  return res.json();
+}).then(function(data){
+  if (!data) return;
+  var nameEl = document.getElementById('userName');
+  var roleEl = document.getElementById('userRole');
+  var avatarEl = document.getElementById('userAvatar');
+  if (nameEl) nameEl.textContent = data.name;
+  if (roleEl) roleEl.textContent = data.role === 'admin' ? 'HR Admin' : data.role;
+  if (avatarEl) avatarEl.textContent = (data.name || 'U').trim().charAt(0).toUpperCase();
+  document.body.style.visibility = 'visible';
+  window.voohrInitWorkspace && window.voohrInitWorkspace();
+}).catch(function(){
+  window.location.href = 'signin.html';
+});
+</script>
+<button class="mobile-toggle" id="mobileToggle">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+</button>
+
+<div class="page-wrapper">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-mark">HR</div>
+        HR Copilot
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Command Center</div>
+      <a href="dashboard.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <div class="nav-section">Workspace</div>
+      <a href="sync.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        AI Sync
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        Reports
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar" id="userAvatar">K</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">Kavita Sharma</div>
+        <div class="user-role" id="userRole">HR Admin</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div>
+          <div class="page-title">AI Sync</div>
+          <div class="breadcrumb"><span>Dashboard</span> / <span>AI Sync</span> / <span id="wsBreadcrumb">Conversation Workspace</span></div>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <button class="btn btn-sm btn-outline" id="exportBtn" title="Download transcript">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+        </button>
+        <button class="btn btn-sm btn-outline" id="shareBtn" title="Copy link to this workspace">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Share
+        </button>
+        <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle light/dark theme">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </button>
+        <div class="lang-toggle">
+          <button class="lang-btn active" data-lang-switch="en">EN</button>
+          <button class="lang-btn" data-lang-switch="hi">Hinglish</button>
+        </div>
+        <button class="icon-btn" id="signOutBtn" title="Sign Out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="content-area" style="padding:1.5rem;">
+      <!-- Page header -->
+      <div class="ws-header">
+        <div class="ws-title-row">
+          <div>
+            <h1 class="ws-title">Conversation Workspace</h1>
+            <div class="ws-subtitle">Read the transcript, and let AI help you run a better conversation next time.</div>
+          </div>
+          <span class="ws-live-pill"><span class="ws-live-dot"></span>Live Intelligence</span>
+        </div>
+        <div class="ws-tabs">
+          <a class="ws-tab" id="analysisTab" href="#">Analysis View</a>
+          <span class="ws-tab active">Conversation Workspace</span>
+        </div>
+      </div>
+
+      <div class="ws-loading" id="wsLoading">Loading workspace&hellip;</div>
+
+      <!-- Unanalyzed gate -->
+      <div class="ws-gate card" id="wsGate" style="display:none;">
+        <h3 class="ws-gate-title">This session hasn't been analyzed yet</h3>
+        <p class="ws-gate-body">Run the AI analysis first so the Conversation Coach and score have evidence to work with.</p>
+        <button class="btn btn-primary" id="runAnalysisBtn">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Run Analysis
+        </button>
+        <div class="ws-gate-note" id="wsGateNote" style="display:none;">Analyzing&hellip; this may take a few moments.</div>
+      </div>
+
+      <!-- Workspace body -->
+      <div class="ws-grid" id="wsBody" style="display:none;">
+        <!-- LEFT: TRANSCRIPT -->
+        <section class="card ws-transcript" style="padding:0;">
+          <div class="ws-toolbar">
+            <div class="ws-search">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" id="wsSearch" placeholder="Search in transcript&hellip;">
+            </div>
+            <button class="ws-tool-btn" id="wsFilterBtn" title="Filters">Filters</button>
+            <select class="ws-tool-select" id="wsSpeakerSelect" title="Filter by speaker">
+              <option value="all">All speakers</option>
+              <option value="HR">HR</option>
+              <option value="Employee">Employee</option>
+            </select>
+            <button class="ws-tool-btn" id="wsDensityBtn" title="View density">View: Standard</button>
+          </div>
+
+          <div class="ws-filter-pop" id="wsFilterPop" style="display:none;">
+            <label class="ws-filter-opt"><input type="checkbox" id="wsShowTime" checked> Show timestamps</label>
+            <label class="ws-filter-opt"><input type="checkbox" id="wsPinnedOnly"> Pinned lines only</label>
+          </div>
+
+          <div class="ws-lines" id="wsLines" data-density="standard"></div>
+
+          <div class="ws-disclaimer">Speaker labels are inferred and may not reflect who actually spoke.</div>
+
+          <!-- Sticky audio player (disabled: no stored recording) -->
+          <div class="ws-audio disabled" id="wsAudio">
+            <button class="ws-audio-btn" disabled title="No recording available">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+            <div class="ws-audio-times">--:-- / --:--</div>
+            <div class="ws-audio-track"><div class="ws-audio-fill" style="width:0%;"></div></div>
+            <select class="ws-audio-speed" disabled><option>1x</option></select>
+            <div class="ws-audio-vol" title="Volume">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>
+            </div>
+            <span class="ws-audio-msg">No recording available for this session</span>
+          </div>
+        </section>
+
+        <!-- RIGHT: CONVERSATION COACH -->
+        <section class="ws-coach">
+          <!-- Score -->
+          <div class="card ws-score-card">
+            <div class="card-header">
+              <div class="card-title">Live Conversation Score</div>
+            </div>
+            <div class="ws-score-row">
+              <div class="ws-score-num" id="wsScoreNum">--</div>
+              <div class="ws-score-meta">
+                <div class="ws-score-label" id="wsScoreLabel">Not measured</div>
+                <div class="ws-score-sub">Out of 100</div>
+              </div>
+            </div>
+            <div class="ws-chips" id="wsScoreChips"></div>
+          </div>
+
+          <!-- AI Coach -->
+          <div class="card ws-coach-card">
+            <div class="card-header">
+              <div class="card-title">Coaching Tips</div>
+              <span class="ws-coach-pill">AI</span>
+            </div>
+            <div class="ws-coach-feed" id="wsCoachFeed"></div>
+          </div>
+
+          <!-- Highlighted moments -->
+          <div class="card ws-moments-card">
+            <div class="card-header">
+              <div class="card-title">Highlighted Moments</div>
+              <a class="ws-view-all" id="wsViewAll" href="#">View All</a>
+            </div>
+            <div class="ws-moments" id="wsMoments"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+window.voohrInitWorkspace = function() {
+  var params = new URLSearchParams(window.location.search);
+  var sessionId = params.get('session_id');
+  var employeeId = params.get('employee_id');
+
+  var state = {
+    session: null,
+    employee: null,
+    transcriptText: '',
+    duration: 0,
+    lines: [],
+    query: '',
+    speaker: 'all',
+    density: 'standard',
+    showTime: true,
+    pinnedOnly: false,
+    pinned: {}
+  };
+
+  var loadingEl = document.getElementById('wsLoading');
+  var bodyEl = document.getElementById('wsBody');
+  var gateEl = document.getElementById('wsGate');
+
+  function esc(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function fmtTime(sec) {
+    sec = Math.max(0, Math.round(sec || 0));
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function showToast(msg) {
+    var t = document.createElement('div');
+    t.className = 'toast-notification';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    if (window.gsap) {
+      gsap.set(t, { y: 60, opacity: 0 });
+      gsap.to(t, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
+      setTimeout(function() {
+        gsap.to(t, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { t.remove(); } });
+      }, 4000);
+    } else {
+      setTimeout(function() { t.remove(); }, 4000);
+    }
+  }
+
+  function scoreBand(v) {
+    if (v === null || v === undefined || isNaN(v)) return { label: 'Not measured', cls: '' };
+    if (v >= 70) return { label: 'Strong signal', cls: 'high' };
+    if (v >= 40) return { label: 'Mixed signals', cls: 'medium' };
+    return { label: 'Needs attention', cls: 'low' };
+  }
+
+  function fail(msg) {
+    loadingEl.textContent = msg;
+  }
+
+  // ── Transcript parsing (heuristic) ──
+  function estimateDuration() {
+    if (state.duration > 0) return state.duration;
+    var words = state.transcriptText.trim().split(/\s+/).filter(Boolean).length;
+    return Math.round(words / 2.5); // ~2.5 words/sec fallback
+  }
+
+  function parseTranscript() {
+    var text = state.transcriptText;
+    if (!text) { state.lines = []; return; }
+    var rawLines = text.split(/\n+/).map(function(s) { return s.trim(); }).filter(Boolean);
+    var sentences = [];
+    rawLines.forEach(function(l) {
+      var parts = l.split(/(?<=[.!?])\s+/);
+      if (parts.length <= 1) sentences.push(l);
+      else parts.forEach(function(p) { if (p.trim()) sentences.push(p.trim()); });
+    });
+    if (sentences.length > 200) sentences = sentences.slice(0, 200);
+
+    var totalChars = sentences.reduce(function(a, s) { return a + s.length; }, 0) || 1;
+    var cursor = 0;
+    var duration = estimateDuration();
+    state.lines = sentences.map(function(s, i) {
+      var start = duration * (cursor / totalChars);
+      cursor += s.length;
+      return {
+        idx: i,
+        text: s,
+        speaker: (i % 2 === 0) ? 'HR' : 'Employee',
+        time: start
+      };
+    });
+  }
+
+  // ── Rendering ──
+  function highlight(text) {
+    if (!state.query) return esc(text);
+    var q = state.query.toLowerCase();
+    var lower = text.toLowerCase();
+    var out = '';
+    var i = 0;
+    while (true) {
+      var j = lower.indexOf(q, i);
+      if (j === -1) { out += esc(text.slice(i)); break; }
+      out += esc(text.slice(i, j)) + '<mark class="ws-hl">' + esc(text.slice(j, j + q.length)) + '</mark>';
+      i = j + q.length;
+    }
+    return out;
+  }
+
+  function renderLines() {
+    var container = document.getElementById('wsLines');
+    container.setAttribute('data-density', state.density);
+    var visible = state.lines.filter(function(l) {
+      if (state.speaker !== 'all' && l.speaker !== state.speaker) return false;
+      if (state.pinnedOnly && !state.pinned[l.idx]) return false;
+      if (state.query && l.text.toLowerCase().indexOf(state.query.toLowerCase()) === -1) return false;
+      return true;
+    });
+    if (!visible.length) {
+      container.innerHTML = '<div class="ws-empty">' + (state.lines.length ? 'No lines match your filters.' : 'No transcript available for this session.') + '</div>';
+      return;
+    }
+    var html = visible.map(function(l) {
+      var pinned = !!state.pinned[l.idx];
+      var initials = l.speaker === 'HR' ? 'HR' : 'EE';
+      return (
+        '<div class="ws-line' + (pinned ? ' pinned' : '') + '" data-idx="' + l.idx + '">' +
+          '<div class="ws-line-avatar ' + (l.speaker === 'HR' ? 'hr' : 'emp') + '">' + initials + '</div>' +
+          '<div class="ws-line-body">' +
+            '<div class="ws-line-head">' +
+              '<span class="ws-line-speaker ' + (l.speaker === 'HR' ? 'hr' : 'emp') + '">' + l.speaker + '</span>' +
+              (state.showTime ? '<span class="ws-line-time">' + fmtTime(l.time) + '</span>' : '') +
+            '</div>' +
+            '<div class="ws-line-text">' + highlight(l.text) + '</div>' +
+          '</div>' +
+          '<div class="ws-line-actions">' +
+            '<button class="ws-line-action" data-action="pin" title="' + (pinned ? 'Unpin' : 'Pin') + '">' +
+              '<svg viewBox="0 0 24 24" width="13" height="13" fill="' + (pinned ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2"><path d="M9 4h6l1 7 2 2v2H6v-2l2-2z"/><line x1="12" y1="15" x2="12" y2="21"/></svg>' +
+            '</button>' +
+            '<div class="ws-line-menu">' +
+              '<button class="ws-line-action" data-action="menu" title="More">' +
+                '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>' +
+              '</button>' +
+              '<div class="ws-line-pop" style="display:none;"><button data-action="copy">Copy line</button></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+    container.innerHTML = html;
+  }
+
+  function onLineClick(e) {
+    var btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    var lineEl = btn.closest('.ws-line');
+    var idx = parseInt(lineEl.getAttribute('data-idx'), 10);
+    var action = btn.getAttribute('data-action');
+    if (action === 'pin') {
+      if (state.pinned[idx]) delete state.pinned[idx]; else state.pinned[idx] = true;
+      renderLines();
+    } else if (action === 'menu') {
+      var pop = lineEl.querySelector('.ws-line-pop');
+      var open = pop.style.display === 'block';
+      document.querySelectorAll('.ws-line-pop').forEach(function(p) { p.style.display = 'none'; });
+      pop.style.display = open ? 'none' : 'block';
+    } else if (action === 'copy') {
+      var text = state.lines[idx].text;
+      navigator.clipboard && navigator.clipboard.writeText(text);
+      showToast('Line copied to clipboard');
+    }
+  }
+
+  // ── Score card ──
+  function renderScore(a) {
+    var ps = a && a.psychological_safety || {};
+    var psych = a && a.psychology || {};
+    var safety = (ps.safety_score !== null && ps.safety_score !== undefined) ? ps.safety_score : null;
+    var numEl = document.getElementById('wsScoreNum');
+    var labelEl = document.getElementById('wsScoreLabel');
+
+    if (safety === null) {
+      numEl.textContent = '--';
+      numEl.className = 'ws-score-num unmeasured';
+      labelEl.textContent = 'Not measured';
+    } else {
+      numEl.textContent = safety;
+      numEl.className = 'ws-score-num ' + scoreBand(safety).cls;
+      labelEl.textContent = 'Psychological Safety';
+    }
+
+    var chips = [];
+    if (safety !== null) {
+      chips.push({ label: 'Psych. Safety', value: safety + '/100', cls: scoreBand(safety).cls });
+    } else {
+      chips.push({ label: 'Psych. Safety', value: 'Not measured', cls: 'unmeasured' });
+    }
+    if (psych.sentiment_score !== null && psych.sentiment_score !== undefined) {
+      chips.push({ label: 'Sentiment', value: Math.round(psych.sentiment_score * 100) + '%', cls: 'medium' });
+    } else {
+      chips.push({ label: 'Sentiment', value: 'Not measured', cls: 'unmeasured' });
+    }
+    ['Empathy', 'Clarity', 'Curiosity', 'Leading Qs'].forEach(function(m) {
+      chips.push({ label: m, value: 'Not measured', cls: 'unmeasured' });
+    });
+    document.getElementById('wsScoreChips').innerHTML = chips.map(function(c) {
+      return '<span class="ws-chip ' + c.cls + '"><b>' + esc(c.label) + '</b>' + esc(c.value) + '</span>';
+    }).join('');
+  }
+
+  // ── Coaching feed ──
+  function renderCoach(a) {
+    var feed = document.getElementById('wsCoachFeed');
+    var coach = (a && a.conversation_coach) || [];
+    var html = '';
+    coach.forEach(function(item) {
+      if (item.better_follow_up_question) {
+        html +=
+          '<div class="ws-coach-card-item good">' +
+            '<div class="ws-coach-type">' +
+              '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+              'Better Question Detected' +
+            '</div>' +
+            '<blockquote class="ws-coach-quote">&ldquo;' + esc(item.better_follow_up_question) + '&rdquo;</blockquote>' +
+            (item.why_it_works ? '<p class="ws-coach-why">' + esc(item.why_it_works) + '</p>' : '') +
+          '</div>';
+      }
+      if (item.avoid_saying || item.immediate_response) {
+        html +=
+          '<div class="ws-coach-card-item improve">' +
+            '<div class="ws-coach-type">' +
+              '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+              'Potential Improvement' +
+            '</div>' +
+            (item.avoid_saying ? '<p class="ws-coach-avoid">' + esc(item.avoid_saying) + '</p>' : '') +
+            (item.immediate_response ? '<div class="ws-coach-try"><span class="ws-coach-try-label">Try Instead</span><p>' + esc(item.immediate_response) + '</p></div>' : '') +
+            (item.immediate_response ? '<button class="ws-use-btn" data-use="' + esc(item.immediate_response) + '">Use This</button>' : '') +
+          '</div>';
+      }
+    });
+    if (!html) {
+      html = '<div class="ws-empty">No coaching tips for this session yet.</div>';
+    }
+    feed.innerHTML = html;
+    feed.querySelectorAll('.ws-use-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        navigator.clipboard && navigator.clipboard.writeText(btn.getAttribute('data-use'));
+        showToast('Suggested wording copied to clipboard');
+      });
+    });
+  }
+
+  // ── Highlighted moments ──
+  function renderMoments(a) {
+    var container = document.getElementById('wsMoments');
+    var viewAll = document.getElementById('wsViewAll');
+    viewAll.href = 'sync_room.html?session_id=' + sessionId + '&employee_id=' + employeeId;
+
+    var items = (a && a.psychology && a.psychology.behavioural_interpretation) || [];
+    if (!items.length) {
+      container.innerHTML = '<div class="ws-empty">No highlighted moments for this session yet.</div>';
+      return;
+    }
+    var text = state.transcriptText.toLowerCase();
+    var html = items.slice(0, 5).map(function(item) {
+      var quote = item.evidence || '';
+      var rel = text.indexOf(String(quote).toLowerCase());
+      var t = rel >= 0 ? Math.round((rel / text.length) * estimateDuration()) : null;
+      return (
+        '<div class="ws-moment">' +
+          (t !== null ? '<span class="ws-moment-time">' + fmtTime(t) + '</span>' : '') +
+          '<p class="ws-moment-text">&ldquo;' + esc(quote) + '&rdquo;</p>' +
+          '<div class="ws-moment-tags">' +
+            (item.observed_behaviour ? '<span class="ws-tag">' + esc(item.observed_behaviour) + '</span>' : '') +
+            (item.confidence !== null && item.confidence !== undefined ? '<span class="ws-tag">' + esc(item.confidence) + '% conf.</span>' : '') +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+    container.innerHTML = html;
+  }
+
+  // ── Export / Share ──
+  function exportTranscript() {
+    if (!state.transcriptText) { showToast('No transcript to export'); return; }
+    var blob = new Blob([state.transcriptText], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'transcript-' + sessionId + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 100);
+    showToast('Transcript downloaded');
+  }
+
+  function shareLink() {
+    var link = window.location.href;
+    navigator.clipboard && navigator.clipboard.writeText(link);
+    showToast('Workspace link copied');
+  }
+
+  // ── Main load ──
+  function renderAll() {
+    var a = state.session.analysis || {};
+    parseTranscript();
+    loadingEl.style.display = 'none';
+    bodyEl.style.display = '';
+    document.getElementById('wsBreadcrumb').textContent = (state.employee && state.employee.name) ? state.employee.name : 'Conversation Workspace';
+    document.getElementById('analysisTab').href = 'sync_room.html?session_id=' + sessionId + '&employee_id=' + employeeId;
+    renderLines();
+    renderScore(a);
+    renderCoach(a);
+    renderMoments(a);
+
+    if (window.gsap) {
+      var el = document.getElementById('wsLines');
+      var lines = el.querySelectorAll('.ws-line');
+      var cards = bodyEl.querySelectorAll('.ws-score-card, .ws-coach-card, .ws-moments-card');
+      gsap.fromTo('.ws-title-row', { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' });
+      gsap.fromTo(cards, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, stagger: 0.08, ease: 'power3.out', delay: 0.1 });
+      gsap.fromTo(lines, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.35, stagger: 0.02, ease: 'power3.out', delay: 0.15 });
+    }
+  }
+
+  function init() {
+    if (!sessionId || !employeeId) {
+      fail('Missing session context. Open this page from a session in the sync list.');
+      return;
+    }
+    var empPromise = fetch('/api/employees/' + employeeId).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+    var sessPromise = fetch('/api/sessions/' + sessionId).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+
+    Promise.all([empPromise, sessPromise]).then(function(results) {
+      state.employee = results[0];
+      state.session = results[1];
+      if (!state.session) {
+        fail('Could not load this session.');
+        return;
+      }
+      var tr = state.session.transcript || {};
+      state.transcriptText = tr.edited || tr.raw || '';
+      state.duration = state.session.recording_duration || 0;
+
+      var a = state.session.analysis;
+      if (!a || !a.summary) {
+        loadingEl.style.display = 'none';
+        gateEl.style.display = '';
+        return;
+      }
+      renderAll();
+    });
+  }
+
+  // ── Event wiring ──
+  document.getElementById('runAnalysisBtn').addEventListener('click', function() {
+    var note = document.getElementById('wsGateNote');
+    note.style.display = '';
+    document.getElementById('runAnalysisBtn').disabled = true;
+    fetch('/api/sessions/' + sessionId + '/analyze', { method: 'POST' })
+      .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Analysis failed'); });
+        return r.json();
+      })
+      .then(function() {
+        return fetch('/api/sessions/' + sessionId).then(function(r) { return r.json(); });
+      })
+      .then(function(s) {
+        state.session = s;
+        gateEl.style.display = 'none';
+        renderAll();
+      })
+      .catch(function(err) {
+        note.style.display = 'none';
+        document.getElementById('runAnalysisBtn').disabled = false;
+        showToast('Analysis failed: ' + err.message);
+      });
+  });
+
+  document.getElementById('wsSearch').addEventListener('input', function(e) {
+    state.query = e.target.value.trim();
+    renderLines();
+  });
+
+  document.getElementById('wsSpeakerSelect').addEventListener('change', function(e) {
+    state.speaker = e.target.value;
+    renderLines();
+  });
+
+  document.getElementById('wsDensityBtn').addEventListener('click', function() {
+    var order = ['standard', 'comfortable', 'condensed'];
+    var next = order[(order.indexOf(state.density) + 1) % order.length];
+    state.density = next;
+    this.textContent = 'View: ' + next.charAt(0).toUpperCase() + next.slice(1);
+    renderLines();
+  });
+
+  document.getElementById('wsFilterBtn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    var pop = document.getElementById('wsFilterPop');
+    pop.style.display = pop.style.display === 'block' ? 'none' : 'block';
+  });
+
+  document.getElementById('wsShowTime').addEventListener('change', function(e) {
+    state.showTime = e.target.checked;
+    renderLines();
+  });
+
+  document.getElementById('wsPinnedOnly').addEventListener('change', function(e) {
+    state.pinnedOnly = e.target.checked;
+    renderLines();
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#wsFilterPop') && !e.target.closest('#wsFilterBtn')) {
+      document.getElementById('wsFilterPop').style.display = 'none';
+    }
+    if (!e.target.closest('.ws-line-menu')) {
+      document.querySelectorAll('.ws-line-pop').forEach(function(p) { p.style.display = 'none'; });
+    }
+  });
+
+  document.getElementById('wsLines').addEventListener('click', onLineClick);
+  document.getElementById('exportBtn').addEventListener('click', exportTranscript);
+  document.getElementById('shareBtn').addEventListener('click', shareLink);
+
+  init();
+};
+</script>
+
+<script>
+(function() {
+  var btn = document.getElementById('signOutBtn');
+  if (btn) btn.addEventListener('click', function() {
+    fetch('/auth/logout', { method: 'POST' }).then(function() {
+      window.location.href = 'signin.html';
+    }).catch(function() {
+      window.location.href = 'signin.html';
+    });
+  });
+})();
+
+(function() {
+  var btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    var next = current === 'light' ? 'dark' : 'light';
+    if (next === 'dark') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+    try { localStorage.setItem('voohr-theme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

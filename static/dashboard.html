@@ -40,10 +40,11 @@
     return res.json();
   }).then(function(data){
     if (!data) return;
-    function onReady() {
-      populate(data);
-      loadEmployees();
-    }
+      function onReady() {
+        populate(data);
+        loadEmployees();
+        loadDashboardStats();
+      }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', onReady);
     } else {
@@ -149,41 +150,29 @@
     <div class="content-area">
       <!-- STATS -->
       <div class="stats-row fade-in">
-        <div class="stat-card">
+        <div class="stat-card" data-stat="active">
           <div class="stat-label" data-lang="en">Active Employees</div>
           <div class="stat-label" data-lang="hi">Active Employees</div>
-          <div class="stat-value">247</div>
-          <div class="stat-change up">
+          <div class="stat-value">—</div>
+          <div class="stat-change up" id="statActiveChange">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/></svg>
-            +3 this week
+            <span>—</span>
           </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" data-stat="burnout">
           <div class="stat-label" data-lang="en">High Burnout Risk</div>
           <div class="stat-label" data-lang="hi">High Burnout Risk</div>
-          <div class="stat-value">12</div>
-          <div class="stat-change down">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23,18 13.5,8.5 8.5,13.5 1,6"/></svg>
-            +2 from last week
-          </div>
+          <div class="stat-value">—</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" data-stat="pending">
           <div class="stat-label" data-lang="en">Pending Syncs</div>
           <div class="stat-label" data-lang="hi">Pending Syncs</div>
-          <div class="stat-value">8</div>
-          <div class="stat-change">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
-            3 overdue
-          </div>
+          <div class="stat-value">—</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" data-stat="wellness">
           <div class="stat-label" data-lang="en">Wellness Score</div>
           <div class="stat-label" data-lang="hi">Wellness Score</div>
-          <div class="stat-value">72%</div>
-          <div class="stat-change up">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/></svg>
-            +5% avg improvement
-          </div>
+          <div class="stat-value">—</div>
         </div>
       </div>
 
@@ -433,24 +422,6 @@ window.addEventListener('load', function() {
   gsap.set(statCards, { opacity: 0, y: 30 });
   tl.to(statCards, { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 }, '-=0.3');
 
-  // Counter-up animation for stat values
-  var statValues = document.querySelectorAll('.stat-value');
-  statValues.forEach(function(el) {
-    var raw = el.textContent.trim();
-    var pct = raw.includes('%');
-    var plus = raw.includes('+');
-    var num = parseInt(raw.replace(/[^0-9]/g, ''));
-    if (isNaN(num)) return;
-    var obj = { val: 0 };
-    el.textContent = (pct ? '0%' : plus ? '0+' : '0');
-    gsap.to(obj, {
-      val: num, duration: 1.4, ease: 'power2.out', delay: 0.3,
-      onUpdate: function() {
-        el.textContent = Math.round(obj.val) + (pct ? '%' : plus ? '+' : '');
-      }
-    });
-  });
-
   var cards = document.querySelectorAll('.card');
   gsap.set(cards, { opacity: 0, y: 40 });
   tl.to(cards, { opacity: 1, y: 0, duration: 0.6, stagger: 0.12 }, '-=0.6');
@@ -504,6 +475,76 @@ window.addEventListener('load', function() {
     window.dashApplyFilters();
   });
 })();
+
+function animateStat(el, target, suffix) {
+  if (!el) return;
+  var obj = { val: 0 };
+  if (typeof gsap === 'undefined') {
+    el.textContent = Math.round(target) + (suffix || '');
+    return;
+  }
+  gsap.to(obj, {
+    val: target, duration: 1.4, ease: 'power2.out', delay: 0.3,
+    onUpdate: function() {
+      el.textContent = Math.round(obj.val) + (suffix || '');
+    }
+  });
+}
+
+// Wire the four stat cards to real API data (no fabricated numbers).
+function loadDashboardStats() {
+  Promise.all([
+    fetch('/api/employees').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+    fetch('/api/sessions').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
+  ]).then(function(res) {
+    var employees = (res[0] && res[0].employees) || [];
+    var sessions = (res[1] && res[1].sessions) || [];
+
+    var active = employees.filter(function(e) { return e.status === 'active'; });
+
+    // Only delta we can derive from stored data: employees created this week.
+    var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    var newThisWeek = 0;
+    active.forEach(function(e) {
+      var created = Date.parse(e.created_at || '');
+      if (!isNaN(created) && created >= weekAgo) newThisWeek++;
+    });
+
+    // Wellness average: null scores excluded from both average and denominator.
+    var scores = employees
+      .filter(function(e) { return e.wellness_score !== null && e.wellness_score !== undefined; })
+      .map(function(e) { return e.wellness_score; });
+
+    // Unknown burnout (null/undefined) is not counted as risk.
+    var burnout = employees.filter(function(e) {
+      return e.burnout_index != null && e.burnout_index >= 70;
+    }).length;
+
+    var pending = 0;
+    sessions.forEach(function(s) {
+      var st = s.status || 'draft';
+      if (st === 'draft' || st === 'transcribed' || st === 'processing') pending++;
+    });
+
+    var wellnessEl = document.querySelector('.stat-card[data-stat="wellness"] .stat-value');
+    if (scores.length) {
+      var avg = scores.reduce(function(a, b) { return a + b; }, 0) / scores.length;
+      animateStat(wellnessEl, Math.round(avg), '%');
+    } else {
+      wellnessEl.textContent = '—';
+    }
+
+    animateStat(document.querySelector('.stat-card[data-stat="active"] .stat-value'), active.length, '');
+    animateStat(document.querySelector('.stat-card[data-stat="burnout"] .stat-value'), burnout, '');
+    animateStat(document.querySelector('.stat-card[data-stat="pending"] .stat-value'), pending, '');
+
+    var change = document.getElementById('statActiveChange');
+    if (change) {
+      var label = change.querySelector('span');
+      if (label) label.textContent = '+' + newThisWeek + ' this week';
+    }
+  });
+}
 
 // Load employees from API and render table
 function loadEmployees() {
@@ -905,7 +946,6 @@ function escHtml(str) {
     if (!dropdown || open) return;
     open = true;
     loadNotifications();
-    dropdown.style.display = '';
     dropdown.classList.add('open');
     if (window.gsap) {
       gsap.fromTo(dropdown, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' });
@@ -919,11 +959,9 @@ function escHtml(str) {
     open = false;
     if (window.gsap) {
       gsap.to(dropdown, { opacity: 0, y: -8, duration: 0.18, ease: 'power2.in', onComplete: function() {
-        dropdown.style.display = 'none';
         dropdown.classList.remove('open');
       }});
     } else {
-      dropdown.style.display = 'none';
       dropdown.classList.remove('open');
     }
   }

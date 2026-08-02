@@ -344,7 +344,6 @@ document.getElementById('signOutBtn').addEventListener('click', async function()
     if (!dropdown || open) return;
     open = true;
     loadNotifications();
-    dropdown.style.display = '';
     dropdown.classList.add('open');
     if (window.gsap) {
       gsap.fromTo(dropdown, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' });
@@ -358,11 +357,9 @@ document.getElementById('signOutBtn').addEventListener('click', async function()
     open = false;
     if (window.gsap) {
       gsap.to(dropdown, { opacity: 0, y: -8, duration: 0.18, ease: 'power2.in', onComplete: function() {
-        dropdown.style.display = 'none';
         dropdown.classList.remove('open');
       }});
     } else {
-      dropdown.style.display = 'none';
       dropdown.classList.remove('open');
     }
   }

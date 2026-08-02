@@ -205,6 +205,26 @@ function formatDate(d) {
   return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 }
 
+function analysisPreviewChips(s) {
+  var a = s.analysis;
+  if (!a || !a.summary) return '<span class="preview-chip pending">Analysis pending</span>';
+  var chips = [];
+  var risks = a.risks || {};
+  var rf = (risks.risk_factors || [])[0];
+  if (rf) chips.push('<span class="preview-chip warn">⚠ ' + escHtml(rf) + '</span>');
+  var ps = a.psychological_safety || {};
+  var safety = ps.safety_score;
+  if (safety !== null && safety !== undefined) {
+    var sCls = safety >= 70 ? 'high' : (safety >= 40 ? 'medium' : 'low');
+    chips.push('<span class="preview-chip ' + sCls + '"><b>Psych Safety</b>' + safety + '/100</span>');
+  }
+  var follow = Math.max(risks.burnout_index || 0, risks.attrition_risk_pct || 0);
+  var fCls = follow >= 70 ? 'high' : (follow >= 40 ? 'medium' : 'low');
+  var fLabel = follow >= 70 ? 'High priority' : (follow >= 40 ? 'Medium priority' : 'Low priority');
+  chips.push('<span class="preview-chip ' + fCls + '"><b>Follow-up</b>' + fLabel + '</span>');
+  return chips.join('');
+}
+
 // Tab switching
 document.querySelectorAll('.sync-tab').forEach(function(tab) {
   tab.addEventListener('click', function() {
@@ -307,19 +327,16 @@ function loadSessions() {
                 '</div>' +
               '</div>' +
             '</div>' +
-            '<button class="btn btn-sm' + (hasAnalysis ? '' : ' btn-primary') + '" data-role="start-analysis" data-session-id="' + s.id + '" ' + (isAnalyzing ? 'disabled' : '') + ' style="flex-shrink:0;gap:6px;white-space:nowrap;">' +
-              '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
-              (isAnalyzing ? 'Analyzing…' : hasAnalysis ? 'View Analysis' : 'Start Analysis') +
+            '<button class="btn btn-sm' + (hasAnalysis ? '' : ' btn-primary') + '" data-role="open-workspace" data-session-id="' + s.id + '" ' + (isAnalyzing ? 'disabled' : '') + ' style="flex-shrink:0;gap:6px;white-space:nowrap;">' +
+              '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
+              (isAnalyzing ? 'Analyzing…' : 'Open Workspace') +
             '</button>' +
-          '</div>';
+          '</div>' +
+          '<div class="session-preview">' + analysisPreviewChips(s) + '</div>';
         item.querySelector('[data-role="select-session"]').addEventListener('click', function() { selectSession(s.id); });
-        item.querySelector('[data-role="start-analysis"]').addEventListener('click', function(e) {
+        item.querySelector('[data-role="open-workspace"]').addEventListener('click', function(e) {
           e.stopPropagation();
-          if (hasAnalysis) {
-            window.location.href = 'sync_room.html?session_id=' + s.id + '&employee_id=' + employeeId;
-          } else {
-            runAnalysis(s.id);
-          }
+          window.location.href = 'conversation-workspace.html?session_id=' + s.id + '&employee_id=' + employeeId;
         });
         listEl.appendChild(item);
       });
@@ -378,46 +395,6 @@ function selectSession(sessionId) {
       console.error('Failed to load session details:', err);
     });
 }
-
-function showLoadingOverlay(msg) {
-  var existing = document.getElementById('analysisLoadingOverlay');
-  if (existing) existing.remove();
-  var overlay = document.createElement('div');
-  overlay.id = 'analysisLoadingOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(6,8,12,0.75);backdrop-filter:blur(8px);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;';
-  overlay.innerHTML =
-    '<div style="width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin 0.8s linear infinite;"></div>' +
-    '<div style="font-family:var(--font-lato);font-size:1.1rem;font-weight:700;color:var(--ivory);text-align:center;max-width:400px;">' + escHtml(msg) + '</div>' +
-    '<div style="font-family:var(--font-lato);font-size:0.8rem;color:var(--ivory-dim);text-align:center;">This may take a few moments</div>' +
-    '<style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
-  document.body.appendChild(overlay);
-}
-
-function hideLoadingOverlay() {
-  var el = document.getElementById('analysisLoadingOverlay');
-  if (el) el.remove();
-}
-
-function runAnalysis(sessionId) {
-  selectedSessionId = sessionId;
-  showLoadingOverlay('Please wait, your AI-powered analysis is being prepared.');
-
-  fetch('/api/sessions/' + sessionId + '/analyze', { method: 'POST' })
-    .then(function(r) {
-      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Analysis failed'); });
-      return r.json();
-    })
-    .then(function(result) {
-      hideLoadingOverlay();
-      window.location.href = 'sync_room.html?session_id=' + sessionId + '&employee_id=' + employeeId;
-    })
-    .catch(function(err) {
-      hideLoadingOverlay();
-      alert('Analysis failed: ' + err.message);
-      loadSessions();
-    });
-}
-
 
 document.addEventListener('DOMContentLoaded', function() {
   loadEmployee();
