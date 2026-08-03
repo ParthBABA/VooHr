@@ -401,7 +401,20 @@ document.getElementById('signOutBtn').addEventListener('click', async function()
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving…';
 
-      setTimeout(function(){
+      fetch('/api/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: nameInp.value.trim() })
+      }).then(function(res) {
+        if (!res.ok) {
+          return res.json().then(function(body) {
+            var err = new Error(body.error || 'save_failed');
+            err.code = body.error || 'save_failed';
+            throw err;
+          });
+        }
+        return res.json();
+      }).then(function() {
         // Update sidebar to reflect the saved name.
         var name = nameInp.value.trim();
         var userNameEl = document.getElementById('userName');
@@ -422,7 +435,18 @@ document.getElementById('signOutBtn').addEventListener('click', async function()
           saveBtn.style.background = '';
           saveBtn.disabled = false;
         }, 800);
-      }, 900);
+      }).catch(function(err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+        if (err && err.code === 'not_authenticated') {
+          window.location.href = 'signin.html';
+          return;
+        }
+        var msg = (err && err.code === 'name_required') ? 'Name is required'
+                : (err && err.code === 'name_too_long') ? 'Name must be under 100 characters'
+                : 'Couldn\u2019t save your name. Please try again.';
+        setFieldError(nameInp, msg);
+      });
     });
   }
 })();
@@ -611,6 +635,12 @@ window.addEventListener('load', function() {
   var cards = document.querySelectorAll('.card');
   gsap.set(cards, { opacity: 0, y: 30 });
   tl.to(cards, { opacity: 1, y: 0, duration: 0.5, stagger: 0.1 }, '-=0.2');
+
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('focus') === 'name') {
+    var nameInp = document.getElementById('profileName');
+    if (nameInp) nameInp.focus();
+  }
 });
 </script>
 </body>

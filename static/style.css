@@ -932,3 +932,15 @@ body.lang-hi [data-lang-block="en"]{display:none;}
 
 /* Error toast — same shape as the shared toast, red surface */
 .toast-notification.error{background:var(--red-soft);border-color:rgba(232,69,69,0.3);color:var(--red);}
+
+/* Info banner — one-shot dismissible call-to-action at the top of a content area */
+.info-banner{display:flex;align-items:center;gap:1rem;padding:0.9rem 1.1rem;margin-bottom:1.5rem;border:1px solid var(--teal-glow);background:var(--teal-soft);border-radius:12px;box-shadow:var(--shadow-sm);}
+.info-banner-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:50%;background:var(--teal-soft);color:var(--teal);}
+.info-banner-icon svg{width:16px;height:16px;}
+.info-banner-body{flex:1;min-width:0;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.info-banner-text{font-family:var(--font-m);font-size:0.85rem;line-height:1.6;color:var(--ivory);}
+.info-banner-link{font-family:var(--font-rc);font-weight:600;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);padding:0.4rem 0.9rem;border:1px solid var(--teal-glow);background:var(--teal-soft);border-radius:8px;transition:all 0.3s;white-space:nowrap;text-decoration:none;}
+.info-banner-link:hover{background:var(--teal);color:var(--void);}
+.info-banner-close{display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex-shrink:0;border:none;background:none;color:var(--ivory-dim);cursor:pointer;border-radius:50%;transition:all 0.3s;}
+.info-banner-close svg{width:14px;height:14px;}
+.info-banner-close:hover{color:var(--ivory);background:var(--ivory-ghost);}

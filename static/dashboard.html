@@ -50,7 +50,39 @@
       }
     }
 
+    if (data.just_registered) {
+      showWelcomeBanner(data.name);
+    }
+
     document.body.style.visibility = 'visible';
+  }
+
+  var welcomeBannerDismissed = false;
+
+  function showWelcomeBanner(name) {
+    var banner = document.getElementById('welcomeBanner');
+    if (!banner || welcomeBannerDismissed) return;
+
+    var nameEl = document.getElementById('welcomeBannerName');
+    if (nameEl) nameEl.textContent = name || '';
+
+    banner.style.display = 'flex';
+    if (window.gsap) {
+      gsap.set(banner, { opacity: 0, y: -14 });
+      gsap.to(banner, { opacity: 1, y: 0, duration: 0.55, ease: 'power2.out' });
+    }
+
+    var closeBtn = document.getElementById('welcomeBannerClose');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function() {
+        welcomeBannerDismissed = true;
+        if (window.gsap) {
+          gsap.to(banner, { opacity: 0, y: -14, duration: 0.3, ease: 'power2.in', onComplete: function() { banner.style.display = 'none'; } });
+        } else {
+          banner.style.display = 'none';
+        }
+      });
+    }
   }
 
   fetch('/api/me').then(function(res){
@@ -142,6 +174,19 @@
     </div>
 
     <div class="content-area">
+      <!-- WELCOME BANNER — one-shot, only shown when /api/me returns just_registered -->
+      <div class="info-banner" id="welcomeBanner" style="display:none;" role="status">
+        <div class="info-banner-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div class="info-banner-body">
+          <span class="info-banner-text">We&rsquo;ve set your name as &lsquo;<span id="welcomeBannerName"></span>&rsquo; from your Google account &mdash; you can change it anytime in Settings.</span>
+          <a href="settings.html?focus=name" class="info-banner-link">Go to Settings</a>
+        </div>
+        <button class="info-banner-close" id="welcomeBannerClose" type="button" title="Dismiss" aria-label="Dismiss">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
       <!-- STATS -->
       <div class="stats-row fade-in">
         <div class="stat-card" data-stat="active">
