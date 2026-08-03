@@ -156,6 +156,148 @@
   </main>
 </div>
 
+<!-- ADD EMPLOYEE SIDE PANEL -->
+<div class="panel-overlay" id="addEmpOverlay">
+  <div class="add-emp-panel" id="addEmpPanel">
+    <div class="panel-header">
+      <div class="panel-header-top">
+        <h2 class="panel-title">Add Employee</h2>
+        <button class="panel-close" id="panelClose" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="step-indicator-bar">
+        <div class="step-indicator-steps">
+          <div class="si-step active" data-si="1">
+            <div class="si-dot">1</div>
+            <div class="si-label">Basic Details</div>
+          </div>
+          <div class="si-line"></div>
+          <div class="si-step" data-si="2">
+            <div class="si-dot">2</div>
+            <div class="si-label">Job Details</div>
+          </div>
+          <div class="si-line"></div>
+          <div class="si-step" data-si="3">
+            <div class="si-dot">3</div>
+            <div class="si-label">Finish</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-body" id="panelBody">
+      <!-- STEP 1: Basic Details -->
+      <div class="panel-step" data-step="1">
+        <div class="step-section">
+          <div class="step-section-title">Basic Information</div>
+          <div class="form-group">
+            <label class="form-label">Full Name <span class="required">*</span></label>
+            <input type="text" class="form-input" id="empName" placeholder="Enter full name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Work Email</label>
+            <input type="email" class="form-input" id="empEmail" placeholder="employee@company.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="tel" class="form-input" id="empPhone" placeholder="+1 234 567 890">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Profile Photo</label>
+            <div class="photo-upload" id="photoUpload">
+              <div class="photo-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+                <span class="photo-text">Click to upload photo</span>
+              </div>
+              <input type="file" id="empPhoto" accept="image/*" hidden>
+              <div class="photo-preview" id="photoPreview" style="display:none;">
+                <img id="photoImg" alt="Preview">
+                <button class="photo-remove" id="photoRemove" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Job Details -->
+      <div class="panel-step" data-step="2" style="display:none;">
+        <div class="step-section">
+          <div class="step-section-title">Job Information</div>
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <select class="form-input" id="empDepartment">
+              <option value="">Select Department</option>
+              <option>Engineering</option>
+              <option>Design</option>
+              <option>Marketing</option>
+              <option>Sales</option>
+              <option>Operations</option>
+              <option>Finance</option>
+              <option>Product</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Designation</label>
+            <input type="text" class="form-input" id="empDesignation" placeholder="e.g. Senior Engineer">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reporting Manager</label>
+            <input type="text" class="form-input" id="empManager" placeholder="Enter manager's name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Joining Date</label>
+            <input type="date" class="form-input" id="empJoiningDate">
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Finish -->
+      <div class="panel-step" data-step="3" style="display:none;">
+        <div class="step-section">
+          <div class="step-section-title">Summary</div>
+          <div class="finish-card">
+            <div class="finish-row">
+              <span class="finish-label">Employee ID</span>
+              <span class="finish-value" id="empIdPreview">—</span>
+            </div>
+            <div class="finish-row">
+              <span class="finish-label">Status</span>
+              <span class="badge healthy">Active</span>
+            </div>
+            <div class="finish-row">
+              <span class="finish-label">AI Profile</span>
+              <span class="finish-value" style="font-size:0.7rem;color:var(--ivory-faint);">Will be initialized after creation</span>
+            </div>
+          </div>
+          <div class="ai-consent">
+            <label class="consent-checkbox">
+              <input type="checkbox" id="aiConsent" checked>
+              <span class="check-box"></span>
+              <span class="check-text">Initialize AI psychological profile after creation</span>
+            </label>
+            <p class="consent-note">Sends basic details to OpenAI to generate an initial engagement baseline, wellbeing risk assessment, and recommended sync cadence. You can regenerate anytime.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-footer">
+      <button class="btn btn-sm btn-outline" id="panelBack" type="button" style="visibility:hidden;">Back</button>
+      <div class="panel-footer-right">
+        <button class="btn btn-sm btn-outline" id="panelCancel" type="button">Cancel</button>
+        <button class="btn btn-sm btn-gradient" id="panelNext" type="button">Next Step</button>
+        <button class="btn btn-sm btn-gradient" id="panelSubmit" type="button" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M20 6L9 17l-5-5"/></svg>
+          Add Employee
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // Live search + department/status filters
 (function() {
@@ -172,6 +314,8 @@
   var statusValueMap = { 'At Risk': 'critical', 'Watch': 'warning', 'Healthy': 'healthy' };
 
   window.dirApplyFilters = function() {
+    var tbody = document.getElementById('dirTableBody');
+    if (tbody && tbody.getAttribute('data-state') && tbody.getAttribute('data-state') !== 'data') return;
     var allRows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
     var total = allRows.length;
     var q = (search && search.value || '').trim().toLowerCase();
@@ -210,55 +354,156 @@
   });
 })();
 
+// Shared toast — same visual language as dashboard.html (error variant = red surface)
+function showToast(msg, isError) {
+  var t = document.createElement('div');
+  t.className = 'toast-notification' + (isError ? ' error' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  if (window.gsap) {
+    gsap.set(t, { y: 60, opacity: 0 });
+    gsap.to(t, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
+    setTimeout(function() {
+      gsap.to(t, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { t.remove(); } });
+    }, 4000);
+  } else {
+    setTimeout(function() { t.remove(); }, 4000);
+  }
+}
+
+// Swap #dirTableBody content based on directory state.
+// state: 'loading' | 'empty' | 'error' | 'data'   (payload = employees array for 'data')
+function renderDirectoryState(state, payload) {
+  var tbody = document.getElementById('dirTableBody');
+  if (!tbody) return;
+  var countEl = document.getElementById('dirCount');
+  var headerCountEl = document.getElementById('dirHeaderCount');
+  var pagination = document.getElementById('dirPagination');
+
+  tbody.setAttribute('data-state', state);
+  tbody.innerHTML = '';
+  if (pagination) pagination.style.display = (state === 'data') ? 'flex' : 'none';
+
+  function fadeIn(el) {
+    if (!el) return;
+    el.classList.add('fade-in');
+    if (window.gsap) {
+      gsap.set(el, { opacity: 0 });
+      gsap.to(el, { opacity: 1, duration: 0.35, ease: 'power2.out' });
+    }
+  }
+
+  if (state === 'loading') {
+    if (countEl) countEl.textContent = 'Loading employees…';
+    if (headerCountEl) headerCountEl.textContent = 'Loading…';
+    var skeleton = '';
+    for (var i = 0; i < 6; i++) {
+      skeleton +=
+        '<tr class="skeleton-row">' +
+          '<td><span class="skeleton-block sm"></span></td>' +
+          '<td><div class="emp-cell"><span class="skeleton-block circle"></span><div class="emp-meta"><span class="skeleton-block line w70"></span><span class="skeleton-block line w45"></span></div></div></td>' +
+          '<td><span class="skeleton-block md"></span></td>' +
+          '<td><div class="skeleton-inline"><span class="skeleton-block bar"></span><span class="skeleton-block xs"></span></div></td>' +
+          '<td><span class="skeleton-block badge"></span></td>' +
+          '<td><span class="skeleton-block md"></span></td>' +
+          '<td><div class="skeleton-inline"><span class="skeleton-block md"></span><span class="skeleton-block md"></span></div></td>' +
+        '</tr>';
+    }
+    tbody.innerHTML = skeleton;
+    return;
+  }
+
+  if (state === 'empty') {
+    if (countEl) countEl.textContent = '0 employees';
+    if (headerCountEl) headerCountEl.textContent = '0 Employees';
+    var emptyRow = document.createElement('tr');
+    emptyRow.innerHTML =
+      '<td colspan="7"><div class="dir-state empty-state fade-in">' +
+        '<div class="dir-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>' +
+        '<div class="dir-state-title">No employees yet</div>' +
+        '<div class="dir-state-sub">Your directory is empty. Add your first employee to start tracking wellness, attendance and sync sessions.</div>' +
+        '<div class="dir-state-actions"><button class="btn btn-sm btn-gradient" id="dirEmptyAddBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Employee</button></div>' +
+      '</div></td>';
+    tbody.appendChild(emptyRow);
+    var addBtn = document.getElementById('dirEmptyAddBtn');
+    if (addBtn) addBtn.addEventListener('click', function() {
+      if (window.dirOpenAddEmployee) window.dirOpenAddEmployee();
+    });
+    fadeIn(tbody.querySelector('.dir-state'));
+    return;
+  }
+
+  if (state === 'error') {
+    if (countEl) countEl.textContent = '—';
+    if (headerCountEl) headerCountEl.textContent = '—';
+    var errRow = document.createElement('tr');
+    errRow.innerHTML =
+      '<td colspan="7"><div class="dir-state error-state fade-in">' +
+        '<div class="dir-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>' +
+        '<div class="dir-state-title">Couldn&rsquo;t load employees</div>' +
+        '<div class="dir-state-sub">Something went wrong while fetching your directory. Check your connection and try again.</div>' +
+        '<div class="dir-state-actions"><button class="btn btn-sm btn-outline" id="dirRetryBtn" type="button">Retry</button></div>' +
+      '</div></td>';
+    tbody.appendChild(errRow);
+    var retryBtn = document.getElementById('dirRetryBtn');
+    if (retryBtn) retryBtn.addEventListener('click', function() { loadDirEmployees(); });
+    fadeIn(tbody.querySelector('.dir-state'));
+    return;
+  }
+
+  // state === 'data'
+  (payload || []).forEach(function(emp) {
+    var name = emp.name || '';
+    var initials = name.trim().split(' ').map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2) || '?';
+    var hasScore = emp.wellness_score !== null && emp.wellness_score !== undefined;
+    var wellnessPct = hasScore ? emp.wellness_score : 0;
+    var fillClass = wellnessPct >= 70 ? 'high' : (wellnessPct >= 40 ? 'medium' : 'low');
+    var fillColor = wellnessPct >= 70 ? 'var(--teal)' : (wellnessPct >= 40 ? 'var(--amber)' : 'var(--red)');
+    var statusLabel = !hasScore ? 'Not Assessed' : emp.wellness_status === 'critical' ? 'At Risk' : (emp.wellness_status === 'warning' ? 'Watch' : 'Healthy');
+    var statusTitle = emp.reasons && emp.reasons.length ? emp.reasons.join('; ') : '';
+
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-status', emp.wellness_status || 'not_assessed');
+    tr.innerHTML =
+      '<td><span class="emp-id">' + (emp.employee_id || '') + '</span></td>' +
+      '<td><div class="emp-cell"><div class="emp-avatar">' + initials + '</div><div class="emp-meta"><span class="emp-name">' + escHtml(name) + '</span><div class="emp-email">' + escHtml(emp.email || '') + '</div></div></div></td>' +
+      '<td><span class="emp-dept">' + escHtml(emp.department || '') + '</span></td>' +
+      '<td>' + (hasScore ? '<div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill ' + fillClass + '" style="width:' + wellnessPct + '%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:' + fillColor + ';">' + wellnessPct + '</span></div>' : '<span style="font-family:var(--font-m);font-size:0.65rem;color:var(--ivory-faint);">--</span>') + '</td>' +
+      '<td><span class="badge ' + (hasScore ? emp.wellness_status : 'not-assessed') + ' attention-glow ' + (hasScore ? emp.wellness_status : '') + '"' + (statusTitle ? ' title="' + escHtml(statusTitle) + '"' : '') + '>' + statusLabel + '</span></td>' +
+      '<td><span class="emp-date">' + escHtml(emp.joining_date || '') + '</span></td>' +
+      '<td style="display:flex;gap:6px;">' +
+        '<a href="dictation.html?employee_id=' + (emp.id || '') + '" class="btn-session" style="text-decoration:none;">' +
+          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="16" x2="15" y2="16"/></svg>' +
+          'New Session' +
+        '</a>' +
+        '<a href="sync.html?employee_id=' + (emp.id || '') + '" class="btn-sync" style="text-decoration:none;">' +
+          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>' +
+          'Sync' +
+        '</a>' +
+      '</td>';
+    tbody.appendChild(tr);
+  });
+  animateDirRows();
+}
+
 // Load employees from API
 function loadDirEmployees() {
+  renderDirectoryState('loading');
   fetch('/api/employees')
     .then(function(r) {
       if (!r.ok) throw new Error('Failed to load');
       return r.json();
     })
     .then(function(data) {
-      var tbody = document.getElementById('dirTableBody');
-      if (!tbody) return;
-      tbody.innerHTML = '';
-
-      (data.employees || []).forEach(function(emp) {
-        var name = emp.name || '';
-        var initials = name.trim().split(' ').map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2) || '?';
-        var hasScore = emp.wellness_score !== null && emp.wellness_score !== undefined;
-        var wellnessPct = hasScore ? emp.wellness_score : 0;
-        var fillClass = wellnessPct >= 70 ? 'high' : (wellnessPct >= 40 ? 'medium' : 'low');
-        var fillColor = wellnessPct >= 70 ? 'var(--teal)' : (wellnessPct >= 40 ? 'var(--amber)' : 'var(--red)');
-        var statusLabel = !hasScore ? 'Not Assessed' : emp.wellness_status === 'critical' ? 'At Risk' : (emp.wellness_status === 'warning' ? 'Watch' : 'Healthy');
-        var statusTitle = emp.reasons && emp.reasons.length ? emp.reasons.join('; ') : '';
-
-        var tr = document.createElement('tr');
-        tr.setAttribute('data-status', emp.wellness_status || 'not_assessed');
-        tr.innerHTML =
-          '<td><span class="emp-id">' + (emp.employee_id || '') + '</span></td>' +
-          '<td><div class="emp-cell"><div class="emp-avatar">' + initials + '</div><div class="emp-meta"><span class="emp-name">' + escHtml(name) + '</span><div class="emp-email">' + escHtml(emp.email || '') + '</div></div></div></td>' +
-          '<td><span class="emp-dept">' + escHtml(emp.department || '') + '</span></td>' +
-          '<td>' + (hasScore ? '<div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill ' + fillClass + '" style="width:' + wellnessPct + '%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:' + fillColor + ';">' + wellnessPct + '</span></div>' : '<span style="font-family:var(--font-m);font-size:0.65rem;color:var(--ivory-faint);">--</span>') + '</td>' +
-          '<td><span class="badge ' + (hasScore ? emp.wellness_status : 'not-assessed') + ' attention-glow ' + (hasScore ? emp.wellness_status : '') + '"' + (statusTitle ? ' title="' + escHtml(statusTitle) + '"' : '') + '>' + statusLabel + '</span></td>' +
-          '<td><span class="emp-date">' + escHtml(emp.joining_date || '') + '</span></td>' +
-          '<td style="display:flex;gap:6px;">' +
-            '<a href="dictation.html?employee_id=' + (emp.id || '') + '" class="btn-session" style="text-decoration:none;">' +
-              '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="16" x2="15" y2="16"/></svg>' +
-              'New Session' +
-            '</a>' +
-            '<a href="sync.html?employee_id=' + (emp.id || '') + '" class="btn-sync" style="text-decoration:none;">' +
-              '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>' +
-              'Sync' +
-            '</a>' +
-          '</td>';
-        tbody.appendChild(tr);
-      });
-
+      var employees = data.employees || [];
+      if (!employees.length) { renderDirectoryState('empty'); return; }
+      renderDirectoryState('data', employees);
       if (window.dirApplyFilters) window.dirApplyFilters();
-      animateDirRows();
     })
     .catch(function(err) {
       console.error('Failed to load employees:', err);
+      renderDirectoryState('error');
+      showToast('Couldn\u2019t load employees. Please try again.', true);
     });
 }
 
@@ -297,6 +542,199 @@ loadDirEmployees();
       document.documentElement.setAttribute('data-theme', 'light');
     }
     try { localStorage.setItem('voohr-theme', next); } catch (e) {}
+  });
+})();
+</script>
+
+<!-- ── ADD EMPLOYEE PANEL (ported from dashboard.html) ── -->
+<script>
+(function() {
+  var panel = document.getElementById('addEmpPanel');
+  var overlay = document.getElementById('addEmpOverlay');
+  var closeBtn = document.getElementById('panelClose');
+  var cancelBtn = document.getElementById('panelCancel');
+  var nextBtn = document.getElementById('panelNext');
+  var backBtn = document.getElementById('panelBack');
+  var submitBtn = document.getElementById('panelSubmit');
+  var steps = document.querySelectorAll('.panel-step');
+  var siSteps = document.querySelectorAll('.si-step');
+  var currentStep = 1;
+  var totalSteps = 3;
+  var openBtn = document.querySelector('[title="Add a new employee"]');
+
+  if (!panel || !overlay) return;
+
+  function showStep(num) {
+    steps.forEach(function(s) { s.style.display = 'none'; });
+    var el = document.querySelector('.panel-step[data-step="' + num + '"]');
+    if (el) el.style.display = '';
+
+    siSteps.forEach(function(s) {
+      var n = parseInt(s.getAttribute('data-si'));
+      s.classList.toggle('active', n === num);
+      s.classList.toggle('completed', n < num);
+    });
+
+    backBtn.style.visibility = num > 1 ? 'visible' : 'hidden';
+    if (num === totalSteps) {
+      nextBtn.style.display = 'none';
+      submitBtn.style.display = 'inline-flex';
+    } else {
+      nextBtn.style.display = 'inline-flex';
+      submitBtn.style.display = 'none';
+    }
+  }
+
+  function openPanel() {
+    overlay.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    currentStep = 1;
+    showStep(1);
+    // Reset form fields
+    var formInputs = document.querySelectorAll('#addEmpPanel input, #addEmpPanel select');
+    formInputs.forEach(function(el) { if (el.type !== 'file') el.value = ''; });
+    var preview = document.getElementById('photoPreview');
+    var placeholder = document.querySelector('.photo-placeholder');
+    if (preview) preview.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'flex';
+    gsap.set(overlay, { opacity: 0 });
+    gsap.set(panel, { x: '100%' });
+    gsap.to(overlay, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+    gsap.to(panel, { x: '0%', duration: 0.45, ease: 'power3.out' });
+  }
+
+  function closePanel() {
+    gsap.to(panel, { x: '100%', duration: 0.35, ease: 'power3.in' });
+    gsap.to(overlay, { opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: function() {
+      overlay.style.display = 'none';
+      document.body.style.overflow = '';
+    }});
+  }
+
+  function nextStep() {
+    if (currentStep === 1) {
+      var name = document.getElementById('empName').value.trim();
+      if (!name) {
+        var inp = document.getElementById('empName');
+        inp.focus();
+        inp.classList.add('input-error');
+        setTimeout(function() { inp.classList.remove('input-error'); }, 2000);
+        return;
+      }
+    }
+    if (currentStep < totalSteps) {
+      currentStep++;
+      showStep(currentStep);
+    }
+  }
+
+  function prevStep() {
+    if (currentStep > 1) {
+      currentStep--;
+      showStep(currentStep);
+    }
+  }
+
+  // Open — header button (title="Add a new employee") + empty-state button
+  window.dirOpenAddEmployee = openPanel;
+  if (openBtn) openBtn.addEventListener('click', openPanel);
+
+  // Close
+  if (closeBtn) closeBtn.addEventListener('click', closePanel);
+  if (cancelBtn) cancelBtn.addEventListener('click', closePanel);
+
+  // Navigate
+  if (nextBtn) nextBtn.addEventListener('click', nextStep);
+  if (backBtn) backBtn.addEventListener('click', prevStep);
+
+  // Photo upload
+  (function() {
+    var upload = document.getElementById('photoUpload');
+    var fileInput = document.getElementById('empPhoto');
+    var preview = document.getElementById('photoPreview');
+    var img = document.getElementById('photoImg');
+    var removeBtn = document.getElementById('photoRemove');
+    var placeholder = upload && upload.querySelector('.photo-placeholder');
+    if (!upload || !fileInput) return;
+
+    upload.addEventListener('click', function(e) {
+      if (e.target.closest('.photo-remove') || e.target.closest('.photo-preview')) return;
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', function() {
+      var file = fileInput.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        img.src = e.target.result;
+        if (placeholder) placeholder.style.display = 'none';
+        preview.style.display = 'flex';
+      };
+      reader.readAsDataURL(file);
+    });
+    if (removeBtn) {
+      removeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        fileInput.value = '';
+        if (placeholder) placeholder.style.display = 'flex';
+        preview.style.display = 'none';
+      });
+    }
+  })();
+
+  // Submit
+  if (submitBtn) {
+    submitBtn.addEventListener('click', function() {
+      var name = document.getElementById('empName').value.trim();
+      var email = document.getElementById('empEmail').value.trim();
+      var phone = document.getElementById('empPhone').value.trim();
+      var department = document.getElementById('empDepartment').value;
+      var position = document.getElementById('empDesignation').value.trim();
+      var joining_date = document.getElementById('empJoiningDate').value;
+
+      if (!name) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating…';
+
+      var body = {
+        name: name,
+        email: email || undefined,
+        phone: phone || undefined,
+        department: department || undefined,
+        position: position || undefined,
+        joining_date: joining_date || undefined,
+      };
+
+      fetch('/api/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'failed'); });
+        return r.json();
+      }).then(function(emp) {
+        submitBtn.textContent = 'Created!';
+        submitBtn.style.background = 'var(--teal)';
+        setTimeout(function() {
+          closePanel();
+          loadDirEmployees();
+          showToast(emp.name + ' added successfully — ' + emp.employee_id);
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Add Employee';
+          submitBtn.style.background = '';
+        }, 800);
+      }).catch(function(err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add Employee';
+        showToast('Failed: ' + err.message, true);
+      });
+    });
+  }
+
+  // Keyboard: Escape to close
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') closePanel();
   });
 })();
 </script>
