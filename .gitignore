@@ -6,3 +6,9 @@ __pycache__/
 .env
 .env.local
 .env.*.local
+
+# Debug/log artifacts — should never be committed
+debug_*.py
+app_stdout.txt
+app_stderr.txt
+*.log

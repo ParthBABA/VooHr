@@ -29,9 +29,11 @@
     var nameEl = document.getElementById('userName');
     var roleEl = document.getElementById('userRole');
     var avatarEl = document.getElementById('userAvatar');
+    var orgEl = document.getElementById('orgNameDisplay');
     if (nameEl) nameEl.textContent = data.name;
     if (roleEl) roleEl.textContent = data.role === 'admin' ? 'HR Admin' : data.role;
     if (avatarEl) avatarEl.textContent = (data.name || 'U').trim().charAt(0).toUpperCase();
+    if (orgEl) orgEl.textContent = data.organization ? data.organization.name : 'Your Organization';
     document.body.style.visibility = 'visible';
   }
 
@@ -64,8 +66,7 @@
     <div class="sidebar-header">
       <div class="sidebar-logo">
         <div class="logo-mark">HR</div>
-        <!-- TODO: replace with org name from backend -->
-        VooVr
+        <span id="orgNameDisplay">VooVr</span>
       </div>
     </div>
     <div class="sidebar-nav">
