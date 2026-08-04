@@ -45,6 +45,23 @@ var recordingTimer = null;
 var recordingSeconds = 0;
 var isRecording = false;
 
+var activeInputTab = 'record';
+var audioFile = null;
+var imageFile = null;
+var textFile = null;
+
+var AUDIO_EXT = ['mp3', 'wav', 'm4a', 'ogg', 'webm'];
+var IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp'];
+var AUDIO_MAX_BYTES = 25 * 1024 * 1024;
+var IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+
+var TAB_CAPTIONS = {
+  record: 'Live microphone — recording saved as WebM',
+  'upload-audio': 'MP3, WAV, M4A, OGG, WEBM · up to 25MB',
+  'upload-image': 'PNG, JPG, JPEG, WEBP · up to 10MB',
+  'upload-text': 'Plain text (.TXT) — drops straight into the transcript'
+};
+
 function escHtml(str) {
   if (!str) return '';
   var d = document.createElement('div');
@@ -184,7 +201,7 @@ function updateWordCount() {
 function saveSession() {
   var text = document.getElementById('transcriptArea').value.trim();
   if (!text) {
-    alert('Transcript is empty. Record something first.');
+    alert('Transcript is empty. Record, upload, or type something first.');
     return;
   }
   document.getElementById('saveBtn').disabled = true;
@@ -223,9 +240,9 @@ function discardSession() {
   window.location.href = 'dashboard.html';
 }
 
-function showToast(msg) {
+function showToast(msg, type) {
   var toast = document.createElement('div');
-  toast.className = 'toast-notification';
+  toast.className = 'toast-notification' + (type === 'error' ? ' error' : '');
   toast.textContent = msg;
   document.body.appendChild(toast);
   gsap.set(toast, { y: 60, opacity: 0 });
@@ -235,6 +252,258 @@ function showToast(msg) {
   }, 4000);
 }
 
+function setUploadStatus(elId, text, state) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'status-text';
+  if (state === 'success') el.classList.add('status-success');
+  if (state === 'error') el.classList.add('status-error');
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function fileExt(name) {
+  return (name.split('.').pop() || '').toLowerCase();
+}
+
+function validateAudioFile(file) {
+  var ext = fileExt(file.name);
+  if (AUDIO_EXT.indexOf(ext) === -1 && (file.type || '').indexOf('audio/') !== 0) {
+    return 'Unsupported format. Use MP3, WAV, M4A, OGG or WEBM.';
+  }
+  if (file.size > AUDIO_MAX_BYTES) return 'Audio file is too large — maximum 25MB.';
+  return null;
+}
+
+function validateImageFile(file) {
+  var ext = fileExt(file.name);
+  if (IMAGE_EXT.indexOf(ext) === -1 && (file.type || '').indexOf('image/') !== 0) {
+    return 'Unsupported format. Use PNG, JPG, JPEG or WEBP.';
+  }
+  if (file.size > IMAGE_MAX_BYTES) return 'Image file is too large — maximum 10MB.';
+  return null;
+}
+
+function validateTextFile(file) {
+  if (fileExt(file.name) !== 'txt' && (file.type || '') !== 'text/plain') {
+    return 'Only plain-text .TXT files are supported.';
+  }
+  return null;
+}
+
+function bindDropzone(dzId, inputId, onFile) {
+  var dz = document.getElementById(dzId);
+  var input = document.getElementById(inputId);
+  if (!dz || !input) return;
+
+  dz.addEventListener('click', function(e) {
+    if (e.target === input) return;
+    input.click();
+  });
+  dz.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      input.click();
+    }
+  });
+  ['dragenter', 'dragover'].forEach(function(ev) {
+    dz.addEventListener(ev, function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.add('drag-over');
+    });
+  });
+  ['dragleave', 'dragend'].forEach(function(ev) {
+    dz.addEventListener(ev, function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over');
+    });
+  });
+  dz.addEventListener('drop', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dz.classList.remove('drag-over');
+    var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) onFile(file);
+  });
+  input.addEventListener('change', function() {
+    var file = input.files && input.files[0];
+    if (file) onFile(file);
+  });
+}
+
+function onAudioSelected(file) {
+  var dz = document.getElementById('audioDropzone');
+  var meta = document.getElementById('audioFileMeta');
+  var btn = document.getElementById('transcribeAudioBtn');
+  var err = validateAudioFile(file);
+  if (err) {
+    audioFile = null;
+    dz.classList.remove('success');
+    dz.classList.add('error');
+    meta.style.display = 'none';
+    btn.disabled = true;
+    setUploadStatus('audioStatus', 'Error: ' + err, 'error');
+    showToast(err, 'error');
+    return;
+  }
+  audioFile = file;
+  dz.classList.remove('error');
+  dz.classList.add('success');
+  document.getElementById('audioFileName').textContent = file.name;
+  document.getElementById('audioFileSize').textContent = formatFileSize(file.size);
+  meta.style.display = '';
+  btn.disabled = false;
+  setUploadStatus('audioStatus', 'Ready to transcribe', 'success');
+}
+
+function onImageSelected(file) {
+  var dz = document.getElementById('imageDropzone');
+  var meta = document.getElementById('imageFileMeta');
+  var btn = document.getElementById('extractImageBtn');
+  var err = validateImageFile(file);
+  if (err) {
+    imageFile = null;
+    dz.classList.remove('success');
+    dz.classList.add('error');
+    meta.style.display = 'none';
+    btn.disabled = true;
+    setUploadStatus('imageStatus', 'Error: ' + err, 'error');
+    showToast(err, 'error');
+    return;
+  }
+  imageFile = file;
+  dz.classList.remove('error');
+  dz.classList.add('success');
+  document.getElementById('imageFileName').textContent = file.name;
+  document.getElementById('imageFileSize').textContent = formatFileSize(file.size);
+  meta.style.display = '';
+  btn.disabled = false;
+  setUploadStatus('imageStatus', 'Ready to extract text', 'success');
+}
+
+function onTextSelected(file) {
+  var dz = document.getElementById('textDropzone');
+  var meta = document.getElementById('textFileMeta');
+  var err = validateTextFile(file);
+  if (err) {
+    textFile = null;
+    dz.classList.remove('success');
+    dz.classList.add('error');
+    meta.style.display = 'none';
+    setUploadStatus('textStatus', 'Error: ' + err, 'error');
+    showToast(err, 'error');
+    return;
+  }
+  textFile = file;
+  dz.classList.remove('error');
+  dz.classList.add('success');
+  document.getElementById('textFileName').textContent = file.name;
+  document.getElementById('textFileSize').textContent = formatFileSize(file.size);
+  meta.style.display = '';
+  readTextFile(file);
+}
+
+function readTextFile(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = String(e.target.result || '').replace(/^\uFEFF/, '');
+    document.getElementById('transcriptArea').value = text;
+    updateWordCount();
+    document.getElementById('saveBtn').disabled = false;
+    setUploadStatus('textStatus', 'Loaded — edit below', 'success');
+    showToast('Text loaded into transcript');
+  };
+  reader.onerror = function() {
+    setUploadStatus('textStatus', 'Error: could not read file', 'error');
+    showToast('Could not read that file.', 'error');
+  };
+  reader.readAsText(file);
+}
+
+function transcribeUploadedAudio() {
+  if (!audioFile) return;
+  var btn = document.getElementById('transcribeAudioBtn');
+  btn.disabled = true;
+  setUploadStatus('audioStatus', 'Transcribing…', '');
+  var fd = new FormData();
+  fd.append('audio', audioFile, audioFile.name);
+  fetch('/api/transcribe', { method: 'POST', body: fd })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'transcription failed'); });
+      return r.json();
+    })
+    .then(function(data) {
+      document.getElementById('transcriptArea').value = data.text || '';
+      updateWordCount();
+      document.getElementById('saveBtn').disabled = false;
+      setUploadStatus('audioStatus', 'Done — edit below', 'success');
+      showToast('Audio transcribed successfully');
+    })
+    .catch(function(err) {
+      btn.disabled = false;
+      setUploadStatus('audioStatus', 'Error: ' + err.message, 'error');
+      showToast('Transcription failed: ' + err.message, 'error');
+    });
+}
+
+function extractUploadedImage() {
+  if (!imageFile) return;
+  var btn = document.getElementById('extractImageBtn');
+  btn.disabled = true;
+  setUploadStatus('imageStatus', 'Extracting text…', '');
+  var fd = new FormData();
+  fd.append('image', imageFile, imageFile.name);
+  fetch('/api/transcribe-image', { method: 'POST', body: fd })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'OCR failed'); });
+      return r.json();
+    })
+    .then(function(data) {
+      document.getElementById('transcriptArea').value = data.text || '';
+      updateWordCount();
+      document.getElementById('saveBtn').disabled = false;
+      setUploadStatus('imageStatus', 'Done — edit below', 'success');
+      showToast('Text extracted from image');
+    })
+    .catch(function(err) {
+      btn.disabled = false;
+      setUploadStatus('imageStatus', 'Error: ' + err.message, 'error');
+      showToast('OCR failed: ' + err.message, 'error');
+    });
+}
+
+function updateTabCaption() {
+  var caption = document.getElementById('inputTabCaption');
+  if (caption) caption.textContent = TAB_CAPTIONS[activeInputTab] || '';
+}
+
+function switchInputTab(name) {
+  if (name === activeInputTab) return;
+  if (activeInputTab === 'record' && isRecording) stopRecording();
+  var oldPane = document.getElementById('tab-' + activeInputTab);
+  var newPane = document.getElementById('tab-' + name);
+  document.querySelectorAll('.input-tab').forEach(function(t) {
+    var active = t.getAttribute('data-tab') === name;
+    t.classList.toggle('active', active);
+    t.setAttribute('aria-selected', active ? 'true' : 'false');
+    t.tabIndex = active ? 0 : -1;
+  });
+  if (oldPane) oldPane.style.display = 'none';
+  newPane.style.display = 'block';
+  if (window.gsap) {
+    gsap.fromTo(newPane, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power3.out' });
+  }
+  activeInputTab = name;
+  updateTabCaption();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   var backBtn = document.getElementById('backBtn');
   if (backBtn) backBtn.addEventListener('click', function(e) { e.preventDefault(); discardSession(); });
@@ -242,9 +511,38 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('transcriptArea').addEventListener('input', updateWordCount);
   document.getElementById('saveBtn').addEventListener('click', saveSession);
   document.getElementById('discardBtn').addEventListener('click', discardSession);
+
+  document.querySelectorAll('.input-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      switchInputTab(tab.getAttribute('data-tab'));
+    });
+  });
+
+  var inputTabs = document.getElementById('inputTabs');
+  if (inputTabs) inputTabs.addEventListener('keydown', function(e) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.input-tab'));
+    var idx = tabs.indexOf(document.activeElement);
+    if (idx < 0) return;
+    var next = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+    tabs[next].focus();
+    switchInputTab(tabs[next].getAttribute('data-tab'));
+  });
+
+  bindDropzone('audioDropzone', 'audioInput', onAudioSelected);
+  bindDropzone('imageDropzone', 'imageInput', onImageSelected);
+  bindDropzone('textDropzone', 'textInput', onTextSelected);
+
+  document.getElementById('transcribeAudioBtn').addEventListener('click', transcribeUploadedAudio);
+  document.getElementById('extractImageBtn').addEventListener('click', extractUploadedImage);
+
+  updateTabCaption();
+
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') discardSession();
-    if (e.key === ' ' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+    var tag = e.target.tagName;
+    if (e.key === ' ' && activeInputTab === 'record' && tag !== 'TEXTAREA' && tag !== 'INPUT' && tag !== 'BUTTON') {
       e.preventDefault();
       toggleRecording();
     }
@@ -305,7 +603,6 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 .recording-area {
   text-align: center;
-  margin-bottom: 2rem;
 }
 .mic-btn {
   width: 88px;
@@ -411,6 +708,190 @@ document.addEventListener('DOMContentLoaded', function() {
   min-width: 140px;
   justify-content: center;
 }
+
+.input-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.9rem;
+}
+.input-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.7rem 0.5rem;
+  font-family: var(--font-m);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ivory-faint);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.input-tab svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.input-tab:hover {
+  color: var(--ivory);
+  background: var(--ivory-ghost);
+}
+.input-tab.active {
+  color: var(--ivory);
+  border-bottom-color: var(--violet);
+}
+.input-tab.active svg {
+  color: var(--violet);
+  opacity: 1;
+}
+.input-tab:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: -2px;
+}
+.input-tab-caption {
+  font-family: var(--font-m);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ivory-faint);
+  text-align: center;
+  margin-bottom: 1.8rem;
+}
+.tab-pane {
+  margin-bottom: 2rem;
+}
+
+.dropzone {
+  width: 100%;
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 2rem 1.5rem;
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ivory-faint);
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: center;
+}
+.dropzone:hover {
+  border-color: var(--border-lit);
+  background: var(--ivory-ghost);
+}
+.dropzone:hover .dz-title {
+  color: var(--ivory);
+}
+.dropzone.drag-over {
+  border-color: var(--violet);
+  background: var(--ivory-ghost);
+  box-shadow: 0 0 18px var(--violet-glow);
+}
+.dropzone.drag-over .dz-title {
+  color: var(--ivory);
+}
+.dropzone.success {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+  box-shadow: 0 0 14px var(--teal-glow);
+}
+.dropzone.success .dz-title {
+  color: var(--teal);
+}
+.dropzone.error {
+  border-color: var(--red);
+  background: var(--red-soft);
+  box-shadow: 0 0 14px var(--red-glow);
+}
+.dropzone.error .dz-title {
+  color: var(--red);
+}
+.dropzone svg {
+  width: 30px;
+  height: 30px;
+  opacity: 0.7;
+}
+.dropzone .dz-title {
+  font-family: var(--font-b);
+  font-size: 0.85rem;
+  color: var(--ivory-dim);
+  transition: color 0.2s;
+}
+.dropzone .dz-title span {
+  color: var(--violet);
+}
+.dropzone .dz-subtitle {
+  font-family: var(--font-m);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ivory-faint);
+}
+.dropzone:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+.file-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+  font-family: var(--font-m);
+  font-size: 0.6rem;
+}
+.file-meta .file-name {
+  color: var(--ivory);
+  font-weight: 600;
+}
+.file-meta .file-size {
+  color: var(--ivory-faint);
+}
+
+.upload-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+.upload-actions .btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.upload-actions .btn:disabled:hover {
+  background: var(--amber);
+  border-color: var(--amber);
+  box-shadow: none;
+}
+
+.status-text.status-success {
+  color: var(--teal);
+}
+.status-text.status-error {
+  color: var(--red);
+}
+
+.transcript-label {
+  font-family: var(--font-m);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ivory-dim);
+  margin-bottom: 0.5rem;
+}
 </style>
 
 <div class="page-wrapper">
@@ -469,23 +950,102 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="breadcrumb" id="sessionBreadcrumb"></div>
           </div>
 
-          <div class="recording-area">
-            <button class="mic-btn" id="micBtn" title="Tap to record">
-              <svg id="recordIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-              <svg id="stopIcon" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none;"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          <div class="input-tabs" id="inputTabs" role="tablist" aria-label="How to add a transcript">
+            <button class="input-tab active" id="tabBtn-record" data-tab="record" role="tab" aria-selected="true" aria-controls="tab-record">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              Record
             </button>
-            <div class="timer" id="recordingTimer">00:00</div>
-            <div class="status-text" id="recordingStatus">Tap to start recording</div>
-            <div class="waveform" id="waveform">
-              <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
-              <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
-              <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
-              <div class="wf-bar"></div>
+            <button class="input-tab" id="tabBtn-upload-audio" data-tab="upload-audio" role="tab" aria-selected="false" aria-controls="tab-upload-audio" tabindex="-1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              Upload Audio
+            </button>
+            <button class="input-tab" id="tabBtn-upload-image" data-tab="upload-image" role="tab" aria-selected="false" aria-controls="tab-upload-image" tabindex="-1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              Upload Image
+            </button>
+            <button class="input-tab" id="tabBtn-upload-text" data-tab="upload-text" role="tab" aria-selected="false" aria-controls="tab-upload-text" tabindex="-1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Upload Text
+            </button>
+          </div>
+          <div class="input-tab-caption" id="inputTabCaption">Live microphone — recording saved as WebM</div>
+
+          <div class="tab-pane" id="tab-record" role="tabpanel" aria-labelledby="tabBtn-record">
+            <div class="recording-area">
+              <button class="mic-btn" id="micBtn" title="Tap to record">
+                <svg id="recordIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                <svg id="stopIcon" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none;"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+              </button>
+              <div class="timer" id="recordingTimer">00:00</div>
+              <div class="status-text" id="recordingStatus">Tap to start recording</div>
+              <div class="waveform" id="waveform">
+                <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
+                <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
+                <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
+                <div class="wf-bar"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-upload-audio" role="tabpanel" aria-labelledby="tabBtn-upload-audio" style="display:none;">
+            <div class="dropzone" id="audioDropzone" role="button" tabindex="0" aria-label="Upload an audio file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              <div class="dz-title">Drop an audio file here or <span>click to browse</span></div>
+              <div class="dz-subtitle">MP3, WAV, M4A, OGG, WEBM · up to 25MB</div>
+              <input type="file" id="audioInput" accept=".mp3,.wav,.m4a,.ogg,.webm,audio/*" style="display:none;">
+            </div>
+            <div class="file-meta" id="audioFileMeta" style="display:none;">
+              <span class="file-name" id="audioFileName"></span>
+              <span class="file-size" id="audioFileSize"></span>
+            </div>
+            <div class="upload-actions">
+              <button class="btn btn-primary btn-sm" id="transcribeAudioBtn" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Transcribe
+              </button>
+              <div class="status-text" id="audioStatus">No file selected</div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-upload-image" role="tabpanel" aria-labelledby="tabBtn-upload-image" style="display:none;">
+            <div class="dropzone" id="imageDropzone" role="button" tabindex="0" aria-label="Upload an image to extract text from">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <div class="dz-title">Drop a photo or screenshot here or <span>click to browse</span></div>
+              <div class="dz-subtitle">PNG, JPG, JPEG, WEBP · up to 10MB</div>
+              <input type="file" id="imageInput" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" style="display:none;">
+            </div>
+            <div class="file-meta" id="imageFileMeta" style="display:none;">
+              <span class="file-name" id="imageFileName"></span>
+              <span class="file-size" id="imageFileSize"></span>
+            </div>
+            <div class="upload-actions">
+              <button class="btn btn-primary btn-sm" id="extractImageBtn" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h3"/><path d="M20 7V4h-3"/><path d="M4 17v3h3"/><path d="M20 17v3h-3"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+                Extract Text
+              </button>
+              <div class="status-text" id="imageStatus">No image selected</div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-upload-text" role="tabpanel" aria-labelledby="tabBtn-upload-text" style="display:none;">
+            <div class="dropzone" id="textDropzone" role="button" tabindex="0" aria-label="Upload a text transcript file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <div class="dz-title">Drop a transcript file here or <span>click to browse</span></div>
+              <div class="dz-subtitle">Plain text (.TXT)</div>
+              <input type="file" id="textInput" accept=".txt,text/plain" style="display:none;">
+            </div>
+            <div class="file-meta" id="textFileMeta" style="display:none;">
+              <span class="file-name" id="textFileName"></span>
+              <span class="file-size" id="textFileSize"></span>
+            </div>
+            <div class="upload-actions">
+              <div class="status-text" id="textStatus">No file selected</div>
             </div>
           </div>
 
           <div class="transcript-section">
-            <textarea class="transcript-area" id="transcriptArea" placeholder="Transcribed text will appear here. You can edit it before saving."></textarea>
+            <div class="transcript-label">Transcript — edit anything before saving</div>
+            <textarea class="transcript-area" id="transcriptArea" placeholder="Transcript text appears here from any input. You can edit it before saving."></textarea>
             <div class="transcript-meta"><span id="wordCount">0 words</span></div>
           </div>
 

@@ -7,13 +7,18 @@ from flask import Blueprint, jsonify, request, session
 from employee_scoring import _status_for
 from employees import _require_auth
 from extensions import get_db
-from providers import get_llm_provider, get_storage_provider, get_stt_provider
+from providers import get_llm_provider, get_storage_provider, get_stt_provider, get_vision_provider
 
 sessions_bp = Blueprint("sessions", __name__)
 
 # Number of recent completed sessions needed before the silent Risk Drift
 # Detection check fires. New employees with fewer analyzed syncs are skipped.
 DRIFT_WINDOW_SIZE = 3
+
+# Image OCR: only raster formats the vision provider understands, and a
+# ~10MB cap so a huge screenshot/photo can't blow up the request buffer.
+IMAGE_CONTENT_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 
 def _session_to_json(s) -> dict:
@@ -491,3 +496,33 @@ def transcribe_audio():
         return jsonify({"text": text})
     except Exception as e:
         return jsonify({"error": f"transcription_failed: {str(e)}"}), 500
+
+
+@sessions_bp.route("/transcribe-image", methods=["POST"])
+def transcribe_image():
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if "image" not in request.files:
+        return jsonify({"error": "image_file_required"}), 400
+
+    image_file = request.files["image"]
+    content_type = image_file.content_type or "image/png"
+    image_bytes = image_file.read()
+
+    if not image_bytes:
+        return jsonify({"error": "empty_image"}), 400
+
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        return jsonify({"error": "image_too_large"}), 400
+
+    if content_type not in IMAGE_CONTENT_TYPES:
+        return jsonify({"error": "unsupported_image_type"}), 400
+
+    try:
+        vision = get_vision_provider()
+        text = vision.extract_text(image_bytes, content_type)
+        return jsonify({"text": text})
+    except Exception as e:
+        return jsonify({"error": f"ocr_failed: {str(e)}"}), 500

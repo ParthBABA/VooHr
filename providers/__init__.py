@@ -14,6 +14,14 @@ def get_stt_provider():
     raise ValueError(f"Unknown STT provider: {name}")
 
 
+def get_vision_provider():
+    name = current_app.config.get("VISION_PROVIDER", "openai")
+    if name == "openai":
+        from providers.vision_ocr import OpenAIVisionOCR
+        return OpenAIVisionOCR()
+    raise ValueError(f"Unknown vision provider: {name}")
+
+
 def get_llm_provider():
     name = current_app.config.get("LLM_PROVIDER", "deepseek")
     if name == "deepseek":
