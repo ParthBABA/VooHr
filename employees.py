@@ -31,6 +31,10 @@ def _session_is_active(user_id, session_token):
         return False
     now = datetime.now(timezone.utc)
     last_seen = rec.get("last_seen")
+    # MongoClient isn't tz_aware, so datetimes read back from the DB are
+    # naive while `now` is aware — normalize before comparing.
+    if last_seen and last_seen.tzinfo is None:
+        last_seen = last_seen.replace(tzinfo=timezone.utc)
     if not last_seen or (now - last_seen) > timedelta(minutes=5):
         db.active_sessions.update_one(
             {"_id": rec["_id"]}, {"$set": {"last_seen": now}}

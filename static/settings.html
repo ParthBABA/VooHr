@@ -616,6 +616,33 @@ function clearFieldError(input){
     return Math.round(diff / 1440) + 'd ago';
   }
 
+  function deviceIconSvg(type){
+    if (type === 'Mobile') {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>';
+    }
+    if (type === 'Tablet') {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
+  }
+
+  function deviceLabel(d){
+    if (!d) return 'Unknown device';
+    var parts = [];
+    if (d.browser) parts.push(d.browser);
+    if (d.os) parts.push(d.os);
+    return parts.length ? parts.join(' on ') : 'Unknown device';
+  }
+
+  function locationLabel(loc){
+    if (!loc) return 'Local network';
+    var parts = [];
+    if (loc.city) parts.push(loc.city);
+    if (loc.region) parts.push(loc.region);
+    if (loc.country) parts.push(loc.country);
+    return parts.length ? parts.join(', ') : 'Local network';
+  }
+
   function renderSessions(sessions){
     listEl.innerHTML = '';
     if (!sessions || !sessions.length) {
@@ -628,16 +655,16 @@ function clearFieldError(input){
 
       var icon = document.createElement('div');
       icon.className = 'session-icon';
-      icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
+      icon.innerHTML = deviceIconSvg(s.device ? s.device.device_type : '');
 
       var meta = document.createElement('div');
       meta.className = 'session-meta';
       var device = document.createElement('div');
       device.className = 'session-device';
-      device.textContent = s.device || 'Unknown device';
+      device.textContent = deviceLabel(s.device);
       var loc = document.createElement('div');
       loc.className = 'session-loc';
-      loc.textContent = 'IP ' + (s.ip || 'unknown');
+      loc.textContent = locationLabel(s.location);
       meta.appendChild(device);
       meta.appendChild(loc);
 

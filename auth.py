@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
+import requests
 from authlib.integrations.flask_client import OAuth
 from bson import ObjectId
 from flask import Blueprint, redirect, request, session, url_for
@@ -132,6 +133,56 @@ def google_callback():
     return redirect("/dashboard.html")
 
 
+def _is_private_ip(ip) -> bool:
+    """True for loopback/private/local addresses that can never geolocate."""
+    if not ip:
+        return True
+    if ip == "::1":
+        return True
+    if ":" in ip:  # any other IPv6 — treat conservatively as non-public
+        return True
+    try:
+        parts = [int(p) for p in ip.split(".")]
+    except ValueError:
+        return True
+    if len(parts) != 4:
+        return True
+    a, b, _c, _d = parts
+    if a == 10:
+        return True
+    if a == 127:
+        return True
+    if a == 172 and 16 <= b <= 31:
+        return True
+    if a == 192 and b == 168:
+        return True
+    return False
+
+
+def _lookup_location(ip) -> dict:
+    """Best-effort geo lookup for a public IP. Returns
+    {"city", "region", "country"} or None. Never raises — a geolocation
+    failure or timeout must not block login (2s cap, runs once per login).
+    """
+    if _is_private_ip(ip):
+        return None
+    try:
+        resp = requests.get(
+            f"http://ip-api.com/json/{ip}?fields=city,regionName,country,status",
+            timeout=2,
+        )
+        data = resp.json()
+    except Exception:
+        return None
+    if data.get("status") != "success":
+        return None
+    return {
+        "city": data.get("city"),
+        "region": data.get("regionName"),
+        "country": data.get("country"),
+    }
+
+
 def _record_active_session(db, user_id: ObjectId):
     """Track this login as an active session so the settings page can list it
     and let the user revoke access. Storing the token in the Flask session is
@@ -139,13 +190,16 @@ def _record_active_session(db, user_id: ObjectId):
     """
     now = datetime.now(timezone.utc)
     session_token = str(uuid.uuid4())
+    ip = request.remote_addr or ""
+    location = _lookup_location(ip)
     session["session_token"] = session_token
     db.active_sessions.insert_one(
         {
             "user_id": ObjectId(user_id),
             "session_token": session_token,
             "user_agent": request.headers.get("User-Agent", ""),
-            "ip": request.remote_addr,
+            "ip": ip,
+            "location": location,
             "created_at": now,
             "last_seen": now,
         }

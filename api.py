@@ -2,6 +2,8 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from flask import Blueprint, jsonify, request, session
 
+import re
+
 from extensions import get_db
 from employees import _session_is_active
 from field_encryption import decrypt_fields, encrypt_fields
@@ -265,38 +267,95 @@ def update_organization_notification_prefs():
     return jsonify({"ok": True, "risk_alerts": risk_alerts})
 
 
-def _parse_device(user_agent: str) -> str:
-    """Crude browser/OS sniffing for the sessions list — substring matching
-    on common tokens is good enough here, it doesn't need to be perfect.
+def _extract_version(ua: str, marker: str, max_parts=None):
+    """Grab the version number that follows `marker` (e.g. "Chrome/" ->
+    "128", "Mac OS X " -> "10.15.7"), normalizing underscores to dots.
+    Returns None if absent."""
+    idx = ua.find(marker)
+    if idx == -1:
+        return None
+    rest = ua[idx + len(marker):]
+    m = re.match(r"(\d+(?:[._]\d+)*)", rest)
+    if not m:
+        return None
+    parts = m.group(1).replace("_", ".").split(".")
+    if max_parts:
+        parts = parts[:max_parts]
+    return ".".join(parts)
+
+
+_WINDOWS_VERSIONS = {
+    "10.0": "10",
+    "6.3": "8.1",
+    "6.2": "8",
+    "6.1": "7",
+    "6.0": "Vista",
+    "5.1": "XP",
+    "5.0": "2000",
+}
+
+
+def _parse_device(user_agent: str) -> dict:
+    """Device breakdown for the sessions list. Returns
+    {"device_type", "browser", "os"} — missing pieces fall back to simple
+    names or are omitted, never crash or show "undefined".
     """
     ua = user_agent or ""
-    if "iPhone" in ua or "iPad" in ua or "iPod" in ua:
-        os_name = "iPhone" if "iPhone" in ua else ("iPad" if "iPad" in ua else "iPod")
-    elif "Android" in ua:
-        os_name = "Android"
-    elif "Windows" in ua:
-        os_name = "Windows"
-    elif "Mac OS X" in ua or "Macintosh" in ua:
-        os_name = "macOS"
-    elif "Linux" in ua:
-        os_name = "Linux"
-    else:
-        os_name = "Unknown"
 
-    if "Edg/" in ua or "Edge/" in ua:
+    # device_type
+    if "iPad" in ua:
+        device_type = "Tablet"
+    elif "iPhone" in ua or "iPod" in ua:
+        device_type = "Mobile"
+    elif "Android" in ua:
+        device_type = "Mobile" if "Mobile" in ua else "Tablet"
+    else:
+        device_type = "Desktop"
+
+    # browser + version
+    browser = "Unknown"
+    browser_version = None
+    if "Edg/" in ua:
         browser = "Edge"
+        browser_version = _extract_version(ua, "Edg/", max_parts=1)
     elif "Chrome" in ua:
         browser = "Chrome"
-    elif "Safari" in ua:
-        browser = "Safari"
+        browser_version = _extract_version(ua, "Chrome/", max_parts=1)
     elif "Firefox" in ua:
         browser = "Firefox"
+        browser_version = _extract_version(ua, "Firefox/", max_parts=1)
+    elif "Safari" in ua:
+        browser = "Safari"
+        browser_version = _extract_version(ua, "Version/", max_parts=1)
     elif "MSIE" in ua or "Trident" in ua:
         browser = "Internet Explorer"
-    else:
-        browser = "Unknown"
+        browser_version = _extract_version(ua, "MSIE ", max_parts=1)
+    browser_label = browser if browser_version is None else f"{browser} {browser_version}"
 
-    return f"{browser} on {os_name}"
+    # os + version
+    os_name = "Unknown"
+    os_version = None
+    if "iPad" in ua:
+        os_name = "iPadOS"
+        os_version = _extract_version(ua, "CPU OS ") or _extract_version(ua, "CPU iPhone OS ")
+    elif "iPhone" in ua or "iPod" in ua:
+        os_name = "iOS"
+        os_version = _extract_version(ua, "CPU iPhone OS ") or _extract_version(ua, "CPU OS ")
+    elif "Android" in ua:
+        os_name = "Android"
+        os_version = _extract_version(ua, "Android ")
+    elif "Windows NT" in ua:
+        os_name = "Windows"
+        nt = _extract_version(ua, "Windows NT ")
+        os_version = _WINDOWS_VERSIONS.get(nt, nt)
+    elif "Mac OS X" in ua or "Macintosh" in ua:
+        os_name = "macOS"
+        os_version = _extract_version(ua, "Mac OS X ")
+    elif "Linux" in ua:
+        os_name = "Linux"
+    os_label = os_name if os_version is None else f"{os_name} {os_version}"
+
+    return {"device_type": device_type, "browser": browser_label, "os": os_label}
 
 
 @api_bp.route("/sessions/active")
@@ -319,6 +378,7 @@ def list_active_sessions():
             {
                 "id": str(d["_id"]),
                 "device": _parse_device(d.get("user_agent", "")),
+                "location": d.get("location"),
                 "ip": d.get("ip") or "",
                 "created_at": d.get("created_at").isoformat() if d.get("created_at") else None,
                 "last_seen": d.get("last_seen").isoformat() if d.get("last_seen") else None,
