@@ -6,6 +6,9 @@
 <title>HR Copilot - Sync Room</title>
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css">
+<style>
+  .gsap-hidden { opacity: 0 !important; }
+</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 </head>
@@ -16,7 +19,7 @@
 
 <div class="page-wrapper">
   <!-- SIDEBAR -->
-  <nav class="sidebar">
+  <nav class="sidebar gsap-hidden">
     <div class="sidebar-header">
       <div class="sidebar-logo">
         <div class="logo-mark">HR</div>
@@ -61,7 +64,7 @@
         <!-- LEFT: JOURNEY -->
         <div class="journey-main">
           <!-- STEP PROGRESS -->
-          <div class="journey-progress fade-in" id="journeyProgress">
+          <div class="journey-progress fade-in gsap-hidden" id="journeyProgress">
             <div class="step-node active" data-step="1">
               <div class="step-dot">1</div>
               <div class="step-label" data-lang="en">Psychological Safety</div>
@@ -94,7 +97,7 @@
           </div>
 
           <!-- STEP CONTENT: STEP 1 -->
-          <div class="step-content scale-in" id="stepContent">
+          <div class="step-content scale-in gsap-hidden" id="stepContent">
             <div class="step-header">
               <div class="step-number">Step 1 of 5</div>
               <h2 class="step-title">Establish Psychological Safety</h2>
@@ -394,7 +397,7 @@
         </div>
 
         <!-- RIGHT: SIDEBAR -->
-        <div class="journey-sidebar">
+        <div class="journey-sidebar gsap-hidden">
           <!-- EMPLOYEE CONTEXT CARD -->
           <div class="card fade-in fade-in-d1" style="margin-bottom:1rem;">
             <div class="card-header">
@@ -834,6 +837,46 @@ function populateStep5(d) {
   if (mn) mn.textContent = d.manager_notes || '';
 }
 
+function applyInitialGsapState() {
+  if (!window.gsap) return;
+
+  var sidebar = document.querySelector('.sidebar');
+  if (sidebar) gsap.set(sidebar, { x: -72, opacity: 0 });
+
+  var progress = document.getElementById('journeyProgress');
+  if (progress) {
+    var stepNodes = progress.querySelectorAll('.step-node');
+    var connectors = progress.querySelectorAll('.step-connector');
+    gsap.set(stepNodes, { opacity: 0, y: -20 });
+    gsap.set(connectors, { scaleX: 0 });
+  }
+
+  var content = document.getElementById('stepContent');
+  if (content) {
+    var header = content.querySelector('.step-header');
+    var scriptBlock = content.querySelector('.script-block');
+    var doItems = content.querySelectorAll('[data-anim^="do-"]');
+    var dontItems = content.querySelectorAll('[data-anim^="dont-"]');
+    var tip = content.querySelector('.guideline.tip');
+    var noteArea = content.querySelector('.note-area');
+    var nav = content.querySelector('.step-nav');
+
+    gsap.set(content, { opacity: 0, y: 20 });
+    if (header) gsap.set(header, { opacity: 0, y: 16 });
+    if (scriptBlock) gsap.set(scriptBlock, { opacity: 0, x: -20, borderLeftColor: 'var(--violet)' });
+    if (doItems.length) gsap.set(doItems, { opacity: 0, x: -16 });
+    if (dontItems.length) gsap.set(dontItems, { opacity: 0, x: 16 });
+    if (tip) gsap.set(tip, { opacity: 0, y: 12 });
+    if (noteArea) gsap.set(noteArea, { opacity: 0, y: 12 });
+    if (nav) gsap.set(nav, { opacity: 0, y: 12 });
+  }
+
+  var sideCards = document.querySelectorAll('.journey-sidebar .card');
+  if (sideCards.length) gsap.set(sideCards, { opacity: 0, x: 30 });
+}
+
+applyInitialGsapState();
+
 // ── Fetch & populate ──
 var employeePromise = employeeId
   ? fetch('/api/employees/' + employeeId).then(function(r) { return r.ok ? r.json() : null; })
@@ -979,33 +1022,18 @@ sessionPromise.then(function(s) {
   var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
   var sidebar = document.querySelector('.sidebar');
-  gsap.set(sidebar, { x: -72, opacity: 0 });
-
   var progress = document.getElementById('journeyProgress');
-  var stepNodes = progress.querySelectorAll('.step-node');
-  var connectors = progress.querySelectorAll('.step-connector');
-  gsap.set(stepNodes, { opacity: 0, y: -20 });
-  gsap.set(connectors, { scaleX: 0 });
-
+  var stepNodes = progress ? progress.querySelectorAll('.step-node') : [];
+  var connectors = progress ? progress.querySelectorAll('.step-connector') : [];
   var content = document.getElementById('stepContent');
-  var header = content.querySelector('.step-header');
-  var scriptBlock = content.querySelector('.script-block');
-  var doItems = content.querySelectorAll('[data-anim^="do-"]');
-  var dontItems = content.querySelectorAll('[data-anim^="dont-"]');
-  var tip = content.querySelector('.guideline.tip');
-  var noteArea = content.querySelector('.note-area');
-  var nav = content.querySelector('.step-nav');
-  gsap.set(content, { opacity: 0, y: 20 });
-  gsap.set(header, { opacity: 0, y: 16 });
-  gsap.set(scriptBlock, { opacity: 0, x: -20, borderLeftColor: 'var(--violet)' });
-  gsap.set(doItems, { opacity: 0, x: -16 });
-  gsap.set(dontItems, { opacity: 0, x: 16 });
-  if (tip) gsap.set(tip, { opacity: 0, y: 12 });
-  if (noteArea) gsap.set(noteArea, { opacity: 0, y: 12 });
-  if (nav) gsap.set(nav, { opacity: 0, y: 12 });
-
+  var header = content ? content.querySelector('.step-header') : null;
+  var scriptBlock = content ? content.querySelector('.script-block') : null;
+  var doItems = content ? content.querySelectorAll('[data-anim^="do-"]') : [];
+  var dontItems = content ? content.querySelectorAll('[data-anim^="dont-"]') : [];
+  var tip = content ? content.querySelector('.guideline.tip') : null;
+  var noteArea = content ? content.querySelector('.note-area') : null;
+  var nav = content ? content.querySelector('.step-nav') : null;
   var sideCards = document.querySelectorAll('.journey-sidebar .card');
-  gsap.set(sideCards, { opacity: 0, x: 30 });
 
   tl.to(sidebar, { x: 0, opacity: 1, duration: 0.5 })
     .to(progress, { opacity: 1, duration: 0.3 }, '-=0.2')

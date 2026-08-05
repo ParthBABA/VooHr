@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -12,6 +12,32 @@ from field_encryption import decrypt_fields, encrypt_fields
 employees_bp = Blueprint("employees", __name__)
 
 
+def _session_is_active(user_id, session_token):
+    """True if a matching active_sessions record exists for this login. Also
+    serves as a cheap heartbeat: refreshes last_seen at most every 5 minutes
+    rather than on every request.
+    """
+    if not user_id or not session_token:
+        return False
+    try:
+        ObjectId(user_id)
+    except InvalidId:
+        return False
+    db = get_db()
+    rec = db.active_sessions.find_one(
+        {"user_id": ObjectId(user_id), "session_token": session_token}
+    )
+    if not rec:
+        return False
+    now = datetime.now(timezone.utc)
+    last_seen = rec.get("last_seen")
+    if not last_seen or (now - last_seen) > timedelta(minutes=5):
+        db.active_sessions.update_one(
+            {"_id": rec["_id"]}, {"$set": {"last_seen": now}}
+        )
+    return True
+
+
 def _require_auth():
     user_id = session.get("user_id")
     org_id = session.get("org_id")
@@ -21,6 +47,9 @@ def _require_auth():
         ObjectId(user_id)
         ObjectId(org_id)
     except InvalidId:
+        session.clear()
+        return None
+    if not _session_is_active(user_id, session.get("session_token")):
         session.clear()
         return None
     return org_id
@@ -85,6 +114,8 @@ def _employee_to_json(emp) -> dict:
         "phone": pii.get("phone", ""),
         "department": emp.get("department", ""),
         "position": emp.get("position", ""),
+        "employment_type": emp.get("employment_type", ""),
+        "work_mode": emp.get("work_mode", ""),
         "joining_date": emp.get("joining_date", ""),
         "status": emp.get("status", "active"),
         "wellness_score": wellness_score,
@@ -111,6 +142,8 @@ def create_employee():
     phone = (data.get("phone") or "").strip()
     department = (data.get("department") or "").strip()
     position = (data.get("position") or "").strip()
+    employment_type = (data.get("employment_type") or "").strip()
+    work_mode = (data.get("work_mode") or "").strip()
     joining_date = (data.get("joining_date") or "").strip()
 
     if not name:
@@ -140,6 +173,8 @@ def create_employee():
         "employee_id": employee_id,
         "department": department,
         "position": position,
+        "employment_type": employment_type,
+        "work_mode": work_mode,
         "joining_date": joining_date,
         "status": "active",
         "email_hash": blind_index(email) if email else None,
@@ -229,7 +264,7 @@ def update_employee(emp_id: str):
     unset_fields: list = []
 
     # Plain fields
-    for field in ("department", "position", "joining_date", "status"):
+    for field in ("department", "position", "employment_type", "work_mode", "joining_date", "status"):
         if field in data:
             set_fields[field] = (data[field] or "").strip()
 

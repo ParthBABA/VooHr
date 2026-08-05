@@ -377,36 +377,44 @@ def analyze_session(session_id: str):
                     #    and swallowed, never allowed to fail /analyze. False
                     #    positives stay silent, exactly as before.
                     if drift.get("is_genuine_pattern"):
-                        now = datetime.now(timezone.utc)
-                        existing = db.notifications.find_one(
-                            {"org_id": ObjectId(org_id), "source_session_id": s["_id"]}
-                        )
-                        if existing:
-                            print(f"[DEBUG_NOTIF] session={session_id} notification already exists ({existing['_id']}) — skipping", file=sys.stderr)
+                        # Respect the org's "Risk & burnout alerts" preference: if
+                        # disabled, skip the insert entirely — the notification is
+                        # never written to the DB, not just hidden in the UI.
+                        org_doc = db.organizations.find_one({"_id": ObjectId(org_id)})
+                        risk_alerts = ((org_doc or {}).get("notification_prefs") or {}).get("risk_alerts", True)
+                        if not risk_alerts:
+                            print(f"[DEBUG_NOTIF] session={session_id} skipped: risk alerts disabled for org", file=sys.stderr)
                         else:
-                            db.notifications.insert_one(
-                                {
-                                    "org_id": ObjectId(org_id),
-                                    "employee_id": s["employee_id"],
-                                    "type": "risk_drift",
-                                    "headline": drift.get("headline", ""),
-                                    "summary": drift.get("summary", ""),
-                                    "confidence": drift.get("confidence", 0),
-                                    "source_session_id": s["_id"],
-                                    "drift_explanation": drift,
-                                    "sessions_window": [
-                                        {
-                                            "date": sess["created_at"].isoformat() if sess.get("created_at") else None,
-                                            "attrition_risk_pct": (sess["analysis"] or {}).get("risks", {}).get("attrition_risk_pct"),
-                                            "burnout_index": (sess["analysis"] or {}).get("risks", {}).get("burnout_index"),
-                                        }
-                                        for sess in qualifying_sessions
-                                    ],
-                                    "read": False,
-                                    "created_at": now,
-                                }
+                            now = datetime.now(timezone.utc)
+                            existing = db.notifications.find_one(
+                                {"org_id": ObjectId(org_id), "source_session_id": s["_id"]}
                             )
-                            print(f"[DEBUG_NOTIF] session={session_id} notification created for employee={s['employee_id']}", file=sys.stderr)
+                            if existing:
+                                print(f"[DEBUG_NOTIF] session={session_id} notification already exists ({existing['_id']}) — skipping", file=sys.stderr)
+                            else:
+                                db.notifications.insert_one(
+                                    {
+                                        "org_id": ObjectId(org_id),
+                                        "employee_id": s["employee_id"],
+                                        "type": "risk_drift",
+                                        "headline": drift.get("headline", ""),
+                                        "summary": drift.get("summary", ""),
+                                        "confidence": drift.get("confidence", 0),
+                                        "source_session_id": s["_id"],
+                                        "drift_explanation": drift,
+                                        "sessions_window": [
+                                            {
+                                                "date": sess["created_at"].isoformat() if sess.get("created_at") else None,
+                                                "attrition_risk_pct": (sess["analysis"] or {}).get("risks", {}).get("attrition_risk_pct"),
+                                                "burnout_index": (sess["analysis"] or {}).get("risks", {}).get("burnout_index"),
+                                            }
+                                            for sess in qualifying_sessions
+                                        ],
+                                        "read": False,
+                                        "created_at": now,
+                                    }
+                                )
+                                print(f"[DEBUG_NOTIF] session={session_id} notification created for employee={s['employee_id']}", file=sys.stderr)
                     else:
                         print(f"[DEBUG_NOTIF] session={session_id} is_genuine_pattern=False — no notification created", file=sys.stderr)
         except Exception as e:

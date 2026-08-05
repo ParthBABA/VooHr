@@ -3,6 +3,7 @@ from bson.errors import InvalidId
 from flask import Blueprint, jsonify, request, session
 
 from extensions import get_db
+from employees import _session_is_active
 from field_encryption import decrypt_fields, encrypt_fields
 
 api_bp = Blueprint("api", __name__)
@@ -33,6 +34,10 @@ def save_pending_org():
 def me():
     user_id = session.get("user_id")
     if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not _session_is_active(user_id, session.get("session_token")):
+        session.clear()
         return jsonify({"error": "not_authenticated"}), 401
 
     db = get_db()
@@ -78,6 +83,10 @@ def update_me():
     if not user_id:
         return jsonify({"error": "not_authenticated"}), 401
 
+    if not _session_is_active(user_id, session.get("session_token")):
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
     db = get_db()
     try:
         user = db.users.find_one({"_id": ObjectId(user_id)})
@@ -111,3 +120,236 @@ def update_me():
     session["user_name"] = name
 
     return jsonify({"ok": True, "name": name})
+
+
+VALID_ORG_INDUSTRIES = {
+    "Technology",
+    "Finance",
+    "Healthcare",
+    "Education",
+    "Manufacturing",
+    "Retail",
+    "Real Estate",
+    "Media",
+    "Legal",
+    "Consulting",
+    "Other",
+}
+VALID_ORG_SIZES = {"1-10", "11-50", "51-200", "201-1000", "1000+"}
+
+
+@api_bp.route("/organization", methods=["PUT"])
+def update_organization():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not _session_is_active(user_id, session.get("session_token")):
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        user = db.users.find_one({"_id": ObjectId(user_id)})
+    except InvalidId:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not user:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if user.get("role") != "admin":
+        return jsonify({"error": "forbidden"}), 403
+
+    org = db.organizations.find_one({"_id": user["org_id"]})
+    if not org:
+        return jsonify({"error": "org_not_found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    industry = (data.get("industry") or "").strip()
+    company_size = (data.get("company_size") or "").strip()
+
+    if not name:
+        return jsonify({"error": "org_name_required"}), 400
+    if len(name) > 150:
+        return jsonify({"error": "org_name_too_long"}), 400
+    if industry not in VALID_ORG_INDUSTRIES:
+        return jsonify({"error": "invalid_industry"}), 400
+    if company_size not in VALID_ORG_SIZES:
+        return jsonify({"error": "invalid_company_size"}), 400
+
+    db.organizations.update_one(
+        {"_id": org["_id"]},
+        {"$set": {"name": name, "industry": industry, "company_size": company_size}},
+    )
+
+    return jsonify(
+        {
+            "ok": True,
+            "organization": {
+                "id": str(org["_id"]),
+                "name": name,
+                "industry": industry,
+                "company_size": company_size,
+            },
+        }
+    )
+
+
+@api_bp.route("/organization/notification-prefs")
+def get_organization_notification_prefs():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not _session_is_active(user_id, session.get("session_token")):
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        user = db.users.find_one({"_id": ObjectId(user_id)})
+    except InvalidId:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not user:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    org = db.organizations.find_one({"_id": user["org_id"]})
+    prefs = (org or {}).get("notification_prefs") or {}
+    return jsonify({"risk_alerts": bool(prefs.get("risk_alerts", True))})
+
+
+@api_bp.route("/organization/notification-prefs", methods=["PUT"])
+def update_organization_notification_prefs():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not _session_is_active(user_id, session.get("session_token")):
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        user = db.users.find_one({"_id": ObjectId(user_id)})
+    except InvalidId:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not user:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if user.get("role") != "admin":
+        return jsonify({"error": "forbidden"}), 403
+
+    org = db.organizations.find_one({"_id": user["org_id"]})
+    if not org:
+        return jsonify({"error": "org_not_found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    risk_alerts = data.get("risk_alerts")
+    if not isinstance(risk_alerts, bool):
+        return jsonify({"error": "invalid_risk_alerts"}), 400
+
+    db.organizations.update_one(
+        {"_id": org["_id"]},
+        {"$set": {"notification_prefs.risk_alerts": risk_alerts}},
+    )
+
+    return jsonify({"ok": True, "risk_alerts": risk_alerts})
+
+
+def _parse_device(user_agent: str) -> str:
+    """Crude browser/OS sniffing for the sessions list — substring matching
+    on common tokens is good enough here, it doesn't need to be perfect.
+    """
+    ua = user_agent or ""
+    if "iPhone" in ua or "iPad" in ua or "iPod" in ua:
+        os_name = "iPhone" if "iPhone" in ua else ("iPad" if "iPad" in ua else "iPod")
+    elif "Android" in ua:
+        os_name = "Android"
+    elif "Windows" in ua:
+        os_name = "Windows"
+    elif "Mac OS X" in ua or "Macintosh" in ua:
+        os_name = "macOS"
+    elif "Linux" in ua:
+        os_name = "Linux"
+    else:
+        os_name = "Unknown"
+
+    if "Edg/" in ua or "Edge/" in ua:
+        browser = "Edge"
+    elif "Chrome" in ua:
+        browser = "Chrome"
+    elif "Safari" in ua:
+        browser = "Safari"
+    elif "Firefox" in ua:
+        browser = "Firefox"
+    elif "MSIE" in ua or "Trident" in ua:
+        browser = "Internet Explorer"
+    else:
+        browser = "Unknown"
+
+    return f"{browser} on {os_name}"
+
+
+@api_bp.route("/sessions/active")
+def list_active_sessions():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not _session_is_active(user_id, session.get("session_token")):
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    current_token = session.get("session_token")
+    docs = db.active_sessions.find({"user_id": ObjectId(user_id)}).sort("last_seen", -1)
+
+    sessions = []
+    for d in docs:
+        sessions.append(
+            {
+                "id": str(d["_id"]),
+                "device": _parse_device(d.get("user_agent", "")),
+                "ip": d.get("ip") or "",
+                "created_at": d.get("created_at").isoformat() if d.get("created_at") else None,
+                "last_seen": d.get("last_seen").isoformat() if d.get("last_seen") else None,
+                "is_current": d.get("session_token") == current_token,
+            }
+        )
+    return jsonify({"sessions": sessions})
+
+
+@api_bp.route("/sessions/revoke/<session_doc_id>", methods=["POST"])
+def revoke_active_session(session_doc_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not _session_is_active(user_id, session.get("session_token")):
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        doc_id = ObjectId(session_doc_id)
+    except InvalidId:
+        return jsonify({"error": "not_found"}), 404
+
+    doc = db.active_sessions.find_one({"_id": doc_id, "user_id": ObjectId(user_id)})
+    if not doc:
+        return jsonify({"error": "not_found"}), 404
+
+    if doc.get("session_token") == session.get("session_token"):
+        return jsonify({"error": "cannot_revoke_current"}), 400
+
+    db.active_sessions.delete_one({"_id": doc_id})
+    return jsonify({"ok": True})

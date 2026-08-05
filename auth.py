@@ -1,7 +1,9 @@
+import uuid
 from datetime import datetime, timezone
 
 from authlib.integrations.flask_client import OAuth
-from flask import Blueprint, redirect, session, url_for
+from bson import ObjectId
+from flask import Blueprint, redirect, request, session, url_for
 
 from blind_index import blind_index
 from extensions import get_db
@@ -101,9 +103,11 @@ def google_callback():
         }
         user_id = db.users.insert_one(user_doc).inserted_id
 
+        session.permanent = True
         session["user_id"] = str(user_id)
         session["org_id"] = str(org_id)
         session["just_registered"] = True
+        _record_active_session(db, user_id)
         return redirect("/onboarding-complete.html")
 
     # --- sign-in flow ---
@@ -119,11 +123,33 @@ def google_callback():
 
     # Decrypt PII for the session
     pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
+    session.permanent = True
     session["user_id"] = str(user["_id"])
     session["org_id"] = str(user["org_id"])
     session["user_name"] = pii.get("name", "")
     session["user_email"] = pii.get("email", "")
+    _record_active_session(db, user["_id"])
     return redirect("/dashboard.html")
+
+
+def _record_active_session(db, user_id: ObjectId):
+    """Track this login as an active session so the settings page can list it
+    and let the user revoke access. Storing the token in the Flask session is
+    what lets _require_auth validate later requests.
+    """
+    now = datetime.now(timezone.utc)
+    session_token = str(uuid.uuid4())
+    session["session_token"] = session_token
+    db.active_sessions.insert_one(
+        {
+            "user_id": ObjectId(user_id),
+            "session_token": session_token,
+            "user_agent": request.headers.get("User-Agent", ""),
+            "ip": request.remote_addr,
+            "created_at": now,
+            "last_seen": now,
+        }
+    )
 
 
 @auth_bp.route("/logout", methods=["POST"])

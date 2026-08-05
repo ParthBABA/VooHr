@@ -42,6 +42,31 @@
     if (orgEl && data.organization) orgEl.textContent = data.organization.name;
     window.__voovrMeOrg = data.organization || null;
 
+    var orgName = document.getElementById('orgName');
+    var orgIndustry = document.getElementById('orgIndustry');
+    var orgSize = document.getElementById('orgSize');
+    var orgSaveBtn = document.getElementById('orgSaveBtn');
+    var orgAdminNote = document.getElementById('orgAdminNote');
+    if (data.organization) {
+      if (orgName) orgName.value = data.organization.name || '';
+      if (orgIndustry) orgIndustry.value = data.organization.industry || '';
+      if (orgSize) orgSize.value = data.organization.company_size || '';
+    }
+    if (data.role !== 'admin') {
+      [orgName, orgIndustry, orgSize].forEach(function(el){
+        if (!el) return;
+        el.readOnly = true;
+        el.disabled = true;
+      });
+      if (orgSaveBtn) orgSaveBtn.style.display = 'none';
+      if (orgAdminNote) orgAdminNote.style.display = 'block';
+
+      var notifRisk = document.getElementById('notifRisk');
+      var notifRiskNote = document.getElementById('notifRiskNote');
+      if (notifRisk) notifRisk.disabled = true;
+      if (notifRiskNote) notifRiskNote.style.display = 'block';
+    }
+
     loadBillingUsage();
 
     document.body.style.visibility = 'visible';
@@ -122,7 +147,7 @@
           <div class="card-header">
             <div>
               <div class="eyebrow">Account</div>
-              <h3 class="card-title">Profile</h3>
+              <h3 class="settings-section-title">Profile</h3>
             </div>
           </div>
 
@@ -160,12 +185,63 @@
           </div>
         </div>
 
+        <!-- ORGANIZATION -->
+        <div class="card fade-in">
+          <div class="card-header">
+            <div>
+              <div class="eyebrow">Organization</div>
+              <h3 class="settings-section-title">Company Details</h3>
+            </div>
+          </div>
+
+          <div class="settings-form-grid">
+            <div class="form-group">
+              <label class="form-label" for="orgName">Organization Name</label>
+              <input type="text" class="form-input" id="orgName" placeholder="Company name">
+              <div class="field-error" id="orgNameError"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="orgIndustry">Industry</label>
+              <select class="form-input" id="orgIndustry">
+                <option value="">Select industry</option>
+                <option value="Technology">Technology</option>
+                <option value="Finance">Finance</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Education">Education</option>
+                <option value="Manufacturing">Manufacturing</option>
+                <option value="Retail">Retail</option>
+                <option value="Real Estate">Real Estate</option>
+                <option value="Media">Media</option>
+                <option value="Legal">Legal</option>
+                <option value="Consulting">Consulting</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="orgSize">Company Size</label>
+              <select class="form-input" id="orgSize">
+                <option value="">Select company size</option>
+                <option value="1-10">1 – 10 employees</option>
+                <option value="11-50">11 – 50 employees</option>
+                <option value="51-200">51 – 200 employees</option>
+                <option value="201-1000">201 – 1,000 employees</option>
+                <option value="1000+">1,000+ employees</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-actions">
+            <button class="btn btn-primary btn-sm" id="orgSaveBtn" type="button">Save Changes</button>
+            <div class="field-error" id="orgAdminNote" style="display:none;">Only org admins can edit these details.</div>
+          </div>
+        </div>
+
         <!-- NOTIFICATIONS -->
         <div class="card fade-in">
           <div class="card-header">
             <div>
               <div class="eyebrow">Communication</div>
-              <h3 class="card-title">Notifications</h3>
+              <h3 class="settings-section-title">Notifications</h3>
             </div>
           </div>
 
@@ -186,10 +262,11 @@
                 <span class="toggle-desc">High-risk and wellbeing flags detected by AI.</span>
               </span>
               <span class="toggle-switch">
-                <input type="checkbox" id="notifRisk" checked>
+                <input type="checkbox" id="notifRisk">
                 <span class="toggle-slider"></span>
               </span>
             </label>
+            <div id="notifRiskNote" style="display:none;font-family:var(--font-rc);font-size:0.62rem;letter-spacing:0.05em;color:var(--ivory-dim);padding:0.1rem 0 0.6rem;">Only org admins can change this.</div>
             <label class="toggle-row">
               <span class="toggle-label">
                 <span class="toggle-title">Weekly digest</span>
@@ -213,82 +290,12 @@
           </div>
         </div>
 
-        <!-- SECURITY -->
-        <div class="card fade-in">
-          <div class="card-header">
-            <div>
-              <div class="eyebrow">Access</div>
-              <h3 class="card-title">Security</h3>
-            </div>
-          </div>
-
-          <div class="step-section-title">Change Password</div>
-          <div class="settings-form-grid">
-            <div class="form-group">
-              <label class="form-label" for="currentPassword">Current Password</label>
-              <input type="password" class="form-input" id="currentPassword" autocomplete="current-password" placeholder="Enter current password">
-              <div class="field-error" id="currentPasswordError"></div>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="newPassword">New Password</label>
-              <input type="password" class="form-input" id="newPassword" autocomplete="new-password" placeholder="At least 8 characters">
-              <div class="field-error" id="newPasswordError"></div>
-            </div>
-            <div class="form-group" style="grid-column:1/-1;">
-              <label class="form-label" for="confirmPassword">Confirm Password</label>
-              <input type="password" class="form-input" id="confirmPassword" autocomplete="new-password" placeholder="Re-enter new password">
-              <div class="field-error" id="confirmPasswordError"></div>
-            </div>
-          </div>
-
-          <div class="settings-actions">
-            <button class="btn btn-primary btn-sm" id="passSaveBtn" type="button">Update Password</button>
-          </div>
-
-          <div class="step-section-title" style="margin-top:1.8rem;">Active Sessions</div>
-          <div class="sessions-list" id="sessionsList">
-            <div class="session-row">
-              <div class="session-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-              </div>
-              <div class="session-meta">
-                <div class="session-device">MacBook Pro &mdash; Chrome</div>
-                <div class="session-loc">Bengaluru, India &middot; Active now</div>
-              </div>
-              <div class="session-time">Current</div>
-              <button class="btn btn-sm btn-outline session-signout" type="button" data-session="MacBook Pro">Sign out</button>
-            </div>
-            <div class="session-row">
-              <div class="session-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-              </div>
-              <div class="session-meta">
-                <div class="session-device">iPhone 15 &mdash; VooVr App</div>
-                <div class="session-loc">Mumbai, India &middot; 2h ago</div>
-              </div>
-              <div class="session-time">2h ago</div>
-              <button class="btn btn-sm btn-outline session-signout" type="button" data-session="iPhone 15">Sign out</button>
-            </div>
-            <div class="session-row">
-              <div class="session-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-              </div>
-              <div class="session-meta">
-                <div class="session-device">Windows Desktop &mdash; Edge</div>
-                <div class="session-loc">Pune, India &middot; Yesterday</div>
-              </div>
-              <div class="session-time">1d ago</div>
-              <button class="btn btn-sm btn-outline session-signout" type="button" data-session="Windows Desktop">Sign out</button>
-            </div>
-          </div>
-        </div>
-
         <!-- BILLING -->
         <div class="card fade-in">
           <div class="card-header">
             <div>
               <div class="eyebrow">Subscription</div>
-              <h3 class="card-title">Billing</h3>
+              <h3 class="settings-section-title">Billing</h3>
             </div>
           </div>
 
@@ -316,6 +323,18 @@
             <span class="plan-foot-note" id="planLimitNote">Loading usage&hellip;</span>
             <button class="btn btn-sm btn-outline" id="manageBillingBtn" type="button">Manage Billing</button>
           </div>
+        </div>
+
+        <!-- ACTIVE SESSIONS -->
+        <div class="card fade-in">
+          <div class="card-header">
+            <div>
+              <div class="eyebrow">Sessions</div>
+              <h3 class="settings-section-title">Active Sessions</h3>
+            </div>
+          </div>
+
+          <div class="sessions-list" id="sessionsList"></div>
         </div>
 
       </div>
@@ -351,26 +370,27 @@ document.getElementById('signOutBtn').addEventListener('click', async function()
   });
 })();
 
+/* ── shared field-error helpers (used by Profile + Organization saves) ── */
+function setFieldError(input, msg){
+  if (!input) return;
+  var err = input.parentNode.querySelector('.field-error');
+  input.classList.add('input-error');
+  if (err) { err.textContent = msg; err.style.display = 'block'; }
+}
+
+function clearFieldError(input){
+  if (!input) return;
+  var err = input.parentNode.querySelector('.field-error');
+  input.classList.remove('input-error');
+  if (err) err.style.display = 'none';
+}
+
 /* ── PROFILE: validation + save ── */
 (function(){
   var nameInp = document.getElementById('profileName');
   var emailInp = document.getElementById('profileEmail');
   var saveBtn = document.getElementById('profileSaveBtn');
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  function setFieldError(input, msg){
-    if (!input) return;
-    var err = input.parentNode.querySelector('.field-error');
-    input.classList.add('input-error');
-    if (err) { err.textContent = msg; err.style.display = 'block'; }
-  }
-
-  function clearFieldError(input){
-    if (!input) return;
-    var err = input.parentNode.querySelector('.field-error');
-    input.classList.remove('input-error');
-    if (err) err.style.display = 'none';
-  }
 
   function validateName(){
     if (!nameInp.value.trim()) { setFieldError(nameInp, 'Name is required'); return false; }
@@ -451,9 +471,78 @@ document.getElementById('signOutBtn').addEventListener('click', async function()
   }
 })();
 
-/* ── NOTIFICATIONS: persisted toggle switches ── */
+/* ── ORGANIZATION: validation + save (admin-only, enforced server-side too) ── */
 (function(){
-  var toggles = document.querySelectorAll('.toggle-switch input');
+  var nameInp = document.getElementById('orgName');
+  var industryInp = document.getElementById('orgIndustry');
+  var sizeInp = document.getElementById('orgSize');
+  var saveBtn = document.getElementById('orgSaveBtn');
+  if (!saveBtn) return;
+
+  function validateName(){
+    if (!nameInp.value.trim()) { setFieldError(nameInp, 'Organization name is required'); return false; }
+    clearFieldError(nameInp);
+    return true;
+  }
+
+  if (nameInp) nameInp.addEventListener('blur', validateName);
+  if (nameInp) nameInp.addEventListener('input', function(){ if (nameInp.value.trim()) clearFieldError(nameInp); });
+
+  saveBtn.addEventListener('click', function(){
+    if (!validateName()) { nameInp.focus(); return; }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    fetch('/api/organization', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: nameInp.value.trim(),
+        industry: industryInp ? industryInp.value : '',
+        company_size: sizeInp ? sizeInp.value : ''
+      })
+    }).then(function(res) {
+      if (!res.ok) {
+        return res.json().then(function(body) {
+          var err = new Error(body.error || 'save_failed');
+          err.code = body.error || 'save_failed';
+          throw err;
+        });
+      }
+      return res.json();
+    }).then(function() {
+      saveBtn.textContent = 'Saved!';
+      saveBtn.style.background = 'var(--teal)';
+      showToast('Organization updated');
+
+      setTimeout(function(){
+        saveBtn.textContent = 'Save Changes';
+        saveBtn.style.background = '';
+        saveBtn.disabled = false;
+      }, 800);
+    }).catch(function(err) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Changes';
+      if (err && err.code === 'not_authenticated') {
+        window.location.href = 'signin.html';
+        return;
+      }
+      if (err && err.code === 'forbidden') {
+        setFieldError(nameInp, 'Only org admins can edit these details.');
+        return;
+      }
+      var msg = (err && err.code === 'org_name_required') ? 'Organization name is required'
+              : (err && err.code === 'org_name_too_long') ? 'Name must be under 150 characters'
+              : 'Couldn\u2019t save. Please try again.';
+      setFieldError(nameInp, msg);
+    });
+  });
+})();
+
+/* ── NOTIFICATIONS: persisted toggle switches (localStorage-only toggles) ── */
+(function(){
+  var toggles = document.querySelectorAll('.toggle-switch input:not(#notifRisk)');
   var key = 'voovr-prefs';
   var saved = {};
   try { saved = JSON.parse(localStorage.getItem(key)) || {}; } catch (e) {}
@@ -468,103 +557,151 @@ document.getElementById('signOutBtn').addEventListener('click', async function()
   });
 })();
 
-/* ── SECURITY: password validation + save ── */
+/* ── NOTIFICATIONS: Risk & burnout alerts → backend preference (gates risk_drift inserts) ── */
 (function(){
-  var currentInp = document.getElementById('currentPassword');
-  var newInp = document.getElementById('newPassword');
-  var confirmInp = document.getElementById('confirmPassword');
-  var saveBtn = document.getElementById('passSaveBtn');
+  var riskInp = document.getElementById('notifRisk');
+  if (!riskInp) return;
 
-  function setFieldError(input, msg){
-    if (!input) return;
-    var err = input.parentNode.querySelector('.field-error');
-    input.classList.add('input-error');
-    if (err) { err.textContent = msg; err.style.display = 'block'; }
+  function loadPref(){
+    fetch('/api/organization/notification-prefs').then(function(res){
+      return res.ok ? res.json() : null;
+    }).then(function(body){
+      if (body && typeof body.risk_alerts === 'boolean') riskInp.checked = body.risk_alerts;
+    }).catch(function(){});
   }
 
-  function clearFieldError(input){
-    if (!input) return;
-    var err = input.parentNode.querySelector('.field-error');
-    input.classList.remove('input-error');
-    if (err) err.style.display = 'none';
-  }
+  riskInp.addEventListener('change', function(){
+    var prev = !riskInp.checked;
+    var wanted = riskInp.checked;
+    riskInp.disabled = true;
 
-  function validateCurrent(){
-    if (!currentInp.value) { setFieldError(currentInp, 'Current password is required'); return false; }
-    clearFieldError(currentInp);
-    return true;
-  }
-
-  function validateNew(){
-    if (newInp.value.length < 8) { setFieldError(newInp, 'Use at least 8 characters'); return false; }
-    clearFieldError(newInp);
-    return true;
-  }
-
-  function validateConfirm(){
-    if (newInp.value && confirmInp.value !== newInp.value) { setFieldError(confirmInp, 'Passwords do not match'); return false; }
-    clearFieldError(confirmInp);
-    return true;
-  }
-
-  if (currentInp) currentInp.addEventListener('blur', validateCurrent);
-  if (newInp) newInp.addEventListener('blur', validateNew);
-  if (newInp) newInp.addEventListener('input', function(){
-    if (newInp.value.length >= 8) clearFieldError(newInp);
-    if (confirmInp && confirmInp.value) validateConfirm();
-  });
-  if (confirmInp) confirmInp.addEventListener('blur', validateConfirm);
-  if (confirmInp) confirmInp.addEventListener('input', function(){
-    if (confirmInp.value && newInp.value && confirmInp.value !== newInp.value) {
-      setFieldError(confirmInp, 'Passwords do not match');
-    } else {
-      clearFieldError(confirmInp);
-    }
-  });
-
-  if (saveBtn) {
-    saveBtn.addEventListener('click', function(){
-      var ok = validateCurrent() & validateNew() & validateConfirm();
-      if (!ok) return;
-
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving…';
-
-      setTimeout(function(){
-        saveBtn.textContent = 'Saved!';
-        saveBtn.style.background = 'var(--teal)';
-        showToast('Password changed');
-
-        currentInp.value = '';
-        newInp.value = '';
-        confirmInp.value = '';
-
-        setTimeout(function(){
-          saveBtn.textContent = 'Update Password';
-          saveBtn.style.background = '';
-          saveBtn.disabled = false;
-        }, 800);
-      }, 900);
+    fetch('/api/organization/notification-prefs', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ risk_alerts: wanted })
+    }).then(function(res) {
+      if (!res.ok) {
+        return res.json().then(function(body) {
+          var err = new Error(body.error || 'save_failed');
+          err.code = body.error || 'save_failed';
+          throw err;
+        });
+      }
+      return res.json();
+    }).then(function() {
+      showToast('Risk alert preference updated');
+      riskInp.disabled = false;
+    }).catch(function() {
+      riskInp.checked = prev;
+      riskInp.disabled = false;
+      showToast('Could not update — try again');
     });
-  }
+  });
+
+  loadPref();
 })();
 
-/* ── SECURITY: sign out mock sessions ── */
+/* ── ACTIVE SESSIONS: real session tracking + revoke ── */
 (function(){
-  var list = document.getElementById('sessionsList');
-  if (!list) return;
-  list.addEventListener('click', function(e){
-    var btn = e.target.closest('.session-signout');
-    if (!btn) return;
-    var row = btn.closest('.session-row');
-    var device = btn.getAttribute('data-session') || 'device';
+  var listEl = document.getElementById('sessionsList');
+  if (!listEl) return;
+
+  function formatLastSeen(iso){
+    if (!iso) return '';
+    var d = new Date(iso);
+    var diff = Math.round((Date.now() - d.getTime()) / 60000);
+    if (diff < 1) return 'just now';
+    if (diff < 60) return diff + 'm ago';
+    if (diff < 1440) return Math.round(diff / 60) + 'h ago';
+    return Math.round(diff / 1440) + 'd ago';
+  }
+
+  function renderSessions(sessions){
+    listEl.innerHTML = '';
+    if (!sessions || !sessions.length) {
+      listEl.innerHTML = '<div style="font-family:var(--font-rc);font-size:0.7rem;letter-spacing:0.06em;color:var(--ivory-faint);">No active sessions found.</div>';
+      return;
+    }
+    sessions.forEach(function(s){
+      var row = document.createElement('div');
+      row.className = 'session-row';
+
+      var icon = document.createElement('div');
+      icon.className = 'session-icon';
+      icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
+
+      var meta = document.createElement('div');
+      meta.className = 'session-meta';
+      var device = document.createElement('div');
+      device.className = 'session-device';
+      device.textContent = s.device || 'Unknown device';
+      var loc = document.createElement('div');
+      loc.className = 'session-loc';
+      loc.textContent = 'IP ' + (s.ip || 'unknown');
+      meta.appendChild(device);
+      meta.appendChild(loc);
+
+      row.appendChild(icon);
+      row.appendChild(meta);
+
+      if (s.is_current) {
+        var badge = document.createElement('div');
+        badge.className = 'session-time';
+        badge.textContent = 'Current';
+        row.appendChild(badge);
+      } else {
+        var time = document.createElement('div');
+        time.className = 'session-time';
+        time.textContent = formatLastSeen(s.last_seen);
+        row.appendChild(time);
+
+        var btn = document.createElement('button');
+        btn.className = 'btn btn-sm btn-outline session-signout';
+        btn.type = 'button';
+        btn.textContent = 'Sign out';
+        btn.addEventListener('click', function(){
+          revokeSession(s.id, row, btn);
+        });
+        row.appendChild(btn);
+      }
+
+      listEl.appendChild(row);
+    });
+  }
+
+  function revokeSession(id, row, btn){
     btn.disabled = true;
-    btn.textContent = 'Signing out…';
-    gsap.to(row, { opacity: 0, y: -6, duration: 0.3, ease: 'power2.in', onComplete: function(){
+    btn.textContent = 'Signing out\u2026';
+    fetch('/api/sessions/revoke/' + encodeURIComponent(id), { method: 'POST' }).then(function(res){
+      if (!res.ok) {
+        return res.json().then(function(body){
+          var err = new Error(body.error || 'revoke_failed');
+          err.code = body.error || 'revoke_failed';
+          throw err;
+        });
+      }
+      return res.json();
+    }).then(function(){
       row.remove();
-      showToast('Signed out of ' + device);
-    }});
-  });
+      if (!listEl.children.length) {
+        listEl.innerHTML = '<div style="font-family:var(--font-rc);font-size:0.7rem;letter-spacing:0.06em;color:var(--ivory-faint);">No active sessions found.</div>';
+      }
+      showToast('Session signed out');
+    }).catch(function(err){
+      btn.disabled = false;
+      btn.textContent = 'Sign out';
+      var msg = (err && err.code === 'cannot_revoke_current')
+        ? 'You can\u2019t sign out the current session.'
+        : 'Couldn\u2019t sign out this session. Try again.';
+      showToast(msg);
+    });
+  }
+
+  fetch('/api/sessions/active').then(function(res){
+    return res.ok ? res.json() : null;
+  }).then(function(body){
+    if (body && body.sessions) renderSessions(body.sessions);
+  }).catch(function(){});
 })();
 
 /* ── BILLING: usage from /api/me + /api/employees ── */

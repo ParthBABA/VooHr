@@ -162,7 +162,7 @@
     <div class="panel-header">
       <div class="panel-header-top">
         <h2 class="panel-title">Add Employee</h2>
-        <button class="panel-close" id="panelClose" type="button">
+        <button class="panel-close" id="panelClose" type="button" aria-label="Close">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -191,32 +191,39 @@
       <div class="panel-step" data-step="1">
         <div class="step-section">
           <div class="step-section-title">Basic Information</div>
-          <div class="form-group">
-            <label class="form-label">Full Name <span class="required">*</span></label>
-            <input type="text" class="form-input" id="empName" placeholder="Enter full name">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Work Email</label>
-            <input type="email" class="form-input" id="empEmail" placeholder="employee@company.com">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Phone</label>
-            <input type="tel" class="form-input" id="empPhone" placeholder="+1 234 567 890">
-          </div>
-          <div class="form-group">
+
+          <div class="form-group avatar-group">
             <label class="form-label">Profile Photo</label>
             <div class="photo-upload" id="photoUpload">
               <div class="photo-placeholder">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
-                <span class="photo-text">Click to upload photo</span>
+                <div class="photo-placeholder-ring">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+                </div>
+                <span class="photo-text">Click to upload</span>
               </div>
               <input type="file" id="empPhoto" accept="image/*" hidden>
               <div class="photo-preview" id="photoPreview" style="display:none;">
                 <img id="photoImg" alt="Preview">
-                <button class="photo-remove" id="photoRemove" type="button">
+                <button class="photo-remove" id="photoRemove" type="button" aria-label="Remove photo">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Full Name <span class="required">*</span></label>
+            <input type="text" class="form-input" id="empName" placeholder="Enter full name">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Work Email</label>
+              <input type="email" class="form-input" id="empEmail" placeholder="employee@company.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone</label>
+              <input type="tel" class="form-input" id="empPhone" placeholder="+1 234 567 890">
             </div>
           </div>
         </div>
@@ -226,30 +233,65 @@
       <div class="panel-step" data-step="2" style="display:none;">
         <div class="step-section">
           <div class="step-section-title">Job Information</div>
-          <div class="form-group">
-            <label class="form-label">Department</label>
-            <select class="form-input" id="empDepartment">
-              <option value="">Select Department</option>
-              <option>Engineering</option>
-              <option>Design</option>
-              <option>Marketing</option>
-              <option>Sales</option>
-              <option>Operations</option>
-              <option>Finance</option>
-              <option>Product</option>
-            </select>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Department</label>
+              <div class="select-wrapper">
+                <select class="form-input" id="empDepartment">
+                  <option value="">Select Department</option>
+                  <option>Engineering</option>
+                  <option>Design</option>
+                  <option>Marketing</option>
+                  <option>Sales</option>
+                  <option>Operations</option>
+                  <option>Finance</option>
+                  <option>Product</option>
+                  <option>HR</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Designation</label>
+              <input type="text" class="form-input" id="empDesignation" placeholder="e.g. Senior Engineer">
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Designation</label>
-            <input type="text" class="form-input" id="empDesignation" placeholder="e.g. Senior Engineer">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Employment Type</label>
+              <div class="select-wrapper">
+                <select class="form-input" id="empType">
+                  <option value="">Select Type</option>
+                  <option>Full-time</option>
+                  <option>Part-time</option>
+                  <option>Contract</option>
+                  <option>Intern</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Work Mode</label>
+              <div class="select-wrapper">
+                <select class="form-input" id="empWorkMode">
+                  <option value="">Select Mode</option>
+                  <option>Onsite</option>
+                  <option>Remote</option>
+                  <option>Hybrid</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Reporting Manager</label>
-            <input type="text" class="form-input" id="empManager" placeholder="Enter manager's name">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Joining Date</label>
-            <input type="date" class="form-input" id="empJoiningDate">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Reporting Manager</label>
+              <input type="text" class="form-input" id="empManager" placeholder="Enter manager's name">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Joining Date</label>
+              <input type="date" class="form-input" id="empJoiningDate">
+            </div>
           </div>
         </div>
       </div>
@@ -264,12 +306,20 @@
               <span class="finish-value" id="empIdPreview">—</span>
             </div>
             <div class="finish-row">
+              <span class="finish-label">Employment Type</span>
+              <span class="finish-value" id="empTypePreview">—</span>
+            </div>
+            <div class="finish-row">
+              <span class="finish-label">Work Mode</span>
+              <span class="finish-value" id="empWorkModePreview">—</span>
+            </div>
+            <div class="finish-row">
               <span class="finish-label">Status</span>
               <span class="badge healthy">Active</span>
             </div>
             <div class="finish-row">
               <span class="finish-label">AI Profile</span>
-              <span class="finish-value" style="font-size:0.7rem;color:var(--ivory-faint);">Will be initialized after creation</span>
+              <span class="finish-value" style="font-size:0.75rem;color:var(--ivory-faint);">Will be initialized after creation</span>
             </div>
           </div>
           <div class="ai-consent">
@@ -579,6 +629,12 @@ loadDirEmployees();
     if (num === totalSteps) {
       nextBtn.style.display = 'none';
       submitBtn.style.display = 'inline-flex';
+      var typeEl = document.getElementById('empType');
+      var modeEl = document.getElementById('empWorkMode');
+      var typePreview = document.getElementById('empTypePreview');
+      var modePreview = document.getElementById('empWorkModePreview');
+      if (typePreview) typePreview.textContent = (typeEl && typeEl.value) || '—';
+      if (modePreview) modePreview.textContent = (modeEl && modeEl.value) || '—';
     } else {
       nextBtn.style.display = 'inline-flex';
       submitBtn.style.display = 'none';
@@ -597,18 +653,46 @@ loadDirEmployees();
     var placeholder = document.querySelector('.photo-placeholder');
     if (preview) preview.style.display = 'none';
     if (placeholder) placeholder.style.display = 'flex';
+    
+    // Performance optimization: will-change hints and disable blur during anim
+    overlay.style.willChange = 'opacity';
+    panel.style.willChange = 'transform';
+    overlay.classList.add('panel-overlay--animating');
+    
     gsap.set(overlay, { opacity: 0 });
     gsap.set(panel, { x: '100%' });
-    gsap.to(overlay, { opacity: 1, duration: 0.3, ease: 'power2.out' });
-    gsap.to(panel, { x: '0%', duration: 0.45, ease: 'power3.out' });
+    
+    gsap.to(overlay, {
+      opacity: 1, duration: 0.3, ease: 'power2.out',
+      onComplete: function() { 
+        overlay.style.willChange = 'auto'; 
+        overlay.classList.remove('panel-overlay--animating'); 
+      }
+    });
+    gsap.to(panel, {
+      x: '0%', duration: 0.45, ease: 'power3.out',
+      onComplete: function() { 
+        panel.style.willChange = 'auto'; 
+      }
+    });
   }
 
   function closePanel() {
+    overlay.style.willChange = 'opacity';
+    panel.style.willChange = 'transform';
+    overlay.classList.add('panel-overlay--animating');
+    
     gsap.to(panel, { x: '100%', duration: 0.35, ease: 'power3.in' });
-    gsap.to(overlay, { opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: function() {
-      overlay.style.display = 'none';
-      document.body.style.overflow = '';
-    }});
+    gsap.to(overlay, { 
+      opacity: 0, duration: 0.3, ease: 'power2.in', 
+      onComplete: function() {
+        overlay.style.display = 'none';
+        overlay.style.willChange = 'auto';
+        panel.style.willChange = 'auto';
+        overlay.classList.remove('panel-overlay--animating');
+        document.body.style.overflow = '';
+      }
+    });
   }
 
   function nextStep() {
@@ -690,6 +774,8 @@ loadDirEmployees();
       var phone = document.getElementById('empPhone').value.trim();
       var department = document.getElementById('empDepartment').value;
       var position = document.getElementById('empDesignation').value.trim();
+      var employment_type = document.getElementById('empType').value;
+      var work_mode = document.getElementById('empWorkMode').value;
       var joining_date = document.getElementById('empJoiningDate').value;
 
       if (!name) return;
@@ -703,6 +789,8 @@ loadDirEmployees();
         phone: phone || undefined,
         department: department || undefined,
         position: position || undefined,
+        employment_type: employment_type || undefined,
+        work_mode: work_mode || undefined,
         joining_date: joining_date || undefined,
       };
 

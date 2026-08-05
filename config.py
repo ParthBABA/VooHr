@@ -1,4 +1,6 @@
 import os
+from datetime import timedelta
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -7,6 +9,12 @@ load_dotenv()
 class Config:
     # Flask session signing key. Set a long random value in production.
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+
+    # Keep users signed in across browser restarts. Session cookies are
+    # browser-session-only by default (and get wiped when the browser
+    # closes), so without a permanent session the app "forgets" the Google
+    # login on the next visit.
+    PERMANENT_SESSION_LIFETIME = timedelta(days=int(os.environ.get("SESSION_LIFETIME_DAYS", "30")))
 
     # MongoDB
     MONGODB_URI = os.environ.get("MONGODB_URI")
