@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 import requests
+from authlib.integrations.base_client.errors import MismatchingStateError
 from authlib.integrations.flask_client import OAuth
 from bson import ObjectId
 from flask import Blueprint, current_app, redirect, request, session, url_for
@@ -48,7 +49,15 @@ def google_signin():
 
 @auth_bp.route("/google/callback")
 def google_callback():
-    token = oauth.google.authorize_access_token()
+    try:
+        token = oauth.google.authorize_access_token()
+    except MismatchingStateError:
+        # Session cookie was lost between the /signin redirect and this
+        # callback — typically because the user opened the app on a
+        # different host (e.g. 127.0.0.1 vs localhost), so the browser
+        # didn't send the cookie back. Send them back to sign in cleanly
+        # instead of a raw 500.
+        return redirect("/signin.html?error=session_expired")
     userinfo = token.get("userinfo") or {}
     email = userinfo.get("email")
     if not email:
