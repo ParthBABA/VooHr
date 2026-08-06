@@ -4,6 +4,7 @@ from flask import Flask, jsonify, request, send_from_directory
 
 from api import api_bp
 from auth import auth_bp, register_google_oauth
+from auth_email import auth_email_bp
 from config import Config
 from employees import employees_bp
 from extensions import init_db
@@ -23,6 +24,7 @@ def create_app():
     register_google_oauth(app)
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(auth_email_bp, url_prefix="/auth")
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(employees_bp, url_prefix="/api")
     app.register_blueprint(sessions_bp, url_prefix="/api")
