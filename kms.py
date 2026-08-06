@@ -23,7 +23,22 @@ def _get_client():
 
     from google.cloud import kms_v1
 
-    _client = kms_v1.KeyManagementServiceClient()
+    # If GCP_SA_KEY_JSON is set, build credentials directly from that JSON
+    # string (no file needed — paste the whole service-account key as one
+    # env var). Falls back to normal Application Default Credentials
+    # (e.g. GOOGLE_APPLICATION_CREDENTIALS pointing at a file) otherwise.
+    sa_json = os.environ.get("GCP_SA_KEY_JSON")
+    if sa_json:
+        import json
+
+        from google.oauth2 import service_account
+
+        info = json.loads(sa_json)
+        credentials = service_account.Credentials.from_service_account_info(info)
+        _client = kms_v1.KeyManagementServiceClient(credentials=credentials)
+    else:
+        _client = kms_v1.KeyManagementServiceClient()
+
     _key_name = _client.crypto_key_path(
         os.environ["GCP_PROJECT_ID"],
         os.environ["GCP_KMS_LOCATION"],
