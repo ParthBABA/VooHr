@@ -52,7 +52,18 @@ def _send_via_resend(to_email: str, otp: str) -> bool:
         timeout=15,
     )
     if not resp.ok:
-        logger.warning("Resend API returned status %s", resp.status_code)
+        logger.warning(
+            "Resend API returned status %s for to=%s: %s",
+            resp.status_code,
+            to_email,
+            resp.text,
+        )
+    else:
+        try:
+            _id = resp.json().get("id")
+        except Exception:
+            _id = "n/a"
+        logger.info("Resend accepted OTP email to=%s id=%s", to_email, _id)
     return resp.ok
 
 
