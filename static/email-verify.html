@@ -40,15 +40,6 @@ a{ color:inherit; text-decoration:none; }
 button{ font-family:inherit; cursor:pointer; border:none; background:none; color:inherit; }
 img{ max-width:100%; display:block; }
 @media (prefers-reduced-motion: reduce){ *{ animation-duration:.001ms !important; transition-duration:.001ms !important; } }
-.eyebrow{
-  display:inline-flex;align-items:center;gap:8px;
-  font-family:var(--font-num);font-size:12px;font-weight:500;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--accent);
-}
-.eyebrow::before{
-  content:'';width:6px;height:6px;border-radius:50%;
-  background:var(--grad-primary);box-shadow:0 0 12px rgba(110,86,255,.9);
-}
 h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:var(--white);}
 .muted{ color:var(--muted); }
 .btn{
@@ -77,82 +68,28 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
 .btn-google:hover{ transform:scale(1.015);background:#fff; }
 .btn-google:active{ transform:scale(.985); }
 .btn-google svg{ flex-shrink:0; }
-.btn-disabled{
-  width:100%;background:rgba(255,255,255,.03);color:var(--muted-2);
-  border:1px solid var(--line);cursor:not-allowed;pointer-events:none;
-  opacity:.5;
-}
 .glass{
   background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
   backdrop-filter:blur(20px);
 }
-.logo{
-  display:flex;align-items:center;gap:10px;
-  font-family:var(--font-head);font-weight:700;font-size:19px;letter-spacing:-.01em;
-}
-.logo-mark{
-  width:28px;height:28px;border-radius:8px;background:var(--grad-primary);
-  position:relative;box-shadow:0 0 0 1px rgba(255,255,255,.08) inset;flex-shrink:0;
-}
-.logo-mark::after{
-  content:'';position:absolute;inset:7px;border-radius:3px;background:var(--bg);
-  clip-path:polygon(0 0,100% 0,0 100%);
-}
 .setup-shell{
-  position:relative;min-height:100vh;display:grid;grid-template-columns:40% 60%;
+  position:relative;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:48px 24px;
 }
 .setup-shell::before{
   content:'';position:absolute;inset:0;background:var(--grad-radial);
   opacity:.8;pointer-events:none;z-index:0;
 }
-.setup-grid-overlay{
-  position:absolute;inset:0;
-  background-image:linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
-  background-size:64px 64px;
-  mask-image:radial-gradient(ellipse 70% 60% at 0% 30%, black, transparent 75%);
-  pointer-events:none;z-index:0;
-}
-.setup-left{
-  position:relative;z-index:1;border-right:1px solid var(--line);
-  padding:48px 56px;display:flex;flex-direction:column;
-}
-.setup-left-top{ display:flex;flex-direction:column; }
-.setup-left-body{
-  flex:1;display:flex;flex-direction:column;justify-content:center;
-  max-width:400px;padding:40px 0;
-}
-.setup-left-body h1{font-size:clamp(30px, 2.6vw, 40px);line-height:1.1;margin:18px 0 16px;}
-.setup-left-body p{font-size:15px;color:var(--muted);line-height:1.7;margin-bottom:34px;}
-.trust-list{ display:flex;flex-direction:column;gap:14px; }
-.trust-item{
-  display:flex;align-items:center;gap:12px;font-size:13.5px;color:var(--white);font-weight:500;
-}
-.trust-check{
-  width:20px;height:20px;border-radius:50%;flex-shrink:0;
+.setup-brand{
   display:flex;align-items:center;justify-content:center;
-  background:rgba(94,230,160,.12);color:#5EE6A0;font-size:11px;font-weight:700;
+  margin-bottom:24px;position:relative;z-index:1;
 }
-.setup-progress{position:relative;z-index:1;}
-.setup-progress-label{
-  display:flex;align-items:center;justify-content:space-between;
-  font-family:var(--font-num);font-size:12px;color:var(--muted-2);margin-bottom:10px;
-}
-.setup-progress-track{display:flex;gap:6px;}
-.setup-progress-track span{
-  flex:1;height:3px;border-radius:999px;background:var(--line);overflow:hidden;position:relative;
-}
-.setup-progress-track span.filled::after{
-  content:'';position:absolute;inset:0;background:var(--grad-primary);
-  box-shadow:0 0 10px rgba(110,86,255,.6);
-}
-.setup-progress-track span.current::after{ animation:progressPulse 1.8s ease-in-out infinite; }
-@keyframes progressPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
-.setup-right{
-  position:relative;z-index:1;display:flex;align-items:center;
-  justify-content:center;padding:48px;
+.setup-logo-img{
+  height:34px;width:auto;display:block;object-fit:contain;
 }
 .setup-card{
-  width:100%;max-width:480px;border-radius:var(--radius-lg);padding:40px;
+  width:100%;max-width:520px;border-radius:var(--radius-lg);padding:32px 40px;
   box-shadow:0 40px 120px -30px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.02) inset;
 }
 .setup-card-head{
@@ -164,25 +101,7 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
   box-shadow:0 0 8px #5EE6A0;flex-shrink:0;
 }
 .setup-card h2{font-size:22px;margin-bottom:8px;}
-.setup-card .card-desc{font-size:13.5px;color:var(--muted);line-height:1.7;margin-bottom:28px;}
-.verify-option{
-  border:1px solid var(--line);
-  border-radius:var(--radius-md);
-  padding:28px;
-  margin-bottom:16px;
-  transition:border-color .25s ease, background .25s ease;
-}
-.verify-option:hover{border-color:#33333a;}
-.verify-option-primary{border-color:rgba(110,86,255,.3);background:rgba(110,86,255,.04);}
-.verify-option-primary:hover{border-color:rgba(110,86,255,.5);background:rgba(110,86,255,.07);}
-.verify-option h3{
-  font-family:var(--font-head);font-size:15px;font-weight:600;
-  color:var(--white);margin-bottom:6px;letter-spacing:-.01em;
-}
-.verify-option p{
-  font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;
-}
-.verify-option .btn{width:100%;}
+.setup-card .card-desc{font-size:13.5px;color:var(--muted);line-height:1.7;margin-bottom:20px;}
 .field{ margin-bottom:0; }
 .field label{
   display:block;
@@ -211,16 +130,25 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
 .field input:disabled{
   opacity:.4;cursor:not-allowed;
 }
-.verify-badge{
-  display:inline-flex;align-items:center;gap:5px;
-  font-family:var(--font-num);font-size:10px;font-weight:600;
-  letter-spacing:.08em;text-transform:uppercase;
-  color:var(--muted-2);
-  background:rgba(255,255,255,.04);
-  border:1px solid var(--line);
-  border-radius:999px;
-  padding:4px 10px;
-  margin-bottom:16px;
+.auth-form{
+  display:flex;flex-direction:column;gap:16px;
+}
+.field-hint{
+  font-size:11.5px;color:var(--muted-2);
+  margin-top:7px;line-height:1.5;
+}
+.divider{
+  display:flex;align-items:center;gap:14px;
+  margin:20px 0 16px;
+}
+.divider::before,
+.divider::after{
+  content:'';flex:1;height:1px;background:var(--line);
+}
+.divider span{
+  font-family:var(--font-num);font-size:11px;font-weight:500;
+  text-transform:uppercase;letter-spacing:.08em;
+  color:var(--muted-2);white-space:nowrap;
 }
 .setup-disclaimer{
   text-align:center;font-size:12px;color:var(--muted-2);
@@ -228,15 +156,23 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
   max-width:380px;margin-left:auto;margin-right:auto;
 }
 .setup-note{text-align:center;font-size:12.5px;color:var(--muted-2);margin-top:22px;}
-@media (max-width:980px){
-  .setup-shell{grid-template-columns:1fr;}
-  .setup-left{border-right:none;border-bottom:1px solid var(--line);padding:40px 32px;}
-  .setup-left-body{padding:28px 0;max-width:520px;}
-  .setup-right{padding:32px;}
+.setup-progress{margin-top:24px;padding-top:20px;border-top:1px solid var(--line);}
+.setup-progress-label{
+  display:flex;align-items:center;justify-content:space-between;
+  font-family:var(--font-num);font-size:12px;color:var(--muted-2);margin-bottom:10px;
 }
+.setup-progress-track{display:flex;gap:6px;}
+.setup-progress-track span{
+  flex:1;height:3px;border-radius:999px;background:var(--line);overflow:hidden;position:relative;
+}
+.setup-progress-track span.filled::after{
+  content:'';position:absolute;inset:0;background:var(--grad-primary);
+  box-shadow:0 0 10px rgba(110,86,255,.6);
+}
+.setup-progress-track span.current::after{ animation:progressPulse 1.8s ease-in-out infinite; }
+@keyframes progressPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
 @media (max-width:560px){
-  .setup-left{padding:32px 24px;}
-  .setup-right{padding:24px;}
+  .setup-shell{padding:32px 20px;}
   .setup-card{padding:28px 22px;}
 }
 .verify-error-link{
@@ -251,74 +187,115 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
 <body>
 
 <div class="setup-shell">
-  <div class="setup-grid-overlay"></div>
-
-  <div class="setup-left">
-    <div class="setup-left-top" data-reveal>
-      <div class="logo"><span class="logo-mark"></span>VooVr</div>
-    </div>
-
-    <div class="setup-left-body">
-      <span class="eyebrow" data-reveal>Verification</span>
-      <h1 data-reveal>Verify Your Business Email</h1>
-      <p data-reveal>Choose how you'd like to verify the business email that will be associated with your organization.</p>
-
-      <div class="trust-list" data-reveal>
-        <div class="trust-item"><span class="trust-check">&#10003;</span>Enterprise Security</div>
-        <div class="trust-item"><span class="trust-check">&#10003;</span>Verified Business Identity</div>
-        <div class="trust-item"><span class="trust-check">&#10003;</span>Secure Workspace</div>
-      </div>
-    </div>
-
-    <div class="setup-progress" data-reveal>
-      <div class="setup-progress-label">
-        <span>Step 1 of 2</span>
-        <span>Email Verification</span>
-      </div>
-      <div class="setup-progress-track">
-        <span class="filled current"></span>
-        <span></span>
-      </div>
-    </div>
+  <div class="setup-brand" data-reveal>
+    <img src="voovr-logo-full.png" alt="VOOVR" class="setup-logo-img">
   </div>
 
-  <div class="setup-right">
-    <div class="setup-card glass" id="setupCard">
+  <div class="setup-card glass" id="setupCard">
       <div class="setup-card-head" data-reveal><span class="dot"></span>Secure workspace setup</div>
-      <h2 data-reveal>Business Email Verification</h2>
-      <p class="card-desc" data-reveal>Choose how you'd like to verify the business email that will be associated with your organization.</p>
+      <h2 data-reveal>Create your account</h2>
+      <p class="card-desc" data-reveal>Set a business email and password to start building your VooVr workspace.</p>
 
       <div id="verifyError" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#f87171;" data-reveal></div>
 
-      <div class="verify-option verify-option-primary" data-reveal>
-        <h3>Continue with Google</h3>
-        <p>Use your business Google account to verify your organization and continue setup.</p>
-        <button type="button" class="btn btn-google" id="googleBtn">
-          <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.81.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.98A9 9 0 0 0 0 9c0 1.45.35 2.83.98 4.03l2.97-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .98 4.97l2.97 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
-          Continue with Google
-        </button>
-      </div>
-
-      <div class="verify-option" data-reveal>
-        <div class="verify-badge">Coming Soon</div>
-        <h3>Verify with Business Email</h3>
-        <p>Use your company email address and verify it using a one-time password.</p>
+      <form class="auth-form" id="signupForm" data-reveal>
         <div class="field">
           <label for="verifyEmail">Business Email</label>
-          <input type="email" id="verifyEmail" name="verifyEmail" placeholder="you@company.com" disabled>
+          <input type="email" id="verifyEmail" autocomplete="email" placeholder="you@company.com" required>
         </div>
-        <button type="button" class="btn btn-disabled" style="margin-top:16px;" disabled>Coming Soon</button>
+        <div class="field">
+          <label for="verifyPassword">Password</label>
+          <input type="password" id="verifyPassword" autocomplete="new-password" placeholder="Create a password" required minlength="8">
+          <div class="field-hint">Use 8+ characters with a mix of letters &amp; numbers.</div>
+        </div>
+        <button type="submit" class="btn btn-primary" id="createAccountBtn" style="width:100%">Create Account</button>
+      </form>
+
+      <div class="setup-progress" data-reveal>
+        <div class="setup-progress-label">
+          <span>Step 2 of 2</span>
+          <span>Email Verification</span>
+        </div>
+        <div class="setup-progress-track">
+          <span class="filled"></span>
+          <span class="filled current"></span>
+        </div>
       </div>
+
+      <div class="divider" data-reveal>
+        <span>Or continue with</span>
+      </div>
+
+      <button type="button" class="btn btn-google" id="googleBtn" data-reveal>
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.81.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.98A9 9 0 0 0 0 9c0 1.45.35 2.83.98 4.03l2.97-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .98 4.97l2.97 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+        Continue with Google
+      </button>
 
       <div class="setup-disclaimer" data-reveal>By continuing, you agree to securely verify your business identity before creating your HR workspace.</div>
     </div>
-  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script>
 document.getElementById('googleBtn').addEventListener('click', function(){
   window.location.href = '/auth/google/register';
+});
+
+document.getElementById('signupForm').addEventListener('submit', function(event){
+  event.preventDefault();
+  if (!event.target.checkValidity()) {
+    event.target.reportValidity();
+    return;
+  }
+  var email = document.getElementById('verifyEmail').value.trim();
+  var password = document.getElementById('verifyPassword').value;
+  var btn = document.getElementById('createAccountBtn');
+  var box = document.getElementById('verifyError');
+
+  btn.disabled = true;
+  btn.textContent = 'Creating account...';
+  box.style.display = 'none';
+
+  fetch('/auth/email/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, password: password })
+  })
+  .then(function(r) {
+    return r.json()
+      .then(function(data) { return { ok: r.ok, data: data, status: r.status }; })
+      .catch(function() { return { ok: false, data: null, status: r.status }; });
+  })
+  .then(function(res) {
+    if (res.data && res.data.ok) {
+      sessionStorage.setItem('voohr_pending_email', email);
+      window.location.href = '/otp-verify.html';
+      return;
+    }
+    btn.disabled = false;
+    btn.textContent = 'Create Account';
+    if (!res.data) {
+      // Non-JSON response (e.g. an HTML 500 error page) — server-side failure.
+      box.textContent = 'Server error (HTTP ' + res.status + '). Please try again.';
+      box.style.display = 'block';
+      return;
+    }
+    var messages = {
+      weak_password: 'Password is too weak. Use 8+ characters with a mix of letters and numbers.',
+      already_registered: 'An account with that email already exists. ' +
+        '<a href="signin.html" class="verify-error-link">Sign in instead</a>.',
+      email_failed: 'We couldn\'t send a verification email. Please try again.',
+      missing_org: 'Your session expired. Please go back and re-enter your organization details.'
+    };
+    box.innerHTML = messages[res.data.error] || 'Something went wrong. Please try again.';
+    box.style.display = 'block';
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.textContent = 'Create Account';
+    box.textContent = 'Network error — could not reach the server. Please try again.';
+    box.style.display = 'block';
+  });
 });
 
 (function(){
@@ -342,8 +319,8 @@ document.getElementById('googleBtn').addEventListener('click', function(){
 window.addEventListener('load', function() {
   var tl = gsap.timeline({ defaults:{ ease:'power3.out' } });
 
-  tl.from('.setup-left [data-reveal]', {
-      opacity:0, y:20, filter:'blur(8px)', duration:.8, stagger:.09
+  tl.from('.setup-brand', {
+      opacity:0, y:20, filter:'blur(8px)', duration:.8
     }, 0)
     .from('#setupCard', {
       opacity:0, y:24, filter:'blur(10px)', duration:.9

@@ -1,0 +1,263 @@
+"""Password-based signup (email OTP verification) for VooHr.
+
+An additional auth path alongside the existing Google OAuth flow in auth.py.
+Follows the same security patterns: blind_index for lookups, KMS envelope
+encryption for reversible PII, and auth.py's session/_record_active_session
+for the signed-in session.
+
+Flow:
+  1. onboarding.html POSTs org details -> session["pending_org"]
+  2. email-verify.html POSTs {email, password}  -> /auth/email/start
+       - stores an OTP doc in `otp_verifications`, emails the 6-digit code
+  3. otp-verify.html POSTs {otp}                -> /auth/email/verify-otp
+       - on match, creates the org + user and starts a session
+  4. otp-verify.html can POST /auth/email/resend-otp to get a fresh code
+  5. returning users sign in via POST /auth/password/signin
+"""
+
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
+
+from flask import Blueprint, jsonify, request, session
+
+from auth import _record_active_session
+from blind_index import blind_index
+from email_service import send_otp_email
+from extensions import get_db
+from field_encryption import decrypt_fields, encrypt_fields
+from password_utils import hash_password, password_strength_ok, verify_password
+
+auth_email_bp = Blueprint("auth_email", __name__)
+
+_OTP_TTL = timedelta(minutes=10)
+_MAX_ATTEMPTS = 5
+_RESEND_COOLDOWN = timedelta(seconds=60)
+_LOCKOUT_AFTER = 5
+_LOCKOUT_TTL = timedelta(minutes=15)
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _aware(dt) -> datetime | None:
+    """MongoDB returns naive UTC datetimes; make them aware before comparing
+    (same pattern as employees.py)."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _generate_otp() -> str:
+    return f"{secrets.randbelow(900000) + 100000:06d}"
+
+
+def _otp_hash(otp: str) -> str:
+    return hashlib.sha256(otp.encode()).hexdigest()
+
+
+@auth_email_bp.route("/email/start", methods=["POST"])
+def email_start():
+    """Create an OTP verification for {email, password} and email the code."""
+    pending_org = session.get("pending_org")
+    if not pending_org:
+        return jsonify({"error": "missing_org"}), 400
+
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    password = data.get("password") or ""
+    if not email or not password:
+        return jsonify({"error": "missing_fields"}), 400
+
+    if not password_strength_ok(password):
+        return jsonify({"error": "weak_password"}), 400
+
+    email_hash = blind_index(email)
+    db = get_db()
+    if db.users.find_one({"email_hash": email_hash}):
+        return jsonify({"error": "already_registered"}), 409
+
+    otp = _generate_otp()
+    now = _now()
+
+    db.otp_verifications.update_one(
+        {"email_hash": email_hash},
+        {
+            "$set": {
+                "otp_hash": _otp_hash(otp),
+                "password_hash": hash_password(password),
+                "pending_org": pending_org,
+                "attempts": 0,
+                "created_at": now,
+                "expires_at": now + _OTP_TTL,
+                "last_sent_at": now,
+            }
+        },
+        upsert=True,
+    )
+
+    if not send_otp_email(email, otp):
+        return jsonify({"error": "email_failed"}), 500
+
+    # Plaintext email kept in the session temporarily so the OTP-verify page
+    # doesn't have to round-trip it through the URL.
+    session["pending_email"] = email
+    return jsonify({"ok": True}), 200
+
+
+@auth_email_bp.route("/email/verify-otp", methods=["POST"])
+def verify_otp():
+    """Verify the 6-digit code; on match, create org + user and sign in."""
+    email = session.get("pending_email")
+    if not email:
+        return jsonify({"error": "session_expired"}), 400
+
+    data = request.get_json(silent=True) or {}
+    otp = (data.get("otp") or "").strip()
+    if not otp:
+        return jsonify({"error": "invalid_otp"}), 400
+
+    email_hash = blind_index(email)
+    db = get_db()
+    doc = db.otp_verifications.find_one({"email_hash": email_hash})
+    now = _now()
+
+    expires_at = _aware(doc.get("expires_at")) if doc else None
+    if expires_at is None or expires_at < now:
+        return jsonify({"error": "expired"}), 400
+
+    if doc.get("attempts", 0) >= _MAX_ATTEMPTS:
+        return jsonify({"error": "too_many_attempts"}), 429
+
+    if _otp_hash(otp) != doc.get("otp_hash"):
+        db.otp_verifications.update_one(
+            {"email_hash": email_hash},
+            {"$inc": {"attempts": 1}},
+        )
+        return jsonify({"error": "invalid_otp"}), 400
+
+    # --- match: create org + user (mirrors the Google register flow) ---
+    pending_org = doc.get("pending_org") or {}
+    name = email.split("@")[0]
+    encrypted_fields, wrapped_dek = encrypt_fields({"name": name, "email": email})
+
+    org_doc = {
+        "name": pending_org.get("orgName", ""),
+        "industry": pending_org.get("industry", ""),
+        "company_size": pending_org.get("companySize", ""),
+        "created_at": now,
+    }
+    org_id = db.organizations.insert_one(org_doc).inserted_id
+
+    user_doc = {
+        "email_hash": email_hash,
+        "encrypted": encrypted_fields,
+        "wrapped_dek": wrapped_dek,
+        # Already argon2-hashed by email_start — never re-hash.
+        "password_hash": doc["password_hash"],
+        "org_id": org_id,
+        "role": "admin",
+        "created_at": now,
+        "last_login": now,
+    }
+    user_id = db.users.insert_one(user_doc).inserted_id
+
+    db.otp_verifications.delete_one({"email_hash": email_hash})
+    session.pop("pending_org", None)
+    session.pop("pending_email", None)
+
+    session.permanent = True
+    session["user_id"] = str(user_id)
+    session["org_id"] = str(org_id)
+    session["just_registered"] = True
+    _record_active_session(db, user_id)
+    return jsonify({"ok": True, "redirect": "/onboarding-complete.html"}), 200
+
+
+@auth_email_bp.route("/email/resend-otp", methods=["POST"])
+def resend_otp():
+    """Generate a fresh OTP for the pending email (with a 60s cooldown)."""
+    email = session.get("pending_email")
+    if not email:
+        return jsonify({"error": "session_expired"}), 400
+
+    email_hash = blind_index(email)
+    db = get_db()
+    doc = db.otp_verifications.find_one({"email_hash": email_hash})
+    if not doc:
+        return jsonify({"error": "expired"}), 400
+
+    now = _now()
+    last_sent = _aware(doc.get("last_sent_at"))
+    if last_sent:
+        elapsed = now - last_sent
+        if elapsed < _RESEND_COOLDOWN:
+            retry_after = int((_RESEND_COOLDOWN - elapsed).total_seconds()) + 1
+            return jsonify({"error": "cooldown", "retry_after": retry_after}), 429
+
+    otp = _generate_otp()
+    db.otp_verifications.update_one(
+        {"email_hash": email_hash},
+        {
+            "$set": {
+                "otp_hash": _otp_hash(otp),
+                "expires_at": now + _OTP_TTL,
+                "last_sent_at": now,
+                "attempts": 0,
+            }
+        },
+    )
+
+    if not send_otp_email(email, otp):
+        return jsonify({"error": "email_failed"}), 500
+    return jsonify({"ok": True}), 200
+
+
+@auth_email_bp.route("/password/signin", methods=["POST"])
+def password_signin():
+    """Returning-user sign-in with email + password."""
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    password = data.get("password") or ""
+
+    email_hash = blind_index(email)
+    db = get_db()
+    user = db.users.find_one({"email_hash": email_hash})
+    if not user or not user.get("password_hash"):
+        # Same response for "no such user" and "Google-only account" so we
+        # don't reveal which case it is.
+        return jsonify({"error": "invalid_credentials"}), 401
+
+    now = _now()
+    lockout_until = _aware(user.get("lockout_until"))
+    if lockout_until and lockout_until > now:
+        retry_after = int((lockout_until - now).total_seconds()) + 1
+        return jsonify({"error": "locked", "retry_after": retry_after}), 423
+
+    if not verify_password(password, user["password_hash"]):
+        attempts = user.get("failed_login_attempts", 0) + 1
+        update = {"$set": {"failed_login_attempts": attempts, "last_login_attempt": now}}
+        if attempts >= _LOCKOUT_AFTER:
+            update["$set"]["lockout_until"] = now + _LOCKOUT_TTL
+        db.users.update_one({"_id": user["_id"]}, update)
+        return jsonify({"error": "invalid_credentials"}), 401
+
+    db.users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {"failed_login_attempts": 0, "last_login": now},
+            "$unset": {"lockout_until": ""},
+        },
+    )
+
+    pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
+    session.permanent = True
+    session["user_id"] = str(user["_id"])
+    session["org_id"] = str(user["org_id"])
+    session["user_name"] = pii.get("name", "")
+    session["user_email"] = pii.get("email", "")
+    _record_active_session(db, user["_id"])
+    return jsonify({"ok": True, "redirect": "/dashboard.html"}), 200
