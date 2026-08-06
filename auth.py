@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import requests
 from authlib.integrations.flask_client import OAuth
 from bson import ObjectId
-from flask import Blueprint, redirect, request, session, url_for
+from flask import Blueprint, current_app, redirect, request, session, url_for
 
 from blind_index import blind_index
 from extensions import get_db
@@ -34,7 +34,7 @@ def google_register():
     if "pending_org" not in session:
         return redirect("/onboarding.html?error=missing_org")
     session["oauth_flow"] = "register"
-    redirect_uri = url_for("auth.google_callback", _external=True)
+    redirect_uri = current_app.config.get("GOOGLE_REDIRECT_URI") or url_for("auth.google_callback", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
 
@@ -42,7 +42,7 @@ def google_register():
 def google_signin():
     """Returning-user sign-in from signin.html."""
     session["oauth_flow"] = "signin"
-    redirect_uri = url_for("auth.google_callback", _external=True)
+    redirect_uri = current_app.config.get("GOOGLE_REDIRECT_URI") or url_for("auth.google_callback", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
 

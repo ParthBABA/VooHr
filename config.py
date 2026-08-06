@@ -23,6 +23,11 @@ class Config:
     # Google OAuth (create credentials at https://console.cloud.google.com/apis/credentials)
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+    # Exact callback URL Google must redirect back to. When unset, it is
+    # derived from the request host (url_for _external=True), which breaks if
+    # the browser uses a different host than the Google Console whitelist
+    # (e.g. 127.0.0.1 vs localhost, or Render's URL).
+    GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI") or ""
 
     # Google Cloud KMS (field-level envelope encryption)
     GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
