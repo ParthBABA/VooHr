@@ -1,62 +1,53 @@
-"""Google Cloud KMS envelope-encryption helpers.
+"""Local envelope-encryption helper (replaces Google Cloud KMS).
 
-Uses Application Default Credentials — run `gcloud auth application-default login`
-locally and it just works. In production (Cloud Run / GCE) the attached service
-account provides credentials automatically.
+GCP KMS needed a service-account key, and this org has
+`iam.disableServiceAccountKeyCreation` enforced, blocking that. Instead we
+wrap/unwrap the per-record DEK with a single master key kept in the
+MASTER_ENCRYPTION_KEY env var (base64, 32 raw bytes) — same trust model as
+PASSWORD_PEPPER / HASH_INDEX_SECRET elsewhere in this app: one server-side
+secret, never written to the database.
 
-Client is lazily initialized so import-time doesn't require credentials.
+Generate a key once with:
+    python -c "import secrets, base64; print(base64.b64encode(secrets.token_bytes(32)).decode())"
+and put the output in MASTER_ENCRYPTION_KEY on Render (and in .env locally).
 """
 
+import base64
 import os
 
-_client = None
-_key_name = None
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+_NONCE_LEN = 12  # 96-bit nonce for AES-GCM
 
 
-def _get_client():
-    global _client, _key_name
-    if _client is not None:
-        return _client, _key_name
-
+def _master_key() -> bytes:
     from dotenv import load_dotenv
     load_dotenv()
 
-    from google.cloud import kms_v1
-
-    # If GCP_SA_KEY_JSON is set, build credentials directly from that JSON
-    # string (no file needed — paste the whole service-account key as one
-    # env var). Falls back to normal Application Default Credentials
-    # (e.g. GOOGLE_APPLICATION_CREDENTIALS pointing at a file) otherwise.
-    sa_json = os.environ.get("GCP_SA_KEY_JSON")
-    if sa_json:
-        import json
-
-        from google.oauth2 import service_account
-
-        info = json.loads(sa_json)
-        credentials = service_account.Credentials.from_service_account_info(info)
-        _client = kms_v1.KeyManagementServiceClient(credentials=credentials)
-    else:
-        _client = kms_v1.KeyManagementServiceClient()
-
-    _key_name = _client.crypto_key_path(
-        os.environ["GCP_PROJECT_ID"],
-        os.environ["GCP_KMS_LOCATION"],
-        os.environ["GCP_KMS_KEY_RING"],
-        os.environ["GCP_KMS_KEY"],
-    )
-    return _client, _key_name
+    key_b64 = os.environ.get("MASTER_ENCRYPTION_KEY")
+    if not key_b64:
+        raise RuntimeError(
+            "MASTER_ENCRYPTION_KEY is not set — cannot wrap/unwrap data keys. "
+            "Generate one with: python -c \"import secrets, base64; "
+            "print(base64.b64encode(secrets.token_bytes(32)).decode())\""
+        )
+    key = base64.b64decode(key_b64)
+    if len(key) != 32:
+        raise RuntimeError("MASTER_ENCRYPTION_KEY must decode to exactly 32 bytes.")
+    return key
 
 
 def wrap_data_key(dek_bytes: bytes) -> bytes:
-    """Send a 32-byte DEK to Cloud KMS and return the wrapped ciphertext."""
-    client, key_name = _get_client()
-    response = client.encrypt(request={"name": key_name, "plaintext": dek_bytes})
-    return response.ciphertext
+    """Encrypt a 32-byte DEK with the local master key. Returns nonce + ciphertext."""
+    aesgcm = AESGCM(_master_key())
+    nonce = os.urandom(_NONCE_LEN)
+    ct = aesgcm.encrypt(nonce, dek_bytes, None)
+    return nonce + ct
 
 
 def unwrap_data_key(wrapped_bytes: bytes) -> bytes:
-    """Ask Cloud KMS to unwrap a previously wrapped DEK."""
-    client, key_name = _get_client()
-    response = client.decrypt(request={"name": key_name, "ciphertext": wrapped_bytes})
-    return response.plaintext
+    """Decrypt a DEK previously wrapped with wrap_data_key."""
+    aesgcm = AESGCM(_master_key())
+    nonce = wrapped_bytes[:_NONCE_LEN]
+    ct = wrapped_bytes[_NONCE_LEN:]
+    return aesgcm.decrypt(nonce, ct, None)
