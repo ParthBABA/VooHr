@@ -52,7 +52,7 @@ try:
     _key_name = _client.crypto_key_path(
         os.environ["GCP_PROJECT_ID"],
         os.environ.get("GCP_KMS_LOCATION", "asia-south1"),
-        os.environ.get("GCP_KMS_KEY_RING", "voovr-keyring"),
+        os.environ.get("GCP_KMS_KEY_RING", "voovr-asia"),
         os.environ.get("GCP_KMS_KEY", "voovr-field-encryption-key"),
     )
 except Exception as exc:

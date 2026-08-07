@@ -32,7 +32,7 @@ class Config:
     # Google Cloud KMS (field-level envelope encryption)
     GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
     GCP_KMS_LOCATION = os.environ.get("GCP_KMS_LOCATION", "asia-south1")
-    GCP_KMS_KEY_RING = os.environ.get("GCP_KMS_KEY_RING", "voovr-keyring")
+    GCP_KMS_KEY_RING = os.environ.get("GCP_KMS_KEY_RING", "voovr-asia")
     GCP_KMS_KEY = os.environ.get("GCP_KMS_KEY", "voovr-field-encryption-key")
 
     # Blind-index & JWT secrets
