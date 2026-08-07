@@ -47,6 +47,22 @@ session.
      (swap the host for your real domain in production, and add both if you
      test locally and deploy).
 
+### Deploying to Railway (field encryption via Google Cloud KMS)
+
+Field-level encryption uses Google Cloud KMS. On Railway:
+
+1. Open your project → **Variables**.
+2. Add `GOOGLE_CREDENTIALS_JSON` and **paste the full service-account JSON as
+   its value** (single-line string — Railway stores it as a secret, no file
+   needed at runtime). Make sure it is a Railway *secret*, not a public
+   variable, and never commit it.
+3. Add `GCP_PROJECT_ID`, `GCP_KMS_LOCATION` (e.g. `asia-south1`),
+   `GCP_KMS_KEY_RING`, and `GCP_KMS_KEY` matching your key in Google Cloud
+   Console.
+
+Locally, either set `GOOGLE_CREDENTIALS_JSON` in `.env` or use
+`GOOGLE_APPLICATION_CREDENTIALS` pointing at the local key file.
+
 2. Install dependencies:
    ```bash
    python3 -m venv .venv
