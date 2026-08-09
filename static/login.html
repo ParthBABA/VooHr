@@ -293,6 +293,9 @@ h1,h2,h3,h4{
   font-family:var(--font-head); font-weight:700; font-size:19px; letter-spacing:-.01em;
   color:var(--white);
 }
+.logo-img{
+  height:34px; width:auto; display:block; object-fit:contain;
+}
 .logo-mark{
   width:28px; height:28px; border-radius:8px;
   background:var(--grad-primary);
@@ -538,6 +541,24 @@ h1,h2,h3,h4{
   -webkit-background-clip:text;
   background-clip:text;
   color:transparent;
+}
+.grad-head{
+  position:relative;
+  z-index:1;
+}
+.grad-head::before{
+  content:'';
+  position:absolute;
+  left:50%; top:50%;
+  transform:translate(-50%,-50%);
+  width:160%;
+  min-width:420px;
+  height:4em;
+  background:radial-gradient(closest-side, rgba(110,86,255,.7), rgba(110,86,255,.22) 60%, rgba(110,86,255,0) 82%);
+  filter:blur(18px);
+  border-radius:50%;
+  z-index:-1;
+  pointer-events:none;
 }
 .hero-inner p{
   font-size:18px;
@@ -1299,12 +1320,12 @@ h1,h2,h3,h4{
   width:100%; height:100%;
   object-fit:cover;
   z-index:0;
-  opacity:.35;
+  opacity:.6;
   transition:transform var(--transition-slow), opacity var(--transition-slow);
 }
 .bento-item:hover .bento-bg{
   transform:scale(1.08);
-  opacity:.45;
+  opacity:.7;
 }
 .bento-item::before{
   content:'';
@@ -1460,7 +1481,6 @@ h1,h2,h3,h4{
   6%{ r:34; opacity:0; }
   100%{ r:34; opacity:0; }
 }
-.particle circle{ }
 
 .flow-steps{
   display:grid;
@@ -1588,7 +1608,7 @@ h1,h2,h3,h4{
 .flow-backdrop.is-open{
   opacity:1;
   visibility:visible;
-  pointer-events:auto;
+  pointer-events:none;
   transition:opacity .4s var(--ease-out,ease), visibility 0s linear 0s, backdrop-filter .4s ease;
 }
 
@@ -1623,6 +1643,7 @@ h1,h2,h3,h4{
   padding:1px;
   background:linear-gradient(120deg, var(--ins-glow-a,#6E56FF), transparent 30%, transparent 70%, var(--ins-glow-b,#4D9FFF));
   -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite:xor;
   mask-composite:exclude;
   opacity:.55;
@@ -1696,15 +1717,76 @@ h1,h2,h3,h4{
 @keyframes ecCameraMove{
   0%   { transform:scale(1)    translate(0%,0%); }   /* 0.0s — wide shot: avatar draws, name+ID write */
   13%  { transform:scale(1)    translate(0%,0%); }   /* 1.3s — basic details (name+ID) just finished */
-  18%  { transform:scale(1.18) translate(2%,11%); }  /* 1.8s — camera has moved down onto dept/date row */
-  23%  { transform:scale(1.18) translate(2%,11%); }  /* 2.3s — holds still while dept/date writes, then finishes */
-  28%  { transform:scale(1.18) translate(2%,19%); }  /* 2.8s — moved further down onto wellness/status row */
-  38%  { transform:scale(1.18) translate(2%,19%); }  /* 3.8s — holds through status chip settling */
-  43%  { transform:scale(1.08) translate(0%,25%); }  /* 4.3s — moved down onto the sync line */
-  48%  { transform:scale(1.08) translate(0%,25%); }  /* 4.8s — holds still while sync line writes */
-  53%  { transform:scale(1.05) translate(0%,30%); }  /* 5.3s — moved down onto the directory tags */
-  58%  { transform:scale(1.05) translate(0%,30%); }  /* 5.8s — holds still while tags write in */
+  18%  { transform:scale(1.18) translate(0%,6%); }   /* 1.8s — camera has moved down onto dept/date row */
+  23%  { transform:scale(1.18) translate(0%,6%); }   /* 2.3s — holds still while dept/date writes, then finishes */
+  28%  { transform:scale(1.18) translate(0%,-12%); } /* 2.8s — moved further down onto wellness/status row */
+  38%  { transform:scale(1.18) translate(0%,-12%); } /* 3.8s — holds through status chip settling */
+  43%  { transform:scale(1.12) translate(0%,-34%); } /* 4.3s — moved down onto the sync line */
+  48%  { transform:scale(1.12) translate(0%,-34%); } /* 4.8s — holds still while sync line writes */
+  53%  { transform:scale(1.08) translate(0%,-52%); } /* 5.3s — moved down onto the directory tags */
+  58%  { transform:scale(1.08) translate(0%,-52%); } /* 5.8s — holds still while tags write in */
   66%  { transform:scale(1)    translate(0%,0%); }   /* 6.6s — pulls back out to the full wide shot */
+  100% { transform:scale(1)    translate(0%,0%); }   /* holds the full shot until the loop restarts */
+}
+
+/* ---- Panel 2: Encryption — same crane/pan camera ---- */
+.enc-camera{
+  transform-origin:24% 30%;
+  will-change:transform;
+}
+.insp-panel[data-panel="2"].is-playing .enc-camera{
+  animation:encCameraMove 10s cubic-bezier(.65,0,.35,1) infinite;
+}
+@keyframes encCameraMove{
+  0%   { transform:scale(1)    translate(0%,0%); }   /* 0.0s — wide: identity line writes */
+  8%   { transform:scale(1)    translate(0%,0%); }   /* 0.8s — identity done */
+  18%  { transform:scale(1.18) translate(0%,15%); }  /* 1.8s — camera down onto the field chips */
+  44%  { transform:scale(1.18) translate(0%,15%); }  /* 4.4s — holds through every cipher scramble */
+  52%  { transform:scale(1.18) translate(0%,-24%); } /* 5.2s — camera down onto the lock */
+  66%  { transform:scale(1.18) translate(0%,-24%); } /* 6.6s — badgoo written, lock sealed */
+  74%  { transform:scale(1.1)  translate(0%,-50%); } /* 7.4s — camera down onto the KMS note */
+  78%  { transform:scale(1.1)  translate(0%,-50%); } /* 7.8s — KMS note done */
+  88%  { transform:scale(1)    translate(0%,0%); }   /* 8.8s — pull back to wide */
+  100% { transform:scale(1)    translate(0%,0%); }   /* holds the full shot until the loop restarts */
+}
+
+/* ---- Panel 3: Access Control — same crane/pan camera ---- */
+.acc-camera{
+  transform-origin:24% 30%;
+  will-change:transform;
+}
+.insp-panel[data-panel="3"].is-playing .acc-camera{
+  animation:accCameraMove 15s cubic-bezier(.65,0,.35,1) infinite;
+}
+@keyframes accCameraMove{
+  0%   { transform:scale(1)    translate(0%,0%); }   /* 0.0s — wide: shield draws */
+  11%  { transform:scale(1)    translate(0%,0%); }   /* 1.65s — meta line in */
+  16%  { transform:scale(1.05) translate(0%,-10%); } /* 2.4s — camera tracks the stacked cards */
+  43%  { transform:scale(1.05) translate(0%,-10%); } /* 6.5s — all cards + bars + tags done */
+  48%  { transform:scale(1.08) translate(0%,-55%); } /* 7.2s — camera down onto the grant line */
+  56%  { transform:scale(1.08) translate(0%,-55%); } /* 8.4s — audit line done */
+  70%  { transform:scale(1)    translate(0%,0%); }   /* 10.5s — pull back to wide */
+  100% { transform:scale(1)    translate(0%,0%); }   /* holds the full shot until the loop restarts */
+}
+
+/* ---- Panel 4: Audit Trail — same crane/pan camera ---- */
+.aud-camera{
+  transform-origin:18% 30%;
+  will-change:transform;
+}
+.insp-panel[data-panel="4"].is-playing .aud-camera{
+  animation:audCameraMove 10s cubic-bezier(.65,0,.35,1) infinite;
+}
+@keyframes audCameraMove{
+  0%   { transform:scale(1)    translate(0%,0%); }   /* 0.0s — wide: LIVE strip + first row */
+  12%  { transform:scale(1)    translate(0%,0%); }   /* 1.2s — g1 done */
+  26%  { transform:scale(1.06) translate(0%,6%); }   /* 2.6s — camera down onto the log rows */
+  59%  { transform:scale(1.06) translate(0%,6%); }   /* 5.9s — g4 done */
+  68%  { transform:scale(1.08) translate(0%,-35%); } /* 6.8s — camera down onto the hash chain */
+  72%  { transform:scale(1.08) translate(0%,-35%); } /* 7.2s — chain done */
+  78%  { transform:scale(1.06) translate(0%,-50%); } /* 7.8s — camera down onto the note */
+  82%  { transform:scale(1.06) translate(0%,-50%); } /* 8.2s — note done */
+  90%  { transform:scale(1)    translate(0%,0%); }   /* 9.0s — pull back to wide */
   100% { transform:scale(1)    translate(0%,0%); }   /* holds the full shot until the loop restarts */
 }
 .ec-card{
@@ -1778,19 +1860,46 @@ h1,h2,h3,h4{
 
 /* ---- Panel 2: AES-256 Encryption — scramble + lock ---- */
 .enc-line{ font-family:var(--font-num); font-size:12.5px; color:var(--white-dim); word-break:break-all; min-height:18px; opacity:0; transform:scale(.82); transform-origin:left center; }
-.enc-line .cipher{ color:var(--secondary); }
 .insp-panel.is-playing .enc-line:nth-child(1){ animation:ecRowIn .5s cubic-bezier(.2,.8,.2,1) forwards; animation-delay:.3s; }
-.insp-panel.is-playing .enc-line:nth-child(2){ animation:ecRowIn .5s cubic-bezier(.2,.8,.2,1) forwards; animation-delay:2.2s; }
+.enc-fields{ display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+.enc-fchip{
+  position:relative;
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:var(--font-num); font-size:11px;
+  padding:5px 10px; border-radius:20px;
+  border:1px solid var(--line-strong);
+  background:var(--surface-3); color:var(--muted);
+  opacity:0; transform:scale(.8);
+}
+.enc-fchip b{ color:var(--secondary); font-weight:600; }
+.enc-fchip .f-val{ position:relative; display:inline-block; min-width:104px; height:15px; text-align:left; }
+.enc-fchip .f-val i{ font-style:normal; color:var(--white-dim); position:absolute; left:0; top:0; white-space:nowrap; }
+.enc-fchip .f-val em{ font-style:normal; color:var(--secondary); position:absolute; left:0; top:0; white-space:nowrap; opacity:0; }
+.insp-panel.is-playing .enc-fchip{ animation:encChipIn .4s cubic-bezier(.2,.8,.2,1) forwards; }
+.insp-panel.is-playing .enc-fchip.fc1{ animation-delay:1.8s; }
+.insp-panel.is-playing .enc-fchip.fc2{ animation-delay:2.4s; }
+.insp-panel.is-playing .enc-fchip.fc3{ animation-delay:3s; }
+.insp-panel.is-playing .enc-fchip .f-val i{ animation:encPlainOut .35s ease forwards; }
+.insp-panel.is-playing .enc-fchip.fc1 .f-val i{ animation-delay:3.6s; }
+.insp-panel.is-playing .enc-fchip.fc2 .f-val i{ animation-delay:4s; }
+.insp-panel.is-playing .enc-fchip.fc3 .f-val i{ animation-delay:4.4s; }
+.insp-panel.is-playing .enc-fchip .f-val em{ animation:encCipherIn .35s ease forwards; }
+.insp-panel.is-playing .enc-fchip.fc1 .f-val em{ animation-delay:3.6s; }
+.insp-panel.is-playing .enc-fchip.fc2 .f-val em{ animation-delay:4s; }
+.insp-panel.is-playing .enc-fchip.fc3 .f-val em{ animation-delay:4.4s; }
+@keyframes encChipIn{ 0%{ opacity:0; transform:scale(.8); } 60%{ opacity:1; transform:scale(1.06); } 100%{ opacity:1; transform:scale(1); } }
+@keyframes encPlainOut{ 0%{ opacity:1; filter:blur(0); } 100%{ opacity:0; filter:blur(2px); } }
+@keyframes encCipherIn{ 0%{ opacity:0; transform:translateY(2px); filter:blur(2px); } 100%{ opacity:1; transform:translateY(0); filter:blur(0); } }
 .enc-lock{ display:flex; align-items:center; gap:10px; margin-top:16px; opacity:0; transform:scale(.7); transform-origin:left center; }
-.insp-panel.is-playing .enc-lock{ animation:ecRowIn .5s cubic-bezier(.2,.8,.2,1) forwards; animation-delay:3.3s; }
+.insp-panel.is-playing .enc-lock{ animation:ecRowIn .5s cubic-bezier(.2,.8,.2,1) forwards; animation-delay:5.2s; }
 .enc-lock svg{ width:30px; height:30px; flex-shrink:0; }
 .enc-lock .shackle{ transform-origin:15px 12px; transition:none; }
 .insp-panel.is-playing .enc-lock .shackle{ animation:lockClose 10s ease-in-out infinite; }
-@keyframes lockClose{ 0%,28%{ transform:translateY(-3px) rotate(-8deg); } 45%,100%{ transform:translateY(0) rotate(0deg); } }
+@keyframes lockClose{ 0%,58%{ transform:translateY(-3px) rotate(-8deg); } 72%,100%{ transform:translateY(0) rotate(0deg); } }
 .enc-badge{ font-size:11px; font-family:var(--font-num); color:var(--secondary); opacity:0; }
-.insp-panel.is-playing .enc-badge{ animation:ecRowIn .4s ease forwards; animation-delay:4.6s; }
+.insp-panel.is-playing .enc-badge{ animation:ecRowIn .4s ease forwards; animation-delay:6.2s; }
 .enc-kms{ margin-top:12px; font-size:11.5px; color:var(--muted); opacity:0; }
-.insp-panel.is-playing .enc-kms{ animation:ecRowIn .4s ease forwards; animation-delay:6s; }
+.insp-panel.is-playing .enc-kms{ animation:ecRowIn .4s ease forwards; animation-delay:7.4s; }
 .enc-kms b{ color:var(--white-dim); }
 
 /* ---- Panel 3: Access Control — shield + role chips ---- */
@@ -1805,40 +1914,100 @@ h1,h2,h3,h4{
 .acc-shield path{ stroke:var(--accent); stroke-width:5; fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:140; stroke-dashoffset:140; }
 .insp-panel.is-playing .acc-shield path{ animation:shieldDraw 1.2s ease forwards; animation-delay:.35s; }
 @keyframes shieldDraw{ to{ stroke-dashoffset:0; } }
-.acc-roles{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
-.acc-role{ font-size:11px; font-family:var(--font-num); padding:5px 10px; border-radius:20px; border:1px solid var(--line-strong); color:var(--muted); background:var(--surface-3); opacity:0; transform:translateY(4px) scale(.8); transform-origin:center; display:flex; align-items:center; gap:5px; }
-.insp-panel.is-playing .acc-role{ animation:ecRowIn .4s ease forwards; }
-.insp-panel.is-playing .acc-role.a1{ animation-delay:1.5s; }
-.insp-panel.is-playing .acc-role.a2{ animation-delay:2.3s; }
-.insp-panel.is-playing .acc-role.a3{ animation-delay:3.1s; }
-.acc-role .dot{ width:6px; height:6px; border-radius:50%; background:var(--muted-2); }
-.insp-panel.is-playing .acc-role.a1 .dot{ animation:dotGo .3s ease forwards; animation-delay:1.9s; }
-.insp-panel.is-playing .acc-role.a2 .dot{ animation:dotGo .3s ease forwards; animation-delay:2.7s; }
-.insp-panel.is-playing .acc-role.a3 .dot{ animation:dotGo .3s ease forwards; animation-delay:3.5s; }
-@keyframes dotGo{ to{ background:var(--success); box-shadow:0 0 8px var(--success); } }
-.acc-grant{ text-align:center; margin-top:16px; font-size:11.5px; color:var(--muted); opacity:0; }
-.insp-panel.is-playing .acc-grant{ animation:ecRowIn .4s ease forwards; animation-delay:4.2s; }
+.acc-meta{ display:flex; justify-content:center; align-items:center; gap:7px; margin-top:10px; font-family:var(--font-num); font-size:10px; color:var(--muted); opacity:0; }
+.insp-panel.is-playing .acc-meta{ animation:ecRowIn .4s ease forwards; animation-delay:1.65s; }
+.acc-meta b{ color:var(--white-dim); font-weight:600; }
+.acc-meta em{ font-style:normal; color:var(--muted-2); }
+.acc-cards{ margin-top:12px; }
+.acc-card{
+  display:flex; align-items:center; gap:10px;
+  padding:9px 12px; border-radius:10px;
+  border:1px solid var(--line-strong);
+  background:var(--surface-3);
+  opacity:0; transform:translateX(-14px) rotate(-1deg) scale(.96);
+}
+.acc-card + .acc-card{ margin-top:8px; }
+.insp-panel.is-playing .acc-card{ animation:accCardIn .5s cubic-bezier(.2,.8,.2,1) forwards; }
+.insp-panel.is-playing .acc-card.c1{ animation-delay:2.4s; }
+.insp-panel.is-playing .acc-card.c2{ animation-delay:3.9s; }
+.insp-panel.is-playing .acc-card.c3{ animation-delay:5.4s; }
+@keyframes accCardIn{
+  0%{ opacity:0; transform:translateX(-14px) rotate(-1deg) scale(.96); }
+  60%{ opacity:1; transform:translateX(2px) rotate(.5deg) scale(1.005); }
+  100%{ opacity:1; transform:translateX(0) rotate(0) scale(1); }
+}
+.acc-cdot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; background:var(--accent); }
+.acc-card.c2 .acc-cdot{ background:var(--secondary); }
+.acc-card.c3 .acc-cdot{ background:var(--muted-2); }
+.acc-cbody{ flex:1; min-width:0; }
+.acc-crow{ display:flex; align-items:baseline; gap:8px; }
+.acc-crow b{ font-size:12.5px; font-weight:600; color:var(--white); letter-spacing:-.01em; white-space:nowrap; }
+.acc-crow i{ font-style:normal; font-size:10.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.acc-crow .acc-cpct{ margin-left:auto; flex-shrink:0; font-family:var(--font-num); font-size:10.5px; color:var(--muted); }
+.acc-card.c2 .acc-cpct{ color:var(--secondary); font-weight:600; }
+.acc-cbar{ margin-top:6px; height:5px; border-radius:3px; background:var(--bg-elevated); border:1px solid var(--line); overflow:hidden; }
+.acc-cfill{ display:block; height:100%; width:var(--w); background:linear-gradient(90deg, var(--accent), var(--secondary)); transform:scaleX(0); transform-origin:left; }
+.insp-panel.is-playing .acc-cfill{ animation:accBar .6s cubic-bezier(.2,.8,.2,1) forwards; }
+.insp-panel.is-playing .acc-card.c1 .acc-cfill{ animation-delay:2.9s; }
+.insp-panel.is-playing .acc-card.c2 .acc-cfill{ animation-delay:4.4s; }
+.insp-panel.is-playing .acc-card.c3 .acc-cfill{ animation-delay:5.9s; }
+@keyframes accBar{ to{ transform:scaleX(1); } }
+.acc-card.is-riya{ border-color:rgba(77,159,255,.45); background:var(--surface-3); box-shadow:0 0 0 1px rgba(77,159,255,.2), 0 8px 20px -10px rgba(77,159,255,.4); }
+.acc-card .acc-you{ font-style:normal; font-size:8.5px; font-weight:600; color:var(--secondary); background:rgba(77,159,255,.14); border:1px solid rgba(77,159,255,.35); padding:0 4px; border-radius:8px; margin-left:4px; vertical-align:1px; }
+.acc-tags{ display:flex; gap:5px; margin-top:6px; flex-wrap:wrap; }
+.acc-tags span{ font-size:9.5px; font-family:var(--font-num); color:var(--white-dim); background:var(--surface-3); border:1px solid var(--line-strong); padding:1px 6px; border-radius:10px; opacity:0; transform:translateY(3px) scale(.9); transform-origin:left center; }
+.insp-panel.is-playing .acc-card .acc-tags span{ animation:ecRowIn .35s ease forwards; }
+.insp-panel.is-playing .acc-card.c1 .acc-tags span{ animation-delay:3.4s; }
+.insp-panel.is-playing .acc-card.c2 .acc-tags span{ animation-delay:4.9s; }
+.insp-panel.is-playing .acc-card.c3 .acc-tags span{ animation-delay:6.4s; }
+.acc-card.c2 .acc-tags span{ color:var(--secondary); background:rgba(77,159,255,.1); border-color:rgba(77,159,255,.3); }
+.acc-grant{ text-align:center; margin-top:14px; font-size:11.5px; color:var(--muted); opacity:0; }
+.insp-panel.is-playing .acc-grant{ animation:ecRowIn .4s ease forwards; animation-delay:7.2s; }
 .acc-grant b{ color:var(--success); }
+.acc-audit{ text-align:center; margin-top:5px; font-family:var(--font-num); font-size:9.5px; color:var(--muted-2); opacity:0; }
+.insp-panel.is-playing .acc-audit{ animation:ecRowIn .4s ease forwards; animation-delay:8.2s; }
+.acc-audit b{ color:var(--white-dim); }
 
-/* ---- Panel 4: Audit Trail — log lines appending ---- */
-.aud-log{ font-family:var(--font-num); font-size:11px; }
-.aud-row{ display:flex; gap:8px; align-items:baseline; padding:5px 0; border-bottom:1px dashed var(--line); opacity:0; transform:translateX(-4px) scale(.85); transform-origin:left center; }
+/* ---- Panel 4: Audit Trail — live log + hash chain ---- */
+.aud-rec{ display:inline-flex; align-items:center; gap:7px; font-family:var(--font-num); font-size:10.5px; color:var(--muted); background:var(--surface-3); border:1px solid var(--line-strong); padding:3px 10px; border-radius:20px; opacity:0; }
+.insp-panel.is-playing .aud-rec{ animation:ecRowIn .4s ease forwards; animation-delay:.2s; }
+.aud-rec b{ color:#FF6B6B; font-weight:700; letter-spacing:.08em; }
+.aud-rec .rec-dot{ width:7px; height:7px; border-radius:50%; background:#FF6B6B; box-shadow:0 0 6px rgba(255,107,107,.8); animation:recBlink 1s ease-in-out infinite; }
+@keyframes recBlink{ 0%,100%{ opacity:1; } 50%{ opacity:.15; } }
+.aud-log{ position:relative; padding-left:26px; margin-top:12px; font-family:var(--font-num); font-size:11px; }
+.aud-log::before{ content:''; position:absolute; left:8px; top:4px; bottom:4px; width:2px; border-radius:2px; background:linear-gradient(180deg, var(--secondary), var(--accent), var(--success)); }
+.aud-row{ position:relative; display:flex; gap:8px; align-items:center; padding:5px 0; border-bottom:1px dashed var(--line); opacity:0; transform:translateX(-4px) scale(.85); transform-origin:left center; }
 .insp-panel.is-playing .aud-row{ animation:audIn .5s cubic-bezier(.2,.8,.2,1) forwards; }
-.insp-panel.is-playing .aud-row.g1{ animation-delay:.6s; }
-.insp-panel.is-playing .aud-row.g2{ animation-delay:2.1s; }
-.insp-panel.is-playing .aud-row.g3{ animation-delay:3.6s; }
-.insp-panel.is-playing .aud-row.g4{ animation-delay:5.1s; }
+.insp-panel.is-playing .aud-row.g1{ animation-delay:1.2s; }
+.insp-panel.is-playing .aud-row.g2{ animation-delay:2.6s; }
+.insp-panel.is-playing .aud-row.g3{ animation-delay:4s; }
+.insp-panel.is-playing .aud-row.g4{ animation-delay:5.4s; }
 @keyframes audIn{
   0%{ opacity:0; transform:translateX(-4px) scale(.85); }
   55%{ opacity:1; transform:translateX(0) scale(1.06); }
   100%{ opacity:1; transform:translateX(0) scale(1); }
 }
+.aud-node{ position:absolute; left:-21px; top:50%; margin-top:-4px; width:8px; height:8px; border-radius:50%; background:var(--bg-elevated); border:2px solid var(--secondary); }
+.aud-row.g2 .aud-node{ border-color:var(--success); }
+.aud-row.g3 .aud-node{ border-color:var(--accent); }
+.aud-row.g4 .aud-node{ border-color:var(--success); }
+.aud-ico{ width:16px; height:16px; flex-shrink:0; }
+.aud-ico svg{ width:100%; height:100%; display:block; }
+.aud-row.g1 .aud-ico{ color:var(--secondary); }
+.aud-row.g2 .aud-ico{ color:var(--success); }
+.aud-row.g3 .aud-ico{ color:var(--accent); }
+.aud-row.g4 .aud-ico{ color:var(--success); }
 .aud-time{ color:var(--muted-2); flex-shrink:0; }
 .aud-actor{ color:var(--secondary); flex-shrink:0; }
 .aud-act{ color:var(--white-dim); }
 .aud-ip{ margin-left:auto; color:var(--muted); flex-shrink:0; }
+.aud-chain{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:12px; opacity:0; }
+.insp-panel.is-playing .aud-chain{ animation:ecRowIn .4s ease forwards; animation-delay:6.8s; }
+.aud-chain .chain-block{ font-family:var(--font-num); font-size:10px; color:var(--secondary); background:rgba(77,159,255,.08); border:1px solid rgba(77,159,255,.25); padding:3px 7px; border-radius:6px; }
+.aud-chain .chain-arrow{ color:var(--muted-2); font-size:11px; }
+.aud-chain .chain-lab{ font-size:11px; color:var(--muted); margin-left:2px; }
 .aud-note{ margin-top:12px; font-size:11.5px; color:var(--muted); opacity:0; }
-.insp-panel.is-playing .aud-note{ animation:ecRowIn .4s ease forwards; animation-delay:6.6s; }
+.insp-panel.is-playing .aud-note{ animation:ecRowIn .4s ease forwards; animation-delay:7.8s; }
 
 @media (max-width:640px){
   .flow-inspector{ padding:20px 18px 18px; }
@@ -1846,6 +2015,7 @@ h1,h2,h3,h4{
 @media (prefers-reduced-motion:reduce){
   .flow-backdrop{ backdrop-filter:none; -webkit-backdrop-filter:none; }
   .insp-panel.is-playing *{ animation:none !important; opacity:1 !important; transform:none !important; }
+  .insp-panel.is-playing .enc-fchip em{ opacity:0 !important; }
 }
 
 @media (max-width:720px){
@@ -1934,6 +2104,7 @@ h1,h2,h3,h4{
   padding-bottom:80px;
 }
 .footer-brand .logo{ margin-bottom:20px; }
+.footer-brand .logo-img{ height:40px; }
 .footer-brand p{ 
   color:var(--muted); 
   font-size:14.5px; 
@@ -2102,7 +2273,7 @@ h1,h2,h3,h4{
 <!-- NAVBAR -->
 <header class="navbar" id="navbar">
   <div class="container nav-inner">
-    <div class="logo"><span class="logo-mark"></span>VooVr</div>
+        <div class="logo"><img src="voovr-logo-full.png" alt="VooVr" class="logo-img"></div>
     <nav class="nav-links">
       <a href="#features">Features</a>
       <a href="#solutions">Solutions</a>
@@ -2180,7 +2351,7 @@ h1,h2,h3,h4{
   <div class="container">
     <div class="showcase-head">
       <span class="eyebrow" data-reveal>Product</span>
-      <h2 data-reveal style="margin-top:14px;">Every HR moment, understood by AI.</h2>
+      <h2 class="grad-head" data-reveal style="margin-top:14px;">Every HR moment, understood by AI.</h2>
       <p data-reveal>From the meeting to the record to the insight — VooVr connects the entire employee lifecycle.</p>
     </div>
 
@@ -2343,7 +2514,7 @@ h1,h2,h3,h4{
   <div class="container">
     <div class="workflow-head">
       <span class="eyebrow" data-reveal>How it works</span>
-      <h2 data-reveal style="margin-top:14px;">AI-powered HR intelligence, end to end.</h2>
+      <h2 class="grad-head" data-reveal style="margin-top:14px;">AI-powered HR intelligence, end to end.</h2>
       <p data-reveal>VooVr transforms employee interactions, records and behavioral signals into intelligent workforce insights for modern HR teams.</p>
     </div>
 
@@ -2366,7 +2537,7 @@ h1,h2,h3,h4{
   <div class="container">
     <div class="showcase-head">
       <span class="eyebrow" data-reveal>Why VooVr</span>
-      <h2 data-reveal style="margin-top:14px;">Built for how HR actually works.</h2>
+      <h2 class="grad-head" data-reveal style="margin-top:14px;">Built for how HR actually works.</h2>
     </div>
     <div class="bento" data-bento>
       <div class="bento-item b1">
@@ -2408,7 +2579,7 @@ h1,h2,h3,h4{
 <section class="section security" id="security">
   <div class="container security-center">
     <span class="eyebrow" data-reveal>Security</span>
-    <h2 data-reveal style="margin-top:14px;">Enterprise-grade, by default.</h2>
+    <h2 class="grad-head" data-reveal style="margin-top:14px;">Enterprise-grade, by default.</h2>
     <p data-reveal>Employee data is the most sensitive data your company holds. VooVr is built with encryption, access controls and audit trails from the ground up.</p>
     <div class="security-badges" data-reveal>
       <span class="sec-badge">SOC 2 Type II</span>
@@ -2539,13 +2710,19 @@ h1,h2,h3,h4{
   <div class="insp-panel" data-panel="2">
     <div class="insp-head"><span class="insp-num">02</span><b>AES-256 Encryption</b><span>Encrypted at rest</span></div>
     <div class="insp-stage">
-      <div class="enc-line">Riya Verma · riya.verma@company.com</div>
-      <div class="enc-line"><span class="cipher">8f3a…c11e</span> <span class="cipher">b02d…9af4</span> <span class="cipher">e771…0c3b</span></div>
-      <div class="enc-lock">
-        <svg viewBox="0 0 30 30"><g class="shackle"><path d="M9 12V9a6 6 0 0 1 12 0v3" fill="none" stroke="#4D9FFF" stroke-width="2.4" stroke-linecap="round"/></g><rect x="6" y="12" width="18" height="13" rx="3" fill="none" stroke="#4D9FFF" stroke-width="2.4"/></svg>
-        <span class="enc-badge">AES-256-GCM · sealed</span>
+      <div class="enc-camera">
+        <div class="enc-line">Riya Verma · riya.verma@company.com</div>
+        <div class="enc-fields">
+          <span class="enc-fchip fc1"><b>Name</b><span class="f-val"><i>Riya Verma</i><em>8f3a…c11e</em></span></span>
+          <span class="enc-fchip fc2"><b>Email</b><span class="f-val"><i>riya@company.com</i><em>b02d…9af4</em></span></span>
+          <span class="enc-fchip fc3"><b>Dept</b><span class="f-val"><i>Product Design</i><em>e771…0c3b</em></span></span>
+        </div>
+        <div class="enc-lock">
+          <svg viewBox="0 0 30 30"><g class="shackle"><path d="M9 12V9a6 6 0 0 1 12 0v3" fill="none" stroke="#4D9FFF" stroke-width="2.4" stroke-linecap="round"/></g><rect x="6" y="12" width="18" height="13" rx="3" fill="none" stroke="#4D9FFF" stroke-width="2.4"/></svg>
+          <span class="enc-badge">AES-256-GCM · sealed</span>
+        </div>
+        <div class="enc-kms">Each record gets its own key, <b>wrapped and rotated via Cloud KMS</b> — nothing sits in plain text.</div>
       </div>
-      <div class="enc-kms">Each record gets its own key, <b>wrapped and rotated via Cloud KMS</b> — nothing sits in plain text.</div>
       <div class="insp-progress"></div>
     </div>
     <p class="insp-foot">Encryption runs automatically the moment a record is saved to the <b>Employee Directory</b>.</p>
@@ -2555,13 +2732,38 @@ h1,h2,h3,h4{
   <div class="insp-panel" data-panel="3">
     <div class="insp-head"><span class="insp-num">03</span><b>Access Control</b><span>SSO + RBAC</span></div>
     <div class="insp-stage">
-      <div class="acc-shield"><svg viewBox="0 0 42 46"><path d="M21 3 L37 10 V22 C37 33 30 40 21 43 C12 40 5 33 5 22 V10 Z"/></svg></div>
-      <div class="acc-roles">
-        <span class="acc-role a1"><span class="dot"></span>Admin — full access</span>
-        <span class="acc-role a2"><span class="dot"></span>Manager — team scope</span>
-        <span class="acc-role a3"><span class="dot"></span>Employee — self only</span>
+      <div class="acc-camera">
+        <div class="acc-shield"><svg viewBox="0 0 42 46"><path d="M21 3 L37 10 V22 C37 33 30 40 21 43 C12 40 5 33 5 22 V10 Z"/></svg></div>
+        <div class="acc-meta"><b>Access Control</b><em>·</em>Riya Verma · HR Manager<em>·</em>4 yrs</div>
+        <div class="acc-cards">
+          <div class="acc-card c1">
+            <span class="acc-cdot"></span>
+            <div class="acc-cbody">
+              <div class="acc-crow"><b>Admin</b><i>full access · every team &amp; setting</i><span class="acc-cpct">100%</span></div>
+              <div class="acc-cbar"><span class="acc-cfill" style="--w:100%"></span></div>
+              <div class="acc-tags"><span>onboard</span><span>payroll</span><span>settings</span></div>
+            </div>
+          </div>
+          <div class="acc-card c2 is-riya">
+            <span class="acc-cdot"></span>
+            <div class="acc-cbody">
+              <div class="acc-crow"><b>Manager <em class="acc-you">you</em></b><i>team scope · Riya's team</i><span class="acc-cpct">65%</span></div>
+              <div class="acc-cbar"><span class="acc-cfill" style="--w:65%"></span></div>
+              <div class="acc-tags"><span>approvals</span><span>team data</span><span>reports</span></div>
+            </div>
+          </div>
+          <div class="acc-card c3">
+            <span class="acc-cdot"></span>
+            <div class="acc-cbody">
+              <div class="acc-crow"><b>Employee</b><i>self-service only</i><span class="acc-cpct">25%</span></div>
+              <div class="acc-cbar"><span class="acc-cfill" style="--w:25%"></span></div>
+              <div class="acc-tags"><span>profile</span><span>leave</span><span>payslips</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="acc-grant"><b>Access granted</b> — scoped to Riya's team &amp; seniority only.</div>
+        <div class="acc-audit"><b>Permission set applied</b> · audit log #A-8F21 · 28 entries</div>
       </div>
-      <div class="acc-grant"><b>Access granted</b> — scoped to Riya's team &amp; seniority only.</div>
       <div class="insp-progress"></div>
     </div>
     <p class="insp-foot">Manage roles for every teammate from <b>Settings → Access</b> on the dashboard.</p>
@@ -2571,13 +2773,17 @@ h1,h2,h3,h4{
   <div class="insp-panel" data-panel="4">
     <div class="insp-head"><span class="insp-num">04</span><b>Audit Trail</b><span>Every action logged</span></div>
     <div class="insp-stage">
-      <div class="aud-log">
-        <div class="aud-row g1"><span class="aud-time">09:41:02</span><span class="aud-actor">R. Verma</span><span class="aud-act">record viewed</span><span class="aud-ip">10.2.4.18</span></div>
-        <div class="aud-row g2"><span class="aud-time">09:41:47</span><span class="aud-actor">S. Rao (HR)</span><span class="aud-act">department updated</span><span class="aud-ip">10.2.4.03</span></div>
-        <div class="aud-row g3"><span class="aud-time">09:42:15</span><span class="aud-actor">System</span><span class="aud-act">wellness score computed</span><span class="aud-ip">internal</span></div>
-        <div class="aud-row g4"><span class="aud-time">09:43:00</span><span class="aud-actor">R. Verma</span><span class="aud-act">login · SSO</span><span class="aud-ip">10.2.4.18</span></div>
+      <div class="aud-camera">
+        <div class="aud-rec"><span class="rec-dot"></span><b>LIVE</b><span class="rec-id">tailing record #A8F2</span></div>
+        <div class="aud-log">
+          <div class="aud-row g1"><span class="aud-node"></span><span class="aud-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7.5 10-7.5S22 12 22 12s-3.5 7.5-10 7.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="aud-time">09:41:02</span><span class="aud-actor">R. Verma</span><span class="aud-act">record viewed</span><span class="aud-ip">10.2.4.18</span></div>
+          <div class="aud-row g2"><span class="aud-node"></span><span class="aud-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5l4 4L8 20l-5 1 1-5L16.5 3.5z"/></svg></span><span class="aud-time">09:41:47</span><span class="aud-actor">S. Rao (HR)</span><span class="aud-act">department updated</span><span class="aud-ip">10.2.4.03</span></div>
+          <div class="aud-row g3"><span class="aud-node"></span><span class="aud-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 14H11l-1 8L18.5 10H12l1-8z"/></svg></span><span class="aud-time">09:42:15</span><span class="aud-actor">System</span><span class="aud-act">wellness score computed</span><span class="aud-ip">internal</span></div>
+          <div class="aud-row g4"><span class="aud-node"></span><span class="aud-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V5l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="aud-time">09:43:00</span><span class="aud-actor">R. Verma</span><span class="aud-act">login · SSO</span><span class="aud-ip">10.2.4.18</span></div>
+        </div>
+        <div class="aud-chain"><span class="chain-block">H4·88F2</span><span class="chain-arrow">→</span><span class="chain-block">9B1E·C0A7</span><span class="chain-arrow">→</span><span class="chain-block">A8F2·7D5E</span><span class="chain-lab">every event hashed &amp; linked</span></div>
+        <div class="aud-note">Every read &amp; write is logged with <b>actor, timestamp &amp; IP</b> — nothing is silent.</div>
       </div>
-      <div class="aud-note">Every read &amp; write is logged with <b>actor, timestamp &amp; IP</b> — nothing is silent.</div>
       <div class="insp-progress"></div>
     </div>
     <p class="insp-foot">Review the full history for any employee from the <b>Employee Directory</b> on the dashboard.</p>
@@ -2588,7 +2794,7 @@ h1,h2,h3,h4{
 <section class="section cta-section" id="pricing">
   <div class="container">
     <div class="cta-box">
-      <h2 data-reveal>Give your HR team an operating system, not another tool.</h2>
+      <h2 class="grad-head" data-reveal>Give your HR team an operating system, not another tool.</h2>
       <p data-reveal>Set up VooVr in an afternoon. See the difference in a week.</p>
       <div class="hero-cta" data-reveal>
         <a href="onboarding.html" class="btn btn-primary magnetic">Get Started</a>
@@ -2603,7 +2809,7 @@ h1,h2,h3,h4{
   <div class="container">
     <div class="footer-top">
       <div class="footer-brand">
-        <div class="logo"><span class="logo-mark"></span>VooVr</div>
+    <div class="logo"><img src="voovr-logo-full.png" alt="VooVr" class="logo-img"></div>
         <p>The operating system for modern HR teams. Meetings, records and insight, connected.</p>
       </div>
       <div class="footer-col">
@@ -2654,6 +2860,8 @@ if (typeof Lenis !== 'undefined') {
 } else {
   console.warn('Lenis failed to load — falling back to native scroll.');
 }
+
+window.addEventListener('load', function(){ ScrollTrigger.refresh(); });
 
 var navbar = document.getElementById('navbar');
 ScrollTrigger.create({
@@ -2866,8 +3074,8 @@ gsap.to('#tlProgress', {
 });
 
 gsap.from('[data-bento] .bento-item', {
-  opacity:0, y:30, scale:.97, stagger:.08, duration:.8, ease:'power3.out',
-  scrollTrigger:{ trigger:'[data-bento]', start:'top 78%' }
+  y:30, stagger:.08, duration:.8, ease:'power3.out',
+  scrollTrigger:{ trigger:'[data-bento]', start:'top 85%', once:true }
 });
 
 gsap.from('.logo-ph', {
@@ -2998,9 +3206,9 @@ window.addEventListener('scroll', function(){
     var node = step.querySelector('.flow-node');
     if (!node) return;
 
-    // desktop: hover + keyboard focus
-    step.addEventListener('mouseenter', function(){ setActive(step); });
-    step.addEventListener('mouseleave', function(){ if (activeStep === step) setActive(null); });
+    // desktop: hover the orb itself (not the whole step) + keyboard focus
+    node.addEventListener('mouseenter', function(){ setActive(step); });
+    node.addEventListener('mouseleave', function(){ if (activeStep === step) setActive(null); });
     node.addEventListener('focus', function(){ setActive(step); });
     node.addEventListener('blur', function(){ if (activeStep === step) setActive(null); });
 
@@ -3066,20 +3274,24 @@ window.addEventListener('scroll', function(){
   function scheduleClose(){
     if (closeTimer) clearTimeout(closeTimer);
     closeTimer = setTimeout(function(){
+      // don't close while the cursor is still parked over the inspector
+      // (the modal can sit on top of the orb it was opened from)
+      if (typeof inspector.matches === 'function' && inspector.matches(':hover')) { scheduleClose(); return; }
       backdrop.classList.remove('is-open');
       inspector.classList.remove('is-open');
       stopAllPanels();
       currentStep = null;
       document.body.style.overflow = '';
-    }, 180);
+    }, 400);
   }
   function cancelClose(){ if (closeTimer){ clearTimeout(closeTimer); closeTimer = null; } }
 
   steps.forEach(function(step){
     var node = step.querySelector('.flow-node');
     if (!node) return;
-    step.addEventListener('mouseenter', function(){ openFor(step); });
-    step.addEventListener('mouseleave', scheduleClose);
+    // only hovering the orb itself opens the explainer popup
+    node.addEventListener('mouseenter', function(){ openFor(step); });
+    node.addEventListener('mouseleave', scheduleClose);
     node.addEventListener('focus', function(){ openFor(step); });
     node.addEventListener('touchstart', function(){ openFor(step); }, { passive: true });
   });
@@ -3094,7 +3306,15 @@ window.addEventListener('scroll', function(){
     currentStep = null;
     document.body.style.overflow = '';
   });
-  backdrop.addEventListener('click', function(){ closeBtn.click(); });
+  /* the backdrop is pointer-events:none (so it never steals hover), so close
+     on any tap outside the inspector instead */
+  document.addEventListener('click', function(e){
+    if (!inspector.classList.contains('is-open')) return;
+    if (inspector.contains(e.target)) return;
+    var dg = document.querySelector('.flow-diagram');
+    if (dg && dg.contains(e.target)) return;
+    closeBtn.click();
+  });
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape' && inspector.classList.contains('is-open')) closeBtn.click();
   });
