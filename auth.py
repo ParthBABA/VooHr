@@ -1,3 +1,4 @@
+import threading
 import uuid
 from datetime import datetime, timezone
 
@@ -196,11 +197,13 @@ def _record_active_session(db, user_id: ObjectId):
     """Track this login as an active session so the settings page can list it
     and let the user revoke access. Storing the token in the Flask session is
     what lets _require_auth validate later requests.
+
+    The geo lookup is run in a background thread so it never blocks the login
+    redirect (free-tier backends can add a 2s penalty otherwise).
     """
     now = datetime.now(timezone.utc)
     session_token = str(uuid.uuid4())
     ip = request.remote_addr or ""
-    location = _lookup_location(ip)
     session["session_token"] = session_token
     db.active_sessions.insert_one(
         {
@@ -208,11 +211,29 @@ def _record_active_session(db, user_id: ObjectId):
             "session_token": session_token,
             "user_agent": request.headers.get("User-Agent", ""),
             "ip": ip,
-            "location": location,
+            "location": None,
             "created_at": now,
             "last_seen": now,
         }
     )
+    threading.Thread(
+        target=_attach_location_async,
+        args=(db, session_token, ip),
+        daemon=True,
+    ).start()
+
+
+def _attach_location_async(db, session_token: str, ip: str):
+    """Best-effort background geo lookup. Never raises, never blocks login."""
+    try:
+        location = _lookup_location(ip)
+        if location:
+            db.active_sessions.update_one(
+                {"session_token": session_token},
+                {"$set": {"location": location}},
+            )
+    except Exception:
+        pass
 
 
 @auth_bp.route("/logout", methods=["POST"])

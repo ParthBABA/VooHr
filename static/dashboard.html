@@ -55,7 +55,31 @@
     }
 
     document.body.style.visibility = 'visible';
+    if (window.runReveal) window.runReveal();
   }
+
+  window.runReveal = function() {
+    if (!window.gsap) return;
+    var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+    var sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      gsap.set(sidebar, { x: -260, opacity: 0 });
+      tl.to(sidebar, { x: 0, opacity: 1, duration: 1 });
+    }
+
+    var statCards = document.querySelectorAll('.stat-card');
+    if (statCards.length) {
+      gsap.set(statCards, { opacity: 0, y: 30 });
+      tl.to(statCards, { opacity: 1, y: 0, duration: 0.9, stagger: 0.1 }, '-=0.4');
+    }
+
+    var cards = document.querySelectorAll('.card');
+    if (cards.length) {
+      gsap.set(cards, { opacity: 0, y: 40 });
+      tl.to(cards, { opacity: 1, y: 0, duration: 1, stagger: 0.12 }, '-=0.7');
+    }
+  };
 
   var welcomeBannerDismissed = false;
 
@@ -445,23 +469,6 @@
 </div>
 
 <script>
-window.addEventListener('load', function() {
-  var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-
-  var sidebar = document.querySelector('.sidebar');
-  gsap.set(sidebar, { x: -260, opacity: 0 });
-  tl.to(sidebar, { x: 0, opacity: 1, duration: 1 });
-
-  var statCards = document.querySelectorAll('.stat-card');
-  gsap.set(statCards, { opacity: 0, y: 30 });
-  tl.to(statCards, { opacity: 1, y: 0, duration: 0.9, stagger: 0.1 }, '-=0.4');
-
-  var cards = document.querySelectorAll('.card');
-  gsap.set(cards, { opacity: 0, y: 40 });
-  tl.to(cards, { opacity: 1, y: 0, duration: 1, stagger: 0.12 }, '-=0.7');
-
-});
-
 // Unified directory table: live search + department/status filters
 (function() {
   var search = document.getElementById('dashDirSearch');
