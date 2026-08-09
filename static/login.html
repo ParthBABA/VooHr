@@ -3331,22 +3331,82 @@ import { Application } from 'https://unpkg.com/@splinetool/runtime@1.12.98/build
     console.warn('[Spline] WebGL not supported');
     return;
   }
-  var app = new Application(canvas);
-  app.load('https://prod.spline.design/aflzqGas8LjPtPQY/scene.splinecode')
-    .then(function(){
-      var inView = true;
-      if (typeof IntersectionObserver !== 'undefined') {
-        new IntersectionObserver(function(entries){
-          entries.forEach(function(en){
-            var nowVisible = en.isIntersecting;
-            if (nowVisible && !inView) { app.play(); }
-            else if (!nowVisible && inView) { app.pause(); }
-            inView = nowVisible;
-          });
-        }, { threshold: 0 }).observe(canvas);
-      }
-    })
-    .catch(function(err){ console.error('[Spline] load error:', err); });
+
+  // --- Cap the render resolution -------------------------------------
+  // Spline (like most WebGL libs) sizes its internal render buffer using
+  // window.devicePixelRatio. On 2x/3x retina and high-DPI phone screens
+  // that's 4-9x the pixels of a 1x display for a full-bleed hero canvas,
+  // which is the single biggest cause of GPU/fill-rate lag here.
+  // We temporarily cap the value the runtime sees while it initializes,
+  // then restore the real value so nothing else on the page is affected.
+  var realDPR = window.devicePixelRatio;
+  var cappedDPR = Math.min(realDPR || 1, 1.5);
+  var dprOverridden = false;
+  try {
+    Object.defineProperty(window, 'devicePixelRatio', {
+      configurable: true,
+      get: function(){ return cappedDPR; }
+    });
+    dprOverridden = true;
+  } catch (e) { /* some browsers won't allow overriding this; fine, just skip */ }
+
+  function restoreDPR(){
+    if (!dprOverridden) return;
+    try {
+      Object.defineProperty(window, 'devicePixelRatio', {
+        configurable: true,
+        get: function(){ return realDPR; }
+      });
+    } catch (e) {}
+  }
+
+  // --- Defer loading until the page is idle ---------------------------
+  // Don't make the 3D scene compete with fonts/CSS/other scripts for
+  // bandwidth and main-thread time during initial page load.
+  function whenIdle(cb){
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(cb, { timeout: 2000 });
+    } else {
+      setTimeout(cb, 300);
+    }
+  }
+
+  function startScene(){
+    var app = new Application(canvas);
+    app.load('https://prod.spline.design/aflzqGas8LjPtPQY/scene.splinecode')
+      .then(function(){
+        restoreDPR();
+
+        var inView = true;
+        var tabVisible = true;
+
+        function sync(){
+          if (inView && tabVisible) app.play();
+          else app.pause();
+        }
+
+        if (typeof IntersectionObserver !== 'undefined') {
+          new IntersectionObserver(function(entries){
+            entries.forEach(function(en){ inView = en.isIntersecting; });
+            sync();
+          }, { threshold: 0 }).observe(canvas);
+        }
+
+        // Also pause while the browser tab itself is backgrounded —
+        // the IntersectionObserver alone doesn't catch tab switches.
+        document.addEventListener('visibilitychange', function(){
+          tabVisible = document.visibilityState === 'visible';
+          sync();
+        });
+      })
+      .catch(function(err){ restoreDPR(); console.error('[Spline] load error:', err); });
+  }
+
+  if (document.readyState === 'complete') {
+    whenIdle(startScene);
+  } else {
+    window.addEventListener('load', function(){ whenIdle(startScene); });
+  }
 })();
 </script>
 </body>
