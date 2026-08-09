@@ -2273,7 +2273,7 @@ h1,h2,h3,h4{
 <!-- NAVBAR -->
 <header class="navbar" id="navbar">
   <div class="container nav-inner">
-        <div class="logo"><img src="voovr-logo-full.png" alt="VooVr" class="logo-img"></div>
+        <div class="logo"><img src="voovr-logo-full.webp" alt="VooVr" class="logo-img"></div>
     <nav class="nav-links">
       <a href="#features">Features</a>
       <a href="#solutions">Solutions</a>
@@ -2369,7 +2369,7 @@ h1,h2,h3,h4{
       </div>
       <div class="sc-media m1">
         <div class="glow"></div>
-        <img src="product-1.png" alt="Attrition Intelligence dashboard showing employee attrition risk, satisfaction, and engagement scores" class="sc-media-img">
+        <img src="product-1.webp" alt="Attrition Intelligence dashboard showing employee attrition risk, satisfaction, and engagement scores" class="sc-media-img">
       </div>
     </div>
 
@@ -2387,7 +2387,7 @@ h1,h2,h3,h4{
       </div>
       <div class="sc-media m2">
         <div class="glow"></div>
-        <img src="product-2.png" alt="Workforce Psychology dashboard showing behaviour analysis, well-being score, stress indicator, and AI recommendations" class="sc-media-img">
+        <img src="product-2.webp" alt="Workforce Psychology dashboard showing behaviour analysis, well-being score, stress indicator, and AI recommendations" class="sc-media-img">
       </div>
     </div>
 
@@ -2541,32 +2541,32 @@ h1,h2,h3,h4{
     </div>
     <div class="bento" data-bento>
       <div class="bento-item b1">
-        <img src="security-bg.png" alt="" class="bento-bg">
+        <img src="security-bg.webp" alt="" class="bento-bg">
         <div class="bento-glow"></div>
         <div class="decor"><span class="bento-dot"></span><span class="bento-dot"></span></div>
         <h4>Security by design.</h4>
         <p>VooVr is built on enterprise-grade infrastructure with end-to-end encryption, strict access controls and comprehensive audit trails. Employee data is protected at every layer of the platform.</p>
       </div>
       <div class="bento-item b2">
-        <img src="aes-bg.png" alt="" class="bento-bg">
+        <img src="aes-bg.webp" alt="" class="bento-bg">
         <div class="bento-glow"></div>
         <h4>AES-256 protected records</h4>
         <p>Every employee record is encrypted using AES-256 standards at rest and in transit. Your data remains yours, secured by bank-grade cryptography.</p>
       </div>
       <div class="bento-item b3">
-        <img src="access-bg.png" alt="" class="bento-bg">
+        <img src="access-bg.webp" alt="" class="bento-bg">
         <div class="bento-glow"></div>
         <h4>Role-based access control</h4>
         <p>Granular permissions ensure HR admins, managers and executives see only what they need. No overexposure, no blind spots.</p>
       </div>
       <div class="bento-item b4">
-        <img src="audit-bg.png" alt="" class="bento-bg">
+        <img src="audit-bg.webp" alt="" class="bento-bg">
         <div class="bento-glow"></div>
         <h4>Audit logs & activity tracking</h4>
         <p>Every view, edit and action is logged with timestamps and identity markers. Full transparency for compliance and internal reviews.</p>
       </div>
       <div class="bento-item b5">
-        <img src="privacy-bg.png" alt="" class="bento-bg">
+        <img src="privacy-bg.webp" alt="" class="bento-bg">
         <div class="bento-glow"></div>
         <h4>Privacy-first HR platform</h4>
         <p>Employee trust is non-negotiable. VooVr is designed with data minimization principles, giving employees visibility into their own information and how it is used.</p>
@@ -2809,7 +2809,7 @@ h1,h2,h3,h4{
   <div class="container">
     <div class="footer-top">
       <div class="footer-brand">
-    <div class="logo"><img src="voovr-logo-full.png" alt="VooVr" class="logo-img"></div>
+    <div class="logo"><img src="voovr-logo-full.webp" alt="VooVr" class="logo-img"></div>
         <p>The operating system for modern HR teams. Meetings, records and insight, connected.</p>
       </div>
       <div class="footer-col">
@@ -3322,7 +3322,7 @@ window.addEventListener('scroll', function(){
 </script>
 
 <script type="module">
-import { Application } from 'https://unpkg.com/@splinetool/runtime@latest/build/runtime.js';
+import { Application } from 'https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js';
 
 (function(){
   var canvas = document.getElementById('canvas3d');
@@ -3332,9 +3332,20 @@ import { Application } from 'https://unpkg.com/@splinetool/runtime@latest/build/
     return;
   }
   var app = new Application(canvas);
-  console.log('[Spline] initializing...');
   app.load('https://prod.spline.design/aflzqGas8LjPtPQY/scene.splinecode')
-    .then(function(){ console.log('[Spline] scene loaded'); })
+    .then(function(){
+      var inView = true;
+      if (typeof IntersectionObserver !== 'undefined') {
+        new IntersectionObserver(function(entries){
+          entries.forEach(function(en){
+            var nowVisible = en.isIntersecting;
+            if (nowVisible && !inView) { app.play(); }
+            else if (!nowVisible && inView) { app.pause(); }
+            inView = nowVisible;
+          });
+        }, { threshold: 0 }).observe(canvas);
+      }
+    })
     .catch(function(err){ console.error('[Spline] load error:', err); });
 })();
 </script>
