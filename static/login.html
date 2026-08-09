@@ -79,7 +79,7 @@
 }
 
 *{margin:0;padding:0;box-sizing:border-box;}
-html{background:var(--bg);}
+html{background:var(--bg);overflow-x:hidden;}
 html.lenis, html.lenis body{height:auto;}
 body{
   background:var(--bg);
@@ -332,7 +332,7 @@ h1,h2,h3,h4{
 /* Burger + mobile menu */
 .nav-burger{
   display:none;
-  width:42px; height:42px;
+  width:44px; height:44px;
   border-radius:12px;
   border:1px solid var(--line);
   background:rgba(255,255,255,.03);
@@ -1009,7 +1009,7 @@ h1,h2,h3,h4{
   font-weight:600;
 }
 .sc-text h3{ 
-  font-size:34px; 
+  font-size:clamp(26px,3.4vw,34px); 
   margin-bottom:20px; 
   line-height:1.15; 
   letter-spacing:-.01em;
@@ -2219,6 +2219,12 @@ h1,h2,h3,h4{
   .cta-box h2{ font-size:clamp(28px,7vw,42px); }
   .demo-stage{ padding:24px 20px; }
   .demo-body{ min-height:auto; }
+  .navbar.scrolled{ backdrop-filter:blur(12px) saturate(160%); }
+  .mobile-menu{ backdrop-filter:blur(16px) saturate(160%); }
+  .glass{ backdrop-filter:blur(12px) saturate(150%); }
+  .glass-strong{ backdrop-filter:blur(16px) saturate(180%); }
+  .footer-col a{ padding:11px 0; margin-bottom:0; }
+  .footer-socials a{ padding:10px; margin:-10px; }
   .to-top{ right:16px; bottom:16px; }
 }
 @media (max-width:480px){
