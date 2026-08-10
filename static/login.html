@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#09090b">
 <title>VooVr — The AI operating system for modern HR teams</title>
 <meta name="description" content="VooVr is the AI-powered employee intelligence platform. Predict attrition, gain workforce psychology insights, and automate smart follow-ups — all in one place for modern HR teams.">
 <meta name="theme-color" content="#09090B">
@@ -223,14 +224,14 @@ h1,h2,h3,h4{
 .glass{
   background:rgba(255,255,255,.025);
   border:1px solid rgba(255,255,255,.06);
-  backdrop-filter:blur(24px) saturate(150%);
+  backdrop-filter:blur(12px) saturate(140%);
   box-shadow:var(--shadow-sm), 0 0 0 1px rgba(255,255,255,.02) inset;
 }
 
 .glass-strong{
   background:rgba(255,255,255,.04);
   border:1px solid rgba(110,86,255,.15);
-  backdrop-filter:blur(32px) saturate(180%);
+  backdrop-filter:blur(16px) saturate(170%);
   box-shadow:var(--shadow-md), var(--shadow-glow), 0 0 0 1px rgba(255,255,255,.03) inset;
 }
 
@@ -281,7 +282,7 @@ h1,h2,h3,h4{
 .navbar.scrolled{
   padding:12px 0;
   background:rgba(9,9,11,.85);
-  backdrop-filter:blur(24px) saturate(160%);
+  backdrop-filter:blur(12px) saturate(150%);
   border-bottom:1px solid var(--line);
   box-shadow:var(--shadow-sm);
 }
@@ -497,12 +498,14 @@ h1,h2,h3,h4{
 #canvas3d{
   position:absolute;
   top:50%; left:50%;
-  width:140%; height:140%;
+  /* Keep the Spline hero, but avoid rendering a 140% x 140% buffer. */
+  width:125%; height:125%;
   transform:translate(-46%, -50%);
   z-index:1;
   opacity:.95;
   pointer-events:none;
   mix-blend-mode:lighten;
+  contain:paint;
 }
 .hero-scrim{
   position:absolute; inset:0;
@@ -831,7 +834,7 @@ h1,h2,h3,h4{
   padding:11px 16px; border-radius:14px;
   border:1px solid rgba(94,230,160,.4);
   background:rgba(17,17,19,.95);
-  backdrop-filter:blur(16px);
+  backdrop-filter:blur(8px);
   font-size:12px; color:var(--white); font-weight:500;
   opacity:0; z-index:5; white-space:nowrap;
   box-shadow:var(--shadow-md), 0 0 30px rgba(94,230,160,.2);
@@ -2854,18 +2857,11 @@ h1,h2,h3,h4{
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
 <script>
 gsap.registerPlugin(ScrollTrigger);
 
-if (typeof Lenis !== 'undefined') {
-  var lenis = new Lenis({ duration: 1.1, smoothWheel: true });
-  lenis.on('scroll', ScrollTrigger.update);
-  gsap.ticker.add(function(time){ lenis.raf(time*1000); });
-  gsap.ticker.lagSmoothing(0);
-} else {
-  console.warn('Lenis failed to load — falling back to native scroll.');
-}
+// Use native scrolling. This avoids an extra requestAnimationFrame loop from Lenis.
+// ScrollTrigger still handles all existing scroll-triggered animations.
 
 window.addEventListener('load', function(){ ScrollTrigger.refresh(); });
 
@@ -3328,8 +3324,6 @@ window.addEventListener('scroll', function(){
 </script>
 
 <script type="module">
-import { Application } from 'https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js';
-
 (function(){
   var canvas = document.getElementById('canvas3d');
   if (!canvas) return;
@@ -3338,15 +3332,10 @@ import { Application } from 'https://unpkg.com/@splinetool/runtime@1.12.98/build
     return;
   }
 
-  // --- Cap the render resolution -------------------------------------
-  // Spline (like most WebGL libs) sizes its internal render buffer using
-  // window.devicePixelRatio. On 2x/3x retina and high-DPI phone screens
-  // that's 4-9x the pixels of a 1x display for a full-bleed hero canvas,
-  // which is the single biggest cause of GPU/fill-rate lag here.
-  // We temporarily cap the value the runtime sees while it initializes,
-  // then restore the real value so nothing else on the page is affected.
-  var realDPR = window.devicePixelRatio;
-  var cappedDPR = Math.min(realDPR || 1, 1.5);
+  // Render the Spline scene at a capped pixel density. High-DPI screens can
+  // otherwise make a full hero canvas render 4–9x as many pixels.
+  var realDPR = window.devicePixelRatio || 1;
+  var cappedDPR = Math.min(realDPR, window.innerWidth <= 720 ? 1 : 1.25);
   var dprOverridden = false;
   try {
     Object.defineProperty(window, 'devicePixelRatio', {
@@ -3354,7 +3343,7 @@ import { Application } from 'https://unpkg.com/@splinetool/runtime@1.12.98/build
       get: function(){ return cappedDPR; }
     });
     dprOverridden = true;
-  } catch (e) { /* some browsers won't allow overriding this; fine, just skip */ }
+  } catch (e) {}
 
   function restoreDPR(){
     if (!dprOverridden) return;
@@ -3366,53 +3355,53 @@ import { Application } from 'https://unpkg.com/@splinetool/runtime@1.12.98/build
     } catch (e) {}
   }
 
-  // --- Defer loading until the page is idle ---------------------------
-  // Don't make the 3D scene compete with fonts/CSS/other scripts for
-  // bandwidth and main-thread time during initial page load.
-  function whenIdle(cb){
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(cb, { timeout: 2000 });
-    } else {
-      setTimeout(cb, 300);
+  async function startScene(){
+    try {
+      // Runtime itself is now downloaded only after the initial page work is done.
+      var mod = await import('https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js');
+      var Application = mod.Application;
+      var app = new Application(canvas);
+
+      await app.load('https://prod.spline.design/aflzqGas8LjPtPQY/scene.splinecode');
+      restoreDPR();
+
+      var inView = true;
+      var tabVisible = document.visibilityState === 'visible';
+
+      function sync(){
+        if (inView && tabVisible) app.play();
+        else app.pause();
+      }
+
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function(entries){
+          inView = entries.some(function(en){ return en.isIntersecting; });
+          sync();
+        }, { threshold: 0 }).observe(canvas);
+      }
+
+      document.addEventListener('visibilitychange', function(){
+        tabVisible = document.visibilityState === 'visible';
+        sync();
+      }, { passive:true });
+
+      sync();
+    } catch (err) {
+      restoreDPR();
+      console.error('[Spline] load error:', err);
     }
   }
 
-  function startScene(){
-    var app = new Application(canvas);
-    app.load('https://prod.spline.design/aflzqGas8LjPtPQY/scene.splinecode')
-      .then(function(){
-        restoreDPR();
-
-        var inView = true;
-        var tabVisible = true;
-
-        function sync(){
-          if (inView && tabVisible) app.play();
-          else app.pause();
-        }
-
-        if (typeof IntersectionObserver !== 'undefined') {
-          new IntersectionObserver(function(entries){
-            entries.forEach(function(en){ inView = en.isIntersecting; });
-            sync();
-          }, { threshold: 0 }).observe(canvas);
-        }
-
-        // Also pause while the browser tab itself is backgrounded —
-        // the IntersectionObserver alone doesn't catch tab switches.
-        document.addEventListener('visibilitychange', function(){
-          tabVisible = document.visibilityState === 'visible';
-          sync();
-        });
-      })
-      .catch(function(err){ restoreDPR(); console.error('[Spline] load error:', err); });
+  function boot(){
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(startScene, { timeout: 1200 });
+    } else {
+      setTimeout(startScene, 250);
+    }
   }
 
-  if (document.readyState === 'complete') {
-    whenIdle(startScene);
-  } else {
-    window.addEventListener('load', function(){ whenIdle(startScene); });
-  }
+  if (document.readyState === 'complete') boot();
+  else window.addEventListener('load', boot, { once:true });
 })();
 </script>
 </body>
