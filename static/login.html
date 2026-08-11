@@ -2241,20 +2241,6 @@ h1,h2,h3,h4{
   .tl-content p{ font-size:13.5px; }
 }
 
-/* Mobile: Smart Follow-ups showcase — tall, spacious, centered card */
-@media (max-width:720px){
-  .sc-media.m3{ aspect-ratio:auto; padding:8px; margin:0 -8px; }
-  .sc-media.m3 .demo-panel{ width:100%; margin:0 auto; }
-  .demo-stage{ min-height:560px; padding:20px 16px; }
-  .demo-layer{ inset:20px 14px; }
-  .recommend-card{ top:20px; left:16px; right:16px; }
-  .tag-row{ left:14px; right:14px; bottom:56px; }
-  .ai-chip{ bottom:16px; }
-  .demo-complete{ left:16px; right:16px; bottom:20px; }
-  .demo-toast{ top:14px; right:14px; }
-  .route-dest{ font-size:10px; padding:5px 8px; }
-}
-
 /* Loader */
 .loader{
   position:fixed; inset:0; z-index:999;
@@ -2284,22 +2270,20 @@ h1,h2,h3,h4{
 
 
 </style>
-<style id="voovr-navigation-performance">
-#voovr-page-transition{position:fixed;inset:0;z-index:99999;background:#09090b;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .28s cubic-bezier(.16,1,.3,1),visibility 0s linear .28s}
-#voovr-page-transition.is-active{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .18s cubic-bezier(.16,1,.3,1)}
-#voovr-page-transition .vpt-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:10px}
-#voovr-page-transition .vpt-dot{width:7px;height:7px;border-radius:50%;background:#8b7cff;animation:vptPulse 1s ease-in-out infinite}
-#voovr-page-transition .vpt-dot:nth-child(2){animation-delay:.12s}
-#voovr-page-transition .vpt-dot:nth-child(3){animation-delay:.24s}
-@keyframes vptPulse{0%,100%{transform:scale(.55);opacity:.35}50%{transform:scale(1);opacity:1}}
-html.voovr-page-loading body{overflow:hidden}
-@media(prefers-reduced-motion:reduce){#voovr-page-transition{transition:none}#voovr-page-transition .vpt-dot{animation:none}}
+<style id="voovr-critical-navigation">
+#voovr-page-transition{position:fixed;inset:0;z-index:99999;background:#09090b;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease}
+#voovr-page-transition.is-active{opacity:1;visibility:visible;pointer-events:auto}
+#voovr-page-transition .vpt-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:9px}
+#voovr-page-transition .vpt-dot{width:7px;height:7px;border-radius:50%;background:#8b7cff;animation:vptPulse .9s ease-in-out infinite}
+#voovr-page-transition .vpt-dot:nth-child(2){animation-delay:.12s}.vpt-dot:nth-child(3){animation-delay:.24s}
+@keyframes vptPulse{0%,100%{transform:scale(.55);opacity:.3}50%{transform:scale(1);opacity:1}}
 </style>
-<link rel="dns-prefetch" href="//unpkg.com"><link rel="preconnect" href="https://unpkg.com" crossorigin>
-<link rel="dns-prefetch" href="//prod.spline.design"><link rel="preconnect" href="https://prod.spline.design" crossorigin>
+<link rel="preconnect" href="https://prod.spline.design" crossorigin>
+<link rel="dns-prefetch" href="//prod.spline.design">
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
 </head>
 <body>
-<div id="voovr-page-transition" aria-hidden="true"><div class="vpt-inner"><span class="vpt-dot"></span><span class="vpt-dot"></span><span class="vpt-dot"></span></div></div>
+<div id="voovr-page-transition"><div class="vpt-inner"><span class="vpt-dot"></span><span class="vpt-dot"></span><span class="vpt-dot"></span></div></div>
 
 <div class="scroll-progress" id="scrollProgress"></div>
 <div class="loader" id="loader"><div class="loader-mark"></div></div>
@@ -2882,10 +2866,18 @@ html.voovr-page-loading body{overflow:hidden}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
 <script>
 gsap.registerPlugin(ScrollTrigger);
 
-document.documentElement.style.scrollBehavior = 'smooth';
+if (typeof Lenis !== 'undefined') {
+  var lenis = new Lenis({ duration: 1.1, smoothWheel: true });
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add(function(time){ lenis.raf(time*1000); });
+  gsap.ticker.lagSmoothing(0);
+} else {
+  console.warn('Lenis failed to load — falling back to native scroll.');
+}
 
 window.addEventListener('load', function(){ ScrollTrigger.refresh(); });
 
@@ -3349,59 +3341,54 @@ window.addEventListener('scroll', function(){
 
 <script type="module">
 (function(){
-  var canvas=document.getElementById('canvas3d');
-  if(!canvas||!window.WebGLRenderingContext)return;
-  var realDPR=window.devicePixelRatio||1;
-  var mobile=matchMedia('(max-width: 768px)').matches;
-  var cappedDPR=Math.min(realDPR,mobile?1:1.25), overridden=false;
-  try{Object.defineProperty(window,'devicePixelRatio',{configurable:true,get:function(){return cappedDPR}});overridden=true}catch(e){}
-  function restore(){if(!overridden)return;try{Object.defineProperty(window,'devicePixelRatio',{configurable:true,get:function(){return realDPR}})}catch(e){}}
-  function idle(cb){if('requestIdleCallback' in window)requestIdleCallback(cb,{timeout:1800});else setTimeout(cb,250)}
-  function start(){
-    import('https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js').then(function(mod){
-      var app=new mod.Application(canvas);
-      return app.load('https://prod.spline.design/aflzqGas8LjPtPQY/scene.splinecode').then(function(){
-        restore();var inView=true,visible=document.visibilityState==='visible';
-        function sync(){if(inView&&visible)app.play();else app.pause()}
-        if('IntersectionObserver'in window)new IntersectionObserver(function(es){es.forEach(function(e){inView=e.isIntersecting;sync()})},{threshold:0}).observe(canvas);
-        document.addEventListener('visibilitychange',function(){visible=document.visibilityState==='visible';sync()});
-        sync();
-      });
-    }).catch(function(e){restore();console.warn('[Spline]',e)});
-  }
-  if(document.readyState==='complete')idle(start);else window.addEventListener('load',function(){idle(start)},{once:true});
+ var canvas=document.getElementById('canvas3d'); if(!canvas)return;
+ window.__voovrSplineReady=false;
+ var d=Math.min(window.devicePixelRatio||1,matchMedia('(max-width:768px)').matches?1:1.25);
+ try{Object.defineProperty(window,'devicePixelRatio',{configurable:true,get:function(){return d}})}catch(e){}
+ function ready(){window.__voovrSplineReady=true;window.dispatchEvent(new Event('voovr:spline-ready'))}
+ import('https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js').then(function(m){
+   var app=new m.Application(canvas);
+   return app.load('https://prod.spline.design/aflzqGas8LjPtPQY/scene.splinecode').then(function(){
+     ready(); app.play();
+     var io='IntersectionObserver'in window?new IntersectionObserver(function(es){es.forEach(function(e){e.isIntersecting?app.play():app.pause()})},{threshold:0}).observe(canvas):null;
+     document.addEventListener('visibilitychange',function(){document.visibilityState==='visible'?app.play():app.pause()});
+   });
+ }).catch(function(e){console.warn('[Spline]',e);ready()});
 })();
 </script>
-<script id="voovr-navigation-controller">
+<script id="voovr-critical-navigation">
 (function(){
-  'use strict';
-  var overlay=document.getElementById('voovr-page-transition'),reduce=matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches,seen=new Set(),timer;
-  function urlFor(a){
-    if(!a||!a.href||a.target==='_blank'||a.hasAttribute('download')||a.dataset.noPrefetch!==undefined)return null;
-    try{var u=new URL(a.href,location.href);if(u.origin!==location.origin||u.href===location.href)return null;return u}catch(e){return null}
-  }
-  function prefetch(url){
-    if(!url||seen.has(url))return;seen.add(url);
-    try{var l=document.createElement('link');l.rel='prefetch';l.href=url;l.as='document';document.head.appendChild(l)}catch(e){}
-    if(navigator.connection&&navigator.connection.saveData)return;
-    fetch(url,{credentials:'same-origin',cache:'force-cache',headers:{'X-VooVr-Prefetch':'1'}}).catch(function(){});
-  }
-  document.addEventListener('pointerover',function(e){
-    var u=urlFor(e.target.closest&&e.target.closest('a'));if(!u)return;
-    clearTimeout(timer);timer=setTimeout(function(){prefetch(u.href)},80);
-  },{passive:true});
-  document.addEventListener('focusin',function(e){var u=urlFor(e.target.closest&&e.target.closest('a'));if(u)prefetch(u.href)});
-  document.addEventListener('click',function(e){
-    if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
-    var a=e.target.closest&&e.target.closest('a'),u=urlFor(a);if(!u||a.dataset.transition==='off')return;
-    e.preventDefault();overlay&&overlay.classList.add('is-active');document.documentElement.classList.add('voovr-page-loading');
-    requestAnimationFrame(function(){setTimeout(function(){location.href=u.href},reduce?0:70)});
-  },true);
-  window.addEventListener('pageshow',function(){overlay&&overlay.classList.remove('is-active');document.documentElement.classList.remove('voovr-page-loading')});
-  (async function(){
-    try{if(document.fonts&&document.fonts.ready)await document.fonts.ready}catch(e){}
-    requestAnimationFrame(function(){requestAnimationFrame(function(){document.documentElement.classList.remove('voovr-page-loading');overlay&&overlay.classList.remove('is-active')})});
-  })();
+ var o=document.getElementById('voovr-page-transition'),seen=new Set(),ht;
+ function u(a){
+   if(!a||!a.href||a.target==='_blank'||a.hasAttribute('download')||a.dataset.noPrefetch!==undefined)return null;
+   try{var x=new URL(a.href,location.href);return x.origin===location.origin&&x.href!==location.href?x:null}catch(e){return null}
+ }
+ function pre(x){
+   if(!x||seen.has(x.href))return; seen.add(x.href);
+   if(navigator.connection&&navigator.connection.saveData)return;
+   try{var l=document.createElement('link');l.rel='prefetch';l.href=x.href;l.as='document';document.head.appendChild(l)}catch(e){}
+ }
+ document.addEventListener('pointerover',function(e){var x=u(e.target.closest&&e.target.closest('a'));if(x){clearTimeout(ht);ht=setTimeout(function(){pre(x)},60)}},{passive:true});
+ document.addEventListener('focusin',function(e){var x=u(e.target.closest&&e.target.closest('a'));if(x)pre(x)});
+ document.addEventListener('click',function(e){
+   if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
+   var a=e.target.closest&&e.target.closest('a'),x=u(a);if(!x||a.dataset.transition==='off')return;
+   e.preventDefault();if(o)o.classList.add('is-active');requestAnimationFrame(function(){location.href=x.href});
+ },true);
+
+ async function reveal(){
+   try{if(document.fonts&&document.fonts.ready)await document.fonts.ready}catch(e){}
+   if(!window.__voovrSplineReady){
+     await new Promise(function(r){
+       var done=false,finish=function(){if(!done){done=true;r()}};
+       window.addEventListener('voovr:spline-ready',finish,{once:true});
+       setTimeout(finish,4200);
+     });
+   }
+   requestAnimationFrame(function(){requestAnimationFrame(function(){if(o)o.classList.remove('is-active')})});
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',reveal,{once:true});else reveal();
+ window.addEventListener('pageshow',function(){if(o)o.classList.remove('is-active')},{once:true});
 })();
 </script>
 </body>
