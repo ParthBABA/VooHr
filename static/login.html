@@ -3027,15 +3027,26 @@ demoTl
 gsap.to('#demoPanel', { y:-6, duration:3.6, ease:'sine.inOut', yoyo:true, repeat:-1 });
 
 window.addEventListener('load', function() {
-  var tl = gsap.timeline({ defaults:{ ease:'power3.out' } });
+  (async function(){
+    try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
+    if(!window.__voovrSplineReady){
+      await new Promise(function(resolve){
+        var done = false;
+        var finish = function(){ if(!done){ done = true; resolve(); } };
+        window.addEventListener('voovr:spline-ready', finish, { once:true });
+        setTimeout(finish, 5000);
+      });
+    }
+    var tl = gsap.timeline({ defaults:{ ease:'power3.out' } });
 
-tl.to('#loader', { opacity:0, duration:.6, onComplete:function(){ document.getElementById('loader').style.display='none'; } })
-    .from('.navbar', { y:-30, opacity:0, duration:.7 }, .1)
-    .from('.hero-inner .eyebrow', { opacity:0, y:16, duration:.7, clearProps:'all' }, .25)
-    .from('.hero-inner h1', { opacity:0, y:26, filter:'blur(10px)', duration:.9, clearProps:'all' }, .35)
-    .from('.hero-inner p', { opacity:0, y:20, duration:.8, clearProps:'all' }, .55)
-    .from('.hero-cta .btn', { opacity:0, y:16, stagger:.1, duration:.7, clearProps:'all' }, .68)
-    .from('#demoPanel', { opacity:0, y:40, duration:1, clearProps:'all' }, 1);
+    tl.to('#loader', { opacity:0, duration:.6, onComplete:function(){ document.getElementById('loader').style.display='none'; } })
+      .from('.navbar', { y:-30, opacity:0, duration:.7 }, .1)
+      .from('.hero-inner .eyebrow', { opacity:0, y:16, duration:.7, clearProps:'all' }, .25)
+      .from('.hero-inner h1', { opacity:0, y:26, filter:'blur(10px)', duration:.9, clearProps:'all' }, .35)
+      .from('.hero-inner p', { opacity:0, y:20, duration:.8, clearProps:'all' }, .55)
+      .from('.hero-cta .btn', { opacity:0, y:16, stagger:.1, duration:.7, clearProps:'all' }, .68)
+      .from('#demoPanel', { opacity:0, y:40, duration:1, clearProps:'all' }, 1);
+  })();
 });
 
 /* ============================================================
