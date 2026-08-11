@@ -665,7 +665,7 @@ function goToStep(n) {
 }
 
 function populateStep(n) {
-  if (!analysisData) { console.error('[SyncRoom DEBUG] populateStep(' + n + ') skipped — analysisData is null (session.analysis missing). Step ' + n + ' will render EMPTY.'); return; }
+  if (!analysisData) return;
   switch (n) {
     case 2: populateStep2(analysisData.step2_behavioural_intelligence || {}); break;
     case 3: populateStep3(analysisData.step3_root_cause_analysis || {}); break;
@@ -841,10 +841,14 @@ function applyInitialGsapState() {
   if (!window.gsap) return;
 
   var sidebar = document.querySelector('.sidebar');
-  if (sidebar) gsap.set(sidebar, { x: -72, opacity: 0 });
+  if (sidebar) {
+    gsap.set(sidebar, { x: -72, opacity: 0 });
+    sidebar.classList.remove('gsap-hidden');
+  }
 
   var progress = document.getElementById('journeyProgress');
   if (progress) {
+    progress.classList.remove('gsap-hidden');
     var stepNodes = progress.querySelectorAll('.step-node');
     var connectors = progress.querySelectorAll('.step-connector');
     gsap.set(stepNodes, { opacity: 0, y: -20 });
@@ -853,6 +857,7 @@ function applyInitialGsapState() {
 
   var content = document.getElementById('stepContent');
   if (content) {
+    content.classList.remove('gsap-hidden');
     var header = content.querySelector('.step-header');
     var scriptBlock = content.querySelector('.script-block');
     var doItems = content.querySelectorAll('[data-anim^="do-"]');
@@ -871,8 +876,10 @@ function applyInitialGsapState() {
     if (nav) gsap.set(nav, { opacity: 0, y: 12 });
   }
 
+  var journeySidebar = document.querySelector('.journey-sidebar');
   var sideCards = document.querySelectorAll('.journey-sidebar .card');
   if (sideCards.length) gsap.set(sideCards, { opacity: 0, x: 30 });
+  if (journeySidebar) journeySidebar.classList.remove('gsap-hidden');
 }
 
 applyInitialGsapState();
@@ -883,10 +890,7 @@ var employeePromise = employeeId
   : Promise.resolve(null);
 
 var sessionPromise = sessionId
-  ? fetch('/api/sessions/' + sessionId).then(function(r) {
-      if (!r.ok) { console.error('[SyncRoom DEBUG] GET /api/sessions/' + sessionId + ' -> HTTP ' + r.status + ' — session fetch failed'); return null; }
-      return r.json();
-    })
+  ? fetch('/api/sessions/' + sessionId).then(function(r) { return r.ok ? r.json() : null; })
   : Promise.resolve(null);
 
 // Also fetch session's employee if no employee_id provided
@@ -905,15 +909,6 @@ sessionPromise.then(function(s) {
 }).then(function(results) {
   var emp = results[0];
   var session = results[1];
-
-  if (session && session.analysis) {
-    var _a = session.analysis;
-    console.log('[SyncRoom DEBUG] session.analysis present. step2=' + (!!_a.step2_behavioural_intelligence) + ' step3=' + (!!_a.step3_root_cause_analysis) + ' step4=' + (!!_a.step4_action_blueprint) + ' step5=' + (!!_a.step5_conversation_strategy));
-  } else if (session === null) {
-    console.error('[SyncRoom DEBUG] session is null (fetch failed or 401/404/500). analysisData will NOT be set.');
-  } else {
-    console.error('[SyncRoom DEBUG] session loaded but session.analysis is', session.analysis, '— never analyzed or /analyze failed. Session keys:', Object.keys(session));
-  }
 
   // ── Page Title ──
   if (emp && emp.name) {
@@ -972,12 +967,13 @@ sessionPromise.then(function(s) {
       if (scriptEn) scriptEn.textContent = '"' + ps.statement + '"';
       if (scriptHi) scriptHi.textContent = '"' + ps.statement + '"';
 
-      var buildItem = function(text, isAvoid) {
+      var buildItem = function(text, isAvoid, idx) {
         var iconSvg = isAvoid
           ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
           : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>';
         var div = document.createElement('div');
         div.className = 'guideline';
+        div.setAttribute('data-anim', (isAvoid ? 'dont-' : 'do-') + idx);
         div.innerHTML = '<div class="g-icon' + (isAvoid ? ' avoid' : '') + '">' + iconSvg + '</div><span>' + escHtml(text) + '</span>';
         return div;
       };
@@ -986,14 +982,14 @@ sessionPromise.then(function(s) {
         var doList = document.getElementById('psychSafetyDoList');
         if (doList) {
           doList.innerHTML = '';
-          ps.do.forEach(function(t) { doList.appendChild(buildItem(t, false)); });
+          ps.do.forEach(function(t, idx) { doList.appendChild(buildItem(t, false, idx)); });
         }
       }
       if (ps.dont && ps.dont.length) {
         var dontList = document.getElementById('psychSafetyDontList');
         if (dontList) {
           dontList.innerHTML = '';
-          ps.dont.forEach(function(t) { dontList.appendChild(buildItem(t, true)); });
+          ps.dont.forEach(function(t, idx) { dontList.appendChild(buildItem(t, true, idx)); });
         }
       }
       if (ps.tip && ps.tip !== INSUFFICIENT) {
