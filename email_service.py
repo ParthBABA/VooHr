@@ -1,17 +1,13 @@
-"""Outbound email for OTP delivery.
+"""Outbound email for OTP delivery via the Brevo Transactional Email API.
 
 Configuration is read from the environment:
 
-  EMAIL_HOST  — either a raw Resend API key (starts with "re_") or an SMTP
-                hostname like smtp.resend.com
-  EMAIL_PORT  — SMTP port (default 587); only used for the SMTP path
-  EMAIL_USER  — SMTP user (default "resend"); only used for the SMTP path
-  EMAIL_PASS  — SMTP password/API key; only used for the SMTP path
-  EMAIL_FROM  — from address; default "VooHr <onboarding@resend.dev>"
+  BREVO_API_KEY      — Brevo v3 API key (required; starts with "xkeysib-")
+  BREVO_SENDER_EMAIL — verified Brevo sender address (required)
+  BREVO_SENDER_NAME  — display name used as the email sender (default "VooHr")
 
-When EMAIL_HOST is a Resend key we call Resend's REST API directly with the
-existing `requests` dependency (no extra SDK). Otherwise we fall back to
-Python's built-in smtplib over STARTTLS.
+Emails are sent with the existing `requests` dependency to
+POST https://api.brevo.com/v3/smtp/email (no extra SDK).
 
 send_otp_email never raises — it logs and returns False so route handlers can
 respond cleanly.
@@ -19,14 +15,12 @@ respond cleanly.
 
 import logging
 import os
-import smtplib
-from email.mime.text import MIMEText
 
 import requests
 
 logger = logging.getLogger(__name__)
 
-RESEND_API_URL = "https://api.resend.com/emails"
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 OTP_SUBJECT = "Your VooHr verification code"
 
 
@@ -39,60 +33,78 @@ def _otp_html(otp: str) -> str:
     )
 
 
-def _send_via_resend(to_email: str, otp: str) -> bool:
-    resp = requests.post(
-        RESEND_API_URL,
-        headers={"Authorization": f"Bearer {os.environ['EMAIL_HOST']}"},
-        json={
-            "from": os.environ.get("EMAIL_FROM", "VooHr <onboarding@resend.dev>"),
-            "to": [to_email],
-            "subject": OTP_SUBJECT,
-            "html": _otp_html(otp),
-        },
-        timeout=15,
-    )
+def _send_via_brevo(to_email: str, otp: str) -> bool:
+    api_key = os.environ.get("BREVO_API_KEY", "")
+    sender_email = os.environ.get("BREVO_SENDER_EMAIL", "")
+    sender_name = os.environ.get("BREVO_SENDER_NAME", "VooHr")
+
+    if not api_key or not sender_email:
+        logger.error(
+            "Brevo not configured: missing BREVO_API_KEY or BREVO_SENDER_EMAIL "
+            "in environment (to=%s)",
+            to_email,
+        )
+        return False
+
+    payload = {
+        "sender": {"email": sender_email, "name": sender_name},
+        "to": [{"email": to_email}],
+        "subject": OTP_SUBJECT,
+        "htmlContent": _otp_html(otp),
+    }
+
+    try:
+        resp = requests.post(
+            BREVO_API_URL,
+            headers={
+                "api-key": api_key,
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=15,
+        )
+    except requests.RequestException:
+        logger.exception("Brevo request failed for to=%s (timeout/network)", to_email)
+        return False
+
+    if resp.status_code == 401:
+        logger.error("Brevo rejected API key (401) for to=%s", to_email)
+        return False
+    if resp.status_code == 403:
+        logger.error(
+            "Brevo sender %s not verified or account blocked (403) for to=%s",
+            sender_email,
+            to_email,
+        )
+        return False
+    if resp.status_code == 429:
+        logger.warning("Brevo rate limited (429) for to=%s", to_email)
+        return False
+    if resp.status_code >= 500:
+        logger.error("Brevo API error (status %s) for to=%s", resp.status_code, to_email)
+        return False
     if not resp.ok:
         logger.warning(
-            "Resend API returned status %s for to=%s: %s",
+            "Brevo API returned status %s for to=%s: %s",
             resp.status_code,
             to_email,
             resp.text,
         )
-    else:
-        try:
-            _id = resp.json().get("id")
-        except Exception:
-            _id = "n/a"
-        logger.info("Resend accepted OTP email to=%s id=%s", to_email, _id)
-    return resp.ok
+        return False
 
-
-def _send_via_smtp(to_email: str, otp: str, host: str) -> bool:
-    port = int(os.environ.get("EMAIL_PORT", "587"))
-    user = os.environ.get("EMAIL_USER", "resend")
-    password = os.environ.get("EMAIL_PASS", "")
-    sender = os.environ.get("EMAIL_FROM", "VooHr <onboarding@resend.dev>")
-
-    msg = MIMEText(_otp_html(otp), "html", "utf-8")
-    msg["Subject"] = OTP_SUBJECT
-    msg["From"] = sender
-    msg["To"] = to_email
-
-    with smtplib.SMTP(host, port, timeout=15) as server:
-        server.starttls()
-        if user:
-            server.login(user, password)
-        server.send_message(msg)
+    try:
+        message_id = resp.json().get("messageId")
+    except Exception:
+        message_id = "n/a"
+    logger.info("Brevo accepted OTP email to=%s messageId=%s", to_email, message_id)
     return True
 
 
 def send_otp_email(to_email: str, otp: str) -> bool:
     """Send an OTP email. Returns True on success, False on any failure."""
-    host = os.environ.get("EMAIL_HOST", "")
     try:
-        if host.startswith("re_"):
-            return _send_via_resend(to_email, otp)
-        return _send_via_smtp(to_email, otp, host)
+        return _send_via_brevo(to_email, otp)
     except Exception:
         logger.exception("Failed to send OTP email to %s", to_email)
         return False

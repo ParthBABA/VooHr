@@ -252,6 +252,14 @@ document.getElementById('signupForm').addEventListener('submit', function(event)
   var btn = document.getElementById('createAccountBtn');
   var box = document.getElementById('verifyError');
 
+  var isStrongPassword = password.length >= 8 && /[a-zA-Z]/.test(password) && /\d/.test(password);
+  if (!isStrongPassword) {
+    box.innerHTML = 'Password is too weak. Create a strong password with at least 8 characters, ' +
+      'including both letters and numbers.';
+    box.style.display = 'block';
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = 'Creating account...';
   box.style.display = 'none';
@@ -281,7 +289,8 @@ document.getElementById('signupForm').addEventListener('submit', function(event)
       return;
     }
     var messages = {
-      weak_password: 'Password is too weak. Use 8+ characters with a mix of letters and numbers.',
+      weak_password: 'Password is too weak. Create a strong password with at least 8 characters, ' +
+        'including both letters and numbers.',
       already_registered: 'An account with that email already exists. ' +
         '<a href="signin.html" class="verify-error-link">Sign in instead</a>.',
       email_failed: 'We couldn\'t send a verification email. Please try again.',
