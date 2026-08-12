@@ -1096,8 +1096,23 @@ sessionPromise.then(function(s) {
   if (backdrop) backdrop.addEventListener('click', closeDrawer);
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeDrawer();
+});
   });
-})();
+  // ── Complete Sync Handler ──
+  document.getElementById('completeSyncBtn').addEventListener('click', function() {
+    fetch('/api/sessions/' + sessionId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' })
+    })
+    .then(r => r.json())
+    .then(data => {
+      window.location.href = 'dashboard.html?employee_id=' + employeeId + '&status=completed';
+    })
+    .catch(err => {
+      console.error('Complete sync failed:', err);
+    });
+  });
 </script>
 </body>
 </html>
