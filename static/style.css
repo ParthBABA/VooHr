@@ -118,6 +118,7 @@ h1,h2,h3,h4,h5,h6{font-family:var(--font-d);font-weight:600;text-transform:upper
 .sidebar{width:260px;min-height:100vh;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;transition:width 0.35s cubic-bezier(0.4,0,0.2,1);overflow:hidden;}
 .sidebar.collapsed{width:72px;}
 .sidebar.collapsed .sidebar-logo{font-size:0;gap:0;justify-content:center;}
+.sidebar{width:20%;min-width:200px;}
 .sidebar.collapsed .sidebar-logo .logo-mark{margin:0;}
 .sidebar.collapsed .nav-section{opacity:0;height:0;padding:0;overflow:hidden;transition:opacity 0.25s ease,height 0.25s ease;}
 .sidebar.collapsed .nav-item span,
