@@ -1,3 +1,4 @@
+import logging
 import os
 
 from flask import Flask, jsonify, request, send_from_directory
@@ -11,6 +12,8 @@ from extensions import init_db
 from notifications import notifications_bp
 from sessions import sessions_bp
 
+logger = logging.getLogger(__name__)
+
 
 def create_app():
     app = Flask(__name__, static_folder="static", static_url_path="")
@@ -19,6 +22,15 @@ def create_app():
     # interactive Werkzeug debugger (an HTML page) instead of letting our
     # errorhandler below turn it into JSON for API callers.
     app.config["PROPAGATE_EXCEPTIONS"] = False
+
+    # Startup sanity check so production logs show whether the Brevo email
+    # config was loaded. Only presence is logged, never the key value.
+    logger.info(
+        "Email config: BREVO_API_KEY=%s BREVO_SENDER_EMAIL=%s BREVO_SENDER_NAME=%s",
+        "set" if os.environ.get("BREVO_API_KEY") else "MISSING",
+        os.environ.get("BREVO_SENDER_EMAIL") or "MISSING",
+        os.environ.get("BREVO_SENDER_NAME") or "(default VooHr)",
+    )
 
     init_db(app)
     register_google_oauth(app)
