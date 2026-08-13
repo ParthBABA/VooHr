@@ -19,6 +19,7 @@
   --white:#F5F5F7;
   --muted:#8A8A93;
   --muted-2:#57575f;
+  --error:#EF4444;
 
   --grad-primary: linear-gradient(135deg, var(--primary), var(--secondary));
   --grad-radial: radial-gradient(circle at 30% 20%, rgba(110,86,255,.25), transparent 60%);
@@ -131,7 +132,7 @@ h1,h2{
   position:relative;
   min-height:100vh;
   display:grid;
-  grid-template-columns:40% 60%;
+  grid-template-columns:1fr;
 }
 .setup-shell::before{
   content:'';
@@ -154,7 +155,6 @@ h1,h2{
 
 .setup-left{
   position:relative; z-index:1;
-  border-right:1px solid var(--line);
   padding:48px 56px;
   display:flex;
   flex-direction:column;
@@ -193,9 +193,7 @@ h1,h2{
 
 .setup-right{
   position:relative; z-index:1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  order:2;
   padding:48px;
 }
 .setup-card{
@@ -267,6 +265,67 @@ h1,h2{
   .setup-right{ padding:24px; }
   .setup-card{ padding:28px 22px; }
 }
+
+/* Tab switching */
+.auth-tabs{
+  display:flex; gap:4px; margin-bottom:24px; border-bottom:1px solid var(--line);
+}
+.auth-tab{
+  flex:1;
+  padding:12px 0;
+  font-family:var(--font-num); font-size:13px; font-weight:600; color:var(--muted);
+  border:none; background:transparent; cursor:pointer; transition:color .25s ease;
+}
+.auth-tab.active{
+  color:var(--white);
+  border-bottom:2px solid var(--primary);
+}
+.auth-tab:hover{ color:var(--accent); }
+
+/* Email tab content */
+.email-tab-content{ display:none; }
+.email-tab-content.active{ display:block; }
+
+.email-fields{
+  display:flex; flex-direction:column; gap:12px; margin-bottom:20px;
+}
+.email-field{
+  display:flex; flex-direction:column; gap:4px;
+}
+.email-field label{
+  font-size:12px; color:var(--muted); font-weight:500; text-transform:uppercase; letter-spacing:.08em;
+}
+.email-field input{
+  width:100%;
+  font-family:var(--font-body);
+  font-size:14px; color:var(--white);
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--line);
+  border-radius:var(--radius-sm);
+  padding:14px 16px;
+  outline:none;
+  transition:border-color .25s ease, background .25s ease, box-shadow .25s ease;
+}
+.email-field input::placeholder{ color:var(--muted-2); }
+.email-field input:hover{ border-color:#2c2c31; }
+.email-field input:focus{
+  border-color:rgba(110,86,255,.55);
+  background:rgba(110,86,255,.05);
+  box-shadow:0 0 0 3px rgba(110,86,255,.12);
+}
+
+.google-section{
+  margin-top:32px;
+}
+
+/* OTP resend */
+.resend-otp-wrap{
+  margin-top:20px; text-align:center;
+}
+.resend-otp-link{
+  font-size:12px; color:var(--muted-2); font-weight:500; transition:color .25s ease;
+}
+.resend-otp-link:hover{ color:var(--accent); }
 </style>
 </head>
 <body>
@@ -282,10 +341,10 @@ h1,h2{
     <div class="setup-left-body">
       <span class="eyebrow" data-reveal>Welcome Back</span>
       <h1 data-reveal>Sign in to your workspace</h1>
-      <p data-reveal>Continue with the Google account linked to your organization. You'll be taken straight to your dashboard.</p>
+      <p data-reveal>Choose your preferred sign-in method.</p>
 
       <div class="trust-list" data-reveal>
-        <div class="trust-item"><span class="trust-check">&#10003;</span>Secure Google Authentication</div>
+        <div class="trust-item"><span class="trust-check">&#10003;</span>Secure Authentication</div>
         <div class="trust-item"><span class="trust-check">&#10003;</span>Enterprise Privacy</div>
         <div class="trust-item"><span class="trust-check">&#10003;</span>Encrypted Sessions</div>
       </div>
@@ -296,53 +355,147 @@ h1,h2{
     <div class="setup-card glass" id="setupCard">
       <div class="setup-card-head" data-reveal><span class="dot"></span>Secure sign in</div>
       <h2 data-reveal>Sign In</h2>
-      <p class="muted" data-reveal style="font-size:13.5px; margin-bottom:26px;">Use your registered business Google account to continue.</p>
 
       <div id="errorBanner" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#f87171;"></div>
 
-      <button type="button" class="btn btn-google" id="googleBtn" data-reveal>
-        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.81.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.98A9 9 0 0 0 0 9c0 1.45.35 2.83.98 4.03l2.97-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .98 4.97l2.97 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
-        Continue with Google
-      </button>
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" data-tab="google">Continue with Google</button>
+        <button class="auth-tab" data-tab="email">Email or Password</button>
+      </div>
 
-      <div class="setup-note" data-reveal>Your session is encrypted and secure.</div>
-      <div class="setup-signin" data-reveal>New here? <a href="onboarding.html">Create an organization</a></div>
+      <!-- Email/Password section - shown by default, hidden when Google tab is active -->
+      <div class="email-tab-content active" id="emailSection" data-reveal>
+        <p class="muted" style="font-size:13.5px; margin-bottom:26px;">Use your registered business email and password.</p>
+
+        <div class="email-fields">
+          <div class="email-field">
+            <label for="emailInput">Email</label>
+            <input type="email" id="emailInput" autocomplete="email" placeholder="you@company.com" required>
+          </div>
+          <div class="email-field">
+            <label for="passwordInput">Password</label>
+            <input type="password" id="passwordInput" autocomplete="current-password" placeholder="Enter your password" required>
+          </div>
+        </div>
+
+        <div class="resend-otp-wrap">
+          <a class="resend-otp-link" id="forgotPasswordLink">Forgot password?</a>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="emailSignInBtn" style="width:100%; margin-top:24px;">Sign In</button>
+      </div>
+
+      <!-- Google Sign In section - shown when Google tab is active -->
+      <div class="google-section" id="googleSection" data-reveal>
+        <p class="muted" style="font-size:13.5px; margin-bottom:26px;">Use your registered business Google account to continue.</p>
+
+        <button type="button" class="btn btn-google" id="googleBtn" data-reveal>
+          <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.81.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.98A9 9 0 0 0 0 9c0 1.45.35 2.83.98 4.03l2.97-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .98 4.97l2.97 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+          Continue with Google
+        </button>
+
+        <div class="setup-note" data-reveal>Your session is encrypted and secure.</div>
+        <div class="setup-signin" data-reveal>New here? <a href="onboarding.html">Create an organization</a></div>
+      </div>
     </div>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script>
-document.getElementById('googleBtn').addEventListener('click', function(){
-  window.location.href = '/auth/google/signin';
-});
+document.addEventListener('DOMContentLoaded', function() {
+  var tabs = document.querySelectorAll('.auth-tab');
+  
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      var target = this.getAttribute('data-tab');
+      
+      // Update tabs
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      this.classList.add('active');
+      
+      // Show/hide sections
+      document.getElementById('googleSection').classList.toggle('active', target === 'google');
+      document.getElementById('emailSection').classList.toggle('active', target === 'email');
+    });
+  });
 
-(function(){
-  var params = new URLSearchParams(window.location.search);
-  var error = params.get('error');
-  if (error) {
-    var messages = {
-      no_account: 'No VooVr account found for that Google account. Create an organization to get started.',
-      session_expired: 'Your session expired. Please sign in again.'
-    };
-    var box = document.getElementById('errorBanner');
-    box.textContent = messages[error] || 'Something went wrong signing you in. Please try again.';
-    box.style.display = 'block';
-  }
-})();
+  // Google sign in
+  document.getElementById('googleBtn').addEventListener('click', function(){
+    window.location.href = '/auth/google/signin';
+  });
 
-window.addEventListener('load', function() {
-  var tl = gsap.timeline({ defaults:{ ease:'power3.out' } });
+  // Email + password sign in with OTP
+  document.getElementById('emailSignInBtn').addEventListener('click', function() {
+    var email = document.getElementById('emailInput').value.trim();
+    var password = document.getElementById('passwordInput').value;
+    var errorBox = document.getElementById('errorBanner');
+    
+    if (!email || !password) {
+      errorBox.style.display = 'block';
+      errorBox.textContent = 'Please enter both email and password.';
+      return;
+    }
+    
+    errorBox.style.display = 'none';
+    
+    fetch('/auth/email/signin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: password })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        if (data.requires_otp) {
+          // Store email for OTP flow
+          sessionStorage.setItem('voohr_pending_email', email);
+          window.location.href = '/otp-verify.html';
+        } else {
+          window.location.href = data.redirect;
+        }
+      } else if (data.error === 'invalid_credentials') {
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'Invalid email or password. Please try again.';
+      } else if (data.error === 'account_requires_otp') {
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'This account requires OTP verification. A code has been sent to your email.';
+        // Store email for OTP flow
+        sessionStorage.setItem('voohr_pending_email', email);
+        window.location.href = '/otp-verify.html';
+      } else if (data.error === 'google_only_account') {
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'This account uses Google sign-in only. Please use Continue with Google instead.';
+      } else {
+        errorBox.style.display = 'block';
+        errorBox.textContent = data.message || 'Sign in failed. Please try again.';
+      }
+    })
+    .catch(function() {
+      errorBox.style.display = 'block';
+      errorBox.textContent = 'Network error — could not reach the server. Please try again.';
+    });
+  });
 
-  tl.from('.setup-left [data-reveal]', {
-      opacity:0, y:20, filter:'blur(8px)', duration:.8, stagger:.09
-    }, 0)
-    .from('#setupCard', {
-      opacity:0, y:24, filter:'blur(10px)', duration:.9
-    }, .15)
-    .from('#setupCard [data-reveal]', {
-      opacity:0, y:14, duration:.7, stagger:.06
-    }, .45);
+  // Forgot password link
+  document.getElementById('forgotPasswordLink').addEventListener('click', function() {
+    window.location.href = '/email-verify.html';
+  });
+
+  // Initial GSAP animation
+  (function(){
+    var tl = gsap.timeline({ defaults:{ ease:'power3.out' } });
+
+    tl.from('.setup-left [data-reveal]', {
+        opacity:0, y:20, filter:'blur(8px)', duration:.8, stagger:.09
+      }, 0)
+      .from('#setupCard', {
+        opacity:0, y:24, filter:'blur(10px)', duration:.9
+      }, .15)
+      .from('#setupCard [data-reveal]', {
+        opacity:0, y:14, duration:.7, stagger:.06
+      }, .45);
+  })();
 });
 </script>
 </body>

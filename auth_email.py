@@ -261,3 +261,93 @@ def password_signin():
     session["user_email"] = pii.get("email", "")
     _record_active_session(db, user["_id"])
     return jsonify({"ok": True, "redirect": "/dashboard.html"}), 200
+
+
+@auth_email_bp.route("/email/signin", methods=["POST"])
+def email_signin():
+    """Email-based sign-in: verify credentials, then either sign in directly
+    or start OTP verification depending on account type.
+
+    Flow:
+      1. If password matches → sign in directly (like /password/signin)
+      2. If password doesn't match → treat as "account exists but wrong password"
+         → send OTP to the email on file so the user can verify via code
+      3. If no user with password hash → return invalid_credentials (Google-only account)
+    """
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    password = data.get("password") or ""
+
+    if not email or not password:
+        return jsonify({"error": "missing_fields"}), 400
+
+    email_hash = blind_index(email)
+    db = get_db()
+    user = db.users.find_one({"email_hash": email_hash})
+
+    if not user:
+        # No account at all — Google-only or never-registered
+        return jsonify({"error": "invalid_credentials"}), 401
+
+    if not user.get("password_hash"):
+        # User exists but is Google-only (no password hash) — OTP won't help,
+        # send them to Google sign-in instead
+        return jsonify({"error": "google_only_account"}), 401
+
+    # User has a password hash — verify the provided password
+    now = _now()
+    lockout_until = _aware(user.get("lockout_until"))
+    if lockout_until and lockout_until > now:
+        retry_after = int((lockout_until - now).total_seconds()) + 1
+        return jsonify({"error": "locked", "retry_after": retry_after}), 423
+
+    if not verify_password(password, user["password_hash"]):
+        # Password incorrect: instead of just rejecting, send OTP to the
+        # on-file email so the user can recover via verification code.
+        # This supports the "email or password" sign-in UX where a wrong
+        # password triggers OTP recovery.
+        db.users.update_one(
+            {"_id": user["_id"]},
+            {"$set": {"failed_login_attempts": user.get("failed_login_attempts", 0) + 1}},
+        )
+        # Send OTP to the email on file
+        pending_email = user.get("user_email") or user.get("email") or email
+        # Decrypt PII to get the actual email
+        try:
+            pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
+            pending_email = pii.get("email", email)
+        except Exception:
+            pending_email = email
+
+        otp = _generate_otp()
+        db.otp_verifications.update_one(
+            {"email_hash": blind_index(pending_email)},
+            {
+                "$set": {
+                    "otp_hash": _otp_hash(otp),
+                    "password_hash": user["password_hash"],
+                    "pending_org": session.get("pending_org"),
+                    "attempts": 0,
+                    "created_at": now,
+                    "expires_at": now + _OTP_TTL,
+                    "last_sent_at": now,
+                }
+            },
+            upsert=True,
+        )
+
+        if not send_otp_email(pending_email, otp):
+            return jsonify({"error": "email_failed"}), 500
+
+        session["pending_email"] = pending_email
+        return jsonify({"ok": True, "requires_otp": True}), 200
+
+    # Password correct — sign in directly
+    pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
+    session.permanent = True
+    session["user_id"] = str(user["_id"])
+    session["org_id"] = str(user["org_id"])
+    session["user_name"] = pii.get("name", "")
+    session["user_email"] = pii.get("email", "")
+    _record_active_session(db, user["_id"])
+    return jsonify({"ok": True, "redirect": "/dashboard.html"}), 200
