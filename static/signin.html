@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sign In — VooVr</title>
+<title>Sign In -- VooVr</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -19,15 +19,11 @@
   --white:#F5F5F7;
   --muted:#8A8A93;
   --muted-2:#57575f;
-  --error:#EF4444;
-
   --grad-primary: linear-gradient(135deg, var(--primary), var(--secondary));
   --grad-radial: radial-gradient(circle at 30% 20%, rgba(110,86,255,.25), transparent 60%);
-
   --font-head: 'Space Grotesk', sans-serif;
   --font-body: 'Manrope', sans-serif;
   --font-num: 'IBM Plex Sans', sans-serif;
-
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 24px;
@@ -131,8 +127,11 @@ h1,h2{
 .setup-shell{
   position:relative;
   min-height:100vh;
-  display:grid;
-  grid-template-columns:1fr;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  padding:48px 24px;
 }
 .setup-shell::before{
   content:'';
@@ -155,9 +154,12 @@ h1,h2{
 
 .setup-left{
   position:relative; z-index:1;
-  padding:48px 56px;
+  flex:1;
+  max-width:500px;
+  padding:48px 40px;
   display:flex;
   flex-direction:column;
+  justify-content:center;
 }
 .setup-left-top{ display:flex; flex-direction:column; }
 .setup-left-body{
@@ -165,8 +167,6 @@ h1,h2{
   display:flex;
   flex-direction:column;
   justify-content:center;
-  max-width:400px;
-  padding:40px 0;
 }
 .setup-left-body h1{
   font-size:clamp(30px, 2.6vw, 40px);
@@ -193,11 +193,16 @@ h1,h2{
 
 .setup-right{
   position:relative; z-index:1;
-  order:2;
-  padding:48px;
+  flex:1;
+  max-width:500px;
+  padding:48px 40px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
 }
 .setup-card{
-  width:100%; max-width:480px;
+  width:100%;
+  max-width:480px;
   border-radius:var(--radius-lg);
   padding:40px;
   box-shadow:0 40px 120px -30px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.02) inset;
@@ -252,18 +257,16 @@ h1,h2{
 }
 
 @media (max-width:980px){
-  .setup-shell{ grid-template-columns:1fr; }
-  .setup-left{
-    border-right:none; border-bottom:1px solid var(--line);
-    padding:40px 32px;
-  }
-  .setup-left-body{ padding:28px 0; max-width:520px; }
-  .setup-right{ padding:32px; }
+  .setup-shell{ padding:32px 20px; }
+}
+@media (max-width:768px){
+  .setup-shell{ flex-direction:column; padding:32px 20px; }
+  .setup-left, .setup-right{ flex:1 100%; max-width:100%; order:initial; }
 }
 @media (max-width:560px){
-  .setup-left{ padding:32px 24px; }
-  .setup-right{ padding:24px; }
-  .setup-card{ padding:28px 22px; }
+  .setup-left{ padding:20px 16px; }
+  .setup-right{ padding:16px; }
+  .setup-card{ padding:24px 20px; }
 }
 
 /* Tab switching */
@@ -287,13 +290,13 @@ h1,h2{
 .email-tab-content.active{ display:block; }
 
 .email-fields{
-  display:flex; flex-direction:column; gap:12px; margin-bottom:20px;
+  display:flex; flex-direction:column; gap:16px; margin-bottom:24px;
 }
 .email-field{
-  display:flex; flex-direction:column; gap:4px;
+  display:flex; flex-direction:column; gap:6px;
 }
 .email-field label{
-  font-size:12px; color:var(--muted); font-weight:500; text-transform:uppercase; letter-spacing:.08em;
+  font-size:13px; color:var(--white); font-weight:500;
 }
 .email-field input{
   width:100%;
@@ -302,7 +305,7 @@ h1,h2{
   background:rgba(255,255,255,.02);
   border:1px solid var(--line);
   border-radius:var(--radius-sm);
-  padding:14px 16px;
+  padding:12px 14px;
   outline:none;
   transition:border-color .25s ease, background .25s ease, box-shadow .25s ease;
 }
