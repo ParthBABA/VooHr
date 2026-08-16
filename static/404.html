@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HR Copilot - Page Not Found</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+</head>
+<body style="background:var(--void); color:var(--ivory); font-family:var(--font-b); font-size:15px; line-height:1.6; min-height:100vh; overflow-x:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px 24px; box-sizing:border-box;">
+  <!-- Spline 3D background -->
+  <canvas id="canvas3d" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;background:var(--void);"></canvas>
+  <div id="spline-overlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:1;background:rgba(0,0,0,0.4);pointer-events:none;"></div>
+
+  <div class="login-card" style="background:var(--ink); border:1px solid var(--border); border-radius:12px; padding:40px 32px 32px; max-width:420px; width:100%; box-shadow:var(--shadow-md); position:relative; z-index:10; text-align:center;">
+    
+    <!-- Logo -->
+    <div class="text-center mb-6">
+<img src="voovr-logo-full.webp" alt="voovrHR" style="width:120px; height:auto; border-radius:8px; margin:0 auto 12px; display:block;">
+      <h1 style="font-family:var(--font-d); font-size:3rem; font-weight:700; letter-spacing:-0.02em; color:var(--amber); text-transform:uppercase; margin:0;">404</h1>
+      <p style="font-family:var(--font-lato); font-size:1rem; color:var(--ivory-faint); letter-spacing:0.04em; text-transform:uppercase; margin:8px 0 0;">Page Not Found</p>
+    </div>
+
+    <p style="font-family:var(--font-lato); font-size:0.9rem; color:var(--ivory); margin:24px 0;">Sorry, the page you’re looking for doesn’t exist or has been moved.</p>
+
+    <div style="text-align:center; margin-top:24px;">
+      <a href="/login" style="background:linear-gradient(135deg,var(--violet),var(--amber)); color:var(--void); font-family:var(--font-lato); font-weight:700; font-size:0.9rem; letter-spacing:0.04em; text-transform:uppercase; padding:16px 24px; display:inline-flex; align-items:center; justify-content:center; gap:10px; border-radius:8px; border:none; text-decoration:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><line x1="9" y1="20" x2="9.01" y2="20"/><line x1="15" y1="20" x2="15.01" y2="20"/></svg>
+        Go to Sign In
+      </a>
+    </div>
+
+  </div>
+
+  <footer style="margin-top:28px; text-align:center; font-size:0.7rem; color:var(--ivory-faint); width:100%;">
+    <span>© 2026 HR Copilot. All rights reserved.</span>
+    <span style="margin-left:16px; color:var(--ivory-faint);">|</span>
+    <a href="/privacy" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Privacy Policy</a>
+    <span style="margin-left:16px; color:var(--ivory-faint);">|</span>
+    <a href="/terms" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Terms of Service</a>
+    <span style="margin-left:16px; color:var(--ivory-faint);">|</span>
+    <a href="mailto:voovrhr@gmail.com" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Contact</a>
+  </footer>
+
+  <!-- Spline runtime -->
+  <script type="module">
+    import { Application } from 'https://unpkg.com/@splinetool/runtime/build/runtime.js';
+    const canvas = document.getElementById('canvas3d');
+    const app = new Application(canvas);
+    app.load('https://prod.spline.design/dnEDCleAPoBnwXaA/scene.splinecode');
+  </script>
+</body>
+</html>

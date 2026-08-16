@@ -351,3 +351,13 @@ def email_signin():
     session["user_email"] = pii.get("email", "")
     _record_active_session(db, user["_id"])
     return jsonify({"ok": True, "redirect": "/dashboard.html"}), 200
+
+
+@auth_email_bp.route("/forgot-password", methods=["POST"])
+def forgot_password():
+    """Placeholder for password reset request. Always returns success to avoid email enumeration."""
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    # In a real implementation, you would send a reset email if the account exists.
+    # For now, we just acknowledge the request.
+    return jsonify({"ok": True, "message": "If the email exists, a reset link has been sent."}), 200

@@ -7,129 +7,178 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 </head>
-<body style="visibility:hidden; background:var(--void); color:var(--ivory); font-family:var(--font-b); font-size:15px; line-height:1.6; min-height:100vh; overflow-x:hidden;">
+<body style="background:var(--void); color:var(--ivory); font-family:var(--font-b); font-size:15px; line-height:1.6; min-height:100vh; overflow-x:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px 24px; box-sizing:border-box;">
+  <!-- Spline 3D background -->
+  <canvas id="canvas3d" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;background:var(--void);"></canvas>
+  <div id="spline-overlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:1;background:rgba(0,0,0,0.4);pointer-events:none;"></div>
 
-  <div class="container">
-    <!-- Main Login Card -->
-    <div class="main-content">
-      <div class="login-card" style="background:var(--ink); border:1px solid var(--border); border-radius:12px; padding:40px 32px 32px; max-width:420px; margin:80px auto 0; width:100%; box-shadow:var(--shadow-md);">
-        
-        <!-- Logo -->
-        <div class="text-center mb-6">
-          <div class="logo-mark" style="width:48px; height:48px; background:linear-gradient(135deg,var(--violet),var(--amber)); display:flex;align-items:center; justify-content:center; font-size:0.8rem; color:var(--void); font-weight:800; border-radius:10px; margin:0 auto 12px; font-family:var(--font-d);">HR</div>
-          <h1 style="font-family:var(--font-d); font-size:1.8rem; font-weight:700; letter-spacing:-0.02em; color:var(--ivory); text-transform:uppercase; margin:0;">HR Copilot</h1>
-          <p style="font-family:var(--font-lato); font-size:0.85rem; color:var(--ivory-faint); letter-spacing:0.04em; text-transform:uppercase; margin:8px 0 0;">Sign in to your account</p>
-        </div>
+  <!-- Redirect if already logged in -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check if user is already logged in
+      // In a real app, this would check the session cookie
+      // For now, we'll just proceed with the login page
+      var isLoggedIn = false; // Placeholder - backend will handle actual check
 
-        <!-- Step 1: Credentials -->
-        <div id="step1" style="display:block;">
-          <form id="loginForm">
-            <!-- Email -->
-            <div style="margin-bottom:24px;">
-              <label style="display:block; font-family:var(--font-lato); font-size:0.75rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ivory-faint); margin-bottom:8px;">Email address</label>
-              <input type="email" id="emailInput" style="width:100%; padding:12px 16px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--ivory); font-size:0.9rem; outline:none; transition:border-color 0.2s;" placeholder="you@company.com">
-            </div>
+      // If already logged in, redirect to dashboard
+      if (isLoggedIn) {
+        // Look for redirect param in query string
+        var urlParams = new URLSearchParams(window.location.search);
+        var redirectUrl = urlParams.get('redirect') || 'dashboard.html';
+        window.location.href = redirectUrl;
+      }
+    });
+  </script>
 
-            <!-- Password -->
-            <div style="margin-bottom:24px; position:relative;">
-              <label style="display:block; font-family:var(--font-lato); font-size:0.75rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ivory-faint); margin-bottom:8px;">Password</label>
-              <input type="password" id="passwordInput" style="width:100%; padding:12px 16px 12px 48px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--ivory); font-size:0.9rem; outline:none; transition:border-color 0.2s;" placeholder="••••••••">
-              <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--ivory-faint); font-size:1.2rem; pointer-events:none;">•</span>
-              <button type="button" class="icon-btn" style="position:absolute; right:16px; top:50%; transform:translateY(-50%);" id="togglePassword" aria-label="Show password">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
-              </button>
-            </div>
-
-            <!-- Forgot password -->
-            <div style="margin-bottom:32px; display:flex; justify-content:space-between; align-items:center;">
-              <a href="#" style="font-family:var(--font-lato); font-size:0.7rem; color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Forgot password?</a>
-              <a href="#" style="font-family:var(--font-lato); font-size:0.7rem; color:var(--ivory-faint); letter-spacing:0.05em; text-transform:uppercase;">Create account</a>
-            </div>
-
-            <!-- Sign In button -->
-            <div style="text-align:center; margin-top:40px;">
-              <button type="submit" class="btn btn-primary w-full" style="background:linear-gradient(135deg,var(--violet),var(--amber)); color:var(--void); font-family:var(--font-lato); font-weight:700; font-size:0.9rem; letter-spacing:0.04em; text-transform:uppercase; padding:16px 24px; width:100%; display:inline-flex; align-items:center; justify-content:center; gap:10px; border-radius:8px; border:none;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><line x1="9" y1="20" x2="9.01" y2="20"/><line x1="15" y1="20" x2="15.01" y2="20"/></svg>
-                Sign In
-              </button>
-            </div>
-
-            <!-- Don't have an account? -->
-            <div style="margin-top:32px; text-align:center; font-size:0.7rem; color:var(--ivory-faint);">
-              <span>Don't have an account? </span><a href="#" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Sign up</a>
-            </div>
-          </form>
-        </div>
-
-        <!-- Step 2: OTP Verification -->
-        <div id="step2" style="display:none; margin-top:-60px; padding:20px 0;">
-          <div class="login-card" style="background:var(--ink); border:1px solid var(--border); border-radius:12px; padding:40px 32px 32px; max-width:420px; margin:0 auto; width:100%; box-shadow:var(--shadow-md);">
-            
-            <!-- Logo -->
-            <div class="text-center mb-6">
-              <div class="logo-mark" style="width:48px; height:48px; background:linear-gradient(135deg,var(--violet),var(--amber)); display:flex;align-items:center; justify-content:center; font-size:0.8rem; color:var(--void); font-weight:800; border-radius:10px; margin:0 auto 12px; font-family:var(--font-d);">HR</div>
-              <h1 style="font-family:var(--font-d); font-size:1.8rem; font-weight:700; letter-spacing:-0.02em; color:var(--ivory); text-transform:uppercase; margin:0;">Verify your identity</h1>
-              <p style="font-family:var(--font-lato); font-size:0.85rem; color:var(--ivory-faint); letter-spacing:0.04em; text-transform:uppercase; margin:8px 0 0;">We've sent a 6-digit code to your email</p>
-            </div>
-
-            <!-- OTP Inputs -->
-            <div class="text-center mb-6">
-              <div style="display:flex; justify-content:center; gap:8px;">
-                <input type="text" id="otp1" maxlength="1" style="width:56px; height:60px; background:var(--surface); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:2rem; font-weight:700; color:var(--ivory); outline:none; transition:border-color 0.2s;" onfocus="this.value='';" oninput="if(this.value.length===1) document.getElementById('otp2').focus();">
-                <input type="text" id="otp2" maxlength="1" style="width:56px; height:60px; background:var(--surface); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:2rem; font-weight:700; color:var(--ivory); outline:none; transition:border-color 0.2s;" onfocus="this.value='';" oninput="if(this.value.length===1) document.getElementById('otp3').focus();">
-                <input type="text" id="otp3" maxlength="1" style="width:56px; height:60px; background:var(--surface); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:2rem; font-weight:700; color:var(--ivory); outline:none; transition:border-color 0.2s;" onfocus="this.value='';" oninput="if(this.value.length===1) document.getElementById('otp4').focus();">
-                <input type="text" id="otp4" maxlength="1" style="width:56px; height:60px; background:var(--surface); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:2rem; font-weight:700; color:var(--ivory); outline:none; transition:border-color 0.2s;" onfocus="this.value='';" oninput="if(this.value.length===1) document.getElementById('otp5').focus();">
-                <input type="text" id="otp5" maxlength="1" style="width:56px; height:60px; background:var(--surface); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:2rem; font-weight:700; color:var(--ivory); outline:none; transition:border-color 0.2s;" onfocus="this.value='';" oninput="if(this.value.length===1) document.getElementById('otp6').focus();">
-                <input type="text" id="otp6" maxlength="1" style="width:56px; height:60px; background:var(--surface); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:2rem; font-weight:700; color:var(--ivory); outline:none; transition:border-color 0.2s;" onfocus="this.value='';">
-              </div>
-            </div>
-
-            <!-- Verification action buttons -->
-            <div class="text-center mb-6">
-              <button type="button" class="btn btn-primary w-full" style="background:linear-gradient(135deg,var(--violet),var(--amber)); color:var(--void); font-family:var(--font-lato); font-weight:700; font-size:0.9rem; letter-spacing:0.04em; text-transform:uppercase; padding:16px 24px; width:100%; display:inline-flex; align-items:center; justify-content:center; gap:10px; border-radius:8px; margin-bottom:12px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><line x1="9" y1="20" x2="9.01" y2="20"/><line x1="15" y1="20" x2="15.01" y2="20"/></svg>
-                Verify & Sign In
-              </button>
-              <div style="display:flex; justify-content:center; gap:24px; align-items:center; color:var(--ivory-faint); font-size:0.7rem;">
-                <a href="#" id="resendLink" style="color:var(--amber); letter-spacing:0.05em;">Resend code</a>
-                <span id="countdown" style="color:var(--amber);">Resend in 00:30</span>
-              </div>
-            </div>
-
-            <!-- Change email link -->
-            <div class="text-center" style="margin-top:24px; padding-top:24px; border-top:1px solid var(--border);">
-              <a href="#" style="font-family:var(--font-lato); font-size:0.7rem; color:var(--ivory-faint); letter-spacing:0.05em; text-transform:uppercase;">Change email</a>
-            </div>
-
-            <!-- Remember this device checkbox -->
-            <div style="margin-top:24px; display:flex; align-items:center; gap:12px; color:var(--ivory-faint); font-size:0.7rem;">
-              <input type="checkbox" id="rememberDevice" style="width:18px; height:18px; accent-color:var(--amber); flex-shrink:0;">
-              <span>Remember this device</span>
-            </div>
-            <p style="margin-top:8px; font-size:0.6rem; color:var(--ivory-dim);">You won't need to re-enter your password on this device for 30 days. You'll still need to verify with a code each time.</p>
-          </div>
-        </div>
-
-      </div>
+  <div class="login-card" style="background:var(--ink); border:1px solid var(--border); border-radius:12px; padding:40px 32px 32px; max-width:420px; width:100%; box-shadow:var(--shadow-md); position:relative; z-index:10;">
+    
+    <!-- Logo -->
+    <div class="text-center mb-6">
+<img src="voovr-logo-full.webp" alt="voovrHR" style="width:120px; height:auto; border-radius:8px; margin:0 auto 12px; display:block;">
+      <p style="font-family:var(--font-lato); font-size:0.85rem; color:var(--ivory-faint); letter-spacing:0.04em; text-transform:uppercase; margin:8px 0 0;">Sign in to your account</p>
     </div>
+
+    <!-- Form -->
+    <form id="loginForm">
+      <!-- Email -->
+      <div style="margin-bottom:24px;">
+        <label style="display:block; font-family:var(--font-lato); font-size:0.75rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ivory-faint); margin-bottom:8px;">Email address</label>
+        <input type="email" id="emailInput" style="width:100%; padding:12px 16px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--ivory); font-size:0.9rem; outline:none; transition:border-color 0.2s;">
+      </div>
+
+      <!-- Password -->
+      <div style="margin-bottom:24px; position:relative;">
+        <label style="display:block; font-family:var(--font-lato); font-size:0.75rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ivory-faint); margin-bottom:8px;">Password</label>
+        <input type="password" id="passwordInput" style="width:100%; padding:12px 48px 12px 16px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--ivory); font-size:0.9rem; outline:none; transition:border-color 0.2s;">
+        <button type="button" class="icon-btn" style="position:absolute; right:16px; top:38%; transform:translateY(-50%);" id="togglePassword" aria-label="Show password">
+          <svg id="eyeOpen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:block;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg id="eyeClosed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+
+      <!-- Forgot password / Create account -->
+      <div style="margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
+        <a href="/forgot-password.html" style="font-family:var(--font-lato); font-size:0.7rem; color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Forgot password?</a>
+        <a href="/signup.html" style="font-family:var(--font-lato); font-size:0.7rem; color:var(--ivory-faint); letter-spacing:0.05em; text-transform:uppercase;">Create account</a>
+      </div>
+
+      <!-- Sign In button (primary) -->
+      <div style="text-align:center; margin-bottom:24px;">
+        <button type="submit" class="btn btn-primary w-full" style="background:linear-gradient(135deg,var(--violet),var(--amber)); color:var(--void); font-family:var(--font-lato); font-weight:700; font-size:0.9rem; letter-spacing:0.04em; text-transform:uppercase; padding:16px 24px; width:100%; display:inline-flex; align-items:center; justify-content:center; gap:10px; border-radius:8px; border:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><line x1="9" y1="20" x2="9.01" y2="20"/><line x1="15" y1="20" x2="15.01" y2="20"/></svg>
+          Sign In
+        </button>
+      </div>
+
+      <!-- Divider OR -->
+      <div style="position:relative; margin-bottom:24px;">
+        <div style="position:absolute; inset:0; display:flex; align-items:center;">
+          <div style="width:100%; border-top:1px solid var(--border);"></div>
+        </div>
+        <div style="position:relative; background:var(--ink); padding:0 16px; display:inline-block;">
+          <span style="font-family:var(--font-lato); font-size:0.65rem; color:var(--ivory-faint); letter-spacing:0.08em; text-transform:uppercase;">OR</span>
+        </div>
+      </div>
+
+      <!-- Continue with Google button (secondary) -->
+      <div style="margin-bottom:24px;">
+        <a href="/auth/google/signin" style="width:100%; display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:14px 24px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--ivory); font-family:var(--font-lato); font-weight:600; font-size:0.85rem; letter-spacing:0.04em; text-transform:uppercase; text-decoration:none; transition:background 0.2s, border-color 0.2s;">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </a>
+      </div>
+
+      <!-- Don't have an account? -->
+      <div style="margin-top:32px; text-align:center; font-size:0.7rem; color:var(--ivory-faint);">
+        <span>Don't have an account? </span><a href="#" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Sign up</a>
+      </div>
+    </form>
+
   </div>
 
+  <!-- OTP VERIFICATION STEP (hidden by default, shown after successful sign in) -->
+  <div id="otpStep" class="login-card" style="display:none; background:var(--ink); border:1px solid var(--border); border-radius:12px; padding:40px 32px 32px; max-width:420px; width:100%; box-shadow:var(--shadow-md);">
+    
+    <!-- Logo -->
+    <div class="text-center mb-6">
+<img src="voovr-logo-full.webp" alt="voovrHR" style="width:120px; height:auto; border-radius:8px; margin:0 auto 12px; display:block;">
+      <h1 style="font-family:var(--font-d); font-size:1.8rem; font-weight:700; letter-spacing:-0.02em; color:var(--ivory); text-transform:uppercase; margin:0;">Verify your identity</h1>
+      <p id="otpEmailDisplay" style="font-family:var(--font-lato); font-size:0.85rem; color:var(--ivory-faint); letter-spacing:0.04em; text-transform:uppercase; margin:8px 0 0;">We've sent a 6-digit code to your email</p>
+    </div>
+
+    <!-- OTP Inputs -->
+    <div class="text-center mb-6">
+      <div style="display:flex; justify-content:center; gap:8px;">
+        <input type="text" id="otp1" maxlength="1" style="width:56px; height:60px; background:var(--surface); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:2rem; font-weight:700; color:var(--ivory); outline:none; transition:border-color 0.2s;" onfocus="this.value='';" oninput="if(this.value.length===1) document.getElementById('otp2').focus();">
+        <input type="text" id="otp2" maxlength="1" style="width:56px; height:60px; background:var(--surface); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:2rem; font-weight:700; color:var(--ivory); outline:none; transition:border-color 0.2s;" onfocus="this.value='';" oninput="if(this.value.length===1) document.getElementById('otp3').focus();">
+        <input type="text" id="otp3" maxlength="1" style="width:56px; height:60px; background:var(--surface); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:2rem; font-weight:700; color:var(--ivory); outline:none; transition:border-color 0.2s;" onfocus="this.value='';" oninput="if(this.value.length===1) document.getElementById('otp4').focus();">
+        <input type="text" id="otp4" maxlength="1" style="width:56px; height:60px; background:var(--surface); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:2rem; font-weight:700; color:var(--ivory); outline:none; transition:border-color 0.2s;" onfocus="this.value='';" oninput="if(this.value.length===1) document.getElementById('otp5').focus();">
+        <input type="text" id="otp5" maxlength="1" style="width:56px; height:60px; background:var(--surface); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:2rem; font-weight:700; color:var(--ivory); outline:none; transition:border-color 0.2s;" onfocus="this.value='';" oninput="if(this.value.length===1) document.getElementById('otp6').focus();">
+        <input type="text" id="otp6" maxlength="1" style="width:56px; height:60px; background:var(--surface); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:2rem; font-weight:700; color:var(--ivory); outline:none; transition:border-color 0.2s;" onfocus="this.value='';">
+      </div>
+    </div>
+
+    <!-- Verification action buttons -->
+    <div class="text-center mb-6">
+      <button type="button" class="btn btn-primary w-full" id="verifyBtn" style="background:linear-gradient(135deg,var(--violet),var(--amber)); color:var(--void); font-family:var(--font-lato); font-weight:700; font-size:0.9rem; letter-spacing:0.04em; text-transform:uppercase; padding:16px 24px; width:100%; display:inline-flex; align-items:center; justify-content:center; gap:10px; border-radius:8px; margin-bottom:12px; border:none; cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><line x1="9" y1="20" x2="9.01" y2="20"/><line x1="15" y1="20" x2="15.01" y2="20"/></svg>
+        Verify & Sign In
+      </button>
+      <div style="display:flex; justify-content:center; gap:24px; align-items:center; color:var(--ivory-faint); font-size:0.7rem;">
+        <a href="#" id="resendLink" style="color:var(--amber); letter-spacing:0.05em; cursor:pointer;">Resend code</a>
+        <span id="countdown" style="color:var(--amber);">Resend in 00:30</span>
+      </div>
+    </div>
+
+    <!-- Google Sign In button (OTP step) -->
+    <div style="margin-bottom:24px;">
+      <a href="/auth/google/signin" style="width:100%; display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:14px 24px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--ivory); font-family:var(--font-lato); font-weight:600; font-size:0.85rem; letter-spacing:0.04em; text-transform:uppercase; text-decoration:none; transition:background 0.2s, border-color 0.2s;">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continue with Google
+      </a>
+    </div>
+
+    <div style="position:relative; margin-bottom:24px;">
+      <div style="position:absolute; inset:0; display:flex; align-items:center;">
+        <div style="width:100%; border-top:1px solid var(--border);"></div>
+      </div>
+      <div style="position:relative; background:var(--ink); padding:0 16px; display:inline-block;">
+        <span style="font-family:var(--font-lato); font-size:0.65rem; color:var(--ivory-faint); letter-spacing:0.08em; text-transform:uppercase;">or change email</span>
+      </div>
+    </div>
+
+    <!-- Change email link -->
+    <div class="text-center" style="margin-top:8px;">
+      <a href="#" id="changeEmailLink" style="font-family:var(--font-lato); font-size:0.7rem; color:var(--amber); letter-spacing:0.05em; text-transform:uppercase; cursor:pointer;">Change email</a>
+    </div>
+
+    <!-- Remember this device checkbox -->
+    <div style="margin-top:24px; display:flex; align-items:center; gap:12px; color:var(--ivory-faint); font-size:0.7rem;">
+      <input type="checkbox" id="rememberDevice" style="width:18px; height:18px; accent-color:var(--amber); flex-shrink:0;">
+      <span>Remember this device</span>
+    </div>
+    <p style="margin-top:8px; font-size:0.6rem; color:var(--ivory-dim);">You won't need to re-enter your password on this device for 30 days. You'll still need to verify with a code each time.</p>
+
+  </div>
+
+  <footer style="margin-top:28px; text-align:center; font-size:0.7rem; color:var(--ivory-faint); width:100%;">
+    <span>© 2026 HR Copilot. All rights reserved.</span>
+    <span style="margin-left:16px; color:var(--ivory-faint);">|</span>
+    <a href="/privacy-policy" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Privacy Policy</a>
+    <span style="margin-left:16px; color:var(--ivory-faint);">|</span>
+    <a href="/terms-of-service" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Terms of Service</a>
+    <span style="margin-left:16px; color:var(--ivory-faint);">|</span>
+    <a href="mailto:voovrhr@gmail.com" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Contact</a>
+  </footer>
+
   <script>
-    // Set theme before first paint
-    (function(){
-      try {
-        var saved = localStorage.getItem('voohr-theme');
-        if (saved === 'light' || saved === 'dark') {
-          document.documentElement.setAttribute('data-theme', saved);
-        }
-      } catch (e) {}
-    })();
+    // ============================================
+    // LOGIN FORM HANDLING (Step 1 → Step 2)
+    // ============================================
 
     document.addEventListener('DOMContentLoaded', function() {
-      var step1 = document.getElementById('step1');
-      var step2 = document.getElementById('step2');
-      var loginForm = document.getElementById('loginForm');
-      var otpForm = document.getElementById('otpForm') || false;
+      var step1Form = document.getElementById('loginForm');
+      var otpStep = document.getElementById('otpStep');
       var otp1 = document.getElementById('otp1');
       var otp2 = document.getElementById('otp2');
       var otp3 = document.getElementById('otp3');
@@ -140,13 +189,28 @@
       var passwordInput = document.getElementById('passwordInput');
       var resendLink = document.getElementById('resendLink');
       var countdown = document.getElementById('countdown');
+      var changeEmailLink = document.getElementById('changeEmailLink');
+      var verifyBtn = document.getElementById('verifyBtn');
+      var otpEmailDisplay = document.getElementById('otpEmailDisplay');
+
+      // Store intended destination for redirect after login
+      var urlParams = new URLSearchParams(window.location.search);
+      var intendedRedirect = urlParams.get('redirect') || 'dashboard.html';
 
       // Toggle password visibility
       if (togglePassword) {
         togglePassword.addEventListener('click', function() {
           var type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
           passwordInput.setAttribute('type', type);
-          this.querySelector('svg').style.display = type === 'none' ? 'block' : 'none';
+          var eyeOpen = this.querySelector('#eyeOpen');
+          var eyeClosed = this.querySelector('#eyeClosed');
+          if (type === 'password') {
+            eyeOpen.style.display = 'block';
+            eyeClosed.style.display = 'none';
+          } else {
+            eyeOpen.style.display = 'none';
+            eyeClosed.style.display = 'block';
+          }
         });
       }
 
@@ -167,59 +231,138 @@
         });
       });
 
-      // Resend code countdown
-      if (resendLink && countdown) {
-        var resendIn = 30;
-        var countdownInterval = setInterval(function() {
+      var countdownInterval = null;
+      var resendIn = 30;
+
+      function startCountdown(seconds) {
+        resendIn = seconds || 30;
+        if (countdownInterval) clearInterval(countdownInterval);
+        resendLink.style.display = 'none';
+        countdown.style.display = 'inline-block';
+        countdown.textContent = 'Resend in ' + formatTime(resendIn);
+        
+        countdownInterval = setInterval(function() {
           resendIn--;
-          var minutes = Math.floor(resendIn / 60);
-          var seconds = resendIn % 60;
-          countdown.textContent = 'Resend in ' + (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+          countdown.textContent = 'Resend in ' + formatTime(resendIn);
           
           if (resendIn <= 0) {
             clearInterval(countdownInterval);
             countdown.textContent = 'Resend code';
             resendLink.style.display = 'inline-block';
+            countdown.style.display = 'none';
           }
         }, 1000);
+      }
 
-        resendLink.addEventListener('click', function() {
-          clearInterval(countdownInterval);
-          resendIn = 30;
-          countdown.textContent = 'Resend in 00:30';
-          resendLink.style.display = 'none';
-          countdown.style.display = 'inline-block';
-          // Restart countdown
-          countdownInterval = setInterval(function() {
-            resendIn--;
-            var minutes = Math.floor(resendIn / 60);
-            var seconds = resendIn % 60;
-            countdown.textContent = 'Resend in ' + (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+      function formatTime(seconds) {
+        var minutes = Math.floor(seconds / 60);
+        var secs = seconds % 60;
+        return (minutes < 10 ? '0' : '') + minutes + ':' + (secs < 10 ? '0' : '') + secs;
+      }
+
+      // Resend code - calls backend
+      if (resendLink) {
+        resendLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          
+          var email = sessionStorage.getItem('voohr_pending_email');
+          if (!email) return;
+          
+          resendLink.textContent = 'Sending...';
+          resendLink.style.pointerEvents = 'none';
+          
+          fetch('/auth/email/resend-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            resendLink.textContent = 'Resend code';
+            resendLink.style.pointerEvents = 'auto';
             
-            if (resendIn <= 0) {
-              clearInterval(countdownInterval);
-              countdown.textContent = 'Resend code';
-              resendLink.style.display = 'inline-block';
-              countdown.style.display = 'none';
+            if (data.ok) {
+              startCountdown(60); // backend uses 60s cooldown
+            } else if (data.error === 'cooldown' && data.retry_after) {
+              startCountdown(data.retry_after);
+            } else if (data.error === 'expired' || data.error === 'session_expired') {
+              // Session expired, go back to step 1
+              showStep1();
+              alert('Your session expired. Please enter your email again.');
+            } else {
+              alert(data.message || 'Failed to resend code. Please try again.');
             }
-          }, 1000);
+          })
+          .catch(function() {
+            resendLink.textContent = 'Resend code';
+            resendLink.style.pointerEvents = 'auto';
+            alert('Network error — could not reach the server. Please try again.');
+          });
         });
       }
 
-      // Form submission - Step 1 to Step 2
-      loginForm.addEventListener('submit', function(e) {
+      // Change email - go back to step 1
+      if (changeEmailLink) {
+        changeEmailLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          showStep1();
+        });
+      }
+
+      function showStep1() {
+        sessionStorage.removeItem('voohr_pending_email');
+        if (countdownInterval) clearInterval(countdownInterval);
+        otpStep.style.display = 'none';
+        step1Form.style.display = 'block';
+        gsap.set(step1Form, { opacity: 0, y: 20 });
+        gsap.to(step1Form, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' });
+        // Clear OTP inputs
+        otpInputs.forEach(function(input) { input.value = ''; });
+        otp1.focus();
+      }
+
+      function maskEmail(email) {
+        var parts = email.split('@');
+        if (parts.length !== 2) return email;
+        var name = parts[0];
+        var domain = parts[1];
+        var maskedName = name.charAt(0) + '***' + name.slice(-1);
+        return maskedName + '@' + domain;
+      }
+
+      function updateOtpEmailDisplay(email) {
+        if (otpEmailDisplay) {
+          otpEmailDisplay.textContent = "We've sent a 6-digit code to " + maskEmail(email);
+        }
+      }
+
+      // Start countdown on page load if OTP step is already visible
+      if (resendLink && countdown && otpStep.style.display !== 'none') {
+        startCountdown(30);
+      }
+
+      // ============================================
+      // STEP 1: Credentials Submission
+      // ============================================
+
+      step1Form.addEventListener('submit', function(e) {
         e.preventDefault();
         
         var email = document.getElementById('emailInput').value.trim();
         var password = document.getElementById('passwordInput').value;
         
+        // Client-side validation
         if (!email || !password) {
-          // Show error
+          alert('Please enter both email and password.');
+          return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          alert('Please enter a valid email address.');
           return;
         }
 
         // Show loading state
-        var submitBtn = loginForm.querySelector('button[type="submit"]');
+        var submitBtn = step1Form.querySelector('button[type="submit"]');
         var originalText = submitBtn.textContent;
         submitBtn.textContent = 'Signing in...';
         submitBtn.disabled = true;
@@ -238,23 +381,38 @@
             if (data.requires_otp) {
               // Store email for OTP flow and show OTP step
               sessionStorage.setItem('voohr_pending_email', email);
-              step1.style.display = 'none';
-              step2.style.display = 'block';
-              // Pre-fill email in OTP step status message if needed
+              updateOtpEmailDisplay(email);
+              // Transition to OTP step with fade/slide animation
+              gsap.set(step1Form, { opacity: 0, y: 20 });
+              gsap.to(step1Form, { opacity: 0, y: -20, duration: 0.3, ease: 'power2.in', onComplete: function() {
+                step1Form.style.display = 'none';
+                otpStep.style.display = 'block';
+                gsap.set(otpStep, { opacity: 0, y: 20 });
+                gsap.to(otpStep, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' });
+                startCountdown(60);
+              }});
             } else {
-              // Direct login success - redirect
-              window.location.href = data.redirect || '/dashboard.html';
+              // Direct login success - redirect to intended destination
+              window.location.href = data.redirect || intendedRedirect;
             }
           } else if (data.error === 'invalid_credentials') {
-            // Show error
             alert('Invalid email or password. Please try again.');
           } else if (data.error === 'account_requires_otp') {
-            // Store email for OTP flow and show OTP step
             sessionStorage.setItem('voohr_pending_email', email);
-            step1.style.display = 'none';
-            step2.style.display = 'block';
+            updateOtpEmailDisplay(email);
+            gsap.set(step1Form, { opacity: 0, y: 20 });
+            gsap.to(step1Form, { opacity: 0, y: -20, duration: 0.3, ease: 'power2.in', onComplete: function() {
+              step1Form.style.display = 'none';
+              otpStep.style.display = 'block';
+              gsap.set(otpStep, { opacity: 0, y: 20 });
+              gsap.to(otpStep, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' });
+              startCountdown(60);
+            }});
           } else if (data.error === 'google_only_account') {
             alert('This account uses Google sign-in only. Please use Continue with Google instead.');
+          } else if (data.error === 'locked' && data.retry_after) {
+            var minutes = Math.ceil(data.retry_after / 60);
+            alert('Too many failed attempts. Please try again in ' + minutes + ' minute(s).');
           } else {
             alert(data.message || 'Sign in failed. Please try again.');
           }
@@ -266,9 +424,13 @@
         });
       });
 
-      // OTP form submission - Step 2 verification
-      if (otpForm) {
-        otpForm.addEventListener('submit', function(e) {
+      // ============================================
+      // STEP 2: OTP Verification Submission
+      // ============================================
+
+      // OTP form submission (attached to verify button click)
+      if (verifyBtn) {
+        verifyBtn.addEventListener('click', function(e) {
           e.preventDefault();
           
           var code = '';
@@ -284,8 +446,8 @@
             return;
           }
 
-          var verifyBtn = otpForm.querySelector('button[type="submit"]');
           verifyBtn.disabled = true;
+          verifyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0110 10" stroke-opacity="1"/></svg> Verifying...';
 
           fetch('/auth/email/verify-otp', {
             method: 'POST',
@@ -295,44 +457,61 @@
           .then(function(r) { return r.json(); })
           .then(function(data) {
             verifyBtn.disabled = false;
+            verifyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><line x1="9" y1="20" x2="9.01" y2="20"/><line x1="15" y1="20" x2="15.01" y2="20"/></svg> Verify & Sign In';
 
             if (data.ok && data.redirect) {
-              window.location.href = data.redirect;
+              // Successful OTP verification - redirect to intended destination
+              window.location.href = data.redirect || intendedRedirect;
             } else if (data.error === 'invalid_otp') {
               alert('That code is incorrect. Please try again.');
               // Clear boxes and refocus first
-              otp1.value = ''; otp2.value = ''; otp3.value = ''; otp4.value = ''; otp5.value = ''; otp6.value = '';
+              otpInputs.forEach(function(input) { input.value = ''; });
               otp1.focus();
             } else if (data.error === 'too_many_attempts') {
               alert('Too many incorrect attempts. Please wait and try again.');
             } else if (data.error === 'expired' || data.error === 'session_expired') {
               alert('Your code expired. Use "Resend code" to get a new one.');
-              // Restart countdown
-              if (resendInterval) clearInterval(resendInterval);
-              var resendIn = 30;
-              countdownInterval = setInterval(function() {
-                resendIn--;
-                var minutes = Math.floor(resendIn / 60);
-                var seconds = resendIn % 60;
-                countdown.textContent = 'Resend in ' + (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-                if (resendIn <= 0) {
-                  clearInterval(countdownInterval);
-                  countdown.textContent = 'Resend code';
-                  resendLink.style.display = 'inline-block';
-                  countdown.style.display = 'none';
-                }
-              }, 1000);
+              if (data.retry_after) {
+                startCountdown(data.retry_after);
+              } else {
+                startCountdown(60);
+              }
             } else {
-              alert('Something went wrong verifying your code. Please try again.');
+              alert(data.message || 'Something went wrong verifying your code. Please try again.');
             }
           })
           .catch(function() {
             verifyBtn.disabled = false;
+            verifyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><line x1="9" y1="20" x2="9.01" y2="20"/><line x1="15" y1="20" x2="15.01" y2="20"/></svg> Verify & Sign In';
             alert('Network error — could not reach the server. Please try again.');
           });
         });
       }
     });
+  </script>
+  <style>
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  </style>
+  <!-- Spline runtime -->
+  <script type="module">
+    import { Application } from 'https://unpkg.com/@splinetool/runtime/build/runtime.js';
+    const canvas = document.getElementById('canvas3d');
+    const app = new Application(canvas);
+    app.load('https://prod.spline.design/dnEDCleAPoBnwXaA/scene.splinecode');
+  </script>
+  <!-- Cookie consent banner -->
+  <script>
+    (function() {
+      if (localStorage.getItem('cookieConsent') === 'true') return;
+      const banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--ink);border-top:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;z-index:1000;font-family:var(--font-b);font-size:0.75rem;color:var(--ivory);';
+      banner.innerHTML = '<span style="max-width:80%;">We use cookies to improve your experience and keep you signed in. By using this site, you agree to our <a href="/privacy-policy" style="color:var(--amber);text-decoration:underline;">Cookie Policy</a>.</span><button id="acceptCookies" style="background:linear-gradient(135deg,var(--violet),var(--amber));color:var(--void);border:none;padding:8px 16px;border-radius:6px;font-weight:600;text-transform:uppercase;font-size:0.65rem;cursor:pointer;">Accept</button>';
+      document.body.appendChild(banner);
+      document.getElementById('acceptCookies').addEventListener('click', function() {
+        localStorage.setItem('cookieConsent', 'true');
+        banner.remove();
+      });
+    })();
   </script>
 </body>
 </html>

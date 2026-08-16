@@ -30,12 +30,26 @@ OTP_SUBJECT = "Your VooHr verification code"
 _SENDER_RE = re.compile(r"^[^<>\s]+@[^<>\s]+\.[^<>\s]+$")
 
 
+def _email_footer() -> str:
+    return (
+        "<hr style=\"border:none;border-top:1px solid #333;margin:24px 0;\">"
+        "<p style=\"font-size:0.75rem;color:#888;\">"
+        "This email was sent because you have an account with HR Copilot. "
+        "<a href=\"https://voovrhr.com/privacy-policy\" style=\"color:#aaa;\">View our Privacy Policy</a> | "
+        "<a href=\"https://voovrhr.com/terms-of-service\" style=\"color:#aaa;\">Terms of Service</a>"
+        "</p>"
+        "<p style=\"font-size:0.75rem;color:#888;\">"
+        "Questions? Contact us at <a href=\"mailto:voovrhr@gmail.com\" style=\"color:#aaa;\">voovrhr@gmail.com</a>"
+        "</p>"
+    )
+
 def _otp_html(otp: str) -> str:
     return (
         "<p>Use the following code to verify your email:</p>"
         f"<h2 style=\"letter-spacing:4px\">{otp}</h2>"
         "<p>This code expires in 10 minutes. If you didn't request it, "
         "you can safely ignore this email.</p>"
+        + _email_footer()
     )
 
 
