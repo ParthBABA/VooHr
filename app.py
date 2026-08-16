@@ -45,7 +45,7 @@ def create_app():
     # Clean URL routes for static pages
     @app.route("/")
     def index():
-        return send_from_directory(app.static_folder, "index.html")
+        return send_from_directory(app.static_folder, "login2.html")
 
     @app.route("/login")
     def login():
