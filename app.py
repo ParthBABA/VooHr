@@ -45,7 +45,7 @@ def create_app():
     # Clean URL routes for static pages
     @app.route("/")
     def index():
-        return send_from_directory(app.static_folder, "login2.html")
+        return send_from_directory(app.static_folder, "login.html")
 
     @app.route("/login")
     def login():
@@ -120,10 +120,6 @@ def create_app():
         return send_from_directory(app.static_folder, "forgot-password.html")
 
     # Redirect legacy .html paths to clean URLs
-    @app.route("/login.html")
-    def login_html_redirect():
-        return redirect("/login")
-
     @app.route("/signin.html")
     def signin_html_redirect():
         return redirect("/signin")
