@@ -1,7 +1,7 @@
 import logging
 import os
 
-from flask import Flask, jsonify, request, send_from_directory, redirect
+from flask import Flask, jsonify, request, send_from_directory, redirect, render_template, session
 
 from api import api_bp
 from auth import auth_bp, register_google_oauth
@@ -11,6 +11,7 @@ from employees import employees_bp
 from extensions import init_db
 from notifications import notifications_bp
 from sessions import sessions_bp
+from employees import _session_is_active
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,10 @@ def create_app():
     # Clean URL routes for static pages
     @app.route("/")
     def index():
-        return send_from_directory(app.static_folder, "login.html")
+        user_id = session.get("user_id")
+        session_token = session.get("session_token")
+        is_logged_in = bool(user_id and session_token and _session_is_active(user_id, session_token))
+        return render_template("index.html", is_logged_in=is_logged_in)
 
     @app.route("/login")
     def login():
