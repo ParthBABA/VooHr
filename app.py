@@ -8,10 +8,10 @@ from auth import auth_bp, register_google_oauth
 from auth_email import auth_email_bp
 from config import Config
 from employees import employees_bp
+from employees import _session_is_active
 from extensions import init_db
 from notifications import notifications_bp
 from sessions import sessions_bp
-from employees import _session_is_active
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def create_app():
         user_id = session.get("user_id")
         session_token = session.get("session_token")
         is_logged_in = bool(user_id and session_token and _session_is_active(user_id, session_token))
-        return render_template("index.html", is_logged_in=is_logged_in)
+        return render_template("login.html", is_logged_in=is_logged_in)
 
     @app.route("/login")
     def login():
