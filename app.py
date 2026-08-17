@@ -47,10 +47,17 @@ def create_app():
     app.register_blueprint(notifications_bp, url_prefix="/api")
 
     # ── Admin TOTP guard ────────────────────────────────────────────────
-    # If an admin has not completed mandatory TOTP setup, redirect them to
-    # the TOTP setup page on every attempt to visit a protected page.
-    # This is centralized so no individual registration/login redirect
-    # target can bypass it.
+    # Every admin session must satisfy TWO conditions before accessing
+    # protected pages:
+    #   a) TOTP must be enabled on the account (first-time enrollment)
+    #   b) The current session must have presented a valid code (per-session
+    #      re-verification on every new login)
+    # Both checks are centralized here so no individual registration/login
+    # redirect target can bypass them.
+
+    _TOTP_ENROLL_ROUTE = "/settings/security/setup-totp"
+    _TOTP_LOGIN_ROUTE  = "/auth/totp/verify-login"
+    _TOTP_EXEMPT = frozenset({_TOTP_ENROLL_ROUTE, _TOTP_LOGIN_ROUTE})
 
     _PROTECTED_PAGES = frozenset({
         "/dashboard",
@@ -64,28 +71,41 @@ def create_app():
     })
 
     def _admin_totp_required():
+        """Return 'enroll', 'verify', or None.
+
+        'enroll'  — TOTP not yet enabled on this account (first-time setup).
+        'verify'  — TOTP enabled but this session hasn't presented a code.
+        None      — no guard needed (not an admin, TOTP satisfied, or not logged in).
+        """
         user_id = session.get("user_id")
         session_token = session.get("session_token")
         if not user_id or not session_token:
-            return False
+            return None
         try:
             uid = ObjectId(user_id)
         except Exception:
-            return False
+            return None
         if not _session_is_active(user_id, session_token):
-            return False
+            return None
         db = get_db()
         user = db.users.find_one({"_id": uid}, {"role": 1, "totp_enabled": 1})
-        if not user:
-            return False
-        return user.get("role") == "admin" and user.get("totp_enabled") is not True
+        if not user or user.get("role") != "admin":
+            return None
+        if user.get("totp_enabled") is not True:
+            return "enroll"
+        if session.get("totp_verified_session") != session_token:
+            return "verify"
+        return None
 
     @app.before_request
     def _enforce_admin_totp():
-        if request.path not in _PROTECTED_PAGES:
+        if request.path in _TOTP_EXEMPT or request.path not in _PROTECTED_PAGES:
             return None
-        if _admin_totp_required():
-            return redirect("/settings/security/setup-totp?forced=1")
+        reason = _admin_totp_required()
+        if reason == "enroll":
+            return redirect(_TOTP_ENROLL_ROUTE + "?forced=1")
+        if reason == "verify":
+            return redirect(_TOTP_LOGIN_ROUTE + "?next=" + request.path)
         return None
 
     # ── End admin TOTP guard ────────────────────────────────────────────
@@ -150,6 +170,10 @@ def create_app():
     @app.route("/settings/security/setup-totp")
     def setup_totp():
         return send_from_directory(app.static_folder, "verify-totp-gate.html")
+
+    @app.route("/auth/totp/verify-login")
+    def totp_verify_login_page():
+        return send_from_directory(app.static_folder, "verify-totp-login.html")
 
     @app.route("/risk-drift")
     def risk_drift():

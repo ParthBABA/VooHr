@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify — VooVr</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.login-shell{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;padding:2rem;
+}
+.login-card{
+  width:100%;max-width:400px;
+  background:var(--ink);border:1px solid var(--border);border-radius:16px;
+  padding:2.5rem 2rem;
+  box-shadow:var(--shadow-lg);
+  position:relative;z-index:1;
+}
+.login-brand{
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:1.75rem;
+}
+.login-brand img{height:28px;width:auto;}
+
+.login-eyebrow{margin-bottom:1rem;text-align:center;}
+
+.login-card h2{
+  font-size:1.35rem;text-align:center;margin-bottom:.5rem;
+  text-transform:none;letter-spacing:-.01em;
+}
+.login-desc{
+  text-align:center;font-size:.85rem;color:var(--ivory-dim);
+  line-height:1.65;margin-bottom:1.75rem;
+}
+
+.otp-label{
+  display:block;text-align:center;font-size:.78rem;
+  color:var(--ivory-dim);margin-bottom:.6rem;
+}
+.otp-segments{
+  display:flex;justify-content:center;gap:8px;margin-bottom:1.25rem;
+}
+.otp-seg{
+  width:48px;height:54px;
+  font-family:'IBM Plex Mono',monospace;font-size:1.25rem;font-weight:600;
+  text-align:center;color:var(--ivory);
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:8px;outline:none;
+  transition:border-color .2s,background .2s,box-shadow .2s;
+  caret-color:var(--violet);
+}
+.otp-seg::placeholder{color:var(--ivory-faint);}
+.otp-seg:focus{
+  border-color:var(--violet);
+  background:var(--violet-soft);
+  box-shadow:0 0 0 3px var(--violet-glow);
+}
+.otp-seg:disabled{opacity:.35;cursor:not-allowed;}
+
+.login-error{
+  display:none;text-align:center;font-size:.8rem;
+  color:var(--red);background:var(--red-soft);
+  border:1px solid var(--red-glow);border-radius:8px;
+  padding:.65rem .9rem;margin-bottom:1rem;
+}
+.login-success{
+  display:none;text-align:center;font-size:.8rem;
+  color:var(--teal);background:var(--teal-soft);
+  border:1px solid var(--teal-glow);border-radius:8px;
+  padding:.65rem .9rem;margin-bottom:1rem;
+}
+
+.login-btn{
+  width:100%;padding:.85rem;border-radius:10px;
+  font-size:.9rem;font-weight:600;letter-spacing:-.005em;
+  color:#fff;background:var(--violet);
+  border:none;cursor:pointer;
+  box-shadow:0 4px 16px var(--violet-glow);
+  transition:background .2s,box-shadow .2s,transform .15s;
+}
+.login-btn:hover{background:#6a3fe0;box-shadow:0 6px 24px var(--violet-glow);}
+.login-btn:active{transform:scale(.985);}
+.login-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+
+.login-footer{
+  text-align:center;margin-top:1.25rem;font-size:.75rem;
+  color:var(--ivory-faint);
+}
+
+[data-reveal]{opacity:0;}
+
+@media(max-width:520px){
+  .login-card{padding:2rem 1.25rem;}
+  .otp-seg{width:42px;height:48px;font-size:1.1rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="login-shell">
+  <div class="login-card">
+
+    <div class="login-brand" data-reveal>
+      <img src="voovr-logo-full.png" alt="VooVr">
+    </div>
+
+    <div class="eyebrow login-eyebrow" data-reveal>Security Verification</div>
+
+    <h2 data-reveal>Verify it's you</h2>
+    <p class="login-desc" data-reveal>Enter the 6-digit code from your authenticator app to continue to the dashboard.</p>
+
+    <label class="otp-label" data-reveal>Authenticator code</label>
+    <div class="otp-segments" data-reveal>
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-seg" aria-label="Digit 1" autocomplete="one-time-code">
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-seg" aria-label="Digit 2" autocomplete="off">
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-seg" aria-label="Digit 3" autocomplete="off">
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-seg" aria-label="Digit 4" autocomplete="off">
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-seg" aria-label="Digit 5" autocomplete="off">
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-seg" aria-label="Digit 6" autocomplete="off">
+    </div>
+
+    <div class="login-error" id="loginError"></div>
+    <div class="login-success" id="loginSuccess"></div>
+
+    <button class="login-btn" id="verifyBtn" disabled>Verify</button>
+
+    <div class="login-footer" data-reveal>You'll be redirected after verification.</div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+(function(){
+  var segs      = Array.prototype.slice.call(document.querySelectorAll('.otp-seg'));
+  var verifyBtn = document.getElementById('verifyBtn');
+  var errBox    = document.getElementById('loginError');
+  var okBox     = document.getElementById('loginSuccess');
+
+  function getReturnUrl(){
+    var p=new URLSearchParams(window.location.search);
+    return p.get('next')||'/dashboard';
+  }
+
+  function setErr(m){ errBox.textContent=m; errBox.style.display=m?'block':'none'; okBox.style.display='none'; }
+  function setOk(m){ okBox.textContent=m; okBox.style.display=m?'block':'none'; errBox.style.display='none'; }
+  function getCode(){ return segs.map(function(s){return s.value;}).join(''); }
+
+  segs.forEach(function(inp,i){
+    inp.addEventListener('input',function(){
+      var v=inp.value.replace(/\D/g,'');
+      inp.value=v;
+      if(v&&i<segs.length-1) segs[i+1].focus();
+      verifyBtn.disabled=getCode().length!==6;
+    });
+    inp.addEventListener('keydown',function(e){
+      if(e.key==='Backspace'&&!inp.value&&i>0){e.preventDefault();segs[i-1].focus();segs[i-1].value='';}
+      if(e.key==='ArrowLeft'&&i>0){e.preventDefault();segs[i-1].focus();}
+      if(e.key==='ArrowRight'&&i<segs.length-1){e.preventDefault();segs[i+1].focus();}
+    });
+    inp.addEventListener('paste',function(e){
+      e.preventDefault();
+      var p=(e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'');
+      var rem=segs.length-i;
+      p.slice(0,rem).split('').forEach(function(ch,j){segs[i+j].value=ch;});
+      var nxt=i+Math.min(p.length,rem);
+      if(nxt<segs.length) segs[nxt].focus(); else segs[segs.length-1].focus();
+      verifyBtn.disabled=getCode().length!==6;
+    });
+  });
+
+  verifyBtn.addEventListener('click',function(){
+    var code=getCode();
+    if(code.length!==6){setErr('Enter the 6-digit code from your authenticator app.');return;}
+    verifyBtn.disabled=true;
+    setErr('');setOk('');
+
+    fetch('/auth/totp/verify-login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({code:code})
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.error){
+        setErr(d.error==='invalid_code'?'Invalid code. Please try again.':d.error);
+        verifyBtn.disabled=false;
+        segs.forEach(function(s){s.value='';});
+        segs[0].focus();
+        return;
+      }
+      setOk('Verified! Redirecting\u2026');
+      setTimeout(function(){window.location.href=getReturnUrl();},1000);
+    })
+    .catch(function(){
+      setErr('Network error. Please try again.');
+      verifyBtn.disabled=false;
+    });
+  });
+
+  segs[segs.length-1].addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&!verifyBtn.disabled) verifyBtn.click();
+  });
+})();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  if(typeof gsap==='undefined') return;
+  var tl=gsap.timeline({defaults:{ease:'power3.out'}});
+  tl.from('.login-card',{opacity:0,y:20,filter:'blur(6px)',duration:.7},0)
+    .from('.login-card [data-reveal]',{opacity:0,y:12,duration:.55,stagger:.05},.15);
+});
+</script>
+</body>
+</html>

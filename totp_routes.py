@@ -106,6 +106,37 @@ def totp_verify_setup():
     return jsonify({"ok": True}), 200
 
 
+@totp_bp.route("/totp/verify-login", methods=["POST"])
+def totp_verify_login():
+    """Verify a TOTP code for an existing session.
+
+    Called on every new login where TOTP is already enabled.  On success
+    the session is marked as TOTP-verified so the before_request guard
+    lets future requests through.
+    """
+    user_id = _current_user_id()
+    if not user_id:
+        return jsonify({"error": "unauthenticated"}), 401
+
+    db = get_db()
+    user = db.users.find_one({"_id": user_id}, {"totp_enabled": 1, "totp_secret": 1})
+    if not user:
+        return jsonify({"error": "user_not_found"}), 404
+    if user.get("totp_enabled") is not True:
+        return jsonify({"error": "totp_not_enabled"}), 400
+
+    data = request.get_json(silent=True) or {}
+    code = (data.get("code") or "").strip()
+    if not code:
+        return jsonify({"error": "missing_code"}), 400
+
+    if not verify_code(user["totp_secret"], code):
+        return jsonify({"error": "invalid_code"}), 400
+
+    session["totp_verified_session"] = session.get("session_token", "")
+    return jsonify({"ok": True}), 200
+
+
 @totp_bp.route("/totp/status", methods=["GET"])
 def totp_status():
     """Return whether the current user has TOTP enabled."""
