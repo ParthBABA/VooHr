@@ -1,6 +1,7 @@
 import logging
 import os
 
+from bson import ObjectId
 from flask import Flask, jsonify, request, send_from_directory, redirect, render_template, session
 
 from api import api_bp
@@ -9,9 +10,10 @@ from auth_email import auth_email_bp
 from config import Config
 from employees import employees_bp
 from employees import _session_is_active
-from extensions import init_db
+from extensions import get_db, init_db
 from notifications import notifications_bp
 from sessions import sessions_bp
+from totp_routes import totp_bp
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +40,55 @@ def create_app():
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(auth_email_bp, url_prefix="/auth")
+    app.register_blueprint(totp_bp, url_prefix="/auth")
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(employees_bp, url_prefix="/api")
     app.register_blueprint(sessions_bp, url_prefix="/api")
     app.register_blueprint(notifications_bp, url_prefix="/api")
+
+    # ── Admin TOTP guard ────────────────────────────────────────────────
+    # If an admin has not completed mandatory TOTP setup, redirect them to
+    # the TOTP setup page on every attempt to visit a protected page.
+    # This is centralized so no individual registration/login redirect
+    # target can bypass it.
+
+    _PROTECTED_PAGES = frozenset({
+        "/dashboard",
+        "/directory",
+        "/dictation",
+        "/workspace",
+        "/settings",
+        "/risk-drift",
+        "/sync",
+        "/sync/room",
+    })
+
+    def _admin_totp_required():
+        user_id = session.get("user_id")
+        session_token = session.get("session_token")
+        if not user_id or not session_token:
+            return False
+        try:
+            uid = ObjectId(user_id)
+        except Exception:
+            return False
+        if not _session_is_active(user_id, session_token):
+            return False
+        db = get_db()
+        user = db.users.find_one({"_id": uid}, {"role": 1, "totp_enabled": 1})
+        if not user:
+            return False
+        return user.get("role") == "admin" and user.get("totp_enabled") is not True
+
+    @app.before_request
+    def _enforce_admin_totp():
+        if request.path not in _PROTECTED_PAGES:
+            return None
+        if _admin_totp_required():
+            return redirect("/settings/security/setup-totp?forced=1")
+        return None
+
+    # ── End admin TOTP guard ────────────────────────────────────────────
 
     # Clean URL routes for static pages
     @app.route("/")
@@ -99,6 +146,10 @@ def create_app():
     @app.route("/settings")
     def settings():
         return send_from_directory(app.static_folder, "settings.html")
+
+    @app.route("/settings/security/setup-totp")
+    def setup_totp():
+        return send_from_directory(app.static_folder, "setup-totp.html")
 
     @app.route("/risk-drift")
     def risk_drift():

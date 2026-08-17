@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secure Your Account — VooVr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#09090B;
+  --surface:#111113;
+  --surface-2:#17171a;
+  --line:#212125;
+  --primary:#6E56FF;
+  --secondary:#4D9FFF;
+  --accent:#A78BFA;
+  --white:#F5F5F7;
+  --muted:#8A8A93;
+  --muted-2:#57575f;
+  --grad-primary: linear-gradient(135deg, var(--primary), var(--secondary));
+  --grad-radial: radial-gradient(circle at 30% 20%, rgba(110,86,255,.25), transparent 60%);
+  --font-head: 'Space Grotesk', sans-serif;
+  --font-body: 'Manrope', sans-serif;
+  --font-num: 'IBM Plex Sans', sans-serif;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{background:var(--bg);}
+body{
+  background:var(--bg);color:var(--white);font-family:var(--font-body);
+  overflow-x:hidden;-webkit-font-smoothing:antialiased;line-height:1.5;min-height:100vh;
+}
+::selection{ background:var(--primary); color:#fff; }
+a{ color:inherit; text-decoration:none; }
+button{ font-family:inherit; cursor:pointer; border:none; background:none; color:inherit; }
+
+.glass{
+  background:rgba(17,17,19,.72);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--font-num);font-size:12px;font-weight:500;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--accent);
+}
+.eyebrow::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--grad-primary);box-shadow:0 0 12px rgba(110,86,255,.9);
+}
+
+h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:var(--white);}
+.muted{ color:var(--muted); }
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:14px 26px;border-radius:999px;font-size:14.5px;font-weight:600;
+  letter-spacing:-.01em;white-space:nowrap;
+  transition:transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s ease, border-color .3s ease, background .3s ease;
+}
+.btn-primary{
+  background:var(--grad-primary);color:#fff;
+  box-shadow:0 8px 30px -8px rgba(110,86,255,.65);
+}
+.btn-primary:hover{ transform:translateY(-2px) scale(1.02); box-shadow:0 12px 40px -6px rgba(110,86,255,.75); }
+.btn-primary:active{ transform:translateY(0) scale(.98); }
+.btn-primary:disabled{ opacity:.5; pointer-events:none; }
+
+/* --- Layout --- */
+.setup-shell{
+  display:grid;grid-template-columns:40% 1fr;min-height:100vh;
+}
+.setup-left{
+  padding:48px 56px;display:flex;flex-direction:column;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.setup-left::before{
+  content:'';position:absolute;inset:0;
+  background:var(--grad-radial);pointer-events:none;
+}
+.setup-right{
+  padding:48px;display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.setup-card{
+  border-radius:var(--radius-xl);padding:48px;
+  width:100%;max-width:440px;position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;gap:32px;
+}
+
+/* --- Content --- */
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:40px;}
+.logo-text{font-family:var(--font-head);font-size:20px;font-weight:600;letter-spacing:-.02em;}
+.setup-left h1{font-size:clamp(28px,3vw,40px);line-height:1.15;margin:16px 0 12px;}
+.setup-left p{color:var(--muted);font-size:15px;line-height:1.65;max-width:400px;}
+
+.trust-list{list-style:none;margin-top:32px;display:flex;flex-direction:column;gap:14px;}
+.trust-check{
+  display:flex;align-items:center;gap:12px;
+  font-size:14px;color:var(--muted);
+}
+.trust-check .icon{
+  width:28px;height:28px;border-radius:50%;
+  background:rgba(74,222,128,.1);color:#4ade80;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-size:14px;
+}
+
+/* --- Card elements --- */
+.shield-icon{
+  width:72px;height:72px;border-radius:50%;
+  background:rgba(110,86,255,.12);
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;
+}
+
+.qr-wrap{
+  width:200px;height:200px;border-radius:var(--radius-md);
+  background:#fff;padding:12px;
+  display:flex;align-items:center;justify-content:center;
+}
+.qr-wrap img{width:100%;height:100%;object-fit:contain;}
+
+.secret-box{
+  width:100%;padding:12px 16px;border-radius:var(--radius-sm);
+  background:var(--surface-2);border:1px solid var(--line);
+  font-family:var(--font-num);font-size:13px;letter-spacing:.08em;
+  color:var(--muted);text-align:center;word-break:break-all;
+  user-select:all;cursor:text;
+}
+
+.code-input{
+  width:100%;padding:16px;border-radius:var(--radius-sm);
+  background:var(--surface-2);border:2px solid var(--line);
+  font-family:var(--font-num);font-size:28px;letter-spacing:.2em;
+  text-align:center;color:var(--white);outline:none;
+  transition:border-color .2s;
+}
+.code-input:focus{ border-color:var(--primary); }
+.code-input::placeholder{ color:var(--muted-2);font-size:16px;letter-spacing:.05em; }
+
+.error-msg{
+  color:#f87171;font-size:13px;text-align:center;min-height:20px;
+}
+.success-msg{
+  color:#4ade80;font-size:13px;text-align:center;min-height:20px;
+}
+
+/* --- Grid overlay --- */
+.grid-overlay{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.015) 1px, transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(ellipse at 60% 40%, black 20%, transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse at 60% 40%, black 20%, transparent 70%);
+}
+
+/* --- Responsive --- */
+@media(max-width:980px){
+  .setup-shell{grid-template-columns:1fr;}
+  .setup-left{padding:32px 24px 24px;}
+  .setup-right{padding:24px;}
+  .setup-left h1{font-size:28px;}
+}
+@media(max-width:560px){
+  .setup-card{padding:28px 20px;}
+  .qr-wrap{width:160px;height:160px;}
+}
+</style>
+</head>
+<body>
+<div class="grid-overlay"></div>
+<div class="setup-shell">
+  <!-- LEFT PANEL -->
+  <div class="setup-left">
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="url(#g1)" stroke-width="2.4"/><path d="M10 16.5l4 4 8-8" stroke="url(#g1)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="g1" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#6E56FF"/><stop offset="1" stop-color="#4D9FFF"/></linearGradient></defs></svg>
+      <span class="logo-text">VooVr</span>
+    </div>
+    <span class="eyebrow">Security Setup</span>
+    <h1>Secure your<br>account with 2FA</h1>
+    <p>Set up two-factor authentication to protect your organization's data. This is required for all admin accounts.</p>
+    <ul class="trust-list">
+      <li class="trust-check"><span class="icon">&#10003;</span> Scan the QR code with your authenticator app</li>
+      <li class="trust-check"><span class="icon">&#10003;</span> Enter the 6-digit code to verify</li>
+      <li class="trust-check"><span class="icon">&#10003;</span> Your account is then fully protected</li>
+    </ul>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="setup-right">
+    <div class="setup-card glass">
+      <div class="shield-icon">&#128737;</div>
+      <div style="text-align:center">
+        <h2 style="font-size:20px;margin-bottom:6px;">Scan QR Code</h2>
+        <p class="muted" style="font-size:13px;">Open your authenticator app and scan this code</p>
+      </div>
+
+      <div id="qrArea" class="qr-wrap" style="display:none;">
+        <img id="qrImg" alt="TOTP QR Code">
+      </div>
+      <div id="qrLoading" style="color:var(--muted);font-size:13px;">Loading QR code...</div>
+
+      <div id="secretArea" style="display:none;width:100%;text-align:center;">
+        <p class="muted" style="font-size:12px;margin-bottom:6px;">Or enter this key manually:</p>
+        <div id="secretBox" class="secret-box"></div>
+      </div>
+
+      <div style="width:100%;text-align:center;">
+        <label class="muted" style="font-size:12px;display:block;margin-bottom:8px;">Enter the 6-digit code from your app</label>
+        <input id="codeInput" class="code-input" type="text" inputmode="numeric" maxlength="6" placeholder="000 000" autocomplete="one-time-code">
+      </div>
+
+      <div id="errorMsg" class="error-msg"></div>
+      <div id="successMsg" class="success-msg"></div>
+
+      <button id="verifyBtn" class="btn btn-primary" style="width:100%;" disabled>Verify &amp; Enable</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var qrArea = document.getElementById('qrArea');
+  var qrImg  = document.getElementById('qrImg');
+  var qrLoading = document.getElementById('qrLoading');
+  var secretArea = document.getElementById('secretArea');
+  var secretBox  = document.getElementById('secretBox');
+  var codeInput  = document.getElementById('codeInput');
+  var verifyBtn  = document.getElementById('verifyBtn');
+  var errorMsg   = document.getElementById('errorMsg');
+  var successMsg = document.getElementById('successMsg');
+
+  function setErr(msg){ errorMsg.textContent = msg; successMsg.textContent = ''; }
+  function setOk(msg){ successMsg.textContent = msg; errorMsg.textContent = ''; }
+
+  // Step 1: Fetch TOTP setup data
+  fetch('/auth/totp/setup', {method:'POST', headers:{'Content-Type':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.error === 'totp_already_enabled') {
+        setOk('TOTP is already enabled. Redirecting...');
+        setTimeout(function(){ window.location.href = '/dashboard'; }, 1500);
+        return;
+      }
+      if (d.error) { setErr(d.error); return; }
+      qrImg.src = d.qr;
+      qrArea.style.display = 'flex';
+      qrLoading.style.display = 'none';
+      secretBox.textContent = d.secret;
+      secretArea.style.display = 'block';
+      verifyBtn.disabled = false;
+    })
+    .catch(function(){ setErr('Failed to load TOTP setup. Please refresh.'); });
+
+  // Enable button once 6 digits entered
+  codeInput.addEventListener('input', function(){
+    var v = codeInput.value.replace(/\s/g,'');
+    verifyBtn.disabled = v.length !== 6;
+    if (v.length === 6) verifyBtn.focus();
+  });
+
+  // Step 2: Verify the code
+  verifyBtn.addEventListener('click', function(){
+    var code = codeInput.value.replace(/\s/g,'');
+    if (code.length !== 6) { setErr('Please enter a 6-digit code.'); return; }
+    verifyBtn.disabled = true;
+    setErr(''); setOk('');
+
+    fetch('/auth/totp/verify-setup', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({code: code})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.error) {
+        setErr(d.error === 'invalid_code' ? 'Invalid code. Try again.' : d.error);
+        verifyBtn.disabled = false;
+        codeInput.value = '';
+        codeInput.focus();
+        return;
+      }
+      setOk('Two-factor authentication enabled! Redirecting to dashboard...');
+      setTimeout(function(){ window.location.href = '/dashboard'; }, 1500);
+    })
+    .catch(function(){
+      setErr('Network error. Please try again.');
+      verifyBtn.disabled = false;
+    });
+  });
+
+  // Submit on Enter
+  codeInput.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !verifyBtn.disabled) verifyBtn.click();
+  });
+})();
+</script>
+</body>
+</html>
