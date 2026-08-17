@@ -136,7 +136,16 @@
   color:var(--ivory-faint);
 }
 
-[data-reveal]{opacity:0;}
+[data-reveal]{
+  opacity:0;
+  animation:revealFade .7s cubic-bezier(0.16,1,0.3,1) forwards;
+  animation-play-state:paused;
+}
+[data-reveal].reveal-ready{animation-play-state:running;}
+@keyframes revealFade{
+  from{opacity:0;transform:translateY(12px);}
+  to{opacity:1;transform:translateY(0);}
+}
 
 @media(max-width:520px){
   .gate-card{padding:2rem 1.25rem;}
@@ -192,7 +201,14 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('[data-reveal]').forEach(function(el,i){
+    el.style.animationDelay=(i*60)+'ms';
+    el.classList.add('reveal-ready');
+  });
+});
+</script>
 <script>
 (function(){
   /* ── DOM refs ── */
@@ -307,14 +323,5 @@
 })();
 </script>
 
-<script>
-/* ── GSAP reveal (DOMContentLoaded, no flash) ── */
-document.addEventListener('DOMContentLoaded',function(){
-  if(typeof gsap==='undefined') return;
-  var tl=gsap.timeline({defaults:{ease:'power3.out'}});
-  tl.from('.gate-card',{opacity:0,y:20,filter:'blur(6px)',duration:.7},0)
-    .from('.gate-card [data-reveal]',{opacity:0,y:12,duration:.55,stagger:.05},.15);
-});
-</script>
 </body>
 </html>
