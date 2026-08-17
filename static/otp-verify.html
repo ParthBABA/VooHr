@@ -134,7 +134,9 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
   .otp-boxes{gap:8px;}
 }
 
-[data-reveal]{opacity:0;}
+[data-reveal]{opacity:0;animation:revealFade .7s cubic-bezier(0.16,1,0.3,1) forwards;animation-delay:.3s;}
+.gsap-active [data-reveal]{animation:none;}
+@keyframes revealFade{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
 </style>
 <link rel="stylesheet" href="page-transition.css">
 </head>
@@ -363,17 +365,22 @@ resendBtn.addEventListener('click', function() {
 
 document.addEventListener('DOMContentLoaded', function() {
   inputs[0].focus();
+  if(typeof gsap==='undefined'){document.querySelectorAll('[data-reveal]').forEach((el,i)=>{el.style.animation='revealFade .7s cubic-bezier(0.16,1,0.3,1) forwards';el.style.animationDelay=(i*60)+'ms';});return;}
+  document.documentElement.classList.add('gsap-active');
   var tl = gsap.timeline({ defaults:{ ease:'power3.out' } });
 
-  tl.from('.setup-brand', {
-      opacity:0, y:20, filter:'blur(8px)', duration:.8
-    }, 0)
-    .from('#setupCard', {
-      opacity:0, y:24, filter:'blur(10px)', duration:.9
-    }, .15)
-    .from('#setupCard [data-reveal]', {
-      opacity:0, y:14, duration:.7, stagger:.06
-    }, .45);
+  tl.fromTo('.setup-brand',
+      {opacity:0, y:20, filter:'blur(8px)'},
+      {opacity:1, y:0, filter:'blur(0px)', duration:.8}
+    , 0)
+    .fromTo('#setupCard',
+      {opacity:0, y:24, filter:'blur(10px)'},
+      {opacity:1, y:0, filter:'blur(0px)', duration:.9}
+    , .15)
+    .fromTo('#setupCard [data-reveal]',
+      {opacity:0, y:14},
+      {opacity:1, y:0, duration:.7, stagger:.06}
+    , .45);
 });
 </script>
 <script src="page-transition.js"></script>

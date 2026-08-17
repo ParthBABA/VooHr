@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Security Checkpoint — VooVr</title>
 <link rel="stylesheet" href="/style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 /* ── Gate-specific overrides (scoped, minimal) ── */
 .gate-shell{
@@ -65,7 +68,7 @@
   padding:.6rem .75rem;
 }
 .secret-key{
-  flex:1;font-family:'IBM Plex Mono',monospace;font-size:.78rem;
+  flex:1;font-family:'Space Mono',monospace;font-size:.78rem;
   color:var(--ivory);letter-spacing:.06em;
   word-break:break-all;user-select:all;
 }
@@ -88,7 +91,7 @@
 }
 .otp-seg{
   width:48px;height:54px;
-  font-family:'IBM Plex Mono',monospace;font-size:1.25rem;font-weight:600;
+  font-family:'Space Mono',monospace;font-size:1.25rem;font-weight:600;
   text-align:center;color:var(--ivory);
   background:var(--surface);border:1.5px solid var(--border);
   border-radius:8px;outline:none;
@@ -136,16 +139,9 @@
   color:var(--ivory-faint);
 }
 
-[data-reveal]{
-  opacity:0;
-  animation:revealFade .7s cubic-bezier(0.16,1,0.3,1) forwards;
-  animation-play-state:paused;
-}
-[data-reveal].reveal-ready{animation-play-state:running;}
-@keyframes revealFade{
-  from{opacity:0;transform:translateY(12px);}
-  to{opacity:1;transform:translateY(0);}
-}
+[data-reveal]{opacity:0;animation:revealFade .7s cubic-bezier(0.16,1,0.3,1) forwards;animation-delay:.3s;}
+.gsap-active [data-reveal]{animation:none;}
+@keyframes revealFade{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
 
 @media(max-width:520px){
   .gate-card{padding:2rem 1.25rem;}
@@ -170,7 +166,7 @@
   margin-bottom:1rem;
 }
 .backup-code{
-  font-family:'IBM Plex Mono',monospace;font-size:.82rem;font-weight:600;
+  font-family:'Space Mono',monospace;font-size:.82rem;font-weight:600;
   color:var(--ivory);letter-spacing:.08em;
   background:var(--surface);border:1px solid var(--border);border-radius:6px;
   padding:.45rem .6rem;text-align:center;
@@ -212,8 +208,11 @@
 .backup-continue-btn:active{transform:scale(.985);}
 .backup-continue-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
 </style>
+<link rel="stylesheet" href="/page-transition.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 </head>
 <body>
+<div id="voovr-page-transition"><div class="vpt-inner"><span class="vpt-dot"></span><span class="vpt-dot"></span><span class="vpt-dot"></span></div></div>
 
 <div class="gate-shell">
   <div class="gate-card">
@@ -279,10 +278,17 @@
 
 <script>
 document.addEventListener('DOMContentLoaded',function(){
-  document.querySelectorAll('[data-reveal]').forEach(function(el,i){
-    el.style.animationDelay=(i*60)+'ms';
-    el.classList.add('reveal-ready');
-  });
+  if(typeof gsap==='undefined'){document.querySelectorAll('[data-reveal]').forEach((el,i)=>{el.style.animation='revealFade .7s cubic-bezier(0.16,1,0.3,1) forwards';el.style.animationDelay=(i*60)+'ms';});return;}
+  document.documentElement.classList.add('gsap-active');
+  var tl=gsap.timeline({defaults:{ease:'power3.out'}});
+  tl.fromTo('.gate-card',
+    {opacity:0,y:24,filter:'blur(10px)'},
+    {opacity:1,y:0,filter:'blur(0px)',duration:.9}
+  ,0)
+  .fromTo('.gate-card [data-reveal]',
+    {opacity:0,y:14},
+    {opacity:1,y:0,duration:.7,stagger:.06}
+  ,.3);
 });
 </script>
 <script>
@@ -463,5 +469,6 @@ document.addEventListener('DOMContentLoaded',function(){
 })();
 </script>
 
+<script src="/page-transition.js"></script>
 </body>
 </html>
