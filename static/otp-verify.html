@@ -134,8 +134,10 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
   .otp-boxes{gap:8px;}
 }
 </style>
+<link rel="stylesheet" href="page-transition.css">
 </head>
 <body>
+<div id="voovr-page-transition"><div class="vpt-inner"><span class="vpt-dot"></span><span class="vpt-dot"></span><span class="vpt-dot"></span></div></div>
 
 <div class="setup-shell">
   <div class="setup-brand" data-reveal>
@@ -357,7 +359,7 @@ resendBtn.addEventListener('click', function() {
   });
 });
 
-window.addEventListener('load', function() {
+document.addEventListener('DOMContentLoaded', function() {
   inputs[0].focus();
   var tl = gsap.timeline({ defaults:{ ease:'power3.out' } });
 
@@ -372,5 +374,6 @@ window.addEventListener('load', function() {
     }, .45);
 });
 </script>
+<script src="page-transition.js"></script>
 </body>
 </html>

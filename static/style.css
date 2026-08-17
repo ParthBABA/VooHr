@@ -990,6 +990,9 @@ body.lang-hi [data-lang-block="en"]{display:none;}
 .info-banner-close svg{width:14px;height:14px;}
 .info-banner-close:hover{color:var(--ivory);background:var(--ivory-ghost);}
 
+/* ── Pre-hide [data-reveal] elements before GSAP runs ── */
+[data-reveal]{opacity:0;}
+
   . s i d e b a r . i c o n - o n l y   . n a v - i t e m { f o n t - s i z e : 0 ; w h i t e - s p a c e : n o w r a p ; p a d d i n g : 0 . 7 r e m   0 ; g a p : 0 ; t r a n s i t i o n : f o n t - s i z e   0 . 3 s   e a s e ; }  
    . s i d e b a r . i c o n - o n l y   . n a v - i t e m   s v g { m a r g i n : 0   a u t o ; d i s p l a y : b l o c k ; f l e x - s h r i n k : 0 ; t r a n s f o r m : s c a l e ( 1 . 2 ) ; t r a n s i t i o n : t r a n s f o r m   0 . 3 s   e a s e ; }  
    . s i d e b a r . i c o n - o n l y   . n a v - i t e m   s p a n { d i s p l a y : n o n e ; }  

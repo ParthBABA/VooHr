@@ -349,8 +349,10 @@ h1,h2{
   .field-row{ grid-template-columns:1fr; gap:0; }
 }
 </style>
+<link rel="stylesheet" href="page-transition.css">
 </head>
 <body>
+<div id="voovr-page-transition"><div class="vpt-inner"><span class="vpt-dot"></span><span class="vpt-dot"></span><span class="vpt-dot"></span></div></div>
 
 <div class="setup-shell">
   <div class="setup-grid-overlay"></div>
@@ -474,7 +476,7 @@ document.getElementById('setupForm').addEventListener('submit', async function(e
    across the left panel, then the card and its fields.
    No parallax, no floating elements, no heavy motion.
 ============================================================ */
-window.addEventListener('load', () => {
+document.addEventListener('DOMContentLoaded', () => {
   const tl = gsap.timeline({ defaults:{ ease:'power3.out' } });
 
   tl.from('.setup-left [data-reveal]', {
@@ -488,5 +490,6 @@ window.addEventListener('load', () => {
     }, .45);
 });
 </script>
+<script src="page-transition.js"></script>
 </body>
 </html>
