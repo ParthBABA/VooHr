@@ -114,6 +114,28 @@ def create_app():
 
     # ── End admin TOTP guard ────────────────────────────────────────────
 
+    # ── Page-login guard ───────────────────────────────────────────────
+    # Shared by every protected page route so the HTML shell is never
+    # served to an unauthenticated visitor.  API routes already reject
+    # unauthenticated calls via _require_auth() in employees.py; this
+    # is the page-level equivalent (better UX + defense-in-depth).
+
+    def _require_page_login():
+        """Return a redirect Response if the session is not valid, or None
+        if the caller may proceed to render the page.
+
+        Reuses the exact same check the landing page uses for its
+        is_logged_in variable and that employees.py uses for API auth.
+        """
+        user_id = session.get("user_id")
+        session_token = session.get("session_token")
+        if not user_id or not session_token:
+            return redirect("/login?redirect=" + request.path)
+        if not _session_is_active(user_id, session_token):
+            session.clear()
+            return redirect("/login?redirect=" + request.path)
+        return None
+
     # Clean URL routes for static pages
     @app.route("/")
     def index():
@@ -153,42 +175,62 @@ def create_app():
 
     @app.route("/dashboard")
     def dashboard():
+        guard = _require_page_login()
+        if guard: return guard
         return send_from_directory(app.static_folder, "dashboard.html")
 
     @app.route("/directory")
     def directory():
+        guard = _require_page_login()
+        if guard: return guard
         return send_from_directory(app.static_folder, "directory.html")
 
     @app.route("/dictation")
     def dictation():
+        guard = _require_page_login()
+        if guard: return guard
         return send_from_directory(app.static_folder, "dictation.html")
 
     @app.route("/workspace")
     def workspace():
+        guard = _require_page_login()
+        if guard: return guard
         return send_from_directory(app.static_folder, "conversation-workspace.html")
 
     @app.route("/settings")
     def settings():
+        guard = _require_page_login()
+        if guard: return guard
         return send_from_directory(app.static_folder, "settings.html")
 
     @app.route("/settings/security/setup-totp")
     def setup_totp():
+        guard = _require_page_login()
+        if guard: return guard
         return send_from_directory(app.static_folder, "verify-totp-gate.html")
 
     @app.route("/auth/totp/verify-login")
     def totp_verify_login_page():
+        guard = _require_page_login()
+        if guard: return guard
         return send_from_directory(app.static_folder, "verify-totp-login.html")
 
     @app.route("/risk-drift")
     def risk_drift():
+        guard = _require_page_login()
+        if guard: return guard
         return send_from_directory(app.static_folder, "risk-drift.html")
 
     @app.route("/sync")
     def sync():
+        guard = _require_page_login()
+        if guard: return guard
         return send_from_directory(app.static_folder, "sync.html")
 
     @app.route("/sync/room")
     def sync_room():
+        guard = _require_page_login()
+        if guard: return guard
         return send_from_directory(app.static_folder, "sync_room.html")
 
     @app.route("/privacy")
