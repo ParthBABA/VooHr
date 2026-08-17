@@ -22,7 +22,7 @@ complete after registration.  The flow is:
 """
 
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
 from flask import Blueprint, jsonify, request, session
@@ -72,11 +72,14 @@ def _current_user_id():
 
 @totp_bp.route("/totp/setup", methods=["POST"])
 def totp_setup():
-    """Generate a fresh TOTP secret, stash it in the session, and return
-    the provisioning URI + QR code so the frontend can display them.
+    """Generate a TOTP secret, persist it on the user document (not the
+    session cookie) so it survives mobile tab discards, and return the
+    provisioning URI + QR code.
 
-    The secret is *not* written to the DB yet — that happens only after
-    the user successfully verifies a code via /totp/verify-setup.
+    If the user already has a non-expired pending secret (e.g. they
+    reloaded the page after scanning the QR), reuse it instead of
+    generating a new one — otherwise their authenticator app would
+    silently invalidate the old secret.
     """
     user_id = _current_user_id()
     if not user_id:
@@ -85,7 +88,8 @@ def totp_setup():
     db = get_db()
     user = db.users.find_one(
         {"_id": user_id},
-        {"email_hash": 1, "encrypted": 1, "wrapped_dek": 1, "totp_enabled": 1},
+        {"email_hash": 1, "encrypted": 1, "wrapped_dek": 1, "totp_enabled": 1,
+         "pending_totp_secret": 1, "pending_totp_secret_expires": 1},
     )
     if not user:
         return jsonify({"error": "user_not_found"}), 404
@@ -93,6 +97,21 @@ def totp_setup():
     # If TOTP is already enabled there's nothing to set up.
     if user.get("totp_enabled") is True:
         return jsonify({"error": "totp_already_enabled"}), 409
+
+    # Reuse an existing non-expired pending secret so the user's
+    # authenticator app doesn't need to re-scan.
+    now = datetime.now(timezone.utc)
+    existing_secret = user.get("pending_totp_secret")
+    existing_expires = user.get("pending_totp_secret_expires")
+    if existing_secret and existing_expires:
+        # Handle both tz-aware and naive datetimes from Mongo.
+        if existing_expires.tzinfo is None:
+            existing_expires = existing_expires.replace(tzinfo=timezone.utc)
+        if existing_expires > now:
+            secret = existing_secret
+            uri = provisioning_uri(secret, user.get("email", str(user_id)))
+            qr = qr_code_data_url(uri)
+            return jsonify({"ok": True, "secret": secret, "uri": uri, "qr": qr}), 200
 
     # Derive a display name for the authenticator app from the encrypted PII.
     from field_encryption import decrypt_fields
@@ -105,8 +124,15 @@ def totp_setup():
     uri = provisioning_uri(secret, display_name)
     qr = qr_code_data_url(uri)
 
-    # Keep the secret in the session until verify-setup confirms it.
-    session["pending_totp_secret"] = secret
+    # Persist the pending secret in the DB (survives tab discards / mobile
+    # backgrounding) with a 10-minute TTL.
+    db.users.update_one(
+        {"_id": user_id},
+        {"$set": {
+            "pending_totp_secret": secret,
+            "pending_totp_secret_expires": now + timedelta(minutes=10),
+        }},
+    )
 
     return jsonify({"ok": True, "secret": secret, "uri": uri, "qr": qr}), 200
 
@@ -114,7 +140,8 @@ def totp_setup():
 @totp_bp.route("/totp/verify-setup", methods=["POST"])
 def totp_verify_setup():
     """Verify the user-supplied 6-digit code against the pending secret
-    and, on success, persist TOTP credentials on the user document.
+    stored in the DB and, on success, persist TOTP credentials on the
+    user document.
 
     Also generates 10 single-use backup codes, stores them hashed, and
     returns the plaintext codes once — this is the only time they are shown.
@@ -123,9 +150,36 @@ def totp_verify_setup():
     if not user_id:
         return jsonify({"error": "unauthenticated"}), 401
 
-    pending_secret = session.get("pending_totp_secret")
+    db = get_db()
+    user = db.users.find_one(
+        {"_id": user_id},
+        {"pending_totp_secret": 1, "pending_totp_secret_expires": 1},
+    )
+    if not user:
+        return jsonify({"error": "user_not_found"}), 404
+
+    pending_secret = user.get("pending_totp_secret")
+    pending_expires = user.get("pending_totp_secret_expires")
+
     if not pending_secret:
         return jsonify({"error": "no_pending_setup"}), 400
+
+    # Check expiry.
+    now = datetime.now(timezone.utc)
+    if pending_expires is not None:
+        if pending_expires.tzinfo is None:
+            pending_expires = pending_expires.replace(tzinfo=timezone.utc)
+        if pending_expires < now:
+            # Expired — clean up so the user gets a clear "start over"
+            # message rather than a stale secret lingering.
+            db.users.update_one(
+                {"_id": user_id},
+                {"$unset": {
+                    "pending_totp_secret": "",
+                    "pending_totp_secret_expires": "",
+                }},
+            )
+            return jsonify({"error": "no_pending_setup"}), 400
 
     data = request.get_json(silent=True) or {}
     code = (data.get("code") or "").strip()
@@ -142,16 +196,18 @@ def totp_verify_setup():
         for c in plaintext_codes
     ]
 
-    db = get_db()
     db.users.update_one(
         {"_id": user_id},
         {"$set": {
             "totp_enabled": True,
             "totp_secret": pending_secret,
             "totp_backup_codes": hashed_codes,
+        },
+         "$unset": {
+            "pending_totp_secret": "",
+            "pending_totp_secret_expires": "",
         }},
     )
-    session.pop("pending_totp_secret", None)
 
     return jsonify({"ok": True, "backup_codes": plaintext_codes}), 200
 
