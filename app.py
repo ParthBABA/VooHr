@@ -57,7 +57,11 @@ def create_app():
 
     _TOTP_ENROLL_ROUTE = "/settings/security/setup-totp"
     _TOTP_LOGIN_ROUTE  = "/auth/totp/verify-login"
-    _TOTP_EXEMPT = frozenset({_TOTP_ENROLL_ROUTE, _TOTP_LOGIN_ROUTE})
+    _TOTP_EXEMPT = frozenset({
+        _TOTP_ENROLL_ROUTE,
+        _TOTP_LOGIN_ROUTE,
+        "/auth/totp/verify-login-backup",
+    })
 
     _PROTECTED_PAGES = frozenset({
         "/dashboard",

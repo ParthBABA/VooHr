@@ -325,6 +325,31 @@
           </div>
         </div>
 
+        <!-- SECURITY / 2FA -->
+        <div class="card fade-in" id="securityCard" style="display:none;">
+          <div class="card-header">
+            <div>
+              <div class="eyebrow">Security</div>
+              <h3 class="settings-section-title">Two-Factor Authentication</h3>
+            </div>
+          </div>
+
+          <div class="settings-form-grid">
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <div id="totpStatusText" style="font-family:var(--font-rc);font-size:0.78rem;color:var(--ivory-dim);padding:.55rem 0;">Loading...</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Recovery codes</label>
+              <div id="backupCodesText" style="font-family:var(--font-rc);font-size:0.78rem;color:var(--ivory-dim);padding:.55rem 0;">Loading...</div>
+            </div>
+          </div>
+
+          <div class="settings-actions" id="securityActions" style="display:none;">
+            <button class="btn btn-sm btn-outline" id="regenerateCodesBtn" type="button">Regenerate codes</button>
+          </div>
+        </div>
+
         <!-- ACTIVE SESSIONS -->
         <div class="card fade-in">
           <div class="card-header">
@@ -729,6 +754,112 @@ function clearFieldError(input){
   }).then(function(body){
     if (body && body.sessions) renderSessions(body.sessions);
   }).catch(function(){});
+})();
+
+/* ── SECURITY: backup codes status + regenerate ── */
+(function(){
+  var card=document.getElementById('securityCard');
+  var statusText=document.getElementById('totpStatusText');
+  var codesText=document.getElementById('backupCodesText');
+  var actions=document.getElementById('securityActions');
+  var regenBtn=document.getElementById('regenerateCodesBtn');
+  if(!card) return;
+
+  function loadStatus(){
+    fetch('/auth/totp/status').then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(!d||!d.totp_enabled){
+        statusText.textContent='Not enabled';
+        statusText.style.color='var(--ivory-faint)';
+        actions.style.display='none';
+        card.style.display='';
+        return;
+      }
+      statusText.textContent='Enabled';
+      statusText.style.color='var(--teal)';
+      // Load backup codes count.
+      fetch('/auth/totp/backup-codes-status').then(function(r){return r.ok?r.json():null;}).then(function(b){
+        if(!b||!b.has_backup_codes){
+          codesText.textContent='No backup codes';
+          codesText.style.color='var(--ivory-faint)';
+        } else {
+          codesText.textContent=b.codes_remaining+' unused codes remaining';
+          codesText.style.color=b.codes_remaining<=2?'var(--amber)':'var(--ivory-dim)';
+        }
+        actions.style.display='';
+      }).catch(function(){
+        codesText.textContent='Could not load';
+      });
+    }).catch(function(){
+      statusText.textContent='Could not load';
+    }).finally(function(){
+      card.style.display='';
+    });
+  }
+
+  if(regenBtn){
+    regenBtn.addEventListener('click',function(){
+      if(!confirm('Regenerate backup codes? Your old codes will stop working immediately.')) return;
+      regenBtn.disabled=true;
+      regenBtn.textContent='Generating\u2026';
+      fetch('/auth/totp/regenerate-backup-codes',{method:'POST',headers:{'Content-Type':'application/json'}})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.error){
+          showToast('Error: '+d.error);
+          regenBtn.disabled=false;
+          regenBtn.textContent='Regenerate codes';
+          return;
+        }
+        // Show the new codes in a modal/overlay.
+        var codes=d.backup_codes;
+        var overlay=document.createElement('div');
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+        var modal=document.createElement('div');
+        modal.style.cssText='background:var(--ink);border:1px solid var(--border);border-radius:16px;padding:2rem;max-width:440px;width:100%;max-height:80vh;overflow-y:auto;';
+        modal.innerHTML='<div style="text-align:center;margin-bottom:1rem;"><div style="font-size:.85rem;font-weight:600;color:var(--amber);margin-bottom:.35rem;">New recovery codes</div><div style="font-size:.78rem;color:var(--ivory-dim);line-height:1.55;">Save these codes. Each code can only be used once. Old codes are now invalid.</div></div>';
+        var grid=document.createElement('div');
+        grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-bottom:1rem;';
+        codes.forEach(function(c){
+          var el=document.createElement('div');
+          el.style.cssText='font-family:"IBM Plex Mono",monospace;font-size:.82rem;font-weight:600;color:var(--ivory);letter-spacing:.08em;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.45rem .6rem;text-align:center;';
+          el.textContent=c;
+          grid.appendChild(el);
+        });
+        modal.appendChild(grid);
+        var btnRow=document.createElement('div');
+        btnRow.style.cssText='display:flex;gap:.5rem;';
+        var copyBtn=document.createElement('button');
+        copyBtn.textContent='Copy all';
+        copyBtn.style.cssText='flex:1;padding:.5rem;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--amber);';
+        copyBtn.onclick=function(){navigator.clipboard.writeText(codes.join('\n')).then(function(){copyBtn.textContent='Copied!';setTimeout(function(){copyBtn.textContent='Copy all';},1500);});};
+        var dlBtn=document.createElement('button');
+        dlBtn.textContent='Download .txt';
+        dlBtn.style.cssText='flex:1;padding:.5rem;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--teal);';
+        dlBtn.onclick=function(){var blob=new Blob([codes.join('\n')],{type:'text/plain'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='voovr-backup-codes.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);};
+        var closeBtn=document.createElement('button');
+        closeBtn.textContent='Done';
+        closeBtn.style.cssText='flex:1;padding:.5rem;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;border:none;background:var(--violet);color:#fff;';
+        closeBtn.onclick=function(){overlay.remove();};
+        btnRow.appendChild(copyBtn);
+        btnRow.appendChild(dlBtn);
+        btnRow.appendChild(closeBtn);
+        modal.appendChild(btnRow);
+        overlay.appendChild(modal);
+        overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
+        document.body.appendChild(overlay);
+        showToast('New backup codes generated');
+        regenBtn.disabled=false;
+        regenBtn.textContent='Regenerate codes';
+        loadStatus();
+      }).catch(function(){
+        showToast('Network error');
+        regenBtn.disabled=false;
+        regenBtn.textContent='Regenerate codes';
+      });
+    });
+  }
+
+  loadStatus();
 })();
 
 /* ── BILLING: usage from /api/me + /api/employees ── */

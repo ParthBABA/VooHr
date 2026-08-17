@@ -88,6 +88,43 @@
   color:var(--ivory-faint);
 }
 
+/* Backup code toggle */
+.backup-toggle{
+  text-align:center;margin-top:.75rem;font-size:.78rem;
+}
+.backup-toggle a{
+  color:var(--ivory-faint);cursor:pointer;text-decoration:underline;
+  transition:color .2s;
+}
+.backup-toggle a:hover{color:var(--amber);}
+
+/* Backup code input mode */
+.backup-mode{
+  display:none;
+}
+.backup-input-wrap{
+  display:flex;justify-content:center;margin-bottom:1.25rem;
+}
+.backup-input{
+  width:100%;max-width:260px;padding:.7rem 1rem;
+  font-family:'IBM Plex Mono',monospace;font-size:1rem;font-weight:600;
+  text-align:center;letter-spacing:.1em;color:var(--ivory);
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:8px;outline:none;
+  transition:border-color .2s,background .2s,box-shadow .2s;
+  caret-color:var(--violet);
+}
+.backup-input::placeholder{color:var(--ivory-faint);letter-spacing:.05em;}
+.backup-input:focus{
+  border-color:var(--violet);
+  background:var(--violet-soft);
+  box-shadow:0 0 0 3px var(--violet-glow);
+}
+.backup-label{
+  display:block;text-align:center;font-size:.78rem;
+  color:var(--ivory-dim);margin-bottom:.6rem;
+}
+
 [data-reveal]{
   opacity:0;
   animation:revealFade .7s cubic-bezier(0.16,1,0.3,1) forwards;
@@ -133,6 +170,20 @@
     <div class="login-success" id="loginSuccess"></div>
 
     <button class="login-btn" id="verifyBtn" disabled>Verify</button>
+
+    <!-- Backup code toggle -->
+    <div class="backup-toggle" id="backupToggleWrap" data-reveal>
+      <a id="backupToggleLink">Lost your device? Use a backup code</a>
+    </div>
+
+    <!-- Backup code input (hidden by default) -->
+    <div class="backup-mode" id="backupMode">
+      <label class="backup-label">Enter a backup code (XXXX-XXXX)</label>
+      <div class="backup-input-wrap">
+        <input type="text" class="backup-input" id="backupCodeInput" placeholder="XXXX-XXXX" maxlength="9" autocomplete="off">
+      </div>
+      <button class="login-btn" id="backupVerifyBtn" disabled>Verify Backup Code</button>
+    </div>
 
     <div class="login-footer" data-reveal>You'll be redirected after verification.</div>
 
@@ -217,6 +268,81 @@ document.addEventListener('DOMContentLoaded',function(){
 
   segs[segs.length-1].addEventListener('keydown',function(e){
     if(e.key==='Enter'&&!verifyBtn.disabled) verifyBtn.click();
+  });
+
+  /* ── Backup code toggle ── */
+  var backupToggleLink=document.getElementById('backupToggleLink');
+  var backupToggleWrap=document.getElementById('backupToggleWrap');
+  var backupMode=document.getElementById('backupMode');
+  var backupInput=document.getElementById('backupCodeInput');
+  var backupVerifyBtn=document.getElementById('backupVerifyBtn');
+  var otpLabel=document.querySelector('.otp-label');
+  var otpSegmentsWrap=document.getElementById('otpSegments');
+  var backupModeActive=false;
+
+  backupToggleLink.addEventListener('click',function(){
+    backupModeActive=!backupModeActive;
+    if(backupModeActive){
+      otpLabel.style.display='none';
+      otpSegmentsWrap.style.display='none';
+      verifyBtn.style.display='none';
+      backupMode.style.display='block';
+      backupToggleLink.textContent='Use authenticator app instead';
+      backupInput.focus();
+    } else {
+      otpLabel.style.display='';
+      otpSegmentsWrap.style.display='';
+      verifyBtn.style.display='';
+      backupMode.style.display='none';
+      backupToggleLink.textContent='Lost your device? Use a backup code';
+      segs[0].focus();
+    }
+  });
+
+  /* ── Backup code input formatting ── */
+  backupInput.addEventListener('input',function(){
+    var v=backupInput.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(v.length>4)v=v.slice(0,4)+'-'+v.slice(4,8);
+    backupInput.value=v;
+    backupVerifyBtn.disabled=v.replace('-','').length!==8;
+  });
+
+  /* ── Backup code verification ── */
+  backupVerifyBtn.addEventListener('click',function(){
+    var code=backupInput.value.trim();
+    if(!code){setErr('Enter a backup code.');return;}
+    backupVerifyBtn.disabled=true;
+    setErr('');setOk('');
+
+    fetch('/auth/totp/verify-login-backup',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({code:code})
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.error){
+        setErr(d.error==='invalid_code'?'Invalid or already used backup code.':d.error);
+        backupVerifyBtn.disabled=false;
+        backupInput.value='';
+        backupInput.focus();
+        return;
+      }
+      var msg='Verified! Redirecting\u2026';
+      if(d.codes_remaining<=2&&d.codes_remaining>=0){
+        msg+=' ('+d.codes_remaining+' backup codes remaining)';
+      }
+      setOk(msg);
+      setTimeout(function(){window.location.href=getReturnUrl();},1000);
+    })
+    .catch(function(){
+      setErr('Network error. Please try again.');
+      backupVerifyBtn.disabled=false;
+    });
+  });
+
+  backupInput.addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&!backupVerifyBtn.disabled) backupVerifyBtn.click();
   });
 })();
 </script>

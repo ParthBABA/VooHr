@@ -151,6 +151,66 @@
   .gate-card{padding:2rem 1.25rem;}
   .otp-seg{width:42px;height:48px;font-size:1.1rem;}
 }
+
+/* Backup codes display */
+.backup-codes-section{
+  display:none;
+  margin-bottom:1.5rem;
+}
+.backup-codes-title{
+  text-align:center;font-size:.85rem;font-weight:600;
+  color:var(--amber);margin-bottom:.35rem;
+}
+.backup-codes-subtitle{
+  text-align:center;font-size:.78rem;color:var(--ivory-dim);
+  line-height:1.55;margin-bottom:1rem;
+}
+.backup-codes-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;
+  margin-bottom:1rem;
+}
+.backup-code{
+  font-family:'IBM Plex Mono',monospace;font-size:.82rem;font-weight:600;
+  color:var(--ivory);letter-spacing:.08em;
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  padding:.45rem .6rem;text-align:center;
+}
+.backup-actions{
+  display:flex;gap:.5rem;margin-bottom:1rem;
+}
+.backup-actions button{
+  flex:1;padding:.5rem;border-radius:8px;font-size:.78rem;font-weight:600;
+  cursor:pointer;border:1px solid var(--border);transition:background .2s;
+}
+.btn-backup-copy{
+  background:var(--surface);color:var(--amber);
+}
+.btn-backup-copy:hover{background:var(--amber-soft);}
+.btn-backup-download{
+  background:var(--surface);color:var(--teal);
+}
+.btn-backup-download:hover{background:var(--teal-soft);}
+.backup-save-check{
+  display:flex;align-items:center;gap:.5rem;
+  justify-content:center;margin-bottom:1rem;
+}
+.backup-save-check input[type="checkbox"]{
+  accent-color:var(--violet);width:16px;height:16px;cursor:pointer;
+}
+.backup-save-check label{
+  font-size:.78rem;color:var(--ivory-dim);cursor:pointer;
+}
+.backup-continue-btn{
+  width:100%;padding:.85rem;border-radius:10px;
+  font-size:.9rem;font-weight:600;letter-spacing:-.005em;
+  color:#fff;background:var(--violet);
+  border:none;cursor:pointer;display:none;
+  box-shadow:0 4px 16px var(--violet-glow);
+  transition:background .2s,box-shadow .2s,transform .15s;
+}
+.backup-continue-btn:hover{background:#6a3fe0;box-shadow:0 6px 24px var(--violet-glow);}
+.backup-continue-btn:active{transform:scale(.985);}
+.backup-continue-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
 </style>
 </head>
 <body>
@@ -195,6 +255,22 @@
     <div class="gate-success" id="gateSuccess"></div>
 
     <button class="gate-btn" id="verifyBtn" disabled>Verify &amp; Continue</button>
+
+    <!-- Backup codes (shown after successful TOTP enrollment) -->
+    <div class="backup-codes-section" id="backupCodesSection">
+      <div class="backup-codes-title">Your recovery codes</div>
+      <div class="backup-codes-subtitle">Save these codes somewhere safe. Each code can only be used once. If you lose access to your authenticator app, you can use one of these codes to sign in.</div>
+      <div class="backup-codes-grid" id="backupCodesGrid"></div>
+      <div class="backup-actions">
+        <button type="button" class="btn-backup-copy" id="backupCopyBtn">Copy all</button>
+        <button type="button" class="btn-backup-download" id="backupDownloadBtn">Download .txt</button>
+      </div>
+      <div class="backup-save-check">
+        <input type="checkbox" id="backupSavedCheck">
+        <label for="backupSavedCheck">I've saved these codes</label>
+      </div>
+      <button class="backup-continue-btn" id="backupContinueBtn">Continue to Dashboard</button>
+    </div>
 
     <div class="gate-footer" data-reveal>You'll be redirected to the dashboard after verification.</div>
 
@@ -307,8 +383,13 @@ document.addEventListener('DOMContentLoaded',function(){
         segs[0].focus();
         return;
       }
-      setOk('Verified! Redirecting to dashboard\u2026');
-      setTimeout(function(){window.location.href='/dashboard';},1200);
+      // If backup codes returned, show them (first-time enrollment).
+      if(d.backup_codes && d.backup_codes.length){
+        showBackupCodes(d.backup_codes);
+      } else {
+        setOk('Verified! Redirecting to dashboard\u2026');
+        setTimeout(function(){window.location.href='/dashboard';},1200);
+      }
     })
     .catch(function(){
       setErr('Network error. Please try again.');
@@ -320,6 +401,65 @@ document.addEventListener('DOMContentLoaded',function(){
   segs[segs.length-1].addEventListener('keydown',function(e){
     if(e.key==='Enter'&&!verifyBtn.disabled) verifyBtn.click();
   });
+
+  /* ── Backup codes display after enrollment ── */
+  function showBackupCodes(codes){
+    // Hide the enrollment UI elements.
+    qrWrap.style.display='none';
+    qrLoading.style.display='none';
+    manualSecret.style.display='none';
+    manualToggle.style.display='none';
+    document.getElementById('otpLabel').style.display='none';
+    document.getElementById('otpSegments').style.display='none';
+    verifyBtn.style.display='none';
+    errBox.style.display='none';
+    okBox.style.display='none';
+
+    // Populate the codes grid.
+    var grid=document.getElementById('backupCodesGrid');
+    grid.innerHTML='';
+    codes.forEach(function(c){
+      var el=document.createElement('div');
+      el.className='backup-code';
+      el.textContent=c;
+      grid.appendChild(el);
+    });
+
+    // Show the section.
+    var section=document.getElementById('backupCodesSection');
+    section.style.display='block';
+
+    // Copy all.
+    document.getElementById('backupCopyBtn').addEventListener('click',function(){
+      navigator.clipboard.writeText(codes.join('\n')).then(function(){
+        document.getElementById('backupCopyBtn').textContent='Copied!';
+        setTimeout(function(){document.getElementById('backupCopyBtn').textContent='Copy all';},1500);
+      });
+    });
+
+    // Download as .txt.
+    document.getElementById('backupDownloadBtn').addEventListener('click',function(){
+      var blob=new Blob([codes.join('\n')],{type:'text/plain'});
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a');
+      a.href=url;a.download='voovr-backup-codes.txt';
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // Checkbox enables the continue button.
+    var check=document.getElementById('backupSavedCheck');
+    var cont=document.getElementById('backupContinueBtn');
+    cont.style.display='block';
+    check.addEventListener('change',function(){
+      cont.disabled=!check.checked;
+    });
+
+    // Continue button.
+    cont.addEventListener('click',function(){
+      window.location.href='/dashboard';
+    });
+  }
 })();
 </script>
 
