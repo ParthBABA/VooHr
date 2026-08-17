@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Checkpoint — VooVr</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* ── Gate-specific overrides (scoped, minimal) ── */
+.gate-shell{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;padding:2rem;
+}
+.gate-card{
+  width:100%;max-width:440px;
+  background:var(--ink);border:1px solid var(--border);border-radius:16px;
+  padding:2.5rem 2rem;
+  box-shadow:var(--shadow-lg);
+  position:relative;z-index:1;
+}
+.gate-brand{
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:1.75rem;
+}
+.gate-brand img{height:28px;width:auto;}
+
+.gate-eyebrow{margin-bottom:1rem;text-align:center;}
+
+.gate-card h2{
+  font-size:1.35rem;text-align:center;margin-bottom:.5rem;
+  text-transform:none;letter-spacing:-.01em;
+}
+.gate-desc{
+  text-align:center;font-size:.85rem;color:var(--ivory-dim);
+  line-height:1.65;margin-bottom:1.75rem;
+}
+
+/* QR */
+.qr-wrap{
+  width:192px;height:192px;margin:0 auto 1.25rem;
+  background:#fff;border-radius:12px;padding:10px;
+  display:none;align-items:center;justify-content:center;
+  border:1px solid var(--border);
+}
+.qr-wrap img{width:100%;height:100%;object-fit:contain;}
+.qr-loading{
+  text-align:center;font-size:.8rem;color:var(--ivory-faint);
+  margin-bottom:1.25rem;
+}
+
+/* Manual secret */
+.manual-toggle{
+  display:block;text-align:center;font-size:.78rem;
+  color:var(--ivory-faint);cursor:pointer;margin-bottom:.75rem;
+  transition:color .2s;
+}
+.manual-toggle:hover{color:var(--amber);}
+
+.manual-secret{
+  display:none;margin-bottom:1.5rem;
+}
+.secret-row{
+  display:flex;align-items:center;gap:.5rem;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:.6rem .75rem;
+}
+.secret-key{
+  flex:1;font-family:'IBM Plex Mono',monospace;font-size:.78rem;
+  color:var(--ivory);letter-spacing:.06em;
+  word-break:break-all;user-select:all;
+}
+.copy-btn{
+  flex-shrink:0;font-size:.7rem;font-weight:600;
+  color:var(--amber);background:var(--amber-soft);
+  border:1px solid var(--amber-glow);border-radius:6px;
+  padding:.35rem .65rem;cursor:pointer;
+  transition:background .2s;
+}
+.copy-btn:hover{background:var(--amber-glow);}
+
+/* OTP segments */
+.otp-label{
+  display:block;text-align:center;font-size:.78rem;
+  color:var(--ivory-dim);margin-bottom:.6rem;
+}
+.otp-segments{
+  display:flex;justify-content:center;gap:8px;margin-bottom:1.25rem;
+}
+.otp-seg{
+  width:48px;height:54px;
+  font-family:'IBM Plex Mono',monospace;font-size:1.25rem;font-weight:600;
+  text-align:center;color:var(--ivory);
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:8px;outline:none;
+  transition:border-color .2s,background .2s,box-shadow .2s;
+  caret-color:var(--violet);
+}
+.otp-seg::placeholder{color:var(--ivory-faint);}
+.otp-seg:focus{
+  border-color:var(--violet);
+  background:var(--violet-soft);
+  box-shadow:0 0 0 3px var(--violet-glow);
+}
+.otp-seg:disabled{opacity:.35;cursor:not-allowed;}
+
+/* Error/success */
+.gate-error{
+  display:none;text-align:center;font-size:.8rem;
+  color:var(--red);background:var(--red-soft);
+  border:1px solid var(--red-glow);border-radius:8px;
+  padding:.65rem .9rem;margin-bottom:1rem;
+}
+.gate-success{
+  display:none;text-align:center;font-size:.8rem;
+  color:var(--teal);background:var(--teal-soft);
+  border:1px solid var(--teal-glow);border-radius:8px;
+  padding:.65rem .9rem;margin-bottom:1rem;
+}
+
+/* CTA */
+.gate-btn{
+  width:100%;padding:.85rem;border-radius:10px;
+  font-size:.9rem;font-weight:600;letter-spacing:-.005em;
+  color:#fff;background:var(--violet);
+  border:none;cursor:pointer;
+  box-shadow:0 4px 16px var(--violet-glow);
+  transition:background .2s,box-shadow .2s,transform .15s;
+}
+.gate-btn:hover{background:#6a3fe0;box-shadow:0 6px 24px var(--violet-glow);}
+.gate-btn:active{transform:scale(.985);}
+.gate-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+
+/* Footer */
+.gate-footer{
+  text-align:center;margin-top:1.25rem;font-size:.75rem;
+  color:var(--ivory-faint);
+}
+
+[data-reveal]{opacity:0;}
+
+@media(max-width:520px){
+  .gate-card{padding:2rem 1.25rem;}
+  .otp-seg{width:42px;height:48px;font-size:1.1rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="gate-shell">
+  <div class="gate-card">
+
+    <div class="gate-brand" data-reveal>
+      <img src="voovr-logo-full.png" alt="VooVr">
+    </div>
+
+    <div class="eyebrow gate-eyebrow" data-reveal>Security Checkpoint</div>
+
+    <h2 data-reveal>Two-factor authentication required</h2>
+    <p class="gate-desc" data-reveal>Admin accounts must enable TOTP-based two-factor authentication before accessing the dashboard. Scan the QR code with your authenticator app to continue.</p>
+
+    <div class="qr-loading" id="qrLoading" data-reveal>Loading QR code&hellip;</div>
+    <div class="qr-wrap" id="qrWrap">
+      <img id="qrImg" alt="TOTP QR Code">
+    </div>
+
+    <a class="manual-toggle" id="manualToggle" data-reveal>Trouble scanning? Use manual entry</a>
+
+    <div class="manual-secret" id="manualSecret">
+      <div class="secret-row">
+        <span class="secret-key" id="secretKey"></span>
+        <button type="button" class="copy-btn" id="copyBtn">Copy</button>
+      </div>
+    </div>
+
+    <label class="otp-label" id="otpLabel" data-reveal>Enter the 6-digit code from your app</label>
+    <div class="otp-segments" id="otpSegments" data-reveal>
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-seg" aria-label="Digit 1" autocomplete="one-time-code">
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-seg" aria-label="Digit 2" autocomplete="off">
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-seg" aria-label="Digit 3" autocomplete="off">
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-seg" aria-label="Digit 4" autocomplete="off">
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-seg" aria-label="Digit 5" autocomplete="off">
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-seg" aria-label="Digit 6" autocomplete="off">
+    </div>
+
+    <div class="gate-error" id="gateError"></div>
+    <div class="gate-success" id="gateSuccess"></div>
+
+    <button class="gate-btn" id="verifyBtn" disabled>Verify &amp; Continue</button>
+
+    <div class="gate-footer" data-reveal>You'll be redirected to the dashboard after verification.</div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+(function(){
+  /* ── DOM refs ── */
+  var qrWrap    = document.getElementById('qrWrap');
+  var qrImg     = document.getElementById('qrImg');
+  var qrLoading = document.getElementById('qrLoading');
+  var manualToggle = document.getElementById('manualToggle');
+  var manualSecret = document.getElementById('manualSecret');
+  var secretKey = document.getElementById('secretKey');
+  var copyBtn   = document.getElementById('copyBtn');
+  var segs      = Array.prototype.slice.call(document.querySelectorAll('.otp-seg'));
+  var verifyBtn = document.getElementById('verifyBtn');
+  var errBox    = document.getElementById('gateError');
+  var okBox     = document.getElementById('gateSuccess');
+
+  function setErr(m){ errBox.textContent=m; errBox.style.display=m?'block':'none'; okBox.style.display='none'; }
+  function setOk(m){ okBox.textContent=m; okBox.style.display=m?'block':'none'; errBox.style.display='none'; }
+
+  function getCode(){ return segs.map(function(s){return s.value;}).join(''); }
+
+  /* ── OTP segmented input behaviour ── */
+  segs.forEach(function(inp,i){
+    inp.addEventListener('input',function(){
+      var v=inp.value.replace(/\D/g,'');
+      inp.value=v;
+      if(v&&i<segs.length-1) segs[i+1].focus();
+      verifyBtn.disabled=getCode().length!==6;
+    });
+    inp.addEventListener('keydown',function(e){
+      if(e.key==='Backspace'&&!inp.value&&i>0){e.preventDefault();segs[i-1].focus();segs[i-1].value='';}
+      if(e.key==='ArrowLeft'&&i>0){e.preventDefault();segs[i-1].focus();}
+      if(e.key==='ArrowRight'&&i<segs.length-1){e.preventDefault();segs[i+1].focus();}
+    });
+    inp.addEventListener('paste',function(e){
+      e.preventDefault();
+      var p=(e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'');
+      var rem=segs.length-i;
+      p.slice(0,rem).split('').forEach(function(ch,j){segs[i+j].value=ch;});
+      var nxt=i+Math.min(p.length,rem);
+      if(nxt<segs.length) segs[nxt].focus(); else segs[segs.length-1].focus();
+      verifyBtn.disabled=getCode().length!==6;
+    });
+  });
+
+  /* ── Manual entry toggle ── */
+  manualToggle.addEventListener('click',function(){
+    var show=manualSecret.style.display==='none'||!manualSecret.style.display;
+    manualSecret.style.display=show?'block':'none';
+    manualToggle.textContent=show?'Hide manual entry':'Trouble scanning? Use manual entry';
+  });
+
+  /* ── Copy secret ── */
+  copyBtn.addEventListener('click',function(){
+    if(!secretKey.textContent) return;
+    navigator.clipboard.writeText(secretKey.textContent).then(function(){
+      copyBtn.textContent='Copied!';
+      setTimeout(function(){copyBtn.textContent='Copy';},1500);
+    });
+  });
+
+  /* ── Step 1: Fetch TOTP setup ── */
+  fetch('/auth/totp/setup',{method:'POST',headers:{'Content-Type':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.error==='totp_already_enabled'){
+        setOk('Two-factor authentication is already enabled. Redirecting\u2026');
+        setTimeout(function(){window.location.href='/dashboard';},1200);
+        return;
+      }
+      if(d.error){setErr(d.error);return;}
+      qrImg.src=d.qr;
+      qrWrap.style.display='flex';
+      qrLoading.style.display='none';
+      secretKey.textContent=d.secret;
+    })
+    .catch(function(){setErr('Failed to load QR code. Please refresh the page.');});
+
+  /* ── Step 2: Verify code ── */
+  verifyBtn.addEventListener('click',function(){
+    var code=getCode();
+    if(code.length!==6){setErr('Enter the 6-digit code from your authenticator app.');return;}
+    verifyBtn.disabled=true;
+    setErr('');setOk('');
+
+    fetch('/auth/totp/verify-setup',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({code:code})
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.error){
+        setErr(d.error==='invalid_code'?'Invalid code. Please check your authenticator app and try again.':d.error);
+        verifyBtn.disabled=false;
+        segs.forEach(function(s){s.value='';});
+        segs[0].focus();
+        return;
+      }
+      setOk('Verified! Redirecting to dashboard\u2026');
+      setTimeout(function(){window.location.href='/dashboard';},1200);
+    })
+    .catch(function(){
+      setErr('Network error. Please try again.');
+      verifyBtn.disabled=false;
+    });
+  });
+
+  /* Submit on Enter */
+  segs[segs.length-1].addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&!verifyBtn.disabled) verifyBtn.click();
+  });
+})();
+</script>
+
+<script>
+/* ── GSAP reveal (DOMContentLoaded, no flash) ── */
+document.addEventListener('DOMContentLoaded',function(){
+  if(typeof gsap==='undefined') return;
+  var tl=gsap.timeline({defaults:{ease:'power3.out'}});
+  tl.from('.gate-card',{opacity:0,y:20,filter:'blur(6px)',duration:.7},0)
+    .from('.gate-card [data-reveal]',{opacity:0,y:12,duration:.55,stagger:.05},.15);
+});
+</script>
+</body>
+</html>

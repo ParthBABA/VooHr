@@ -149,7 +149,7 @@ def create_app():
 
     @app.route("/settings/security/setup-totp")
     def setup_totp():
-        return send_from_directory(app.static_folder, "setup-totp.html")
+        return send_from_directory(app.static_folder, "verify-totp-gate.html")
 
     @app.route("/risk-drift")
     def risk_drift():
