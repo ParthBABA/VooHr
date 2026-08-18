@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request, session
 
-from auth import _record_active_session
+from login_flow import _login_result_for_user, _record_active_session
 from blind_index import blind_index
 from email_service import send_otp_email
 from extensions import get_db
@@ -260,7 +260,11 @@ def password_signin():
     session["user_name"] = pii.get("name", "")
     session["user_email"] = pii.get("email", "")
     _record_active_session(db, user["_id"])
-    return jsonify({"ok": True, "redirect": "/dashboard.html"}), 200
+
+    # TOTP gate: return the appropriate redirect so the frontend can
+    # send the user to TOTP verification or forced setup when needed.
+    result = _login_result_for_user(db, user)
+    return jsonify({"ok": True, **result}), 200
 
 
 @auth_email_bp.route("/email/signin", methods=["POST"])
@@ -350,7 +354,9 @@ def email_signin():
     session["user_name"] = pii.get("name", "")
     session["user_email"] = pii.get("email", "")
     _record_active_session(db, user["_id"])
-    return jsonify({"ok": True, "redirect": "/dashboard.html"}), 200
+
+    result = _login_result_for_user(db, user)
+    return jsonify({"ok": True, **result}), 200
 
 
 @auth_email_bp.route("/forgot-password", methods=["POST"])
