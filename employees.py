@@ -129,6 +129,7 @@ def _employee_to_json(emp) -> dict:
         "wellness_source": wellness_source,
         "reasons": reasons,
         "signals": signals,
+        "photo": emp.get("photo"),
         "created_at": emp.get("created_at").isoformat() if emp.get("created_at") else None,
         "updated_at": emp.get("updated_at").isoformat() if emp.get("updated_at") else None,
     }
@@ -172,6 +173,10 @@ def create_employee():
     if signals["engagement_survey_score"] is not None:
         signals["engagement_survey_score"] = int(signals["engagement_survey_score"])
 
+    photo = (data.get("photo") or "").strip()
+    if photo and not photo.startswith("data:image/"):
+        photo = ""
+
     emp_doc = {
         "org_id": ObjectId(org_id),
         "employee_id": employee_id,
@@ -185,6 +190,7 @@ def create_employee():
         "encrypted": encrypted_fields,
         "wrapped_dek": wrapped_dek,
         "signals": signals,
+        "photo": photo or None,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
     }
@@ -271,6 +277,14 @@ def update_employee(emp_id: str):
     for field in ("department", "position", "employment_type", "work_mode", "joining_date", "status"):
         if field in data:
             set_fields[field] = (data[field] or "").strip()
+
+    # Photo — validate data-URL prefix, or clear
+    if "photo" in data:
+        photo = (data["photo"] or "").strip()
+        if photo and photo.startswith("data:image/"):
+            set_fields["photo"] = photo
+        else:
+            unset_fields.append("photo")
 
     # Signals
     signals = dict(emp.get("signals") or {})

@@ -505,6 +505,7 @@ function renderDirectoryState(state, payload) {
   (payload || []).forEach(function(emp) {
     var name = emp.name || '';
     var initials = name.trim().split(' ').map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2) || '?';
+    var avatarInner = emp.photo ? '<img src="' + emp.photo + '" alt="">' : initials;
     var hasScore = emp.wellness_score !== null && emp.wellness_score !== undefined;
     var wellnessPct = hasScore ? emp.wellness_score : 0;
     var fillClass = wellnessPct >= 70 ? 'high' : (wellnessPct >= 40 ? 'medium' : 'low');
@@ -516,7 +517,7 @@ function renderDirectoryState(state, payload) {
     tr.setAttribute('data-status', emp.wellness_status || 'not_assessed');
     tr.innerHTML =
       '<td><span class="emp-id">' + (emp.employee_id || '') + '</span></td>' +
-      '<td><div class="emp-cell"><div class="emp-avatar">' + initials + '</div><div class="emp-meta"><span class="emp-name">' + escHtml(name) + '</span><div class="emp-email">' + escHtml(emp.email || '') + '</div></div></div></td>' +
+      '<td><div class="emp-cell"><div class="emp-avatar">' + avatarInner + '</div><div class="emp-meta"><span class="emp-name">' + escHtml(name) + '</span><div class="emp-email">' + escHtml(emp.email || '') + '</div></div></div></td>' +
       '<td><span class="emp-dept">' + escHtml(emp.department || '') + '</span></td>' +
       '<td>' + (hasScore ? '<div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill ' + fillClass + '" style="width:' + wellnessPct + '%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:' + fillColor + ';">' + wellnessPct + '</span></div>' : '<span style="font-family:var(--font-m);font-size:0.65rem;color:var(--ivory-faint);">--</span>') + '</td>' +
       '<td><span class="badge ' + (hasScore ? emp.wellness_status : 'not-assessed') + ' attention-glow ' + (hasScore ? emp.wellness_status : '') + '"' + (statusTitle ? ' title="' + escHtml(statusTitle) + '"' : '') + '>' + statusLabel + '</span></td>' +

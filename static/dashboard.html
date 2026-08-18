@@ -602,6 +602,7 @@ function loadEmployees() {
       (data.employees || []).forEach(function(emp) {
         var name = emp.name || '';
         var initials = name.trim().split(' ').map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2) || '?';
+        var avatarInner = emp.photo ? '<img src="' + emp.photo + '" alt="">' : initials;
         var hasScore = emp.wellness_score !== null && emp.wellness_score !== undefined;
         var wellnessPct = hasScore ? emp.wellness_score : 0;
         var fillClass = wellnessPct >= 70 ? 'high' : (wellnessPct >= 40 ? 'medium' : 'low');
@@ -613,7 +614,7 @@ function loadEmployees() {
         tr.setAttribute('data-status', emp.wellness_status || 'not_assessed');
         tr.innerHTML =
           '<td><span class="emp-id">' + (emp.employee_id || '') + '</span></td>' +
-          '<td><div class="emp-cell"><div class="emp-avatar">' + initials + '</div><div class="emp-meta"><span class="emp-name">' + escHtml(name) + '</span><div class="emp-email">' + escHtml(emp.email || '') + '</div></div></div></td>' +
+          '<td><div class="emp-cell"><div class="emp-avatar">' + avatarInner + '</div><div class="emp-meta"><span class="emp-name">' + escHtml(name) + '</span><div class="emp-email">' + escHtml(emp.email || '') + '</div></div></div></td>' +
           '<td><span class="emp-dept">' + escHtml(emp.department || '') + '</span></td>' +
           '<td>' + (hasScore ? '<div style="display:flex;align-items:center;gap:0.5rem;"><div class="index-bar" style="width:80px;"><div class="fill ' + fillClass + '" style="width:' + wellnessPct + '%;"></div></div><span style="font-family:var(--font-m);font-size:0.65rem;color:' + fillColor + ';">' + wellnessPct + '</span></div>' : '<span style="font-family:var(--font-m);font-size:0.65rem;color:var(--ivory-faint);">--</span>') + '</td>' +
           '<td><span class="badge ' + (hasScore ? emp.wellness_status : 'not-assessed') + ' attention-glow ' + (hasScore ? emp.wellness_status : '') + '"' + (statusTitle ? ' title="' + escHtml(statusTitle) + '"' : '') + '>' + statusLabel + '</span></td>' +
@@ -688,6 +689,7 @@ function escHtml(str) {
   var siSteps = document.querySelectorAll('.si-step');
   var currentStep = 1;
   var totalSteps = 3;
+  var currentPhotoData = null;
   var openBtn = document.querySelector('[title="Add a new employee"]');
 
   if (!panel || !overlay) return;
@@ -725,6 +727,7 @@ function escHtml(str) {
     var placeholder = document.querySelector('.photo-placeholder');
     if (preview) preview.style.display = 'none';
     if (placeholder) placeholder.style.display = 'flex';
+    currentPhotoData = null;
     gsap.set(overlay, { opacity: 0 });
     gsap.set(panel, { x: '100%' });
     gsap.to(overlay, { opacity: 1, duration: 0.3, ease: 'power2.out' });
@@ -799,9 +802,21 @@ function escHtml(str) {
       if (!file) return;
       var reader = new FileReader();
       reader.onload = function(e) {
-        img.src = e.target.result;
-        if (placeholder) placeholder.style.display = 'none';
-        preview.style.display = 'flex';
+        var raw = new Image();
+        raw.onload = function() {
+          var canvas = document.createElement('canvas');
+          canvas.width = 256;
+          canvas.height = 256;
+          var ctx = canvas.getContext('2d');
+          var scale = Math.max(256 / raw.width, 256 / raw.height);
+          var sw = 256 / scale, sh = 256 / scale;
+          ctx.drawImage(raw, (raw.width - sw) / 2, (raw.height - sh) / 2, sw, sh, 0, 0, 256, 256);
+          currentPhotoData = canvas.toDataURL('image/jpeg', 0.85);
+          img.src = currentPhotoData;
+          if (placeholder) placeholder.style.display = 'none';
+          preview.style.display = 'flex';
+        };
+        raw.src = e.target.result;
       };
       reader.readAsDataURL(file);
     });
@@ -809,6 +824,7 @@ function escHtml(str) {
       removeBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         fileInput.value = '';
+        currentPhotoData = null;
         if (placeholder) placeholder.style.display = 'flex';
         preview.style.display = 'none';
       });
@@ -838,6 +854,7 @@ function escHtml(str) {
         department: department || undefined,
         position: position || undefined,
         joining_date: joining_date || undefined,
+        photo: currentPhotoData || undefined,
       };
 
       fetch('/api/employees', {
