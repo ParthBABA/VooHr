@@ -209,6 +209,8 @@ def totp_verify_setup():
         }},
     )
 
+    session["totp_verified_session"] = session.get("session_token", "")
+
     return jsonify({"ok": True, "backup_codes": plaintext_codes}), 200
 
 
