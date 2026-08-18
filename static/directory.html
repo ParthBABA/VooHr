@@ -610,6 +610,7 @@ loadDirEmployees();
   var siSteps = document.querySelectorAll('.si-step');
   var currentStep = 1;
   var totalSteps = 3;
+  var currentPhotoData = null;
   var openBtn = document.querySelector('[title="Add a new employee"]');
 
   if (!panel || !overlay) return;
@@ -653,6 +654,7 @@ loadDirEmployees();
     var placeholder = document.querySelector('.photo-placeholder');
     if (preview) preview.style.display = 'none';
     if (placeholder) placeholder.style.display = 'flex';
+    currentPhotoData = null;
     
     // Performance optimization: will-change hints and disable blur during anim
     overlay.style.willChange = 'opacity';
@@ -750,9 +752,21 @@ loadDirEmployees();
       if (!file) return;
       var reader = new FileReader();
       reader.onload = function(e) {
-        img.src = e.target.result;
-        if (placeholder) placeholder.style.display = 'none';
-        preview.style.display = 'flex';
+        var raw = new Image();
+        raw.onload = function() {
+          var canvas = document.createElement('canvas');
+          canvas.width = 256;
+          canvas.height = 256;
+          var ctx = canvas.getContext('2d');
+          var scale = Math.max(256 / raw.width, 256 / raw.height);
+          var sw = 256 / scale, sh = 256 / scale;
+          ctx.drawImage(raw, (raw.width - sw) / 2, (raw.height - sh) / 2, sw, sh, 0, 0, 256, 256);
+          currentPhotoData = canvas.toDataURL('image/jpeg', 0.85);
+          img.src = currentPhotoData;
+          if (placeholder) placeholder.style.display = 'none';
+          preview.style.display = 'flex';
+        };
+        raw.src = e.target.result;
       };
       reader.readAsDataURL(file);
     });
@@ -760,6 +774,7 @@ loadDirEmployees();
       removeBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         fileInput.value = '';
+        currentPhotoData = null;
         if (placeholder) placeholder.style.display = 'flex';
         preview.style.display = 'none';
       });
@@ -792,6 +807,7 @@ loadDirEmployees();
         employment_type: employment_type || undefined,
         work_mode: work_mode || undefined,
         joining_date: joining_date || undefined,
+        photo: currentPhotoData || undefined,
       };
 
       fetch('/api/employees', {

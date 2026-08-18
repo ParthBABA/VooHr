@@ -303,7 +303,8 @@ h1,h2,h3,h4,h5,h6{font-family:var(--font-d);font-weight:600;text-transform:upper
 
 /* EMPLOYEE CELL — avatar + stacked name/email (Employee column) */
 .emp-cell{display:flex;align-items:center;gap:0.7rem;}
-.emp-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--amber));display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:0.65rem;font-weight:700;color:#fff;flex-shrink:0;}
+.emp-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--amber));display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:0.65rem;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;}
+.emp-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
 .emp-meta{min-width:0;}
 .emp-meta .emp-name{display:block;}
 .emp-email{font-family:var(--font-lato);font-weight:400;font-size:0.7rem;letter-spacing:0.02em;color:var(--ivory-faint);margin-top:0.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -537,7 +538,7 @@ body.lang-hi [data-lang-block="en"]{display:none;}
 .avatar-group .photo-upload:hover .photo-placeholder-ring{color:var(--amber);}
 .avatar-group .photo-text{font-size:0.6rem;letter-spacing:0.04em;line-height:1.3;padding:0 0.8rem;color:var(--ivory-dim);transition:color 0.3s;}
 .avatar-group .photo-upload:hover .photo-text{color:var(--ivory);}
-.avatar-group .photo-preview{width:96px;height:96px;}
+.avatar-group .photo-preview{width:96px;height:96px;position:relative;}
 .avatar-group .photo-preview img{width:96px;height:96px;border-radius:50%;object-fit:cover;border:2px solid var(--border-lit);}
 .photo-remove{position:absolute;top:-6px;right:-6px;width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--elevated);color:var(--ivory-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.3s;box-shadow:var(--shadow-sm);}
 .photo-remove:hover{color:var(--red);border-color:var(--red);background:var(--surface);}
