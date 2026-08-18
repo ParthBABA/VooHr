@@ -21,9 +21,11 @@ complete after registration.  The flow is:
          Requires an already TOTP-verified session.
 """
 
+import sys
 import time
 from datetime import datetime, timedelta, timezone
 
+import pyotp
 from bson import ObjectId
 from flask import Blueprint, jsonify, request, session
 
@@ -237,6 +239,15 @@ def totp_verify_login():
     code = (data.get("code") or "").strip()
     if not code:
         return jsonify({"error": "missing_code"}), 400
+
+    # ── TEMPORARY DIAGNOSTIC — remove after debugging ────────────────
+    server_code_now = pyotp.TOTP(user["totp_secret"]).now()
+    print(
+        f"TOTP DEBUG user={user_id} submitted={code} server_expects={server_code_now} "
+        f"secret_len={len(user['totp_secret'])} server_utc={datetime.now(timezone.utc).isoformat()}",
+        file=sys.stderr,
+    )
+    # ── END TEMPORARY DIAGNOSTIC ─────────────────────────────────────
 
     if not verify_code(user["totp_secret"], code):
         return jsonify({"error": "invalid_code"}), 400
