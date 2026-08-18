@@ -21,11 +21,9 @@ complete after registration.  The flow is:
          Requires an already TOTP-verified session.
 """
 
-import sys
 import time
 from datetime import datetime, timedelta, timezone
 
-import pyotp
 from bson import ObjectId
 from flask import Blueprint, jsonify, request, session
 
@@ -240,29 +238,7 @@ def totp_verify_login():
     if not code:
         return jsonify({"error": "missing_code"}), 400
 
-    # ── TEMPORARY DIAGNOSTIC — remove after debugging ────────────────
-    totp = pyotp.TOTP(user["totp_secret"])
-    server_code_now = totp.now()
-    wide_match = totp.verify(code, valid_window=10)
-    # Find exact offset if wide match succeeded
-    matched_offset = None
-    if wide_match:
-        now_ts = datetime.now(timezone.utc).timestamp()
-        for i in range(-10, 11):
-            step_ts = now_ts + (i * 30)
-            if totp.at(datetime.fromtimestamp(step_ts, tz=timezone.utc)) == code:
-                matched_offset = i
-                break
-    print(
-        f"TOTP DEBUG user={user_id} submitted={code} server_expects={server_code_now} "
-        f"secret_len={len(user['totp_secret'])} server_utc={datetime.now(timezone.utc).isoformat()} "
-        f"wide_window_match={wide_match} matched_offset={matched_offset} "
-        f"(offset * 30s = {matched_offset * 30 if matched_offset is not None else 'N/A'}s drift)",
-        file=sys.stderr,
-    )
-    # ── END TEMPORARY DIAGNOSTIC ─────────────────────────────────────
-
-    if not verify_code(user["totp_secret"], code):
+    if not verify_code(user["totp_secret"], code, valid_window=2):
         return jsonify({"error": "invalid_code"}), 400
 
     session["totp_verified_session"] = session.get("session_token", "")
