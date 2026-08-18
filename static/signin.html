@@ -130,7 +130,6 @@ h1,h2{
 
 .setup-shell{
   position:relative;
-  min-height:100vh;
   width:min(1200px, 100%);
   margin:0 auto;
   display:flex;
@@ -142,14 +141,14 @@ h1,h2{
 }
 .setup-shell::before{
   content:'';
-  position:absolute; inset:0;
+  position:fixed; inset:0;
   background:var(--grad-radial);
   opacity:.8;
   pointer-events:none;
   z-index:0;
 }
 .setup-grid-overlay{
-  position:absolute; inset:0;
+  position:fixed; inset:0;
   background-image:
     linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
