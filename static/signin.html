@@ -433,7 +433,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (error) {
       var banner = document.getElementById('errorBanner');
       var messages = {
-        no_account: 'No account found with that email. <a href="onboarding.html" class="verify-error-link">Create one</a>?',
+        no_account: 'This account does not exist on our records. Please <a href="onboarding.html" class="verify-error-link">create one</a>.',
         session_expired: 'Your sign-in session expired. Please try again.'
       };
       banner.innerHTML = messages[error] || 'Something went wrong. Please try again.';
