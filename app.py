@@ -245,74 +245,79 @@ def create_app():
     def forgot_password():
         return send_from_directory(app.static_folder, "forgot-password.html")
 
-    # Redirect legacy .html paths to clean URLs
+    # Redirect legacy .html paths to clean URLs, preserving any query string
+    # so backend redirects like /signin.html?error=no_account work end-to-end.
+    def _html_redirect(target):
+        qs = request.query_string.decode()
+        return redirect(f"{target}?{qs}" if qs else target)
+
     @app.route("/signin.html")
     def signin_html_redirect():
-        return redirect("/signin")
+        return _html_redirect("/signin")
 
     @app.route("/signup.html")
     def signup_html_redirect():
-        return redirect("/signup")
+        return _html_redirect("/signup")
 
     @app.route("/email-verify.html")
     def email_verify_html_redirect():
-        return redirect("/verify-email")
+        return _html_redirect("/verify-email")
 
     @app.route("/otp-verify.html")
     def otp_verify_html_redirect():
-        return redirect("/verify-otp")
+        return _html_redirect("/verify-otp")
 
     @app.route("/onboarding.html")
     def onboarding_html_redirect():
-        return redirect("/onboarding")
+        return _html_redirect("/onboarding")
 
     @app.route("/onboarding-complete.html")
     def welcome_html_redirect():
-        return redirect("/welcome")
+        return _html_redirect("/welcome")
 
     @app.route("/dashboard.html")
     def dashboard_html_redirect():
-        return redirect("/dashboard")
+        return _html_redirect("/dashboard")
 
     @app.route("/directory.html")
     def directory_html_redirect():
-        return redirect("/directory")
+        return _html_redirect("/directory")
 
     @app.route("/dictation.html")
     def dictation_html_redirect():
-        return redirect("/dictation")
+        return _html_redirect("/dictation")
 
     @app.route("/conversation-workspace.html")
     def workspace_html_redirect():
-        return redirect("/workspace")
+        return _html_redirect("/workspace")
 
     @app.route("/settings.html")
     def settings_html_redirect():
-        return redirect("/settings")
+        return _html_redirect("/settings")
 
     @app.route("/risk-drift.html")
     def risk_drift_html_redirect():
-        return redirect("/risk-drift")
+        return _html_redirect("/risk-drift")
 
     @app.route("/sync.html")
     def sync_html_redirect():
-        return redirect("/sync")
+        return _html_redirect("/sync")
 
     @app.route("/sync_room.html")
     def sync_room_html_redirect():
-        return redirect("/sync/room")
+        return _html_redirect("/sync/room")
 
     @app.route("/privacy-policy.html")
     def privacy_html_redirect():
-        return redirect("/privacy")
+        return _html_redirect("/privacy")
 
     @app.route("/terms-of-service.html")
     def terms_html_redirect():
-        return redirect("/terms")
+        return _html_redirect("/terms")
 
     @app.route("/forgot-password.html")
     def forgot_password_html_redirect():
-        return redirect("/forgot-password")
+        return _html_redirect("/forgot-password")
 
     # Custom 404 page for non-API routes
     @app.errorhandler(404)
