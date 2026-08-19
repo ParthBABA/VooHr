@@ -21,13 +21,12 @@ complete after registration.  The flow is:
          Requires an already TOTP-verified session.
 """
 
-import time
 from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
 from flask import Blueprint, jsonify, request, session
 
-from extensions import get_db
+from extensions import get_db, check_rate_limit, record_rate_limit_event
 from totp_utils import (
     generate_backup_codes,
     generate_secret,
@@ -41,22 +40,23 @@ from totp_utils import (
 totp_bp = Blueprint("totp", __name__)
 
 # ── Rate limiting for backup-code brute-force protection ──────────────
-_BACKUPCodeAttempts: dict[str, list[float]] = {}
 _BACKUPCodeAttempts_MAX = 5
 _BACKUPCodeAttempts_WINDOW = 900  # 15 minutes in seconds
 
 
-def _check_backup_rate_limit(user_id_str: str) -> bool:
-    """Return True if the attempt is allowed, False if rate-limited."""
-    now = time.time()
-    attempts = _BACKUPCodeAttempts.setdefault(user_id_str, [])
-    # Prune old entries outside the window
-    cutoff = now - _BACKUPCodeAttempts_WINDOW
-    attempts[:] = [t for t in attempts if t > cutoff]
-    if len(attempts) >= _BACKUPCodeAttempts_MAX:
-        return False
-    attempts.append(now)
-    return True
+def _check_backup_rate_limit(user_id_str: str) -> tuple[bool, int]:
+    """Return (allowed, retry_after) using MongoDB-backed rate limiting.
+
+    Returns (True, 0) if the attempt is allowed, (False, seconds) if
+    rate-limited.
+    """
+    db = get_db()
+    key = f"backup_code:{user_id_str}"
+    allowed, retry_after = check_rate_limit(db, key, _BACKUPCodeAttempts_MAX, _BACKUPCodeAttempts_WINDOW)
+    if not allowed:
+        return False, retry_after or _BACKUPCodeAttempts_WINDOW
+    record_rate_limit_event(db, key, ttl_seconds=_BACKUPCodeAttempts_WINDOW)
+    return True, 0
 
 
 def _current_user_id():
@@ -275,11 +275,12 @@ def totp_verify_login_backup():
         return jsonify({"error": "unauthenticated"}), 401
 
     uid_str = str(user_id)
-    if not _check_backup_rate_limit(uid_str):
+    allowed, retry_after = _check_backup_rate_limit(uid_str)
+    if not allowed:
         return jsonify({
-            "error": "too_many_attempts",
-            "message": "Too many attempts. Please try again later.",
-        }), 429
+            "error": "Too many attempts. Please try again later.",
+            "retry_after": retry_after,
+        }), 429, {"Retry-After": str(retry_after)}
 
     db = get_db()
     user = db.users.find_one(
@@ -309,9 +310,6 @@ def totp_verify_login_backup():
 
     # Mark session as TOTP-verified (same as totp_verify_login).
     session["totp_verified_session"] = session.get("session_token", "")
-
-    # Reset rate limit on success.
-    _BACKUPCodeAttempts.pop(uid_str, None)
 
     codes_remaining = sum(1 for c in backup_codes if not c.get("used")) - 1
     resp = {"ok": True, "codes_remaining": codes_remaining}

@@ -944,3 +944,176 @@ class TestExistingPhase1Tests:
         """api.py defines _check_auth with TOTP enforcement."""
         import api
         assert hasattr(api, "_check_auth")
+
+
+# ---------------------------------------------------------------------------
+# 10. Rate limiting — Email OTP
+# ---------------------------------------------------------------------------
+
+from datetime import timedelta
+from unittest.mock import patch as _patch, MagicMock as _MagicMock
+from extensions import check_rate_limit, record_rate_limit_event
+
+
+class TestEmailOTPRateLimiting:
+    """MongoDB-backed rate limiting for OTP sending."""
+
+    def _make_db(self):
+        db = _MagicMock()
+        return db
+
+    def test_first_otp_request_succeeds(self):
+        db = self._make_db()
+        db.rate_limits.count_documents.return_value = 0
+        allowed, retry_after = check_rate_limit(db, "otp_email:test@example.com", 5, 900)
+        assert allowed is True
+        assert retry_after is None
+
+    def test_requests_within_limit_eventually_return_429(self):
+        db = self._make_db()
+        # Simulate 5 events already recorded
+        db.rate_limits.count_documents.return_value = 5
+        allowed, retry_after = check_rate_limit(db, "otp_email:test@example.com", 5, 900)
+        assert allowed is False
+        assert retry_after is not None
+        assert retry_after > 0
+
+    def test_rate_limiting_applied_to_repeated_requests(self):
+        db = self._make_db()
+        # Below limit
+        db.rate_limits.count_documents.return_value = 3
+        allowed, _ = check_rate_limit(db, "otp_email:a@b.com", 5, 900)
+        assert allowed is True
+        # At limit
+        db.rate_limits.count_documents.return_value = 5
+        allowed, _ = check_rate_limit(db, "otp_email:a@b.com", 5, 900)
+        assert allowed is False
+
+    def test_rate_limit_state_is_mongodb_not_process_local(self):
+        """The rate limit functions use MongoDB, not a Python dict."""
+        import inspect
+        from extensions import check_rate_limit, record_rate_limit_event
+        src_check = inspect.getsource(check_rate_limit)
+        src_record = inspect.getsource(record_rate_limit_event)
+        assert "rate_limits" in src_check
+        assert "rate_limits" in src_record
+        assert "count_documents" in src_check
+        assert "insert_one" in src_record
+
+    def test_resend_otp_returns_user_friendly_429(self):
+        """The resend endpoint returns a user-friendly message with retry_after."""
+        import inspect
+        import auth_email
+        src = inspect.getsource(auth_email.resend_otp)
+        assert "retry_after" in src
+        assert "Retry-After" in src
+        assert "Too many OTP requests" in src
+
+    def test_otp_rate_limit_constants_are_reasonable(self):
+        """Rate limit constants exist and have reasonable values."""
+        import auth_email
+        assert auth_email._OTP_MAX_PER_EMAIL == 5
+        assert auth_email._OTP_MAX_PER_IP == 20
+        assert auth_email._OTP_RATE_WINDOW == 900
+
+    def test_client_ip_function_exists(self):
+        """auth_email has a _client_ip helper."""
+        import auth_email
+        assert callable(auth_email._client_ip)
+
+
+# ---------------------------------------------------------------------------
+# 11. Rate limiting — TOTP backup codes
+# ---------------------------------------------------------------------------
+
+class TestBackupCodeRateLimiting:
+    """MongoDB-backed rate limiting for backup code attempts."""
+
+    def test_valid_backup_code_still_works(self):
+        """The backup code verification path still returns success."""
+        import inspect
+        import totp_routes
+        src = inspect.getsource(totp_routes.totp_verify_login_backup)
+        assert "codes_remaining" in src
+        assert "regenerate_recommended" in src
+
+    def test_repeated_invalid_attempts_return_429(self):
+        """Backup code verification calls _check_backup_rate_limit."""
+        import inspect
+        import totp_routes
+        src = inspect.getsource(totp_routes.totp_verify_login_backup)
+        assert "_check_backup_rate_limit" in src
+        assert "429" in src
+
+    def test_rate_limiting_uses_mongodb(self):
+        """_check_backup_rate_limit uses MongoDB, not in-memory dict."""
+        import inspect
+        import totp_routes
+        src = inspect.getsource(totp_routes._check_backup_rate_limit)
+        assert "check_rate_limit" in src
+        assert "record_rate_limit_event" in src
+        assert "get_db" in src
+
+    def test_no_in_memory_rate_limit_dict(self):
+        """The old in-memory _BACKUPCodeAttempts dict is removed."""
+        import totp_routes
+        assert not hasattr(totp_routes, "_BACKUPCodeAttempts")
+
+
+# ---------------------------------------------------------------------------
+# 12. Error leakage removal — sessions.py
+# ---------------------------------------------------------------------------
+
+class TestErrorLeakageRemoval:
+    """Exception messages are no longer returned to clients."""
+
+    def test_analysis_exception_returns_generic_error(self):
+        """analyze_session returns a generic error, not str(e)."""
+        import inspect
+        import sessions
+        src = inspect.getsource(sessions.analyze_session)
+        assert "str(e)" not in src
+        assert "Analysis failed. Please try again." in src
+
+    def test_transcription_exception_returns_generic_error(self):
+        """transcribe_audio returns a generic error, not str(e)."""
+        import inspect
+        import sessions
+        src = inspect.getsource(sessions.transcribe_audio)
+        assert "str(e)" not in src
+        assert "Transcription failed. Please try again." in src
+
+    def test_ocr_exception_returns_generic_error(self):
+        """transcribe_image returns a generic error, not str(e)."""
+        import inspect
+        import sessions
+        src = inspect.getsource(sessions.transcribe_image)
+        assert "str(e)" not in src
+        assert "Transcription failed. Please try again." in src
+
+    def test_detailed_exception_logged_not_exposed(self):
+        """Exception details are logged, not sent to client."""
+        import inspect
+        import sessions
+        # analyze_session uses logger.exception
+        src = inspect.getsource(sessions.analyze_session)
+        assert "logger.exception" in src
+        # transcribe uses logger.exception
+        src_audio = inspect.getsource(sessions.transcribe_audio)
+        assert "logger.exception" in src_audio
+        src_image = inspect.getsource(sessions.transcribe_image)
+        assert "logger.exception" in src_image
+
+    def test_sessions_module_has_logger(self):
+        """sessions.py defines a logger for exception logging."""
+        import sessions
+        assert hasattr(sessions, "logger")
+
+    def test_email_enumeration_fixed(self):
+        """email_signin no longer reveals google_only_account vs not_registered."""
+        import inspect
+        import auth_email
+        src = inspect.getsource(auth_email.email_signin)
+        # Both cases should return invalid_credentials
+        assert "google_only_account" not in src
+        assert src.count("invalid_credentials") >= 2

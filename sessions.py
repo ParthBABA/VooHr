@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -10,6 +11,7 @@ from extensions import get_db
 from providers import get_llm_provider, get_storage_provider, get_stt_provider, get_vision_provider
 
 sessions_bp = Blueprint("sessions", __name__)
+logger = logging.getLogger(__name__)
 
 # Number of recent completed sessions needed before the silent Risk Drift
 # Detection check fires. New employees with fewer analyzed syncs are skipped.
@@ -472,14 +474,12 @@ def analyze_session(session_id: str):
         return jsonify(result_json)
 
     except Exception as e:
-        import traceback
-        print("[DEBUG_SESSION] EXCEPTION:", e, file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
+        logger.exception("Session analysis failed (session=%s)", session_id)
         db.sessions.update_one(
             {"_id": ObjectId(session_id)},
             {"$set": {"status": "failed", "updated_at": datetime.now(timezone.utc)}},
         )
-        return jsonify({"error": f"analysis_failed: {str(e)}"}), 500
+        return jsonify({"error": "Analysis failed. Please try again."}), 500
 
 
 @sessions_bp.route("/transcribe", methods=["POST"])
@@ -503,7 +503,8 @@ def transcribe_audio():
         text = stt.transcribe(audio_bytes, content_type)
         return jsonify({"text": text})
     except Exception as e:
-        return jsonify({"error": f"transcription_failed: {str(e)}"}), 500
+        logger.exception("Audio transcription failed")
+        return jsonify({"error": "Transcription failed. Please try again."}), 500
 
 
 @sessions_bp.route("/transcribe-image", methods=["POST"])
@@ -533,4 +534,5 @@ def transcribe_image():
         text = vision.extract_text(image_bytes, content_type)
         return jsonify({"text": text})
     except Exception as e:
-        return jsonify({"error": f"ocr_failed: {str(e)}"}), 500
+        logger.exception("Image transcription (OCR) failed")
+        return jsonify({"error": "Transcription failed. Please try again."}), 500

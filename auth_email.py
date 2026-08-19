@@ -24,7 +24,7 @@ from flask import Blueprint, jsonify, request, session
 from login_flow import _login_result_for_user, _record_active_session
 from blind_index import blind_index
 from email_service import send_otp_email
-from extensions import get_db
+from extensions import get_db, check_rate_limit, record_rate_limit_event
 from field_encryption import decrypt_fields, encrypt_fields
 from password_utils import hash_password, password_strength_ok, verify_password
 
@@ -35,6 +35,11 @@ _MAX_ATTEMPTS = 5
 _RESEND_COOLDOWN = timedelta(seconds=60)
 _LOCKOUT_AFTER = 5
 _LOCKOUT_TTL = timedelta(minutes=15)
+
+# Rate-limit constants for OTP sending.
+_OTP_MAX_PER_EMAIL = 5       # max OTP sends per email per window
+_OTP_MAX_PER_IP = 20         # max OTP sends per IP per window
+_OTP_RATE_WINDOW = 900       # 15-minute sliding window in seconds
 
 
 def _now() -> datetime:
@@ -59,6 +64,35 @@ def _otp_hash(otp: str) -> str:
     return hashlib.sha256(otp.encode()).hexdigest()
 
 
+def _client_ip():
+    """Return the real client IP, respecting X-Forwarded-For from a reverse proxy."""
+    return request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
+
+
+def _check_otp_send_rate_limit(db, email, ip):
+    """Check per-email and per-IP rate limits for OTP sending.
+
+    Returns None on success, or a (response, status_code) tuple on 429.
+    Records a rate-limit event on success.
+    """
+    email_key = f"otp_email:{email.lower().strip()}"
+    ip_key = f"otp_ip:{ip}"
+
+    allowed, retry_after = check_rate_limit(db, email_key, _OTP_MAX_PER_EMAIL, _OTP_RATE_WINDOW)
+    if not allowed:
+        msg = "Too many OTP requests. Please wait a few minutes before requesting another code."
+        return jsonify({"error": msg, "retry_after": retry_after}), 429
+
+    allowed, retry_after = check_rate_limit(db, ip_key, _OTP_MAX_PER_IP, _OTP_RATE_WINDOW)
+    if not allowed:
+        msg = "Too many OTP requests. Please wait a few minutes before requesting another code."
+        return jsonify({"error": msg, "retry_after": retry_after}), 429
+
+    record_rate_limit_event(db, email_key, ttl_seconds=_OTP_RATE_WINDOW)
+    record_rate_limit_event(db, ip_key, ttl_seconds=_OTP_RATE_WINDOW)
+    return None
+
+
 @auth_email_bp.route("/email/start", methods=["POST"])
 def email_start():
     """Create an OTP verification for {email, password} and email the code."""
@@ -79,6 +113,10 @@ def email_start():
     db = get_db()
     if db.users.find_one({"email_hash": email_hash}):
         return jsonify({"error": "already_registered"}), 409
+
+    rate_limit_resp = _check_otp_send_rate_limit(db, email, _client_ip())
+    if rate_limit_resp:
+        return rate_limit_resp
 
     otp = _generate_otp()
     now = _now()
@@ -196,7 +234,14 @@ def resend_otp():
         elapsed = now - last_sent
         if elapsed < _RESEND_COOLDOWN:
             retry_after = int((_RESEND_COOLDOWN - elapsed).total_seconds()) + 1
-            return jsonify({"error": "cooldown", "retry_after": retry_after}), 429
+            return jsonify({
+                "error": "Too many OTP requests. Please wait before requesting another code.",
+                "retry_after": retry_after,
+            }), 429, {"Retry-After": str(retry_after)}
+
+    rate_limit_resp = _check_otp_send_rate_limit(db, email, _client_ip())
+    if rate_limit_resp:
+        return rate_limit_resp
 
     otp = _generate_otp()
     db.otp_verifications.update_one(
@@ -295,8 +340,9 @@ def email_signin():
 
     if not user.get("password_hash"):
         # User exists but is Google-only (no password hash) — OTP won't help,
-        # send them to Google sign-in instead
-        return jsonify({"error": "google_only_account"}), 401
+        # send them to Google sign-in instead.  Return the same generic error
+        # as "no account" to prevent email enumeration.
+        return jsonify({"error": "invalid_credentials"}), 401
 
     # User has a password hash — verify the provided password
     now = _now()
