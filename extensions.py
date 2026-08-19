@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from flask import current_app
-from pymongo import MongoClient, ASCENDING
+from pymongo import MongoClient, ASCENDING, DESCENDING, TEXT
 
 
 def init_db(app):
@@ -17,6 +17,7 @@ def init_db(app):
         db = client[app.config["MONGODB_DB"]]
         _cleanup_expired_pending_totp(db)
         _init_rate_limits(db)
+        _init_indexes(db)
 
 
 def _cleanup_expired_pending_totp(db):
@@ -48,6 +49,110 @@ def _init_rate_limits(db):
         expireAfterSeconds=0,
         background=True,
     )
+
+
+# ── MongoDB indexes ───────────────────────────────────────────────────
+
+def _init_indexes(db):
+    """Create all application indexes.  Idempotent: safe to run on every
+    startup.  ``create_index`` is a no-op when an equivalent index already
+    exists.
+
+    Indexes are derived from actual query patterns observed in the codebase:
+      - users:           email_hash lookups (login, signup), _id default
+      - employees:       org_id filtered lists, compound (org_id, employee_id)
+      - sessions:        org_id lists, compound with employee_id + created_at
+      - notifications:   org_id lists with read/unread filter, created_at sort
+      - active_sessions: user_id lookup, session_token lookup, TTL cleanup
+      - rate_limits:     (already created in _init_rate_limits)
+      - counters:        _id-only for atomic employee ID generation
+    """
+
+    # ── users ──────────────────────────────────────────────────────────
+    # Query: find_one({"email_hash": ...}) in auth.py, auth_email.py
+    db.users.create_index("email_hash", unique=True, background=True)
+
+    # ── employees ──────────────────────────────────────────────────────
+    # Query: find({org_id, ...}).sort("created_at", -1)  in list_employees
+    db.employees.create_index(
+        [("org_id", ASCENDING), ("created_at", DESCENDING)],
+        background=True,
+    )
+    # Query: _next_employee_id — sort by employee_id desc within org
+    # (now also enforced as unique constraint via atomic counter)
+    db.employees.create_index(
+        [("org_id", ASCENDING), ("employee_id", ASCENDING)],
+        unique=True,
+        background=True,
+    )
+
+    # ── sessions ───────────────────────────────────────────────────────
+    # Query: find({org_id}).sort("created_at", -1) in list_sessions
+    db.sessions.create_index(
+        [("org_id", ASCENDING), ("created_at", DESCENDING)],
+        background=True,
+    )
+    # Query: find({org_id, employee_id, ...}) in list_sessions, analyze drift
+    db.sessions.create_index(
+        [("employee_id", ASCENDING), ("created_at", DESCENDING)],
+        background=True,
+    )
+
+    # ── notifications ──────────────────────────────────────────────────
+    # Query: find({org_id}).sort("created_at", -1) in list_notifications
+    db.notifications.create_index(
+        [("org_id", ASCENDING), ("created_at", DESCENDING)],
+        background=True,
+    )
+    # Query: count_documents({org_id, read: False}) in list_notifications
+    db.notifications.create_index(
+        [("org_id", ASCENDING), ("read", ASCENDING)],
+        background=True,
+    )
+
+    # ── active_sessions ────────────────────────────────────────────────
+    # Query: find_one({user_id, session_token}) in _session_is_active
+    db.active_sessions.create_index(
+        [("user_id", ASCENDING), ("session_token", ASCENDING)],
+        background=True,
+    )
+    # Query: find({user_id}).sort("last_seen", -1) in list_active_sessions
+    db.active_sessions.create_index(
+        [("user_id", ASCENDING), ("last_seen", DESCENDING)],
+        background=True,
+    )
+
+    # ── counters (atomic employee ID generation) ───────────────────────
+    # Used by next_employee_id — _id is "employee:<org_id>"
+    db.counters.create_index("_id", background=True)
+
+    # ── otp_verifications ──────────────────────────────────────────────
+    # Query: find_one({email_hash}) in auth_email.py
+    db.otp_verifications.create_index("email_hash", background=True)
+
+
+# ── Atomic employee ID generation ────────────────────────────────────
+
+def next_employee_id(db, org_id: str) -> str:
+    """Generate the next employee ID for an organization atomically.
+
+    Uses a MongoDB ``counters`` collection with ``$inc`` + ``upsert`` to
+    guarantee uniqueness even under concurrent requests.
+
+    Counter document structure:
+        { "_id": "employee:<org_id>", "seq": 1 }
+
+    Returns the formatted employee ID (e.g. "EMP001").
+    """
+    counter_id = f"employee:{org_id}"
+    result = db.counters.find_one_and_update(
+        {"_id": counter_id},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True,  # return the document AFTER the update
+    )
+    seq = result["seq"]
+    return f"EMP{seq:03d}"
 
 
 def check_rate_limit(db, key, max_events, window_seconds):

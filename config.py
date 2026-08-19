@@ -70,6 +70,13 @@ class Config:
     # Audio storage
     AUDIO_STORAGE_PATH = os.environ.get("AUDIO_STORAGE_PATH", "static/audio/sessions")
 
+    # Maximum request body size (50 MB).
+    # OpenAI Whisper accepts audio up to 25 MB; images are capped at 10 MB
+    # by MAX_IMAGE_BYTES in sessions.py; employee photos are base64-encoded
+    # inside JSON bodies.  50 MB covers all legitimate payloads with headroom
+    # while blocking multi-gigabyte abuse.
+    MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50 MB
+
     # Cookie/session behaviour
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

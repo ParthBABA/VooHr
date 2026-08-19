@@ -6,7 +6,7 @@ from flask import Blueprint, jsonify, request, session
 
 from blind_index import blind_index
 from employee_scoring import score_employee
-from extensions import get_db
+from extensions import get_db, next_employee_id
 from field_encryption import decrypt_fields, encrypt_fields
 from login_flow import _hash_session_token
 
@@ -89,15 +89,7 @@ def _totp_required():
 
 
 def _next_employee_id(db, org_id: str) -> str:
-    last = db.employees.find_one(
-        {"org_id": ObjectId(org_id)},
-        sort=[("employee_id", -1)],
-    )
-    if last and last.get("employee_id"):
-        num = int(last["employee_id"].replace("EMP", "")) + 1
-    else:
-        num = 1
-    return f"EMP{num:03d}"
+    return next_employee_id(db, org_id)
 
 
 def _employee_to_json(emp) -> dict:

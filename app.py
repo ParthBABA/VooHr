@@ -3,6 +3,8 @@ import logging
 import os
 import secrets
 
+from werkzeug.exceptions import RequestEntityTooLarge
+
 from bson import ObjectId
 from flask import Flask, jsonify, request, send_from_directory, redirect, render_template, session
 
@@ -88,6 +90,10 @@ def create_app():
     @app.errorhandler(TOTPRequired)
     def _handle_totp_required(exc):
         return jsonify({"error": "TOTP verification required"}), 403
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def _handle_payload_too_large(exc):
+        return jsonify({"error": "Request payload is too large."}), 413
 
     # ── Admin TOTP guard ────────────────────────────────────────────────
     # Every admin session must satisfy TWO conditions before accessing
