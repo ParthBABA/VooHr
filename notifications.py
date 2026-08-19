@@ -1,4 +1,4 @@
-import sys
+import logging
 from datetime import datetime, timezone
 
 from bson import ObjectId
@@ -10,6 +10,7 @@ from extensions import get_db
 from field_encryption import decrypt_fields
 
 notifications_bp = Blueprint("notifications", __name__)
+logger = logging.getLogger(__name__)
 
 
 def _notification_to_json(n, employee_name="") -> dict:
@@ -78,11 +79,7 @@ def list_notifications():
     )
     total = db.notifications.count_documents(query)
 
-    print(
-        f"[DEBUG_NOTIF] list org={org_id} page={page} limit={limit} "
-        f"total={total} unread={unread_count}",
-        file=sys.stderr,
-    )
+    logger.debug("notifications list: page=%d limit=%d total=%d unread=%d", page, limit, total, unread_count)
 
     return jsonify({
         "notifications": result,
@@ -116,8 +113,6 @@ def get_notification(notification_id: str):
     data["drift_explanation"] = n.get("drift_explanation", {})
     data["sessions_window"] = n.get("sessions_window", [])
 
-    print(f"[DEBUG_NOTIF] get id={notification_id} org={org_id} employee={n.get('employee_id')}", file=sys.stderr)
-
     return jsonify(data)
 
 
@@ -142,8 +137,6 @@ def mark_read(notification_id: str):
     if result.matched_count == 0:
         return jsonify({"error": "not_found"}), 404
 
-    print(f"[DEBUG_NOTIF] mark_read id={notification_id} org={org_id}", file=sys.stderr)
-
     return jsonify({"ok": True})
 
 
@@ -159,6 +152,6 @@ def mark_all_read():
         {"$set": {"read": True, "read_at": datetime.now(timezone.utc)}},
     )
 
-    print(f"[DEBUG_NOTIF] mark_all_read org={org_id} modified={result.modified_count}", file=sys.stderr)
+    logger.debug("mark_all_read: modified=%d", result.modified_count)
 
     return jsonify({"ok": True, "modified": result.modified_count})

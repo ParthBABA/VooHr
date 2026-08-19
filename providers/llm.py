@@ -1,8 +1,11 @@
+import logging
 import os
 import json
 import re
 from abc import ABC, abstractmethod
 from flask import current_app
+
+logger = logging.getLogger(__name__)
 
 
 # ── Canonical field names per step section (what the frontend expects) ──
@@ -114,8 +117,7 @@ def _normalize_step_fields(result, step_key):
     for old_key in renamed:
         del step[old_key]
     if renamed:
-        import sys
-        print(f"[DEBUG_NORMALIZE] {step_key}: renamed {renamed}", file=sys.stderr)
+        logger.debug("normalize %s: renamed %s", step_key, renamed)
 
 
 CONFIDENCE_MAP = {
@@ -156,13 +158,11 @@ def _coerce_step_section(key, val):
 
 def validate_analysis(result, depth=0):
     """Post-generation guardrails: validate and fix analysis JSON."""
-    import sys
     errors = []
 
     # If AI returned a JSON array at top level, bail to safe fallback
     if depth == 0 and not isinstance(result, dict):
-        print("[DEBUG_VALIDATE] Top-level response is NOT a dict — type:", type(result).__name__, file=sys.stderr)
-        print("[DEBUG_FALLBACK] section=top_level reason=not_a_dict missing_fields=all", file=sys.stderr)
+        logger.warning("Top-level response is not a dict: %s", type(result).__name__)
         result = dict(FALLBACK_ANALYSIS)
         result["_validation_errors"] = ["Top-level response was not a JSON object"]
         return result
@@ -197,10 +197,10 @@ def validate_analysis(result, depth=0):
                 reason = "list_extracted_first_element" if (isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict)) else \
                          "string_wrapped_to_raw_analysis" if isinstance(val, str) else \
                          "list_wrapped_to_raw_items"
-                print(f"[TYPE_COERCION] section={key} original_type={orig_type} new_type={new_type} reason={reason}", file=sys.stderr)
+                logger.debug("type_coercion section=%s orig=%s dest=dict reason=%s", key, orig_type, reason)
                 errors.append(f"Coerced {orig_type}→dict for '{key}' (reason={reason})")
             else:
-                print(f"[TYPE_COERCION] section={key} original_type={type(val).__name__} new_type=dict reason=unexpected_type_replaced_empty", file=sys.stderr)
+                logger.debug("type_coercion section=%s orig=%s dest=dict reason=unexpected_type_replaced_empty", key, type(val).__name__)
                 result[key] = {}
                 errors.append(f"Expected dict for '{key}', got {type(val).__name__}")
         elif key in ("psychology",) and not isinstance(result[key], dict):
@@ -283,7 +283,7 @@ def validate_analysis(result, depth=0):
             if not isinstance(v, list) or len(v) == 0:
                 missing_info.append(f"{f}=[]")
 
-        print(f"[DEBUG_FALLBACK] section={step_key} reason=no_meaningful_content missing_fields={missing_info}", file=sys.stderr)
+        logger.debug("fallback section=%s reason=no_meaningful_content missing=%s", step_key, missing_info)
 
     # Check for individual LTE/empty fields (informational, not replacing)
     for step_key, spec in SECTION_FIELDS.items():
@@ -317,11 +317,10 @@ DRIFT_STRING_FIELDS = [
 
 def validate_drift_explanation(result):
     """Post-generation guardrails: validate and fix drift-explanation JSON."""
-    import sys
     errors = []
 
     if not isinstance(result, dict):
-        print("[DEBUG_VALIDATE] Drift explanation is NOT a dict — type:", type(result).__name__, file=sys.stderr)
+        logger.warning("Drift explanation is not a dict: %s", type(result).__name__)
         result = dict(FALLBACK_DRIFT_EXPLANATION)
         result["_validation_errors"] = ["Drift explanation was not a JSON object"]
         return result
@@ -334,20 +333,20 @@ def validate_drift_explanation(result):
         else:
             result["is_genuine_pattern"] = bool(is_genuine)
             reason = f"{type(is_genuine).__name__}_coerced"
-        print(f"[TYPE_COERCION] field=is_genuine_pattern original_type={type(is_genuine).__name__} new_type=bool reason={reason}", file=sys.stderr)
+        logger.debug("type_coercion field=is_genuine_pattern orig=%s dest=bool reason=%s", type(is_genuine).__name__, reason)
         errors.append("Coerced non-bool for 'is_genuine_pattern'")
 
     for field in DRIFT_STRING_FIELDS:
         val = result.get(field, "")
         if not isinstance(val, str):
             result[field] = str(val) if val is not None else ""
-            print(f"[TYPE_COERCION] field={field} original_type={type(val).__name__} new_type=str reason=coerced", file=sys.stderr)
+            logger.debug("type_coercion field=%s orig=%s dest=str reason=coerced", field, type(val).__name__)
             errors.append(f"Coerced {type(val).__name__}→str for '{field}'")
 
     ev = result.get("escalation_evidence", [])
     if not isinstance(ev, list):
         result["escalation_evidence"] = [str(ev)] if ev is not None else []
-        print(f"[TYPE_COERCION] field=escalation_evidence original_type={type(ev).__name__} new_type=list reason=coerced", file=sys.stderr)
+        logger.debug("type_coercion field=escalation_evidence orig=%s dest=list reason=coerced", type(ev).__name__)
         errors.append(f"Coerced {type(ev).__name__}→list for 'escalation_evidence'")
     else:
         result["escalation_evidence"] = [str(x) for x in ev]
@@ -872,7 +871,6 @@ class DeepSeekLLM(BaseLLM):
         self.model = os.environ.get("DEEPSEEK_ANALYSIS_MODEL", "deepseek-chat")
 
     def analyze(self, transcript: str) -> dict:
-        import sys
         from openai import OpenAI
 
         client = OpenAI(api_key=self.api_key, base_url=self.base_url)
@@ -1035,102 +1033,19 @@ Return ONLY valid JSON, no markdown formatting, no code fences."""
             stream=False,
         )
 
-        # ── DEBUG: Stage 1 — Raw LLM response ──
         raw_content = resp.choices[0].message.content or ""
-        print("=" * 60, file=sys.stderr)
-        print("[DEBUG_DEEPSEEK] STAGE 1 — RAW LLM RESPONSE:", file=sys.stderr)
-        print(raw_content[:3000], file=sys.stderr)
-        print("...(truncated)" if len(raw_content) > 3000 else "", file=sys.stderr)
-        print("RAW LENGTH:", len(raw_content), file=sys.stderr)
 
         # DeepSeek doesn't support response_format=json_object on all models,
         # so strip markdown code fences defensively before parsing.
         content = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_content.strip())
 
-        # ── DEBUG: Stage 2 — Cleaned JSON string ──
-        print("---", file=sys.stderr)
-        print("[DEBUG_DEEPSEEK] STAGE 2 — CLEANED JSON STRING:", file=sys.stderr)
-        print(content[:3000], file=sys.stderr)
-        print("CLEANED LENGTH:", len(content), file=sys.stderr)
-
         try:
             result = json.loads(content)
-        except json.JSONDecodeError as e:
-            print("[DEBUG_DEEPSEEK] JSON PARSE FAILED:", e, file=sys.stderr)
+        except json.JSONDecodeError:
+            logger.exception("DeepSeek analyze: JSON parse failed")
             return dict(FALLBACK_ANALYSIS)
 
-        # ── DEBUG: Stage 3 — Parsed JSON top-level type ──
-        print("---", file=sys.stderr)
-        print("[DEBUG_DEEPSEEK] STAGE 3 — PARSED JSON TYPE:", type(result).__name__, file=sys.stderr)
-        if isinstance(result, dict):
-            print("TOP-LEVEL KEYS:", list(result.keys()), file=sys.stderr)
-
-            # ── DEBUG: Stage 4 — Field types ──
-            print("---", file=sys.stderr)
-            print("[DEBUG_DEEPSEEK] STAGE 4 — FIELD TYPES:", file=sys.stderr)
-            for fname in ["psychological_safety", "step2_behavioural_intelligence", "step3_root_cause_analysis", "step4_action_blueprint", "step5_conversation_strategy"]:
-                val = result.get(fname)
-                t = type(val).__name__
-                print(f"  {fname}: {t}", end="", file=sys.stderr)
-                if isinstance(val, dict):
-                    print(f"  keys={list(val.keys())[:10]}", file=sys.stderr)
-                    lte_count = sum(1 for v in val.values() if isinstance(v, str) and v == "Limited transcript evidence.")
-                    empty_list_count = sum(1 for v in val.values() if isinstance(v, list) and len(v) == 0)
-                    print(f"  LTE_fields={lte_count}  empty_lists={empty_list_count}", file=sys.stderr)
-                elif isinstance(val, list):
-                    print(f"  len={len(val)}", file=sys.stderr)
-                else:
-                    print(file=sys.stderr)
-
-            # ── DEBUG: Stage 5 — "Limited transcript evidence." field-level scan ──
-            print("---", file=sys.stderr)
-            print("[DEBUG_DEEPSEEK] STAGE 5 — 'Limited transcript evidence.' SCAN:", file=sys.stderr)
-            step_keys = ["step2_behavioural_intelligence", "step3_root_cause_analysis", "step4_action_blueprint", "step5_conversation_strategy"]
-            for sk in step_keys:
-                step = result.get(sk)
-                if isinstance(step, dict):
-                    lte_fields = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
-                    empty_lists = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
-                    if lte_fields:
-                        print(f"  {sk} LTE fields: {lte_fields}", file=sys.stderr)
-                    if empty_lists:
-                        print(f"  {sk} EMPTY arrays: {empty_lists}", file=sys.stderr)
-                    if not lte_fields and not empty_lists:
-                        print(f"  {sk}: ALL POPULATED", file=sys.stderr)
-
-        # ── DEBUG: Stage 6 — BEFORE validation ──
-        print("---", file=sys.stderr)
-        print("[DEBUG_DEEPSEEK] STAGE 6 — BEFORE validate_analysis():", file=sys.stderr)
-        if isinstance(result, dict):
-            for sk in step_keys:
-                step = result.get(sk)
-                if isinstance(step, dict):
-                    lte_fields = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
-                    print(f"  {sk}: LTE={lte_fields}", file=sys.stderr)
-
-        # Always run validation, not just in V2 mode — the model can return a
-        # field with the wrong type (e.g. "risks" as a list instead of a dict)
-        # regardless of which prompt was used, and downstream code (sessions.py)
-        # assumes these fields are dicts/lists as documented. Skipping this in
-        # non-V2 mode was the cause of "'list' object has no attribute 'get'".
         result = validate_analysis(result)
-
-        # ── DEBUG: Stage 7 — AFTER validation ──
-        print("---", file=sys.stderr)
-        print("[DEBUG_DEEPSEEK] STAGE 7 — AFTER validate_analysis():", file=sys.stderr)
-        print("  _validation_errors:", result.get("_validation_errors", []), file=sys.stderr)
-        if isinstance(result, dict):
-            for sk in step_keys:
-                step = result.get(sk)
-                if isinstance(step, dict):
-                    lte_fields = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
-                    empty_lists = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
-                    print(f"  {sk}: LTE={lte_fields}  EMPTY={empty_lists}", file=sys.stderr)
-
-        # ── DEBUG: Stage 8 — Final dict being returned ──
-        print("---", file=sys.stderr)
-        print("[DEBUG_DEEPSEEK] STAGE 8 — FINAL RETURN DICT keys:", list(result.keys()) if isinstance(result, dict) else type(result).__name__, file=sys.stderr)
-        print("=" * 60, file=sys.stderr)
         return result
 
     def explain_drift(self, sessions: list) -> dict:
@@ -1140,7 +1055,6 @@ Return ONLY valid JSON, no markdown formatting, no code fences."""
         Sends FULL transcripts together (not just the risk % numbers) so the
         model can cross-reference actual conversation content, not just trend lines.
         """
-        import sys
         from openai import OpenAI
 
         client = OpenAI(api_key=self.api_key, base_url=self.base_url)
@@ -1162,14 +1076,9 @@ Return ONLY valid JSON, no markdown formatting, no code fences."""
 
         try:
             result = json.loads(content)
-        except json.JSONDecodeError as e:
-            print("[DEBUG_DEEPSEEK_DRIFT] JSON PARSE FAILED:", e, file=sys.stderr)
+        except json.JSONDecodeError:
+            logger.exception("DeepSeek explain_drift: JSON parse failed")
             return dict(FALLBACK_DRIFT_EXPLANATION)
 
         result = validate_drift_explanation(result)
-        print(
-            f"[DEBUG_DEEPSEEK_DRIFT] is_genuine_pattern={result.get('is_genuine_pattern')} "
-            f"confidence={result.get('confidence')}",
-            file=sys.stderr,
-        )
         return result

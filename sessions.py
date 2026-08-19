@@ -236,22 +236,6 @@ def analyze_session(session_id: str):
         llm = get_llm_provider()
         analysis = llm.analyze(transcript)
 
-        # ── DEBUG: Stage 9 — Analysis result from LLM ──
-        import sys
-        print("---", file=sys.stderr)
-        print("[DEBUG_SESSION] STAGE 9 — analysis dict from llm.analyze():", file=sys.stderr)
-        print("  type:", type(analysis).__name__, file=sys.stderr)
-        if isinstance(analysis, dict):
-            print("  keys:", list(analysis.keys()), file=sys.stderr)
-            for sk in ["step2_behavioural_intelligence", "step3_root_cause_analysis", "step4_action_blueprint", "step5_conversation_strategy"]:
-                step = analysis.get(sk)
-                if isinstance(step, dict):
-                    lte = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
-                    empty = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
-                    print(f"    {sk}: LTE={lte}  EMPTY={empty}", file=sys.stderr)
-                else:
-                    print(f"    {sk}: type={type(step).__name__}", file=sys.stderr)
-
         now = datetime.now(timezone.utc)
         db.sessions.update_one(
             {"_id": ObjectId(session_id)},
@@ -308,12 +292,10 @@ def analyze_session(session_id: str):
 
         # ── Silent background: Risk Drift Detection ──
         # Fires automatically after the wellness update above, never on user
-        # action. It is best-effort: any failure here is logged to stderr and
-        # swallowed so it can't fail the /analyze response or roll back the
-        # ai_wellness update that already succeeded.
+        # action. It is best-effort: any failure here is logged and swallowed
+        # so it can't fail the /analyze response or roll back the ai_wellness
+        # update that already succeeded.
         try:
-            import sys
-
             # 1. Last N completed sessions (oldest-first) with a real analysis
             #    and a non-empty transcript.
             qualifying_sessions = list(
@@ -334,17 +316,11 @@ def analyze_session(session_id: str):
 
             # 2. Not enough completed syncs yet — expected for new employees,
             #    not an error. Skip quietly.
-            if len(qualifying_sessions) < DRIFT_WINDOW_SIZE:
-                print(f"[DEBUG_DRIFT] session={session_id} skipped: {len(qualifying_sessions)}/{DRIFT_WINDOW_SIZE} qualifying sessions", file=sys.stderr)
-            else:
+            if len(qualifying_sessions) >= DRIFT_WINDOW_SIZE:
                 emp = db.employees.find_one({"_id": s["employee_id"]})
 
                 # 3. Skip if this window was already processed (retries / re-analysis).
-                if not emp:
-                    print(f"[DEBUG_DRIFT] session={session_id} skipped: employee not found", file=sys.stderr)
-                elif emp.get("last_drift_check_session_id") == s["_id"]:
-                    print(f"[DEBUG_DRIFT] session={session_id} skipped: drift window already processed", file=sys.stderr)
-                else:
+                if emp and emp.get("last_drift_check_session_id") != s["_id"]:
                     # 4. Build the payload for explain_drift(): FULL transcripts,
                     #    oldest first, not just the risk % numbers.
                     sessions_payload = [
@@ -372,28 +348,20 @@ def analyze_session(session_id: str):
                             "drift_explanation": drift,
                         }},
                     )
-                    print(f"[DEBUG_DRIFT] session={session_id} drift check complete — is_genuine_pattern={drift.get('is_genuine_pattern')} confidence={drift.get('confidence')}", file=sys.stderr)
 
                     # 7. Surface genuine drift as a notification. Best-effort like
                     #    everything else in this block: a write failure is logged
                     #    and swallowed, never allowed to fail /analyze. False
                     #    positives stay silent, exactly as before.
                     if drift.get("is_genuine_pattern"):
-                        # Respect the org's "Risk & burnout alerts" preference: if
-                        # disabled, skip the insert entirely — the notification is
-                        # never written to the DB, not just hidden in the UI.
                         org_doc = db.organizations.find_one({"_id": ObjectId(org_id)})
                         risk_alerts = ((org_doc or {}).get("notification_prefs") or {}).get("risk_alerts", True)
-                        if not risk_alerts:
-                            print(f"[DEBUG_NOTIF] session={session_id} skipped: risk alerts disabled for org", file=sys.stderr)
-                        else:
+                        if risk_alerts:
                             now = datetime.now(timezone.utc)
                             existing = db.notifications.find_one(
                                 {"org_id": ObjectId(org_id), "source_session_id": s["_id"]}
                             )
-                            if existing:
-                                print(f"[DEBUG_NOTIF] session={session_id} notification already exists ({existing['_id']}) — skipping", file=sys.stderr)
-                            else:
+                            if not existing:
                                 db.notifications.insert_one(
                                     {
                                         "org_id": ObjectId(org_id),
@@ -416,30 +384,8 @@ def analyze_session(session_id: str):
                                         "created_at": now,
                                     }
                                 )
-                                print(f"[DEBUG_NOTIF] session={session_id} notification created for employee={s['employee_id']}", file=sys.stderr)
-                    else:
-                        print(f"[DEBUG_NOTIF] session={session_id} is_genuine_pattern=False — no notification created", file=sys.stderr)
-        except Exception as e:
-            import traceback
-            print(f"[DEBUG_DRIFT] session={session_id} drift check failed: {e}", file=sys.stderr)
-            traceback.print_exc(file=sys.stderr)
-
-        # ── DEBUG: Stage 10 — Re-fetch from DB and check stored data ──
-        s_check = db.sessions.find_one({"_id": ObjectId(session_id)})
-        stored_analysis = (s_check or {}).get("analysis") or {}
-        print("---", file=sys.stderr)
-        print("[DEBUG_SESSION] STAGE 10 — analysis stored in MongoDB:", file=sys.stderr)
-        if isinstance(stored_analysis, dict):
-            for sk in ["step2_behavioural_intelligence", "step3_root_cause_analysis", "step4_action_blueprint", "step5_conversation_strategy"]:
-                step = stored_analysis.get(sk)
-                if isinstance(step, dict):
-                    lte = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
-                    empty = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
-                    print(f"    {sk}: LTE={lte}  EMPTY={empty}", file=sys.stderr)
-                else:
-                    print(f"    {sk}: type={type(step).__name__}", file=sys.stderr)
-        else:
-            print(f"    stored_analysis type: {type(stored_analysis).__name__}", file=sys.stderr)
+        except Exception:
+            logger.exception("Drift detection failed (session=%s)", session_id)
 
         # Build the response INSIDE the same try block so that any failure
         # here (e.g. the session vanishing, or an unexpected shape) is caught
@@ -451,26 +397,6 @@ def analyze_session(session_id: str):
         if not s:
             return jsonify({"error": "session_disappeared_after_analysis"}), 500
         result_json = _session_to_json(s)
-
-        # ── DEBUG: Stage 11 — JSON response sent to frontend ──
-        print("---", file=sys.stderr)
-        print("[DEBUG_SESSION] STAGE 11 — response JSON to frontend:", file=sys.stderr)
-        resp_analysis = result_json.get("analysis") or {}
-        if isinstance(resp_analysis, dict):
-            for sk in ["step2_behavioural_intelligence", "step3_root_cause_analysis", "step4_action_blueprint", "step5_conversation_strategy"]:
-                step = resp_analysis.get(sk)
-                if isinstance(step, dict):
-                    lte = [k for k, v in step.items() if isinstance(v, str) and v == "Limited transcript evidence."]
-                    empty = [k for k, v in step.items() if isinstance(v, list) and len(v) == 0]
-                    print(f"    {sk}: LTE={lte}  EMPTY={empty}", file=sys.stderr)
-                    # Verify populated content — log fields with real values
-                    populated = [k for k, v in step.items() if isinstance(v, str) and v.strip() and v != "Limited transcript evidence."]
-                    non_empty_lists = [k for k, v in step.items() if isinstance(v, list) and len(v) > 0]
-                    if populated or non_empty_lists:
-                        print(f"    {sk}: POPULATED_fields={populated}  POPULATED_lists={non_empty_lists}", file=sys.stderr)
-                else:
-                    print(f"    {sk}: type={type(step).__name__}  value={repr(step)[:200]}", file=sys.stderr)
-        print("=" * 60, file=sys.stderr)
         return jsonify(result_json)
 
     except Exception as e:

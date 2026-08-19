@@ -8,13 +8,17 @@
 6. TOTP enforcement — _require_auth and _check_auth block unverified admins.
 """
 
+import ast as _ast
 import importlib
+import inspect
 import os
 import sys
 from unittest import mock
 
 import pytest
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 # ---------------------------------------------------------------------------
@@ -1117,3 +1121,210 @@ class TestErrorLeakageRemoval:
         # Both cases should return invalid_credentials
         assert "google_only_account" not in src
         assert src.count("invalid_credentials") >= 2
+
+
+# ---------------------------------------------------------------------------
+# 13. Debug print cleanup — no production prints remain
+# ---------------------------------------------------------------------------
+
+
+def _count_print_calls(filepath: str) -> list[int]:
+    """Return line numbers of print() or traceback.print_exc() calls in a .py file."""
+    with open(filepath, encoding="utf-8") as f:
+        source = f.read()
+    tree = _ast.parse(source)
+    lines = []
+    for node in _ast.walk(tree):
+        if isinstance(node, _ast.Call):
+            func = node.func
+            if isinstance(func, _ast.Name) and func.id == "print":
+                lines.append(node.lineno)
+            elif isinstance(func, _ast.Attribute) and func.attr == "print_exc":
+                lines.append(node.lineno)
+    return lines
+
+
+class TestNoProductionPrints:
+    """Production source files must not contain print() or traceback.print_exc() calls."""
+
+    def _assert_no_prints(self, filepath: str):
+        lines = _count_print_calls(filepath)
+        assert lines == [], f"Found print/traceback.print_exc at lines {lines} in {filepath}"
+
+    def test_sessions_py_clean(self):
+        self._assert_no_prints(os.path.join(_ROOT, "sessions.py"))
+
+    def test_notifications_py_clean(self):
+        self._assert_no_prints(os.path.join(_ROOT, "notifications.py"))
+
+    def test_providers_llm_py_clean(self):
+        self._assert_no_prints(os.path.join(_ROOT, "providers", "llm.py"))
+
+    def test_auth_email_py_clean(self):
+        self._assert_no_prints(os.path.join(_ROOT, "auth_email.py"))
+
+    def test_auth_py_clean(self):
+        self._assert_no_prints(os.path.join(_ROOT, "auth.py"))
+
+    def test_employees_py_clean(self):
+        self._assert_no_prints(os.path.join(_ROOT, "employees.py"))
+
+    def test_totp_routes_py_clean(self):
+        self._assert_no_prints(os.path.join(_ROOT, "totp_routes.py"))
+
+    def test_extensions_py_clean(self):
+        self._assert_no_prints(os.path.join(_ROOT, "extensions.py"))
+
+    def test_app_py_clean(self):
+        self._assert_no_prints(os.path.join(_ROOT, "app.py"))
+
+
+class TestNoSysImportsForDebug:
+    """Production files should not have orphaned `import sys` used only for stderr prints."""
+
+    def _sys_import_lines(self, filepath: str) -> list[int]:
+        with open(filepath, encoding="utf-8") as f:
+            source = f.read()
+        tree = _ast.parse(source)
+        lines = []
+        for node in _ast.walk(tree):
+            if isinstance(node, _ast.Import):
+                for alias in node.names:
+                    if alias.name == "sys":
+                        lines.append(node.lineno)
+            elif isinstance(node, _ast.ImportFrom):
+                if node.module == "sys":
+                    lines.append(node.lineno)
+        return lines
+
+    def test_sessions_py_no_sys_import(self):
+        assert self._sys_import_lines(os.path.join(_ROOT, "sessions.py")) == []
+
+    def test_notifications_py_no_sys_import(self):
+        assert self._sys_import_lines(os.path.join(_ROOT, "notifications.py")) == []
+
+    def test_providers_llm_py_no_sys_import(self):
+        assert self._sys_import_lines(os.path.join(_ROOT, "providers", "llm.py")) == []
+
+
+class TestNoTracebackImport:
+    """Production files should not import traceback (replaced by logger.exception)."""
+
+    def _has_traceback_import(self, filepath: str) -> bool:
+        with open(filepath, encoding="utf-8") as f:
+            source = f.read()
+        tree = _ast.parse(source)
+        for node in _ast.walk(tree):
+            if isinstance(node, _ast.Import):
+                for alias in node.names:
+                    if alias.name == "traceback":
+                        return True
+            elif isinstance(node, _ast.ImportFrom):
+                if node.module == "traceback":
+                    return True
+        return False
+
+    def test_sessions_py_no_traceback_import(self):
+        assert not self._has_traceback_import(os.path.join(_ROOT, "sessions.py"))
+
+
+class TestSensitiveDataNotInPrints:
+    """Verify sensitive data patterns do not appear in print/debug output in source."""
+
+    def _read_source(self, *parts):
+        with open(os.path.join(_ROOT, *parts), encoding="utf-8") as f:
+            return f.read()
+
+    def test_no_stderr_analysis_output(self):
+        """LLM analysis results must not be printed to stderr."""
+        src = self._read_source("sessions.py")
+        assert "print(raw_content" not in src
+        assert "print(content[:3000]" not in src
+        assert "print(\"STAGE" not in src
+
+    def test_no_stderr_drift_results(self):
+        """Drift analysis results must not be printed."""
+        src = self._read_source("sessions.py")
+        assert "is_genuine_pattern=" not in src
+        assert "confidence={drift" not in src
+
+    def test_no_stderr_llm_response_content(self):
+        """Raw LLM response content must not be printed."""
+        src = self._read_source("providers", "llm.py")
+        assert "raw_content[:3000]" not in src
+        assert "print(raw_content" not in src
+        assert "RAW LLM RESPONSE" not in src
+
+    def test_no_stderr_employee_ids_in_prints(self):
+        """Employee IDs must not be printed."""
+        src = self._read_source("notifications.py")
+        assert "employee={n.get" not in src
+        assert "employee=" not in src.split("print(")[1].split(")")[0] if "print(" in src else True
+
+    def test_no_stderr_validation_errors_exposed(self):
+        """Validation error details must not be printed."""
+        src = self._read_source("providers", "llm.py")
+        assert "_validation_errors:" not in src
+
+    def test_no_stderr_type_coercion_details(self):
+        """TYPE_COERCION debug output must not be printed."""
+        src = self._read_source("providers", "llm.py")
+        assert "[TYPE_COERCION]" not in src
+
+    def test_no_stderr_debug_session_tags(self):
+        """[DEBUG_SESSION] tags must not exist in source."""
+        src = self._read_source("sessions.py")
+        assert "[DEBUG_SESSION]" not in src
+        assert "[DEBUG_DRIFT]" not in src
+        assert "[DEBUG_NOTIF]" not in src
+
+    def test_no_stderr_debug_deepseek_tags(self):
+        """[DEBUG_DEEPSEEK] tags must not exist in source."""
+        src = self._read_source("providers", "llm.py")
+        assert "[DEBUG_DEEPSEEK]" not in src
+        assert "[DEBUG_NORMALIZE]" not in src
+        assert "[DEBUG_VALIDATE]" not in src
+        assert "[DEBUG_FALLBACK]" not in src
+
+
+class TestExistingGenericErrorsUnchanged:
+    """Generic error responses from previous security fixes remain unchanged."""
+
+    def test_analysis_failed_generic(self):
+        import sessions
+        src = inspect.getsource(sessions.analyze_session)
+        assert '"Analysis failed. Please try again."' in src
+
+    def test_transcription_failed_generic(self):
+        import sessions
+        src = inspect.getsource(sessions.transcribe_audio)
+        assert '"Transcription failed. Please try again."' in src
+
+    def test_ocr_failed_generic(self):
+        import sessions
+        src = inspect.getsource(sessions.transcribe_image)
+        assert '"Transcription failed. Please try again."' in src
+
+
+class TestDriftDetectionUsesLogger:
+    """Drift detection exception handling uses logger, not print."""
+
+    def test_drift_exception_handler_uses_logger(self):
+        import sessions
+        src = inspect.getsource(sessions.analyze_session)
+        assert "logger.exception(\"Drift detection failed" in src
+
+    def test_no_traceback_print_exc_in_sessions(self):
+        import sessions
+        src = inspect.getsource(sessions.analyze_session)
+        assert "traceback.print_exc" not in src
+
+    def test_drift_skip_branches_are_clean(self):
+        """The drift skip branches (insufficient sessions, employee not found,
+        window already processed) no longer print anything."""
+        import sessions
+        src = inspect.getsource(sessions.analyze_session)
+        # These were the old debug prints in the skip branches
+        assert "qualifying_sessions}" not in src
+        assert "employee not found" not in src
+        assert "drift window already processed" not in src
