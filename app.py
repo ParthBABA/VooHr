@@ -142,7 +142,7 @@ def create_app():
         user_id = session.get("user_id")
         session_token = session.get("session_token")
         is_logged_in = bool(user_id and session_token and _session_is_active(user_id, session_token))
-        app.logger.info("Root route: user_id=%s session_token=%s is_logged_in=%s", user_id, session_token, is_logged_in)
+        app.logger.info("Root route: user_id=%s is_logged_in=%s", user_id, is_logged_in)
         return render_template("login.html", is_logged_in=is_logged_in)
 
     @app.route("/login")
@@ -353,4 +353,4 @@ app = create_app()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, port=port)
+    app.run(debug=os.environ.get("FLASK_DEBUG", "false").lower() == "true", port=port)

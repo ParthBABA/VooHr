@@ -8,7 +8,12 @@ load_dotenv()
 
 class Config:
     # Flask session signing key. Set a long random value in production.
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+    # The app will refuse to start if this is not set, preventing accidental
+    # use of an insecure default in production.
+    _secret = (os.environ.get("SECRET_KEY") or "").strip()
+    if not _secret:
+        raise RuntimeError("SECRET_KEY environment variable is not set. Refusing to start without a secure session key.")
+    SECRET_KEY = _secret
 
     # Keep users signed in across browser restarts. Session cookies are
     # browser-session-only by default (and get wiped when the browser

@@ -38,13 +38,13 @@ def encrypt_fields(fields: dict[str, str | None]) -> tuple[dict[str, str], str]:
     Returns (encrypted_dict, wrapped_dek_b64).
     """
     dek = os.urandom(32)
-    nonce = os.urandom(_ALGO_NONCE_LEN)
     aesgcm = AESGCM(dek)
 
     encrypted: dict[str, str] = {}
     for key, value in fields.items():
         if value is None or value == "":
             continue
+        nonce = os.urandom(_ALGO_NONCE_LEN)
         ct = aesgcm.encrypt(nonce, value.encode("utf-8"), None)
         # Store nonce (12) + ciphertext (includes 16-byte GCM tag)
         encrypted[key] = _b64(nonce + ct)
