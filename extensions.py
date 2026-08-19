@@ -1,7 +1,11 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from flask import current_app
 from pymongo import MongoClient, ASCENDING, DESCENDING, TEXT
+from pymongo.errors import DuplicateKeyError
+
+log = logging.getLogger(__name__)
 
 
 def init_db(app):
@@ -70,7 +74,17 @@ def _init_indexes(db):
 
     # ── users ──────────────────────────────────────────────────────────
     # Query: find_one({"email_hash": ...}) in auth.py, auth_email.py
-    db.users.create_index("email_hash", unique=True, background=True)
+    try:
+        db.users.create_index("email_hash", unique=True, background=True)
+    except DuplicateKeyError:
+        log.critical(
+            "FAILED to create unique index on users.email_hash because "
+            "duplicate email_hash records already exist. "
+            "Run 'python find_duplicates.py' to identify the duplicates. "
+            "The application will continue to start, but signup/login "
+            "may fail until duplicates are resolved. "
+            "DO NOT weaken the index — resolve the duplicate data instead."
+        )
 
     # ── employees ──────────────────────────────────────────────────────
     # Query: find({org_id, ...}).sort("created_at", -1)  in list_employees
@@ -121,10 +135,6 @@ def _init_indexes(db):
         [("user_id", ASCENDING), ("last_seen", DESCENDING)],
         background=True,
     )
-
-    # ── counters (atomic employee ID generation) ───────────────────────
-    # Used by next_employee_id — _id is "employee:<org_id>"
-    db.counters.create_index("_id", background=True)
 
     # ── otp_verifications ──────────────────────────────────────────────
     # Query: find_one({email_hash}) in auth_email.py

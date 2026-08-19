@@ -3,6 +3,7 @@
 1. Request body size limits (MAX_CONTENT_LENGTH + 413 handler)
 2. Atomic employee ID generation (MongoDB counter)
 3. MongoDB indexes
+4. Email hash determinism, uniqueness, and duplicate detection
 """
 
 import importlib
@@ -442,10 +443,13 @@ class TestMongoDBIndexes:
                 break
         assert found, "Missing (user_id, last_seen) index on active_sessions"
 
-    def test_counters_index_created(self):
-        """counters collection gets an index (for atomic employee ID generation)."""
-        db = self._call_init_indexes()
-        assert db.counters.create_index.called
+    def test_counters_no_explicit_id_index(self):
+        """counters collection must NOT have an explicit _id index — MongoDB
+        manages the _id index automatically and does not accept the
+        background option on it."""
+        src = open(os.path.join(_ROOT, "extensions.py"), encoding="utf-8").read()
+        # The old invalid line was: db.counters.create_index("_id", background=True)
+        assert 'db.counters.create_index("_id"' not in src
 
     def test_otp_verifications_index_created(self):
         """otp_verifications collection gets an email_hash index."""
@@ -726,3 +730,212 @@ class TestHealthEndpoint:
         assert "get_db" not in health_block
         assert "db.command" not in health_block
         assert "except" not in health_block
+
+
+# ---------------------------------------------------------------------------
+# 5. EMAIL HASH DETERMINISM, UNIQUENESS, AND DUPLICATE DETECTION
+# ---------------------------------------------------------------------------
+
+
+class TestEmailHashDeterminism:
+    """blind_index.blind_index must produce the same hash for the same input."""
+
+    def _bi(self):
+        """Return blind_index with HASH_INDEX_SECRET mocked."""
+        import importlib
+        import blind_index as bi_mod
+        importlib.reload(bi_mod)
+        return bi_mod.blind_index
+
+    def test_same_email_same_hash(self):
+        """Calling blind_index twice with the same email yields identical output."""
+        with patch.dict(os.environ, {"HASH_INDEX_SECRET": "test-secret-key-for-tests"}):
+            bi = self._bi()
+            h1 = bi("alice@example.com")
+            h2 = bi("alice@example.com")
+            assert h1 == h2
+
+    def test_deterministic_across_imports(self):
+        """Hash is stable even if the module is re-imported."""
+        import importlib
+        with patch.dict(os.environ, {"HASH_INDEX_SECRET": "test-secret-key-for-tests"}):
+            import blind_index as bi_mod
+            h1 = bi_mod.blind_index("test@example.com")
+            importlib.reload(bi_mod)
+            h2 = bi_mod.blind_index("test@example.com")
+            assert h1 == h2
+
+    def test_normalizes_case(self):
+        """blind_index lowercases input: 'Alice@Example.COM' == 'alice@example.com'."""
+        with patch.dict(os.environ, {"HASH_INDEX_SECRET": "test-secret-key-for-tests"}):
+            bi = self._bi()
+            assert bi("Alice@Example.COM") == bi("alice@example.com")
+
+    def test_strips_whitespace(self):
+        """Leading/trailing whitespace is stripped before hashing."""
+        with patch.dict(os.environ, {"HASH_INDEX_SECRET": "test-secret-key-for-tests"}):
+            bi = self._bi()
+            assert bi("  alice@example.com  ") == bi("alice@example.com")
+
+    def test_hash_is_hex_64_chars(self):
+        """SHA-256 HMAC produces a 64-char hex string."""
+        with patch.dict(os.environ, {"HASH_INDEX_SECRET": "test-secret-key-for-tests"}):
+            bi = self._bi()
+            h = bi("alice@example.com")
+            assert len(h) == 64
+            assert all(c in "0123456789abcdef" for c in h)
+
+
+class TestEmailHashUniqueness:
+    """Different emails must produce different hashes."""
+
+    def _bi(self):
+        """Return blind_index with HASH_INDEX_SECRET mocked."""
+        import importlib
+        import blind_index as bi_mod
+        importlib.reload(bi_mod)
+        return bi_mod.blind_index
+
+    def test_different_emails_different_hashes(self):
+        with patch.dict(os.environ, {"HASH_INDEX_SECRET": "test-secret-key-for-tests"}):
+            bi = self._bi()
+            h1 = bi("alice@example.com")
+            h2 = bi("bob@example.com")
+            assert h1 != h2
+
+    def test_similar_emails_different_hashes(self):
+        with patch.dict(os.environ, {"HASH_INDEX_SECRET": "test-secret-key-for-tests"}):
+            bi = self._bi()
+            h1 = bi("alice@example.com")
+            h2 = bi("alice@EXAMPLE.com")  # different subdomain casing normalized, but distinct from aliceb@example
+            h3 = bi("aliceb@example.com")  # different local part
+            assert h1 != h3
+
+    def test_single_char_difference(self):
+        with patch.dict(os.environ, {"HASH_INDEX_SECRET": "test-secret-key-for-tests"}):
+            bi = self._bi()
+            h1 = bi("user1@example.com")
+            h2 = bi("user2@example.com")
+            assert h1 != h2
+
+
+class TestUniqueIndexConfiguration:
+    """The users.email_hash index must be configured with unique=True."""
+
+    def test_init_indexes_source_has_unique_true(self):
+        """extensions.py _init_indexes must create email_hash with unique=True."""
+        src = open(os.path.join(_ROOT, "extensions.py"), encoding="utf-8").read()
+        # Find the users email_hash index creation line
+        assert 'create_index("email_hash"' in src
+        # Verify unique=True is on the same line or in the same call
+        idx = src.find('create_index("email_hash"')
+        snippet = src[idx:idx+120]
+        assert "unique=True" in snippet
+
+    def test_init_indexes_catches_duplicate_key_error(self):
+        """Startup must catch DuplicateKeyError and log instead of crashing."""
+        src = open(os.path.join(_ROOT, "extensions.py"), encoding="utf-8").read()
+        assert "DuplicateKeyError" in src
+        assert "email_hash" in src
+        # Verify it logs a critical message
+        assert "log.critical" in src
+
+    def test_find_duplicates_script_exists(self):
+        """find_duplicates.py diagnostic utility must exist."""
+        path = os.path.join(_ROOT, "find_duplicates.py")
+        assert os.path.isfile(path), "find_duplicates.py not found"
+
+    def test_find_duplicates_has_aggregation_pipeline(self):
+        """find_duplicates.py uses MongoDB aggregation to find duplicates."""
+        src = open(os.path.join(_ROOT, "find_duplicates.py"), encoding="utf-8").read()
+        assert "$group" in src
+        assert "$match" in src
+        assert "email_hash" in src
+
+    def test_find_duplicates_does_not_delete(self):
+        """find_duplicates.py must NOT contain delete_one or delete_many."""
+        src = open(os.path.join(_ROOT, "find_duplicates.py"), encoding="utf-8").read()
+        assert "delete_one" not in src
+        assert "delete_many" not in src
+        assert "drop()" not in src
+
+    def test_find_duplicates_does_not_expose_secrets(self):
+        """find_duplicates.py must NOT output password_hash, wrapped_dek,
+        encrypted fields, TOTP secrets, or session tokens."""
+        src = open(os.path.join(_ROOT, "find_duplicates.py"), encoding="utf-8").read()
+        # The script should not print these sensitive fields
+        assert "password_hash" not in src or "has_password" in src  # has_password is a bool flag
+        assert "wrapped_dek" not in src
+        assert "totp_secret" not in src
+        assert "session_token" not in src
+
+
+class TestDuplicateDetection:
+    """The find_duplicates utility safely detects duplicate records."""
+
+    def test_find_duplicates_empty_collection(self):
+        """find_duplicates returns empty list when no duplicates exist."""
+        from find_duplicates import find_duplicates
+        mock_db = MagicMock()
+        mock_db.users.aggregate.return_value = []
+        result = find_duplicates(mock_db)
+        assert result == []
+
+    def test_find_duplicates_with_groups(self):
+        """find_duplicates returns groups when duplicates exist."""
+        from find_duplicates import find_duplicates
+        mock_db = MagicMock()
+        mock_db.users.aggregate.return_value = [
+            {
+                "_id": "abc123",
+                "count": 2,
+                "docs": [
+                    {"id": "oid1", "created_at": None, "org_id": "org1",
+                     "role": "admin", "has_password": True, "last_login": None},
+                    {"id": "oid2", "created_at": None, "org_id": "org2",
+                     "role": "admin", "has_password": True, "last_login": None},
+                ],
+            }
+        ]
+        result = find_duplicates(mock_db)
+        assert len(result) == 1
+        assert result[0]["count"] == 2
+        assert len(result[0]["docs"]) == 2
+
+    def test_print_report_no_duplicates(self):
+        """print_report returns 0 when no duplicates found."""
+        from find_duplicates import print_report
+        count = print_report([])
+        assert count == 0
+
+    def test_print_report_with_duplicates(self):
+        """print_report returns the number of duplicate groups."""
+        from find_duplicates import print_report
+        groups = [
+            {"_id": "hash1", "count": 2, "docs": [
+                {"id": "a", "created_at": None, "org_id": "o1",
+                 "role": "admin", "has_password": True, "last_login": None},
+                {"id": "b", "created_at": None, "org_id": "o2",
+                 "role": "admin", "has_password": False, "last_login": None},
+            ]},
+        ]
+        count = print_report(groups)
+        assert count == 1
+
+    def test_signup_flow_checks_existing_user(self):
+        """auth.py Google register checks for existing user before insert."""
+        src = open(os.path.join(_ROOT, "auth.py"), encoding="utf-8").read()
+        assert 'find_one({"email_hash": email_hash})' in src
+        assert 'insert_one(user_doc)' in src
+
+    def test_email_signup_checks_existing_user(self):
+        """auth_email.py email verify-otp checks for existing user before insert."""
+        src = open(os.path.join(_ROOT, "auth_email.py"), encoding="utf-8").read()
+        assert 'find_one({"email_hash": email_hash})' in src
+        assert 'insert_one(user_doc)' in src
+
+    def test_email_start_checks_existing_user(self):
+        """auth_email.py email_start checks for existing user before OTP creation."""
+        src = open(os.path.join(_ROOT, "auth_email.py"), encoding="utf-8").read()
+        # email_start should check for existing user
+        assert 'db.users.find_one({"email_hash": email_hash})' in src
