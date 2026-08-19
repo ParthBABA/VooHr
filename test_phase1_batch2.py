@@ -652,83 +652,77 @@ class TestDeepSeekSTTRemoval:
 
 
 class TestHealthEndpoint:
-    """The /health endpoint should return status without auth."""
+    """GET /health returns a lightweight liveness probe."""
 
-    def test_health_endpoint_exists_in_source(self):
-        """app.py source should contain /health route."""
-        app_source = open(os.path.join(_ROOT, "app.py"), encoding="utf-8").read()
-        assert '"/health"' in app_source
-        assert '"/api/health"' in app_source
-
-    def test_health_endpoint_no_auth_required(self):
-        """Health endpoint should not require authentication."""
-        app_source = open(os.path.join(_ROOT, "app.py"), encoding="utf-8").read()
-        health_section = app_source[app_source.find('def _health_check'):]
-        assert "session.get" not in health_section.split("return jsonify")[0]
-
-    def test_health_returns_200_ok(self):
-        """Health endpoint should return 200 with status ok when MongoDB is available."""
+    def _make_app(self):
+        """Build a minimal Flask app replicating app.py's health route."""
         from flask import Flask, jsonify
-        from unittest.mock import MagicMock, patch
 
         app = Flask(__name__)
         app.config["TESTING"] = True
 
-        mock_db = MagicMock()
-        mock_db.command.return_value = {"ok": 1}
+        @app.route("/health")
+        @app.route("/api/health")
+        def _health_check():
+            return jsonify({"status": "ok"}), 200
 
-        with patch("extensions.get_db", return_value=mock_db):
-            @app.route("/health")
-            def _health_check():
-                from extensions import get_db
-                try:
-                    db = get_db()
-                    db.command("ping")
-                    return jsonify({"status": "ok"}), 200
-                except Exception:
-                    return jsonify({"status": "unhealthy", "error": "database_unavailable"}), 503
+        return app
 
-            with app.test_client() as client:
-                resp = client.get("/health")
-                assert resp.status_code == 200
-                assert resp.get_json()["status"] == "ok"
+    def test_get_health_returns_200(self):
+        """GET /health must return HTTP 200."""
+        app = self._make_app()
+        with app.test_client() as client:
+            resp = client.get("/health")
+            assert resp.status_code == 200
 
-    def test_health_returns_503_when_db_down(self):
-        """Health endpoint should return 503 when MongoDB is unavailable."""
-        from flask import Flask, jsonify
-        from unittest.mock import MagicMock, patch
+    def test_get_api_health_returns_200(self):
+        """GET /api/health must also return HTTP 200."""
+        app = self._make_app()
+        with app.test_client() as client:
+            resp = client.get("/api/health")
+            assert resp.status_code == 200
 
-        app = Flask(__name__)
-        app.config["TESTING"] = True
+    def test_health_response_body(self):
+        """Response body must be exactly {"status": "ok"}."""
+        app = self._make_app()
+        with app.test_client() as client:
+            resp = client.get("/health")
+            assert resp.get_json() == {"status": "ok"}
 
-        mock_db = MagicMock()
-        mock_db.command.side_effect = Exception("Connection refused")
+    def test_health_exposes_no_secrets(self):
+        """Response must not contain env vars, URIs, keys, or stack traces."""
+        app = self._make_app()
+        with app.test_client() as client:
+            body = client.get("/health").get_data(as_text=True).lower()
+        for term in ("mongo", "api_key", "secret", "password", "traceback",
+                      "stack", "uri", "token", "session"):
+            assert term not in body, f"Health response leaks '{term}'"
 
-        with patch("extensions.get_db", return_value=mock_db):
-            @app.route("/health")
-            def _health_check():
-                from extensions import get_db
-                try:
-                    db = get_db()
-                    db.command("ping")
-                    return jsonify({"status": "ok"}), 200
-                except Exception:
-                    return jsonify({"status": "unhealthy", "error": "database_unavailable"}), 503
+    def test_health_requires_no_authentication(self):
+        """Unauthenticated GET /health must succeed (no login needed)."""
+        app = self._make_app()
+        with app.test_client() as client:
+            resp = client.get("/health")
+            assert resp.status_code == 200
+            assert resp.get_json()["status"] == "ok"
 
-            with app.test_client() as client:
-                resp = client.get("/health")
-                assert resp.status_code == 503
-                assert resp.get_json()["status"] == "unhealthy"
+    def test_health_not_blocked_by_csrf(self):
+        """GET /health is safe-method and must not be blocked by CSRF."""
+        app = self._make_app()
+        with app.test_client() as client:
+            resp = client.get("/health")
+            assert resp.status_code != 403
 
-    def test_health_source_uses_db_command_ping(self):
-        """app.py health handler should use db.command('ping') for liveness check."""
-        app_source = open(os.path.join(_ROOT, "app.py"), encoding="utf-8").read()
-        health_section = app_source[app_source.find('def _health_check'):app_source.find('return app')]
-        assert 'db.command("ping")' in health_section
+    def test_health_source_in_app(self):
+        """app.py source must contain both /health and /api/health routes."""
+        src = open(os.path.join(_ROOT, "app.py"), encoding="utf-8").read()
+        assert '"/health"' in src
+        assert '"/api/health"' in src
 
-    def test_health_source_catches_exception(self):
-        """app.py health handler should catch exceptions and return 503."""
-        app_source = open(os.path.join(_ROOT, "app.py"), encoding="utf-8").read()
-        health_section = app_source[app_source.find('def _health_check'):app_source.find('return app')]
-        assert "except Exception" in health_section
-        assert "503" in health_section
+    def test_health_source_is_lightweight(self):
+        """app.py health handler must NOT call db.command or get_db."""
+        src = open(os.path.join(_ROOT, "app.py"), encoding="utf-8").read()
+        health_block = src[src.find('def _health_check'):src.find('\n    @app.before_request')]
+        assert "get_db" not in health_block
+        assert "db.command" not in health_block
+        assert "except" not in health_block

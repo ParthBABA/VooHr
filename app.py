@@ -51,18 +51,12 @@ def create_app():
     @app.route("/health")
     @app.route("/api/health")
     def _health_check():
-        """Production-safe health check endpoint.
-        
-        Returns 200 OK if the service is running, 503 if MongoDB is unavailable.
-        No authentication required - used by load balancers and monitoring.
+        """Liveness-only health check.
+
+        Returns 200 immediately — no DB ping, no secret leakage.
+        Used by load balancers and Render health checks.
         """
-        try:
-            db = get_db()
-            db.command("ping")
-            return jsonify({"status": "ok"}), 200
-        except Exception as e:
-            app.logger.warning("Health check failed: %s", str(e))
-            return jsonify({"status": "unhealthy", "error": "database_unavailable"}), 503
+        return jsonify({"status": "ok"}), 200
 
     @app.before_request
     def _csrf_protect():
