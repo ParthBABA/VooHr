@@ -7,6 +7,7 @@ import re
 from extensions import get_db
 from employees import _session_is_active
 from field_encryption import decrypt_fields, encrypt_fields
+from login_flow import _hash_session_token
 
 api_bp = Blueprint("api", __name__)
 
@@ -370,6 +371,7 @@ def list_active_sessions():
 
     db = get_db()
     current_token = session.get("session_token")
+    current_hash = _hash_session_token(current_token) if current_token else None
     docs = db.active_sessions.find({"user_id": ObjectId(user_id)}).sort("last_seen", -1)
 
     sessions = []
@@ -382,7 +384,7 @@ def list_active_sessions():
                 "ip": d.get("ip") or "",
                 "created_at": d.get("created_at").isoformat() if d.get("created_at") else None,
                 "last_seen": d.get("last_seen").isoformat() if d.get("last_seen") else None,
-                "is_current": d.get("session_token") == current_token,
+                "is_current": d.get("session_token") == current_hash,
             }
         )
     return jsonify({"sessions": sessions})
@@ -408,7 +410,7 @@ def revoke_active_session(session_doc_id):
     if not doc:
         return jsonify({"error": "not_found"}), 404
 
-    if doc.get("session_token") == session.get("session_token"):
+    if doc.get("session_token") == _hash_session_token(session.get("session_token", "")):
         return jsonify({"error": "cannot_revoke_current"}), 400
 
     db.active_sessions.delete_one({"_id": doc_id})

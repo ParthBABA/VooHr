@@ -8,6 +8,7 @@ from blind_index import blind_index
 from employee_scoring import score_employee
 from extensions import get_db
 from field_encryption import decrypt_fields, encrypt_fields
+from login_flow import _hash_session_token
 
 employees_bp = Blueprint("employees", __name__)
 
@@ -25,7 +26,7 @@ def _session_is_active(user_id, session_token):
         return False
     db = get_db()
     rec = db.active_sessions.find_one(
-        {"user_id": ObjectId(user_id), "session_token": session_token}
+        {"user_id": ObjectId(user_id), "session_token": _hash_session_token(session_token)}
     )
     if not rec:
         return False

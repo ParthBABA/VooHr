@@ -11,6 +11,7 @@ Provides:
     verification, or is a new admin who must enrol in TOTP first?
 """
 
+import hashlib
 import threading
 import uuid
 from datetime import datetime, timezone
@@ -18,6 +19,16 @@ from datetime import datetime, timezone
 import requests
 from bson import ObjectId
 from flask import request, session
+
+
+def _hash_session_token(token: str) -> str:
+    """Deterministic SHA-256 hash of a session token for database storage.
+
+    The raw token lives only in the Flask session cookie and server memory.
+    Only the hex digest is persisted in ``active_sessions`` so a database
+    compromise never leaks usable session tokens.
+    """
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def _is_private_ip(ip) -> bool:
@@ -85,7 +96,7 @@ def _record_active_session(db, user_id: ObjectId):
     db.active_sessions.insert_one(
         {
             "user_id": ObjectId(user_id),
-            "session_token": session_token,
+            "session_token": _hash_session_token(session_token),
             "user_agent": request.headers.get("User-Agent", ""),
             "ip": ip,
             "location": None,
@@ -106,7 +117,7 @@ def _attach_location_async(db, session_token: str, ip: str):
         location = _lookup_location(ip)
         if location:
             db.active_sessions.update_one(
-                {"session_token": session_token},
+                {"session_token": _hash_session_token(session_token)},
                 {"$set": {"location": location}},
             )
     except Exception:

@@ -1,5 +1,7 @@
+import hmac
 import logging
 import os
+import secrets
 
 from bson import ObjectId
 from flask import Flask, jsonify, request, send_from_directory, redirect, render_template, session
@@ -25,6 +27,42 @@ def create_app():
     # interactive Werkzeug debugger (an HTML page) instead of letting our
     # errorhandler below turn it into JSON for API callers.
     app.config["PROPAGATE_EXCEPTIONS"] = False
+
+    # ── CSRF protection ─────────────────────────────────────────────────
+    # Every state-changing request (POST/PUT/PATCH/DELETE) from an
+    # authenticated session must carry a valid X-CSRF-Token header.
+    # The token is a secrets.token_urlsafe(32) stored in the Flask session
+    # and delivered to the frontend via GET /api/csrf-token.  The frontend
+    # JS (static/csrf.js) monkey-patches window.fetch to attach it
+    # automatically.
+
+    @app.route("/api/csrf-token")
+    def _csrf_token_endpoint():
+        """Return the CSRF token for the current authenticated session."""
+        if not session.get("user_id"):
+            return jsonify({"error": "not_authenticated"}), 401
+        if "_csrf_token" not in session:
+            session["_csrf_token"] = secrets.token_urlsafe(32)
+        return jsonify({"csrf_token": session["_csrf_token"]})
+
+    @app.before_request
+    def _csrf_protect():
+        """Validate CSRF token on state-changing requests from authenticated
+        sessions.  Safe methods and unauthenticated requests are exempt."""
+        if request.method in ("GET", "HEAD", "OPTIONS"):
+            return None
+        # Only enforce for authenticated sessions
+        if not session.get("user_id"):
+            return None
+        token = request.headers.get("X-CSRF-Token")
+        if not token:
+            return jsonify({"error": "CSRF validation failed"}), 403
+        expected = session.get("_csrf_token")
+        if not expected:
+            return jsonify({"error": "CSRF validation failed"}), 403
+        if not hmac.compare_digest(token, expected):
+            return jsonify({"error": "CSRF validation failed"}), 403
+        return None
 
     # Startup sanity check so production logs show whether the Brevo email
     # config was loaded. Only presence is logged, never the key value.
