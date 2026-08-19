@@ -9,10 +9,6 @@
   <script src="/csrf.js"></script>
 </head>
 <body style="background:var(--void); color:var(--ivory); font-family:var(--font-b); font-size:15px; line-height:1.6; min-height:100vh; overflow-x:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px 24px; box-sizing:border-box;">
-  <!-- Spline 3D background -->
-  <canvas id="canvas3d" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;background:var(--void);"></canvas>
-  <div id="spline-overlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:1;background:rgba(0,0,0,0.4);pointer-events:none;"></div>
-
   <!-- Redirect if already logged in -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -493,13 +489,6 @@
   <style>
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
-  <!-- Spline runtime -->
-  <script type="module">
-    import { Application } from 'https://unpkg.com/@splinetool/runtime/build/runtime.js';
-    const canvas = document.getElementById('canvas3d');
-    const app = new Application(canvas);
-    app.load('https://prod.spline.design/dnEDCleAPoBnwXaA/scene.splinecode');
-  </script>
   <!-- Cookie consent banner -->
   <script>
     (function() {

@@ -7,9 +7,6 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body style="background:var(--void); color:var(--ivory); font-family:var(--font-b); font-size:15px; line-height:1.6; min-height:100vh; overflow-x:hidden; padding:40px 20px; box-sizing:border-box;">
-  <canvas id="canvas3d" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;background:var(--void);"></canvas>
-  <div id="spline-overlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:1;background:rgba(0,0,0,0.4);pointer-events:none;"></div>
-
   <div style="max-width:800px;margin:0 auto;position:relative;z-index:10;background:var(--ink);border:1px solid var(--border);border-radius:12px;padding:40px 32px;box-shadow:var(--shadow-md);">
     <div style="margin-bottom:24px;">
       <a href="/login2.html" style="font-family:var(--font-lato); font-size:0.7rem; color:var(--amber); letter-spacing:0.05em; text-transform:uppercase; text-decoration:none;">← Back to Login</a>
@@ -92,13 +89,6 @@
     <a href="mailto:voovrhr@gmail.com" style="color:var(--amber); margin-left:8px;">Contact</a>
   </footer>
 
-  <!-- Spline runtime -->
-  <script type="module">
-    import { Application } from 'https://unpkg.com/@splinetool/runtime/build/runtime.js';
-    const canvas = document.getElementById('canvas3d');
-    const app = new Application(canvas);
-    app.load('https://prod.spline.design/dnEDCleAPoBnwXaA/scene.splinecode');
-  </script>
   <!-- Cookie consent banner -->
   <script>
     (function() {

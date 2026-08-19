@@ -504,6 +504,7 @@ h1,h2,h3,h4{
   pointer-events:none;
   mix-blend-mode:lighten;
 }
+
 .hero-scrim{
   position:absolute; inset:0;
   z-index:1;
@@ -3029,14 +3030,6 @@ gsap.to('#demoPanel', { y:-6, duration:3.6, ease:'sine.inOut', yoyo:true, repeat
 window.addEventListener('load', function() {
   (async function(){
     try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
-    if(!window.__voovrSplineReady){
-      await new Promise(function(resolve){
-        var done = false;
-        var finish = function(){ if(!done){ done = true; resolve(); } };
-        window.addEventListener('voovr:spline-ready', finish, { once:true });
-        setTimeout(finish, 5000);
-      });
-    }
     var tl = gsap.timeline({ defaults:{ ease:'power3.out' } });
 
     tl.to('#loader', { opacity:0, duration:.6, onComplete:function(){ document.getElementById('loader').style.display='none'; } })
@@ -3353,18 +3346,14 @@ window.addEventListener('scroll', function(){
 <script type="module">
 (function(){
  var canvas=document.getElementById('canvas3d'); if(!canvas)return;
- window.__voovrSplineReady=false;
- var d=Math.min(window.devicePixelRatio||1,matchMedia('(max-width:768px)').matches?1:1.25);
- try{Object.defineProperty(window,'devicePixelRatio',{configurable:true,get:function(){return d}})}catch(e){}
- function ready(){window.__voovrSplineReady=true;window.dispatchEvent(new Event('voovr:spline-ready'))}
  import('https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js').then(function(m){
    var app=new m.Application(canvas);
-   return app.load('https://prod.spline.design/aflzqGas8LjPtPQY/scene.splinecode').then(function(){
-     ready(); app.play();
+   return app.load('https://prod.spline.design/jhs7cyJaMDYvVaFw/scene.splinecode').then(function(){
+     app.play();
      var io='IntersectionObserver'in window?new IntersectionObserver(function(es){es.forEach(function(e){e.isIntersecting?app.play():app.pause()})},{threshold:0}).observe(canvas):null;
      document.addEventListener('visibilitychange',function(){document.visibilityState==='visible'?app.play():app.pause()});
    });
- }).catch(function(e){console.warn('[Spline]',e);ready()});
+ }).catch(function(e){console.warn('[Spline]',e)});
 })();
 </script>
 <script id="voovr-critical-navigation">
@@ -3389,13 +3378,6 @@ window.addEventListener('scroll', function(){
 
  async function reveal(){
    try{if(document.fonts&&document.fonts.ready)await document.fonts.ready}catch(e){}
-   if(!window.__voovrSplineReady){
-     await new Promise(function(r){
-       var done=false,finish=function(){if(!done){done=true;r()}};
-       window.addEventListener('voovr:spline-ready',finish,{once:true});
-       setTimeout(finish,4200);
-     });
-   }
    requestAnimationFrame(function(){requestAnimationFrame(function(){if(o)o.classList.remove('is-active')})});
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',reveal,{once:true});else reveal();
