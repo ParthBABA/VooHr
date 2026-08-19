@@ -6,11 +6,6 @@ def get_stt_provider():
     if name == "openai":
         from providers.openai_stt import OpenAIWhisperSTT
         return OpenAIWhisperSTT()
-    if name == "deepseek":
-        # NOTE: DeepSeek has no audio/transcription API — this will fail at
-        # request time. Kept only for reference; use STT_PROVIDER=openai.
-        from providers.deepseek_stt import DeepSeekSTT
-        return DeepSeekSTT()
     raise ValueError(f"Unknown STT provider: {name}")
 
 

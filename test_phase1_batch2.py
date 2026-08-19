@@ -551,3 +551,184 @@ class TestInitDBIntegration:
         import inspect
         src = inspect.getsource(extensions.init_db)
         assert "_init_rate_limits(db)" in src
+
+
+# ---------------------------------------------------------------------------
+# 5. BLIND INDEX HOT-PATH FIX
+# ---------------------------------------------------------------------------
+
+
+class TestBlindIndexHotPath:
+    """blind_index._get_secret() must NOT call load_dotenv() on every invocation."""
+
+    def test_get_secret_no_load_dotenv(self):
+        """_get_secret should not import or call load_dotenv."""
+        import blind_index
+        import inspect
+        src = inspect.getsource(blind_index._get_secret)
+        # Check that no import of dotenv or load_dotenv call exists in the function body
+        # (docstrings mentioning it are fine, but actual code must not have it)
+        import ast
+        tree = ast.parse(src)
+        func_def = tree.body[0]  # the function def
+        func_src_lines = src.splitlines()
+        # Get the actual code lines of the function body (skip docstring)
+        body = func_def.body
+        # If first statement is Expr(Constant(Str)), that's the docstring - skip it
+        start_line = body[0].end_lineno if hasattr(body[0], 'end_lineno') else 0
+        if isinstance(body[0], ast.Expr) and isinstance(body[0].value, (ast.Constant, ast.Str)):
+            start_line = body[0].end_lineno
+        code_lines = func_src_lines[start_line:]
+        code_body = "\n".join(code_lines)
+        assert "load_dotenv" not in code_body
+
+    def test_get_secret_still_returns_valid_secret(self):
+        """_get_secret should still return a valid secret from environment."""
+        import blind_index
+        import os
+        os.environ["HASH_INDEX_SECRET"] = "test-secret-123"
+        try:
+            secret = blind_index._get_secret()
+            assert secret == "test-secret-123"
+        finally:
+            del os.environ["HASH_INDEX_SECRET"]
+
+    def test_blind_index_still_works(self):
+        """blind_index() should still produce deterministic HMAC output."""
+        import blind_index
+        import os
+        os.environ["HASH_INDEX_SECRET"] = "test-secret-123"
+        try:
+            result1 = blind_index.blind_index("test@example.com")
+            result2 = blind_index.blind_index("test@example.com")
+            assert result1 == result2
+            assert len(result1) == 64
+        finally:
+            del os.environ["HASH_INDEX_SECRET"]
+
+
+# ---------------------------------------------------------------------------
+# 6. DEAD DEEPSEEK STT REMOVAL
+# ---------------------------------------------------------------------------
+
+
+class TestDeepSeekSTTRemoval:
+    """The dead DeepSeek STT provider code should be removed."""
+
+    def test_deepseek_stt_file_deleted(self):
+        """providers/deepseek_stt.py should not exist."""
+        import os
+        assert not os.path.exists(os.path.join(_ROOT, "providers", "deepseek_stt.py"))
+
+    def test_get_stt_provider_no_deepseek_branch(self):
+        """get_stt_provider should not have a DeepSeek branch."""
+        import providers
+        import inspect
+        src = inspect.getsource(providers.get_stt_provider)
+        assert "deepseek" not in src.lower()
+
+    def test_get_llm_provider_still_has_deepseek(self):
+        """get_llm_provider should still support DeepSeek (LLM, not STT)."""
+        import providers
+        import inspect
+        src = inspect.getsource(providers.get_llm_provider)
+        assert "deepseek" in src.lower()
+
+    def test_get_stt_provider_raises_for_unknown(self):
+        """get_stt_provider should raise ValueError for unknown provider."""
+        from flask import Flask
+        from unittest.mock import patch
+        app = Flask(__name__)
+        app.config["STT_PROVIDER"] = "unknown_provider"
+        with app.app_context():
+            import providers
+            with pytest.raises(ValueError, match="Unknown STT provider"):
+                providers.get_stt_provider()
+
+
+# ---------------------------------------------------------------------------
+# 7. HEALTH ENDPOINT
+# ---------------------------------------------------------------------------
+
+
+class TestHealthEndpoint:
+    """The /health endpoint should return status without auth."""
+
+    def test_health_endpoint_exists_in_source(self):
+        """app.py source should contain /health route."""
+        app_source = open(os.path.join(_ROOT, "app.py"), encoding="utf-8").read()
+        assert '"/health"' in app_source
+        assert '"/api/health"' in app_source
+
+    def test_health_endpoint_no_auth_required(self):
+        """Health endpoint should not require authentication."""
+        app_source = open(os.path.join(_ROOT, "app.py"), encoding="utf-8").read()
+        health_section = app_source[app_source.find('def _health_check'):]
+        assert "session.get" not in health_section.split("return jsonify")[0]
+
+    def test_health_returns_200_ok(self):
+        """Health endpoint should return 200 with status ok when MongoDB is available."""
+        from flask import Flask, jsonify
+        from unittest.mock import MagicMock, patch
+
+        app = Flask(__name__)
+        app.config["TESTING"] = True
+
+        mock_db = MagicMock()
+        mock_db.command.return_value = {"ok": 1}
+
+        with patch("extensions.get_db", return_value=mock_db):
+            @app.route("/health")
+            def _health_check():
+                from extensions import get_db
+                try:
+                    db = get_db()
+                    db.command("ping")
+                    return jsonify({"status": "ok"}), 200
+                except Exception:
+                    return jsonify({"status": "unhealthy", "error": "database_unavailable"}), 503
+
+            with app.test_client() as client:
+                resp = client.get("/health")
+                assert resp.status_code == 200
+                assert resp.get_json()["status"] == "ok"
+
+    def test_health_returns_503_when_db_down(self):
+        """Health endpoint should return 503 when MongoDB is unavailable."""
+        from flask import Flask, jsonify
+        from unittest.mock import MagicMock, patch
+
+        app = Flask(__name__)
+        app.config["TESTING"] = True
+
+        mock_db = MagicMock()
+        mock_db.command.side_effect = Exception("Connection refused")
+
+        with patch("extensions.get_db", return_value=mock_db):
+            @app.route("/health")
+            def _health_check():
+                from extensions import get_db
+                try:
+                    db = get_db()
+                    db.command("ping")
+                    return jsonify({"status": "ok"}), 200
+                except Exception:
+                    return jsonify({"status": "unhealthy", "error": "database_unavailable"}), 503
+
+            with app.test_client() as client:
+                resp = client.get("/health")
+                assert resp.status_code == 503
+                assert resp.get_json()["status"] == "unhealthy"
+
+    def test_health_source_uses_db_command_ping(self):
+        """app.py health handler should use db.command('ping') for liveness check."""
+        app_source = open(os.path.join(_ROOT, "app.py"), encoding="utf-8").read()
+        health_section = app_source[app_source.find('def _health_check'):app_source.find('return app')]
+        assert 'db.command("ping")' in health_section
+
+    def test_health_source_catches_exception(self):
+        """app.py health handler should catch exceptions and return 503."""
+        app_source = open(os.path.join(_ROOT, "app.py"), encoding="utf-8").read()
+        health_section = app_source[app_source.find('def _health_check'):app_source.find('return app')]
+        assert "except Exception" in health_section
+        assert "503" in health_section

@@ -13,9 +13,12 @@ import hmac as _hmac
 
 
 def _get_secret():
+    """Return the HMAC secret for blind index generation.
+    
+    Environment variables are loaded at module level in config.py,
+    so load_dotenv() is not called here to avoid per-call overhead.
+    """
     import os
-    from dotenv import load_dotenv
-    load_dotenv()
     return os.environ.get("HASH_INDEX_SECRET") or os.environ.get("JWT_SECRET", "")
 
 
