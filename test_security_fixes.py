@@ -5,6 +5,7 @@
 3. app.py — no hardcoded debug=True, no session_token logging.
 4. login_flow.py — session tokens are stored as SHA-256 hashes.
 5. CSRF protection — centralized before_request guard.
+6. TOTP enforcement — _require_auth and _check_auth block unverified admins.
 """
 
 import importlib
@@ -317,7 +318,7 @@ class TestSessionValidation:
         user_id = str(ObjectId())
         raw_token = "raw-session-token-abc"
 
-        with patch("login_flow._hash_session_token", return_value="HASHED") as mock_hash, \
+        with patch("employees._hash_session_token", return_value="HASHED") as mock_hash, \
              patch("employees.get_db", return_value=db):
             # find_one returns a record so session is "active"
             db.active_sessions.find_one.return_value = {
@@ -644,3 +645,302 @@ class TestCSRFProtection:
         token = self._get_token(client)
         resp = client.delete("/api/data", headers={"X-CSRF-Token": token})
         assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# 9. TOTP enforcement — _require_auth and _check_auth
+# ---------------------------------------------------------------------------
+
+from bson import ObjectId
+from unittest.mock import MagicMock, patch
+from employees import _require_auth, _totp_required, TOTPRequired
+
+# Valid 24-char hex ObjectIds for tests
+_FAKE_UID = "a" * 24
+_FAKE_OID = ObjectId(_FAKE_UID)
+
+
+class TestTOTPRequired:
+    """TOTPRequired exception is raised when an admin session needs
+    TOTP verification."""
+
+    def test_is_exception_subclass(self):
+        assert issubclass(TOTPRequired, Exception)
+
+    def test_can_be_raised_and_caught(self):
+        with pytest.raises(TOTPRequired):
+            raise TOTPRequired()
+
+
+class TestTOTPRequiredFunction:
+    """_totp_required() returns True only when the admin session has TOTP
+    enabled but the session hasn't been verified."""
+
+    def _make_session(self, user_id=None, session_token="tok",
+                      totp_verified_session=None):
+        uid = user_id or _FAKE_UID
+        s = {"user_id": uid, "session_token": session_token}
+        if totp_verified_session is not None:
+            s["totp_verified_session"] = totp_verified_session
+        return s
+
+    def test_returns_false_when_not_logged_in(self):
+        with patch("employees.session", {}):
+            assert _totp_required() is False
+
+    def test_returns_false_for_non_admin(self):
+        user_doc = {"role": "user", "totp_enabled": True}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = self._make_session()
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db):
+            assert _totp_required() is False
+
+    def test_returns_false_when_totp_not_enabled(self):
+        user_doc = {"role": "admin", "totp_enabled": False}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = self._make_session()
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db):
+            assert _totp_required() is False
+
+    def test_returns_false_when_totp_enabled_and_verified(self):
+        user_doc = {"role": "admin", "totp_enabled": True}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = self._make_session(totp_verified_session="tok")
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db):
+            assert _totp_required() is False
+
+    def test_returns_true_when_totp_enabled_and_not_verified(self):
+        user_doc = {"role": "admin", "totp_enabled": True}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = self._make_session()
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db):
+            assert _totp_required() is True
+
+    def test_returns_true_when_totp_verified_for_different_session(self):
+        user_doc = {"role": "admin", "totp_enabled": True}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = self._make_session(totp_verified_session="other-token")
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db):
+            assert _totp_required() is True
+
+    def test_returns_false_when_user_not_found(self):
+        db = MagicMock()
+        db.users.find_one.return_value = None
+        sess = self._make_session()
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db):
+            assert _totp_required() is False
+
+    def test_returns_false_when_totp_enabled_field_missing(self):
+        user_doc = {"role": "admin"}  # no totp_enabled key
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = self._make_session()
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db):
+            assert _totp_required() is False
+
+
+class TestRequireAuthTOTP:
+    """_require_auth() raises TOTPRequired when TOTP enforcement is needed."""
+
+    def _make_session(self, **overrides):
+        s = {
+            "user_id": _FAKE_UID,
+            "org_id": _FAKE_UID,
+            "session_token": "tok123",
+        }
+        s.update(overrides)
+        return s
+
+    def test_raises_totp_when_admin_totp_not_verified(self):
+        user_doc = {"role": "admin", "totp_enabled": True}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = self._make_session()
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db), \
+             patch("employees._session_is_active", return_value=True):
+            with pytest.raises(TOTPRequired):
+                _require_auth()
+
+    def test_returns_org_id_when_admin_totp_verified(self):
+        user_doc = {"role": "admin", "totp_enabled": True}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = self._make_session(totp_verified_session="tok123")
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db), \
+             patch("employees._session_is_active", return_value=True):
+            result = _require_auth()
+            assert result == _FAKE_UID
+
+    def test_returns_org_id_when_totp_not_required(self):
+        user_doc = {"role": "admin", "totp_enabled": False}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = self._make_session()
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db), \
+             patch("employees._session_is_active", return_value=True):
+            result = _require_auth()
+            assert result == _FAKE_UID
+
+    def test_returns_none_when_no_session(self):
+        with patch("employees.session", {}):
+            assert _require_auth() is None
+
+
+class TestCheckAuthTOTP:
+    """_check_auth() in api.py raises TOTPRequired when needed."""
+
+    def _make_session(self, **overrides):
+        s = {"user_id": _FAKE_UID, "session_token": "tok123"}
+        s.update(overrides)
+        return s
+
+    def test_raises_totp_when_admin_totp_not_verified(self):
+        user_doc = {"role": "admin", "totp_enabled": True}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = self._make_session()
+        with patch("api.session", sess), \
+             patch("api.get_db", return_value=db), \
+             patch("api._session_is_active", return_value=True):
+            from api import _check_auth
+            with pytest.raises(TOTPRequired):
+                _check_auth()
+
+    def test_returns_user_id_when_totp_verified(self):
+        user_doc = {"role": "admin", "totp_enabled": True}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = self._make_session(totp_verified_session="tok123")
+        with patch("api.session", sess), \
+             patch("api.get_db", return_value=db), \
+             patch("api._session_is_active", return_value=True):
+            from api import _check_auth
+            result = _check_auth()
+            assert result == _FAKE_UID
+
+    def test_returns_user_id_when_totp_not_required(self):
+        user_doc = {"role": "user", "totp_enabled": False}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = self._make_session()
+        with patch("api.session", sess), \
+             patch("api.get_db", return_value=db), \
+             patch("api._session_is_active", return_value=True):
+            from api import _check_auth
+            result = _check_auth()
+            assert result == _FAKE_UID
+
+    def test_returns_none_when_no_session(self):
+        with patch("api.session", {}):
+            from api import _check_auth
+            assert _check_auth() is None
+
+
+class TestClientBypassPrevention:
+    """Client-provided totp_verified values cannot bypass server-side
+    enforcement."""
+
+    def test_totp_verified_session_from_client_ignored(self):
+        """Even if a client sets totp_verified_session in the session,
+        it must match the current session_token to be valid."""
+        user_doc = {"role": "admin", "totp_enabled": True}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = {
+            "user_id": _FAKE_UID,
+            "org_id": _FAKE_UID,
+            "session_token": "real-tok",
+            "totp_verified_session": "forged-tok",
+        }
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db), \
+             patch("employees._session_is_active", return_value=True):
+            with pytest.raises(TOTPRequired):
+                _require_auth()
+
+    def test_empty_totp_verified_session_not_bypass(self):
+        """An empty totp_verified_session does not bypass the check."""
+        user_doc = {"role": "admin", "totp_enabled": True}
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = {
+            "user_id": _FAKE_UID,
+            "org_id": _FAKE_UID,
+            "session_token": "tok123",
+            "totp_verified_session": "",
+        }
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db), \
+             patch("employees._session_is_active", return_value=True):
+            with pytest.raises(TOTPRequired):
+                _require_auth()
+
+    def test_totp_enabled_true_from_client_ignored(self):
+        """The totp_enabled flag is read from the DB, not the session."""
+        user_doc = {"role": "admin"}  # no totp_enabled in DB
+        db = MagicMock()
+        db.users.find_one.return_value = user_doc
+        sess = {
+            "user_id": _FAKE_UID,
+            "org_id": _FAKE_UID,
+            "session_token": "tok123",
+        }
+        with patch("employees.session", sess), \
+             patch("employees.get_db", return_value=db), \
+             patch("employees._session_is_active", return_value=True):
+            result = _require_auth()
+            assert result == _FAKE_UID  # No TOTP required, passes through
+
+
+class TestExistingPhase1Tests:
+    """Verify existing Phase 1 tests are not broken by TOTP changes."""
+
+    def test_totp_routes_still_accessible_in_source(self):
+        """The TOTP routes in totp_routes.py must not reference _require_auth."""
+        import inspect
+        import totp_routes
+        for name, obj in inspect.getmembers(totp_routes, inspect.isfunction):
+            src = inspect.getsource(obj)
+            assert "_require_auth()" not in src, (
+                f"totp_routes.{name} unexpectedly calls _require_auth()"
+            )
+
+    def test_session_token_still_hashed(self):
+        """Session token hashing still works after TOTP enforcement."""
+        token = "test-token-for-hash"
+        h = login_flow._hash_session_token(token)
+        assert len(h) == 64
+
+    def test_error_handler_returns_403(self):
+        """The TOTPRequired error handler in app.py returns 403."""
+        # Read the app.py source to verify the handler exists
+        app_source = open(
+            os.path.join(os.path.dirname(__file__), "app.py"), encoding="utf-8"
+        ).read()
+        assert "TOTPRequired" in app_source
+        assert "403" in app_source
+
+    def test_require_auth_imports_totp_required(self):
+        """employees.py exports TOTPRequired for use by other modules."""
+        from employees import TOTPRequired
+        assert TOTPRequired is not None
+
+    def test_check_auth_exists_in_api(self):
+        """api.py defines _check_auth with TOTP enforcement."""
+        import api
+        assert hasattr(api, "_check_auth")

@@ -5,11 +5,37 @@ from flask import Blueprint, jsonify, request, session
 import re
 
 from extensions import get_db
-from employees import _session_is_active
+from employees import _session_is_active, TOTPRequired
 from field_encryption import decrypt_fields, encrypt_fields
 from login_flow import _hash_session_token
 
 api_bp = Blueprint("api", __name__)
+
+
+def _check_auth():
+    """Validate session + TOTP for API routes that do manual checks.
+
+    Returns the user_id string on success.  Raises TOTPRequired if the
+    admin session needs TOTP verification.  Returns None (after clearing
+    the session) for invalid/expired sessions.
+    """
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    if not _session_is_active(user_id, session.get("session_token")):
+        session.clear()
+        return None
+    try:
+        uid = ObjectId(user_id)
+    except InvalidId:
+        session.clear()
+        return None
+    db = get_db()
+    user = db.users.find_one({"_id": uid}, {"role": 1, "totp_enabled": 1})
+    if user and user.get("role") == "admin" and user.get("totp_enabled") is True:
+        if session.get("totp_verified_session") != session.get("session_token"):
+            raise TOTPRequired()
+    return user_id
 
 
 @api_bp.route("/onboarding/org", methods=["POST"])
@@ -35,12 +61,8 @@ def save_pending_org():
 
 @api_bp.route("/me")
 def me():
-    user_id = session.get("user_id")
+    user_id = _check_auth()
     if not user_id:
-        return jsonify({"error": "not_authenticated"}), 401
-
-    if not _session_is_active(user_id, session.get("session_token")):
-        session.clear()
         return jsonify({"error": "not_authenticated"}), 401
 
     db = get_db()
@@ -82,12 +104,8 @@ def me():
 
 @api_bp.route("/me", methods=["PATCH"])
 def update_me():
-    user_id = session.get("user_id")
+    user_id = _check_auth()
     if not user_id:
-        return jsonify({"error": "not_authenticated"}), 401
-
-    if not _session_is_active(user_id, session.get("session_token")):
-        session.clear()
         return jsonify({"error": "not_authenticated"}), 401
 
     db = get_db()
@@ -143,12 +161,8 @@ VALID_ORG_SIZES = {"1-10", "11-50", "51-200", "201-1000", "1000+"}
 
 @api_bp.route("/organization", methods=["PUT"])
 def update_organization():
-    user_id = session.get("user_id")
+    user_id = _check_auth()
     if not user_id:
-        return jsonify({"error": "not_authenticated"}), 401
-
-    if not _session_is_active(user_id, session.get("session_token")):
-        session.clear()
         return jsonify({"error": "not_authenticated"}), 401
 
     db = get_db()
@@ -203,12 +217,8 @@ def update_organization():
 
 @api_bp.route("/organization/notification-prefs")
 def get_organization_notification_prefs():
-    user_id = session.get("user_id")
+    user_id = _check_auth()
     if not user_id:
-        return jsonify({"error": "not_authenticated"}), 401
-
-    if not _session_is_active(user_id, session.get("session_token")):
-        session.clear()
         return jsonify({"error": "not_authenticated"}), 401
 
     db = get_db()
@@ -229,12 +239,8 @@ def get_organization_notification_prefs():
 
 @api_bp.route("/organization/notification-prefs", methods=["PUT"])
 def update_organization_notification_prefs():
-    user_id = session.get("user_id")
+    user_id = _check_auth()
     if not user_id:
-        return jsonify({"error": "not_authenticated"}), 401
-
-    if not _session_is_active(user_id, session.get("session_token")):
-        session.clear()
         return jsonify({"error": "not_authenticated"}), 401
 
     db = get_db()
@@ -361,12 +367,8 @@ def _parse_device(user_agent: str) -> dict:
 
 @api_bp.route("/sessions/active")
 def list_active_sessions():
-    user_id = session.get("user_id")
+    user_id = _check_auth()
     if not user_id:
-        return jsonify({"error": "not_authenticated"}), 401
-
-    if not _session_is_active(user_id, session.get("session_token")):
-        session.clear()
         return jsonify({"error": "not_authenticated"}), 401
 
     db = get_db()
@@ -392,12 +394,8 @@ def list_active_sessions():
 
 @api_bp.route("/sessions/revoke/<session_doc_id>", methods=["POST"])
 def revoke_active_session(session_doc_id):
-    user_id = session.get("user_id")
+    user_id = _check_auth()
     if not user_id:
-        return jsonify({"error": "not_authenticated"}), 401
-
-    if not _session_is_active(user_id, session.get("session_token")):
-        session.clear()
         return jsonify({"error": "not_authenticated"}), 401
 
     db = get_db()

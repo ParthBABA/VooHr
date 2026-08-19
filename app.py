@@ -12,6 +12,7 @@ from auth_email import auth_email_bp
 from config import Config
 from employees import employees_bp
 from employees import _session_is_active
+from employees import TOTPRequired
 from extensions import get_db, init_db
 from notifications import notifications_bp
 from sessions import sessions_bp
@@ -83,6 +84,10 @@ def create_app():
     app.register_blueprint(employees_bp, url_prefix="/api")
     app.register_blueprint(sessions_bp, url_prefix="/api")
     app.register_blueprint(notifications_bp, url_prefix="/api")
+
+    @app.errorhandler(TOTPRequired)
+    def _handle_totp_required(exc):
+        return jsonify({"error": "TOTP verification required"}), 403
 
     # ── Admin TOTP guard ────────────────────────────────────────────────
     # Every admin session must satisfy TWO conditions before accessing

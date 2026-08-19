@@ -13,6 +13,11 @@ from login_flow import _hash_session_token
 employees_bp = Blueprint("employees", __name__)
 
 
+class TOTPRequired(Exception):
+    """Raised by _require_auth() when the admin session needs TOTP verification."""
+    pass
+
+
 def _session_is_active(user_id, session_token):
     """True if a matching active_sessions record exists for this login. Also
     serves as a cheap heartbeat: refreshes last_seen at most every 5 minutes
@@ -57,7 +62,30 @@ def _require_auth():
     if not _session_is_active(user_id, session.get("session_token")):
         session.clear()
         return None
+    if _totp_required():
+        raise TOTPRequired()
     return org_id
+
+
+def _totp_required():
+    """Return True if the current admin session has TOTP enabled but the
+    session has not been verified.  Non-admin users and users without TOTP
+    are never blocked."""
+    user_id = session.get("user_id")
+    session_token = session.get("session_token")
+    if not user_id or not session_token:
+        return False
+    try:
+        uid = ObjectId(user_id)
+    except Exception:
+        return False
+    db = get_db()
+    user = db.users.find_one({"_id": uid}, {"role": 1, "totp_enabled": 1})
+    if not user or user.get("role") != "admin":
+        return False
+    if user.get("totp_enabled") is not True:
+        return False
+    return session.get("totp_verified_session") != session_token
 
 
 def _next_employee_id(db, org_id: str) -> str:
