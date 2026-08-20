@@ -3033,7 +3033,15 @@ gsap.to('#demoPanel', { y:-6, duration:3.6, ease:'sine.inOut', yoyo:true, repeat
 
 window.addEventListener('load', function() {
   (async function(){
-    try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
+    var globalMax=new Promise(function(r){setTimeout(r,15000)});
+    var ready=(async function(){
+      try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
+      if(window.__splineReady && window.__splineReady.promise){
+        var fallback=new Promise(function(r){setTimeout(r,10000)});
+        await Promise.race([window.__splineReady.promise,fallback]);
+      }
+    })();
+    await Promise.race([ready,globalMax]);
     var tl = gsap.timeline({ defaults:{ ease:'power3.out' } });
 
     tl.to('#loader', { opacity:0, duration:.6, onComplete:function(){ document.getElementById('loader').style.display='none'; } })
@@ -3050,6 +3058,7 @@ window.addEventListener('load', function() {
    MAGNETIC BUTTONS
 ============================================================ */
 document.querySelectorAll('.magnetic').forEach(function(el){
+  if('ontouchstart'in window||navigator.maxTouchPoints>0) return;
   el.addEventListener('mousemove', function(e){
     var r = el.getBoundingClientRect();
     var x = e.clientX - r.left - r.width/2;
@@ -3347,17 +3356,31 @@ window.addEventListener('scroll', function(){
 })();
 </script>
 
+<script>
+window.__splineReady=(function(){var p={};p.promise=new Promise(function(r,j){p.resolve=r;p.reject=j});return p})();
+</script>
 <script type="module">
 (function(){
- var canvas=document.getElementById('canvas3d'); if(!canvas)return;
+ var canvas=document.getElementById('canvas3d');
+ if(!canvas){window.__splineReady.resolve();return}
+ var isMobile=('ontouchstart'in window||navigator.maxTouchPoints>0||navigator.maxTouchPoints===undefined)&&window.innerWidth<=768;
+ var origDpr=window.devicePixelRatio;
+ if(isMobile){window.devicePixelRatio=Math.min(origDpr,1.25)}
+ function restoreDpr(){try{window.devicePixelRatio=origDpr}catch(e){}}
  import('https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js').then(function(m){
    var app=new m.Application(canvas);
    return app.load('https://prod.spline.design/jhs7cyJaMDYvVaFw/scene.splinecode').then(function(){
+     restoreDpr();
      app.play();
-     var io='IntersectionObserver'in window?new IntersectionObserver(function(es){es.forEach(function(e){e.isIntersecting?app.play():app.pause()})},{threshold:0}).observe(canvas):null;
-     document.addEventListener('visibilitychange',function(){document.visibilityState==='visible'?app.play():app.pause()});
+     window.__splineReady.resolve();
+     if('IntersectionObserver' in window){new IntersectionObserver(function(es){es.forEach(function(e){e.isIntersecting?app.play():app.stop()})},{threshold:0}).observe(canvas)}
+     document.addEventListener('visibilitychange',function(){document.visibilityState==='visible'?app.play():app.stop()});
    });
- }).catch(function(e){console.warn('[Spline]',e)});
+ }).catch(function(e){
+   restoreDpr();
+   window.__splineReady.resolve();
+   console.warn('[Spline]',e);
+ });
 })();
 </script>
 <script id="voovr-critical-navigation">
