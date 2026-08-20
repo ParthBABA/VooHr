@@ -1,14 +1,17 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
 from bson.errors import InvalidId
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, request, session, make_response
 
 from blind_index import blind_index
 from employee_scoring import score_employee
 from extensions import get_db, next_employee_id
 from field_encryption import decrypt_fields, encrypt_fields
 from login_flow import _hash_session_token
+
+logger = logging.getLogger(__name__)
 
 employees_bp = Blueprint("employees", __name__)
 
@@ -375,11 +378,72 @@ def delete_employee(emp_id: str):
 
     db = get_db()
     try:
-        result = db.employees.delete_one({"_id": ObjectId(emp_id), "org_id": ObjectId(org_id)})
+        emp_oid = ObjectId(emp_id)
     except InvalidId:
         return jsonify({"error": "invalid_id"}), 400
 
-    if result.deleted_count == 0:
+    emp = db.employees.find_one({"_id": emp_oid, "org_id": ObjectId(org_id)})
+    if not emp:
         return jsonify({"error": "not_found"}), 404
 
+    try:
+        db.sessions.delete_many({"employee_id": emp_oid, "org_id": ObjectId(org_id)})
+        db.notifications.delete_many({"employee_id": emp_oid, "org_id": ObjectId(org_id)})
+        db.employees.delete_one({"_id": emp_oid, "org_id": ObjectId(org_id)})
+    except Exception:
+        logger.exception("Employee deletion failed (employee=%s)", emp_id)
+        return jsonify({"error": "deletion_failed"}), 500
+
     return jsonify({"ok": True})
+
+
+@employees_bp.route("/employees/<emp_id>/export", methods=["GET"])
+def export_employee(emp_id: str):
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        emp_oid = ObjectId(emp_id)
+    except InvalidId:
+        return jsonify({"error": "invalid_id"}), 400
+
+    emp = db.employees.find_one({"_id": emp_oid, "org_id": ObjectId(org_id)})
+    if not emp:
+        return jsonify({"error": "not_found"}), 404
+
+    pii = decrypt_fields(emp.get("encrypted"), emp.get("wrapped_dek", ""))
+    signals = emp.get("signals") or {}
+    ai = emp.get("ai_wellness") or {}
+
+    export_data = {
+        "employee_id": emp.get("employee_id"),
+        "name": pii.get("name", ""),
+        "email": pii.get("email", ""),
+        "phone": pii.get("phone", ""),
+        "department": emp.get("department", ""),
+        "position": emp.get("position", ""),
+        "employment_type": emp.get("employment_type", ""),
+        "work_mode": emp.get("work_mode", ""),
+        "joining_date": emp.get("joining_date", ""),
+        "status": emp.get("status", "active"),
+        "signals": signals,
+        "ai_wellness": {
+            "score": ai.get("score"),
+            "status": ai.get("status"),
+            "attrition_risk_pct": ai.get("attrition_risk_pct"),
+            "burnout_index": ai.get("burnout_index"),
+            "risk_factors": ai.get("risk_factors", []),
+            "source_session_id": ai.get("source_session_id"),
+            "updated_at": ai.get("updated_at").isoformat() if ai.get("updated_at") else None,
+        } if ai else None,
+        "photo": emp.get("photo"),
+        "created_at": emp.get("created_at").isoformat() if emp.get("created_at") else None,
+        "updated_at": emp.get("updated_at").isoformat() if emp.get("updated_at") else None,
+    }
+
+    resp = make_response(jsonify(export_data))
+    safe_name = (emp.get("employee_id") or "employee").replace(" ", "_")
+    resp.headers["Content-Disposition"] = f'attachment; filename="{safe_name}_export.json"'
+    return resp
