@@ -152,7 +152,6 @@ def _employee_to_json(emp) -> dict:
         "burnout_index": (ai or {}).get("burnout_index"),
         "wellness_source": wellness_source,
         "reasons": reasons,
-        "signals": signals,
         "photo": emp.get("photo"),
         "created_at": emp.get("created_at").isoformat() if emp.get("created_at") else None,
         "updated_at": emp.get("updated_at").isoformat() if emp.get("updated_at") else None,

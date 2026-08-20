@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from flask import current_app
+from flask import current_app, request
 from pymongo import MongoClient, ASCENDING, DESCENDING, TEXT
 from pymongo.errors import DuplicateKeyError
 
@@ -198,6 +198,13 @@ def record_rate_limit_event(db, key, ttl_seconds=3600):
         "ts": now,
         "expire_at": now + timedelta(seconds=ttl_seconds),
     })
+
+
+def client_ip():
+    """Return the real client IP, respecting X-Forwarded-For from a trusted
+    reverse proxy.  Returns the leftmost (original) client IP.
+    """
+    return request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
 
 
 def get_db():

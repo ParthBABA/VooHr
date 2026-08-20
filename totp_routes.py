@@ -39,6 +39,10 @@ from totp_utils import (
 
 totp_bp = Blueprint("totp", __name__)
 
+# ── Rate limiting for TOTP verification brute-force protection ────────
+_TOTPVerify_MAX = 10         # max TOTP verification attempts per window
+_TOTPVerify_WINDOW = 900     # 15-minute sliding window in seconds
+
 # ── Rate limiting for backup-code brute-force protection ──────────────
 _BACKUPCodeAttempts_MAX = 5
 _BACKUPCodeAttempts_WINDOW = 900  # 15 minutes in seconds
@@ -56,6 +60,21 @@ def _check_backup_rate_limit(user_id_str: str) -> tuple[bool, int]:
     if not allowed:
         return False, retry_after or _BACKUPCodeAttempts_WINDOW
     record_rate_limit_event(db, key, ttl_seconds=_BACKUPCodeAttempts_WINDOW)
+    return True, 0
+
+
+def _check_totp_rate_limit(user_id_str: str) -> tuple[bool, int]:
+    """Return (allowed, retry_after) for TOTP code verification brute-force protection.
+
+    Returns (True, 0) if the attempt is allowed, (False, seconds) if
+    rate-limited.
+    """
+    db = get_db()
+    key = f"totp_verify:{user_id_str}"
+    allowed, retry_after = check_rate_limit(db, key, _TOTPVerify_MAX, _TOTPVerify_WINDOW)
+    if not allowed:
+        return False, retry_after or _TOTPVerify_WINDOW
+    record_rate_limit_event(db, key, ttl_seconds=_TOTPVerify_WINDOW)
     return True, 0
 
 
@@ -150,6 +169,14 @@ def totp_verify_setup():
     if not user_id:
         return jsonify({"error": "unauthenticated"}), 401
 
+    uid_str = str(user_id)
+    allowed, retry_after = _check_totp_rate_limit(uid_str)
+    if not allowed:
+        return jsonify({
+            "error": "Too many attempts. Please try again later.",
+            "retry_after": retry_after,
+        }), 429, {"Retry-After": str(retry_after)}
+
     db = get_db()
     user = db.users.find_one(
         {"_id": user_id},
@@ -225,6 +252,14 @@ def totp_verify_login():
     user_id = _current_user_id()
     if not user_id:
         return jsonify({"error": "unauthenticated"}), 401
+
+    uid_str = str(user_id)
+    allowed, retry_after = _check_totp_rate_limit(uid_str)
+    if not allowed:
+        return jsonify({
+            "error": "Too many attempts. Please try again later.",
+            "retry_after": retry_after,
+        }), 429, {"Retry-After": str(retry_after)}
 
     db = get_db()
     user = db.users.find_one({"_id": user_id}, {"totp_enabled": 1, "totp_secret": 1})

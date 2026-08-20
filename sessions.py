@@ -7,11 +7,35 @@ from flask import Blueprint, jsonify, request, session
 
 from employee_scoring import _status_for
 from employees import _require_auth
-from extensions import get_db
+from extensions import get_db, check_rate_limit, record_rate_limit_event
 from providers import get_llm_provider, get_storage_provider, get_stt_provider, get_vision_provider
 
 sessions_bp = Blueprint("sessions", __name__)
 logger = logging.getLogger(__name__)
+
+# ── Rate-limit constants for expensive authenticated endpoints ─────────
+# Per-user sliding-window limits to prevent abuse of LLM / STT / Vision
+# calls.  These are intentionally generous for legitimate HR workflows
+# but prevent automated flooding.
+_ANALYZE_MAX = 15            # max analyze requests per window
+_TRANSCRIBE_MAX = 30        # max transcription requests per window
+_OCR_MAX = 20               # max image OCR requests per window
+_API_RATE_WINDOW = 900      # 15-minute sliding window in seconds
+
+
+def _check_api_rate_limit(user_id_str: str, endpoint: str, max_events: int) -> tuple[bool, int]:
+    """Return (allowed, retry_after) for authenticated API rate limiting.
+
+    Uses a per-user, per-endpoint key so different endpoints have
+    independent budgets.
+    """
+    db = get_db()
+    key = f"api_rate:{user_id_str}:{endpoint}"
+    allowed, retry_after = check_rate_limit(db, key, max_events, _API_RATE_WINDOW)
+    if not allowed:
+        return False, retry_after or _API_RATE_WINDOW
+    record_rate_limit_event(db, key, ttl_seconds=_API_RATE_WINDOW)
+    return True, 0
 
 # Number of recent completed sessions needed before the silent Risk Drift
 # Detection check fires. New employees with fewer analyzed syncs are skipped.
@@ -214,6 +238,14 @@ def analyze_session(session_id: str):
     if not org_id:
         return jsonify({"error": "not_authenticated"}), 401
 
+    user_id_str = session.get("user_id", "")
+    allowed, retry_after = _check_api_rate_limit(user_id_str, "analyze", _ANALYZE_MAX)
+    if not allowed:
+        return jsonify({
+            "error": "Too many requests. Please try again later.",
+            "retry_after": retry_after,
+        }), 429, {"Retry-After": str(retry_after)}
+
     db = get_db()
     try:
         s = db.sessions.find_one({"_id": ObjectId(session_id), "org_id": ObjectId(org_id)})
@@ -414,6 +446,14 @@ def transcribe_audio():
     if not org_id:
         return jsonify({"error": "not_authenticated"}), 401
 
+    user_id_str = session.get("user_id", "")
+    allowed, retry_after = _check_api_rate_limit(user_id_str, "transcribe", _TRANSCRIBE_MAX)
+    if not allowed:
+        return jsonify({
+            "error": "Too many requests. Please try again later.",
+            "retry_after": retry_after,
+        }), 429, {"Retry-After": str(retry_after)}
+
     if "audio" not in request.files:
         return jsonify({"error": "audio_file_required"}), 400
 
@@ -438,6 +478,14 @@ def transcribe_image():
     org_id = _require_auth()
     if not org_id:
         return jsonify({"error": "not_authenticated"}), 401
+
+    user_id_str = session.get("user_id", "")
+    allowed, retry_after = _check_api_rate_limit(user_id_str, "ocr", _OCR_MAX)
+    if not allowed:
+        return jsonify({
+            "error": "Too many requests. Please try again later.",
+            "retry_after": retry_after,
+        }), 429, {"Retry-After": str(retry_after)}
 
     if "image" not in request.files:
         return jsonify({"error": "image_file_required"}), 400

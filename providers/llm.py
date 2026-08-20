@@ -1042,7 +1042,7 @@ Return ONLY valid JSON, no markdown formatting, no code fences."""
         try:
             result = json.loads(content)
         except json.JSONDecodeError:
-            logger.exception("DeepSeek analyze: JSON parse failed")
+            logger.warning("DeepSeek analyze: JSON parse failed")
             return dict(FALLBACK_ANALYSIS)
 
         result = validate_analysis(result)
@@ -1077,7 +1077,7 @@ Return ONLY valid JSON, no markdown formatting, no code fences."""
         try:
             result = json.loads(content)
         except json.JSONDecodeError:
-            logger.exception("DeepSeek explain_drift: JSON parse failed")
+            logger.warning("DeepSeek explain_drift: JSON parse failed")
             return dict(FALLBACK_DRIFT_EXPLANATION)
 
         result = validate_drift_explanation(result)

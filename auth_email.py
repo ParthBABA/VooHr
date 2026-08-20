@@ -356,10 +356,11 @@ def email_signin():
         # on-file email so the user can recover via verification code.
         # This supports the "email or password" sign-in UX where a wrong
         # password triggers OTP recovery.
-        db.users.update_one(
-            {"_id": user["_id"]},
-            {"$set": {"failed_login_attempts": user.get("failed_login_attempts", 0) + 1}},
-        )
+        attempts = user.get("failed_login_attempts", 0) + 1
+        update = {"$set": {"failed_login_attempts": attempts, "last_login_attempt": now}}
+        if attempts >= _LOCKOUT_AFTER:
+            update["$set"]["lockout_until"] = now + _LOCKOUT_TTL
+        db.users.update_one({"_id": user["_id"]}, update)
         # Send OTP to the email on file
         pending_email = user.get("user_email") or user.get("email") or email
         # Decrypt PII to get the actual email
@@ -393,6 +394,13 @@ def email_signin():
         return jsonify({"ok": True, "requires_otp": True}), 200
 
     # Password correct — sign in directly
+    db.users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {"failed_login_attempts": 0, "last_login": now},
+            "$unset": {"lockout_until": ""},
+        },
+    )
     pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
     session.permanent = True
     session["user_id"] = str(user["_id"])

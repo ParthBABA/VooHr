@@ -15,7 +15,7 @@ from config import Config
 from employees import employees_bp
 from employees import _session_is_active
 from employees import TOTPRequired
-from extensions import get_db, init_db
+from extensions import get_db, init_db, check_rate_limit, record_rate_limit_event, client_ip
 from notifications import notifications_bp
 from sessions import sessions_bp
 from totp_routes import totp_bp
@@ -44,6 +44,19 @@ def create_app():
         """Return the CSRF token for the current authenticated session."""
         if not session.get("user_id"):
             return jsonify({"error": "not_authenticated"}), 401
+
+        # Rate-limit CSRF token generation to prevent abuse.
+        ip = client_ip()
+        db = get_db()
+        key = f"csrf_token:{ip}"
+        allowed, retry_after = check_rate_limit(db, key, 30, 900)
+        if not allowed:
+            return jsonify({
+                "error": "Too many requests. Please try again later.",
+                "retry_after": retry_after,
+            }), 429
+        record_rate_limit_event(db, key, ttl_seconds=900)
+
         if "_csrf_token" not in session:
             session["_csrf_token"] = secrets.token_urlsafe(32)
         return jsonify({"csrf_token": session["_csrf_token"]})
@@ -201,7 +214,7 @@ def create_app():
         user_id = session.get("user_id")
         session_token = session.get("session_token")
         is_logged_in = bool(user_id and session_token and _session_is_active(user_id, session_token))
-        app.logger.info("Root route: user_id=%s is_logged_in=%s", user_id, is_logged_in)
+        app.logger.info("Root route: is_logged_in=%s", is_logged_in)
         return render_template("login.html", is_logged_in=is_logged_in)
 
     @app.route("/login")

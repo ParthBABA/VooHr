@@ -383,7 +383,6 @@ def list_active_sessions():
                 "id": str(d["_id"]),
                 "device": _parse_device(d.get("user_agent", "")),
                 "location": d.get("location"),
-                "ip": d.get("ip") or "",
                 "created_at": d.get("created_at").isoformat() if d.get("created_at") else None,
                 "last_seen": d.get("last_seen").isoformat() if d.get("last_seen") else None,
                 "is_current": d.get("session_token") == current_hash,
