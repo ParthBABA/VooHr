@@ -30,6 +30,13 @@ from password_utils import hash_password, password_strength_ok, verify_password
 
 auth_email_bp = Blueprint("auth_email", __name__)
 
+# ── Input length limits ────────────────────────────────────────────────
+# Prevent CPU/memory abuse from oversized inputs before expensive
+# operations (argon2 hashing, blind_index, OTP hashing).
+MAX_PASSWORD_LENGTH = 256   # characters — far above any real password
+_MAX_EMAIL_LENGTH = 320     # RFC 5321 maximum mailbox length
+_MAX_OTP_LENGTH = 128       # characters — OTPs are 6 digits
+
 _OTP_TTL = timedelta(minutes=10)
 _MAX_ATTEMPTS = 5
 _RESEND_COOLDOWN = timedelta(seconds=60)
@@ -106,6 +113,11 @@ def email_start():
     if not email or not password:
         return jsonify({"error": "missing_fields"}), 400
 
+    if len(password) > MAX_PASSWORD_LENGTH:
+        return jsonify({"error": "password_too_long"}), 400
+    if len(email) > _MAX_EMAIL_LENGTH:
+        return jsonify({"error": "email_too_long"}), 400
+
     if not password_strength_ok(password):
         return jsonify({"error": "weak_password"}), 400
 
@@ -156,6 +168,8 @@ def verify_otp():
     data = request.get_json(silent=True) or {}
     otp = (data.get("otp") or "").strip()
     if not otp:
+        return jsonify({"error": "invalid_otp"}), 400
+    if len(otp) > _MAX_OTP_LENGTH:
         return jsonify({"error": "invalid_otp"}), 400
 
     email_hash = blind_index(email)
@@ -268,6 +282,9 @@ def password_signin():
     email = (data.get("email") or "").strip()
     password = data.get("password") or ""
 
+    if len(email) > _MAX_EMAIL_LENGTH or len(password) > MAX_PASSWORD_LENGTH:
+        return jsonify({"error": "invalid_credentials"}), 401
+
     email_hash = blind_index(email)
     db = get_db()
     user = db.users.find_one({"email_hash": email_hash})
@@ -328,6 +345,8 @@ def email_signin():
     password = data.get("password") or ""
 
     if not email or not password:
+        return jsonify({"error": "missing_fields"}), 400
+    if len(password) > MAX_PASSWORD_LENGTH or len(email) > _MAX_EMAIL_LENGTH:
         return jsonify({"error": "missing_fields"}), 400
 
     email_hash = blind_index(email)

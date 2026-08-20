@@ -77,6 +77,14 @@ class Config:
     # while blocking multi-gigabyte abuse.
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50 MB
 
+    # Multipart form-data limits — defence-in-depth for uploads.
+    # MAX_FORM_MEMORY_SIZE: fields kept in memory before spilling to disk.
+    # MAX_FORM_PARTS: upper bound on the number of form parts (fields +
+    # file uploads) per request.  Both values are well above what the
+    # legitimate application needs while blocking abusive payloads.
+    MAX_FORM_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB per non-file field
+    MAX_FORM_PARTS = 100                     # typical: 2-5 parts
+
     # Cookie/session behaviour
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

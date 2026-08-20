@@ -15,6 +15,20 @@ logger = logging.getLogger(__name__)
 
 employees_bp = Blueprint("employees", __name__)
 
+# ── Employee field length limits ───────────────────────────────────────
+# Prevent uncontrolled MongoDB document growth via oversized user input.
+# Limits are generous enough for real-world HR data while blocking abuse.
+MAX_EMPLOYEE_NAME_LEN = 200        # characters
+MAX_EMPLOYEE_EMAIL_LEN = 320       # RFC 5321 max mailbox length
+MAX_EMPLOYEE_PHONE_LEN = 30        # characters
+MAX_EMPLOYEE_DEPT_LEN = 100        # characters
+MAX_EMPLOYEE_POSITION_LEN = 100    # characters
+MAX_EMPLOYEE_ET_LEN = 50           # employment_type
+MAX_EMPLOYEE_WM_LEN = 50           # work_mode
+MAX_EMPLOYEE_DATE_LEN = 30         # joining_date (ISO string)
+MAX_EMPLOYEE_STATUS_LEN = 30       # status enum
+MAX_PHOTO_BYTES = 2 * 1024 * 1024  # 2 MB for base64 data-URL string
+
 
 class TOTPRequired(Exception):
     """Raised by _require_auth() when the admin session needs TOTP verification."""
@@ -177,6 +191,24 @@ def create_employee():
     if not name:
         return jsonify({"error": "name_required"}), 400
 
+    # ── Field length guards ─────────────────────────────────────────
+    if len(name) > MAX_EMPLOYEE_NAME_LEN:
+        return jsonify({"error": "name_too_long"}), 400
+    if email and len(email) > MAX_EMPLOYEE_EMAIL_LEN:
+        return jsonify({"error": "email_too_long"}), 400
+    if phone and len(phone) > MAX_EMPLOYEE_PHONE_LEN:
+        return jsonify({"error": "phone_too_long"}), 400
+    if len(department) > MAX_EMPLOYEE_DEPT_LEN:
+        return jsonify({"error": "department_too_long"}), 400
+    if len(position) > MAX_EMPLOYEE_POSITION_LEN:
+        return jsonify({"error": "position_too_long"}), 400
+    if len(employment_type) > MAX_EMPLOYEE_ET_LEN:
+        return jsonify({"error": "employment_type_too_long"}), 400
+    if len(work_mode) > MAX_EMPLOYEE_WM_LEN:
+        return jsonify({"error": "work_mode_too_long"}), 400
+    if len(joining_date) > MAX_EMPLOYEE_DATE_LEN:
+        return jsonify({"error": "joining_date_too_long"}), 400
+
     db = get_db()
     employee_id = _next_employee_id(db, org_id)
 
@@ -199,6 +231,9 @@ def create_employee():
     photo = (data.get("photo") or "").strip()
     if photo and not photo.startswith("data:image/"):
         photo = ""
+    # ── Photo size guard (base64 data-URL string) ───────────────────
+    if photo and len(photo) > MAX_PHOTO_BYTES:
+        return jsonify({"error": "photo_too_large"}), 413
 
     emp_doc = {
         "org_id": ObjectId(org_id),
@@ -296,15 +331,27 @@ def update_employee(emp_id: str):
     set_fields: dict = {}
     unset_fields: list = []
 
-    # Plain fields
-    for field in ("department", "position", "employment_type", "work_mode", "joining_date", "status"):
+    # Plain fields — with length guards
+    for field, max_len in (
+        ("department", MAX_EMPLOYEE_DEPT_LEN),
+        ("position", MAX_EMPLOYEE_POSITION_LEN),
+        ("employment_type", MAX_EMPLOYEE_ET_LEN),
+        ("work_mode", MAX_EMPLOYEE_WM_LEN),
+        ("joining_date", MAX_EMPLOYEE_DATE_LEN),
+        ("status", MAX_EMPLOYEE_STATUS_LEN),
+    ):
         if field in data:
-            set_fields[field] = (data[field] or "").strip()
+            val = (data[field] or "").strip()
+            if len(val) > max_len:
+                return jsonify({"error": f"{field}_too_long"}), 400
+            set_fields[field] = val
 
     # Photo — validate data-URL prefix, or clear
     if "photo" in data:
         photo = (data["photo"] or "").strip()
         if photo and photo.startswith("data:image/"):
+            if len(photo) > MAX_PHOTO_BYTES:
+                return jsonify({"error": "photo_too_large"}), 413
             set_fields["photo"] = photo
         else:
             unset_fields.append("photo")
@@ -329,9 +376,15 @@ def update_employee(emp_id: str):
 
     # PII fields — re-encrypt if provided
     pii_changes = {}
-    for field in ("name", "email", "phone"):
+    for field, max_len in (
+        ("name", MAX_EMPLOYEE_NAME_LEN),
+        ("email", MAX_EMPLOYEE_EMAIL_LEN),
+        ("phone", MAX_EMPLOYEE_PHONE_LEN),
+    ):
         if field in data:
             val = (data[field] or "").strip()
+            if val and len(val) > max_len:
+                return jsonify({"error": f"{field}_too_long"}), 400
             if val:
                 pii_changes[field] = val
             else:

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import io
 import logging
 
 from bson import ObjectId
@@ -46,6 +47,65 @@ DRIFT_WINDOW_SIZE = 3
 IMAGE_CONTENT_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
+# Audio transcription: Whisper accepts up to 25 MB.  The extra 1 MB headroom
+# lets us reject *before* forwarding to the provider while staying safely
+# under Whisper's own limit.
+MAX_AUDIO_BYTES = 26 * 1024 * 1024  # 26 MB
+
+# Audio MIME types the browser can realistically produce for recording.
+# Content-Type on a multipart part is client-controlled, so this is a
+# defence-in-depth check, not a security boundary on its own.
+AUDIO_CONTENT_TYPES = {
+    "audio/webm", "audio/wav", "audio/x-wav", "audio/mpeg",
+    "audio/mp3", "audio/ogg", "audio/x-m4a", "audio/mp4",
+    "audio/aac", "audio/flac",
+}
+
+# ── Session field length limits ────────────────────────────────────────
+# Prevent uncontrolled growth of MongoDB documents via oversized text.
+MAX_RAW_TEXT_BYTES = 512 * 1024       # 512 KB  (transcription text)
+MAX_EDITED_TEXT_BYTES = 512 * 1024    # 512 KB  (user-edited transcript)
+MAX_SESSION_AUDIO_BYTES = 2 * 1024 * 1024  # 2 MB  (base64 audio in JSON)
+MAX_SESSION_SOURCE_LEN = 100          # characters
+MAX_SESSION_LANGUAGE_LEN = 20         # characters
+
+# ── LLM transcript truncation ──────────────────────────────────────────
+# DeepSeek / OpenAI models accept large context windows, but sending
+# unbounded transcripts wastes tokens and can hit rate-limit / cost
+# boundaries.  50 000 chars ≈ 12 000 tokens — comfortably within model
+# limits while covering even very long HR conversations.
+MAX_LLM_TRANSCRIPT_CHARS = 50_000
+
+
+def _validate_image_magic_bytes(image_bytes: bytes) -> str | None:
+    """Check file magic bytes and return the detected MIME type, or None.
+
+    Uses the first bytes of the file to identify the actual format,
+    independent of what the client claims in the Content-Type header.
+    Returns the MIME type string on success, or None if the bytes do not
+    match any supported image format.
+    """
+    if len(image_bytes) < 8:
+        return None
+
+    # PNG: 89 50 4E 47 0D 0A 1A 0A
+    if image_bytes[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+
+    # JPEG: FF D8 FF
+    if image_bytes[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+
+    # WebP: RIFF....WEBP
+    if image_bytes[:4] == b"RIFF" and image_bytes[8:12] == b"WEBP":
+        return "image/webp"
+
+    # GIF: GIF87a or GIF89a
+    if image_bytes[:6] in (b"GIF87a", b"GIF89a"):
+        return "image/gif"
+
+    return None
+
 
 def _session_to_json(s) -> dict:
     return {
@@ -87,6 +147,20 @@ def create_session():
         return jsonify({"error": "employee_id_required"}), 400
     if not raw_text:
         return jsonify({"error": "raw_text_required"}), 400
+
+    # ── Field length guards ─────────────────────────────────────────
+    if len(raw_text.encode("utf-8")) > MAX_RAW_TEXT_BYTES:
+        return jsonify({"error": "raw_text_too_large"}), 413
+    edited_raw = data.get("edited_text")
+    if edited_raw and len(edited_raw.encode("utf-8")) > MAX_EDITED_TEXT_BYTES:
+        return jsonify({"error": "edited_text_too_large"}), 413
+    audio_val = data.get("audio")
+    if audio_val and isinstance(audio_val, str) and len(audio_val) > MAX_SESSION_AUDIO_BYTES:
+        return jsonify({"error": "audio_payload_too_large"}), 413
+    if len(str(source)) > MAX_SESSION_SOURCE_LEN:
+        return jsonify({"error": "source_too_long"}), 400
+    if len(str(language)) > MAX_SESSION_LANGUAGE_LEN:
+        return jsonify({"error": "language_too_long"}), 400
 
     try:
         ObjectId(employee_id)
@@ -192,6 +266,8 @@ def update_session(session_id: str):
 
     if "edited_text" in data:
         edited = (data["edited_text"] or "").strip()
+        if len(edited.encode("utf-8")) > MAX_EDITED_TEXT_BYTES:
+            return jsonify({"error": "edited_text_too_large"}), 413
         set_fields["transcript.edited"] = edited
         set_fields["transcript.word_count"] = len(edited.split())
         set_fields["last_transcript_update"] = datetime.now(timezone.utc)
@@ -202,7 +278,10 @@ def update_session(session_id: str):
             set_fields["status"] = data["status"]
 
     if "audio" in data:
-        set_fields["audio"] = data["audio"]
+        audio_val = data["audio"]
+        if audio_val and isinstance(audio_val, str) and len(audio_val) > MAX_SESSION_AUDIO_BYTES:
+            return jsonify({"error": "audio_payload_too_large"}), 413
+        set_fields["audio"] = audio_val
 
     if not set_fields:
         return jsonify({"error": "no_fields_to_update"}), 400
@@ -259,6 +338,13 @@ def analyze_session(session_id: str):
     if not transcript:
         return jsonify({"error": "no_transcript_to_analyze"}), 400
 
+    # ── Truncate before sending to LLM ──────────────────────────────
+    # Prevents unbounded token usage / cost when a transcript is
+    # exceptionally long.  The truncation is applied *after* the full
+    # transcript is stored (so nothing is lost from the DB) but *before*
+    # the LLM call.
+    llm_transcript = transcript[:MAX_LLM_TRANSCRIPT_CHARS]
+
     db.sessions.update_one(
         {"_id": ObjectId(session_id)},
         {"$set": {"status": "processing", "updated_at": datetime.now(timezone.utc)}},
@@ -266,7 +352,7 @@ def analyze_session(session_id: str):
 
     try:
         llm = get_llm_provider()
-        analysis = llm.analyze(transcript)
+        analysis = llm.analyze(llm_transcript)
 
         now = datetime.now(timezone.utc)
         db.sessions.update_one(
@@ -355,12 +441,14 @@ def analyze_session(session_id: str):
                 if emp and emp.get("last_drift_check_session_id") != s["_id"]:
                     # 4. Build the payload for explain_drift(): FULL transcripts,
                     #    oldest first, not just the risk % numbers.
+                    #    Each transcript is truncated to prevent unbounded
+                    #    token usage in the drift-detection LLM call.
                     sessions_payload = [
                         {
                             "date": sess["created_at"].isoformat() if sess.get("created_at") else None,
                             "attrition_risk_pct": (sess["analysis"] or {}).get("risks", {}).get("attrition_risk_pct"),
                             "burnout_index": (sess["analysis"] or {}).get("risks", {}).get("burnout_index"),
-                            "transcript": (sess.get("transcript") or {}).get("edited") or (sess.get("transcript") or {}).get("raw", ""),
+                            "transcript": ((sess.get("transcript") or {}).get("edited") or (sess.get("transcript") or {}).get("raw", ""))[:MAX_LLM_TRANSCRIPT_CHARS],
                         }
                         for sess in qualifying_sessions
                     ]
@@ -464,6 +552,16 @@ def transcribe_audio():
     if not audio_bytes:
         return jsonify({"error": "empty_audio"}), 400
 
+    # ── Per-endpoint size check BEFORE expensive STT call ────────────
+    if len(audio_bytes) > MAX_AUDIO_BYTES:
+        return jsonify({"error": "audio_too_large"}), 413
+
+    # ── MIME-type validation (defence-in-depth) ─────────────────────
+    # Client-controlled Content-Type header is checked against an
+    # allowlist of formats the browser can produce for getUserMedia.
+    if content_type not in AUDIO_CONTENT_TYPES:
+        return jsonify({"error": "unsupported_audio_type"}), 400
+
     try:
         stt = get_stt_provider()
         text = stt.transcribe(audio_bytes, content_type)
@@ -502,6 +600,17 @@ def transcribe_image():
 
     if content_type not in IMAGE_CONTENT_TYPES:
         return jsonify({"error": "unsupported_image_type"}), 400
+
+    # ── Server-side magic-bytes validation (PIL) ────────────────────
+    # The client-supplied Content-Type is untrusted; verify the actual
+    # file signature using Pillow so a non-image file disguised with a
+    # legitimate MIME header is rejected before the OCR API call.
+    try:
+        from PIL import Image as _PILImage
+        img = _PILImage.open(io.BytesIO(image_bytes))
+        img.verify()  # raises if the file is corrupt / not an image
+    except Exception:
+        return jsonify({"error": "invalid_image_content"}), 400
 
     try:
         vision = get_vision_provider()
