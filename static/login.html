@@ -3382,6 +3382,9 @@ window.__splineReady=(function(){var p={};p.promise=new Promise(function(r,j){p.
 <script id="voovr-critical-navigation">
 (function(){
  var o=document.getElementById('voovr-page-transition'),seen=new Set(),ht;
+ var LEGAL_ASSET='Banding - Copy@1-1536x730.png';
+ var LEGAL_TARGETS={'/privacy-policy.html':1,'/terms-of-service.html':1};
+ var legalCache=null;
  function u(a){
    if(!a||!a.href||a.target==='_blank'||a.hasAttribute('download')||a.dataset.noPrefetch!==undefined)return null;
    try{var x=new URL(a.href,location.href);return x.origin===location.origin&&x.href!==location.href?x:null}catch(e){return null}
@@ -3391,12 +3394,23 @@ window.__splineReady=(function(){var p={};p.promise=new Promise(function(r,j){p.
    if(navigator.connection&&navigator.connection.saveData)return;
    try{var l=document.createElement('link');l.rel='prefetch';l.href=x.href;l.as='document';document.head.appendChild(l)}catch(e){}
  }
+ function preloadLegalBg(){
+   if(legalCache)return Promise.resolve();
+   return new Promise(function(ok){
+     var img=new Image();
+     img.onload=function(){legalCache=1;ok()};
+     img.onerror=function(){ok()};
+     img.src=LEGAL_ASSET;
+   });
+ }
  document.addEventListener('pointerover',function(e){var x=u(e.target.closest&&e.target.closest('a'));if(x){clearTimeout(ht);ht=setTimeout(function(){pre(x)},60)}},{passive:true});
  document.addEventListener('focusin',function(e){var x=u(e.target.closest&&e.target.closest('a'));if(x)pre(x)});
  document.addEventListener('click',function(e){
    if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
    var a=e.target.closest&&e.target.closest('a'),x=u(a);if(!x||a.dataset.transition==='off')return;
-   e.preventDefault();if(o)o.classList.add('is-active');requestAnimationFrame(function(){location.href=x.href});
+   e.preventDefault();if(o)o.classList.add('is-active');
+   if(LEGAL_TARGETS[x.pathname]){preloadLegalBg().then(function(){location.href=x.href})}
+   else{requestAnimationFrame(function(){location.href=x.href})}
  },true);
 
  async function reveal(){
