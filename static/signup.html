@@ -54,7 +54,7 @@
       <div style="margin-bottom:24px; display:flex; align-items:flex-start; gap:10px;">
         <input type="checkbox" id="termsCheckbox" required style="width:18px; height:18px; accent-color:var(--amber); flex-shrink:0; margin-top:2px;">
         <label for="termsCheckbox" style="font-family:var(--font-lato); font-size:0.7rem; color:var(--ivory-faint); line-height:1.5;">
-          I agree to the <a href="/terms-of-service" target="_blank" rel="noopener noreferrer" style="color:var(--amber); text-decoration:underline;">Terms of Service</a> and <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" style="color:var(--amber); text-decoration:underline;">Privacy Policy</a>
+          I agree to the <a href="/terms-of-service.html" target="_blank" rel="noopener noreferrer" style="color:var(--amber); text-decoration:underline;">Terms of Service</a> and <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer" style="color:var(--amber); text-decoration:underline;">Privacy Policy</a>
         </label>
       </div>
       <div id="termsError" style="display:none; margin-bottom:16px; font-family:var(--font-lato); font-size:0.65rem; color:var(--amber);">Please accept the Terms of Service to continue.</div>
@@ -95,9 +95,9 @@
   <footer style="margin-top:28px; text-align:center; font-size:0.7rem; color:var(--ivory-faint); width:100%; position:relative; z-index:10;">
     <span>© 2026 HR Copilot. All rights reserved.</span>
     <span style="margin-left:16px; color:var(--ivory-faint);">|</span>
-    <a href="/privacy-policy" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Privacy Policy</a>
+    <a href="/privacy-policy.html" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Privacy Policy</a>
     <span style="margin-left:16px; color:var(--ivory-faint);">|</span>
-    <a href="/terms-of-service" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Terms of Service</a>
+    <a href="/terms-of-service.html" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Terms of Service</a>
     <span style="margin-left:16px; color:var(--ivory-faint);">|</span>
     <a href="mailto:voovrhr@gmail.com" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Contact</a>
   </footer>
@@ -186,7 +186,7 @@
       if (localStorage.getItem('cookieConsent') === 'true') return;
       const banner = document.createElement('div');
       banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--ink);border-top:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;z-index:1000;font-family:var(--font-b);font-size:0.75rem;color:var(--ivory);';
-      banner.innerHTML = '<span style="max-width:80%;">We use cookies to improve your experience and keep you signed in. By using this site, you agree to our <a href="/privacy-policy" style="color:var(--amber);text-decoration:underline;">Cookie Policy</a>.</span><button id="acceptCookies" style="background:linear-gradient(135deg,var(--violet),var(--amber));color:var(--void);border:none;padding:8px 16px;border-radius:6px;font-weight:600;text-transform:uppercase;font-size:0.65rem;cursor:pointer;">Accept</button>';
+      banner.innerHTML = '<span style="max-width:80%;">We use cookies to improve your experience and keep you signed in. By using this site, you agree to our <a href="/privacy-policy.html" style="color:var(--amber);text-decoration:underline;">Cookie Policy</a>.</span><button id="acceptCookies" style="background:linear-gradient(135deg,var(--violet),var(--amber));color:var(--void);border:none;padding:8px 16px;border-radius:6px;font-weight:600;text-transform:uppercase;font-size:0.65rem;cursor:pointer;">Accept</button>';
       document.body.appendChild(banner);
       document.getElementById('acceptCookies').addEventListener('click', function() {
         localStorage.setItem('cookieConsent', 'true');
