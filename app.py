@@ -45,20 +45,28 @@ def create_app():
         if not session.get("user_id"):
             return jsonify({"error": "not_authenticated"}), 401
 
-        # Rate-limit CSRF token generation to prevent abuse.
-        ip = client_ip()
-        db = get_db()
-        key = f"csrf_token:{ip}"
-        allowed, retry_after = check_rate_limit(db, key, 30, 900)
-        if not allowed:
-            return jsonify({
-                "error": "Too many requests. Please try again later.",
-                "retry_after": retry_after,
-            }), 429
-        record_rate_limit_event(db, key, ttl_seconds=900)
-
+        # Re-delivering an existing session-bound token is free: it mints no
+        # new secret and reveals nothing the caller doesn't already hold, so
+        # it must never consume rate-limit budget or be answered with 429.
+        # Only actual token GENERATION is rate-limited — otherwise normal
+        # navigation (every page load fetches /api/csrf-token via csrf.js)
+        # exhausts the per-IP budget, the endpoint starts returning 429, and
+        # state-changing requests such as TOTP verification are sent without
+        # X-CSRF-Token, failing with "CSRF validation failed".
         if "_csrf_token" not in session:
+            # Rate-limit CSRF token generation to prevent abuse.
+            ip = client_ip()
+            db = get_db()
+            key = f"csrf_token:{ip}"
+            allowed, retry_after = check_rate_limit(db, key, 30, 900)
+            if not allowed:
+                return jsonify({
+                    "error": "Too many requests. Please try again later.",
+                    "retry_after": retry_after,
+                }), 429
+            record_rate_limit_event(db, key, ttl_seconds=900)
             session["_csrf_token"] = secrets.token_urlsafe(32)
+
         return jsonify({"csrf_token": session["_csrf_token"]})
 
     @app.route("/health")
