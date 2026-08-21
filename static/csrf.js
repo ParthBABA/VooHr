@@ -15,16 +15,26 @@
 (function () {
   var csrfToken = null;
 
-  fetch("/api/csrf-token")
+  /* Exposed so pages that fire authenticated POSTs automatically on load
+     (e.g. the TOTP setup gate) can await the token instead of racing this
+     request.  Resolves with the token once populated; rejects cleanly if
+     retrieval fails.  The fetch interceptor below is unchanged. */
+  window.csrfTokenReady = fetch("/api/csrf-token")
     .then(function (r) {
       return r.ok ? r.json() : null;
     })
     .then(function (data) {
       if (data && data.csrf_token) {
         csrfToken = data.csrf_token;
+        return csrfToken;
       }
-    })
-    .catch(function () {});
+      throw new Error("CSRF token unavailable");
+    });
+
+  /* Mark rejections as handled so pages that never await the token (the
+     interceptor's null-token behaviour is unchanged) stay console-clean;
+     awaiting consumers still receive the rejection. */
+  window.csrfTokenReady.catch(function () {});
 
   var _origFetch = window.fetch;
   window.fetch = function (input, init) {
