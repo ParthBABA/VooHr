@@ -292,7 +292,11 @@ def _extract_version(ua: str, marker: str, max_parts=None):
 
 
 _WINDOWS_VERSIONS = {
-    "10.0": "10",
+    # NOTE: "10.0" is intentionally NOT mapped here.  Modern Chromium
+    # reports "Windows NT 10.0" for BOTH Windows 10 and Windows 11, so the
+    # User-Agent alone cannot distinguish them — see _parse_device, which
+    # resolves that case via Sec-CH-UA-Platform-Version or falls back to a
+    # plain "Windows" label instead of guessing.
     "6.3": "8.1",
     "6.2": "8",
     "6.1": "7",
@@ -302,10 +306,45 @@ _WINDOWS_VERSIONS = {
 }
 
 
-def _parse_device(user_agent: str) -> dict:
+def _windows_display_name(nt_version, ch_platform=None, ch_platform_version=None):
+    """Resolve the Windows label for an NT kernel version.
+
+    UA-CH semantics (https://wicg.github.io/ua-client-hints): Windows 11
+    reports platform version major >= 13; Windows 10 reports 1-10.  The
+    hint is only trusted when its companion Sec-CH-UA-Platform agrees with
+    (or is absent alongside) a Windows User-Agent.  When nothing reliable
+    is available — e.g. Firefox/Safari, or sessions recorded before hints
+    were captured — the generic "Windows" is returned rather than a guess.
+    """
+    if nt_version != "10.0":
+        return _WINDOWS_VERSIONS.get(nt_version, nt_version)
+
+    if ch_platform and ch_platform.strip().lower() != "windows":
+        return None
+    raw = (ch_platform_version or "").strip()
+    m = re.match(r"(\d+)", raw)
+    if not m:
+        return None
+    try:
+        major = int(m.group(1))
+    except ValueError:
+        return None
+    if major >= 13:
+        return "11"
+    if 1 <= major <= 10:
+        return "10"
+    return None
+
+
+def _parse_device(user_agent: str, ch_platform=None, ch_platform_version=None) -> dict:
     """Device breakdown for the sessions list. Returns
     {"device_type", "browser", "os"} — missing pieces fall back to simple
     names or are omitted, never crash or show "undefined".
+
+    `ch_platform` / `ch_platform_version` are the Sec-CH-UA-Platform /
+    Sec-CH-UA-Platform-Version values captured at login time (stored in the
+    active_sessions doc).  They are required to tell Windows 11 apart from
+    Windows 10; without them the OS degrades to plain "Windows".
     """
     ua = user_agent or ""
 
@@ -354,7 +393,8 @@ def _parse_device(user_agent: str) -> dict:
     elif "Windows NT" in ua:
         os_name = "Windows"
         nt = _extract_version(ua, "Windows NT ")
-        os_version = _WINDOWS_VERSIONS.get(nt, nt)
+        win_display = _windows_display_name(nt, ch_platform, ch_platform_version)
+        os_version = win_display
     elif "Mac OS X" in ua or "Macintosh" in ua:
         os_name = "macOS"
         os_version = _extract_version(ua, "Mac OS X ")
@@ -363,6 +403,22 @@ def _parse_device(user_agent: str) -> dict:
     os_label = os_name if os_version is None else f"{os_name} {os_version}"
 
     return {"device_type": device_type, "browser": browser_label, "os": os_label}
+
+
+def _sanitize_location(raw) -> dict:
+    """Reduce a stored location doc to the public shape
+    {"city", "region", "country"} (nulls when unknown).  Returns None when
+    nothing is known.  Guarantees no extra fields (e.g. the server-side IP)
+    can ever leak into the API response."""
+    if not isinstance(raw, dict):
+        return None
+    clean = {
+        key: (raw.get(key) or None)
+        for key in ("city", "region", "country")
+    }
+    if not any(clean.values()):
+        return None
+    return clean
 
 
 @api_bp.route("/sessions/active")
@@ -381,8 +437,12 @@ def list_active_sessions():
         sessions.append(
             {
                 "id": str(d["_id"]),
-                "device": _parse_device(d.get("user_agent", "")),
-                "location": d.get("location"),
+                "device": _parse_device(
+                    d.get("user_agent", ""),
+                    d.get("ch_platform"),
+                    d.get("ch_platform_version"),
+                ),
+                "location": _sanitize_location(d.get("location")),
                 "created_at": d.get("created_at").isoformat() if d.get("created_at") else None,
                 "last_seen": d.get("last_seen").isoformat() if d.get("last_seen") else None,
                 "is_current": d.get("session_token") == current_hash,

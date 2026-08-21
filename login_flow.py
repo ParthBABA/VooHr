@@ -57,12 +57,42 @@ def _is_private_ip(ip) -> bool:
     return False
 
 
+def _client_ip() -> str:
+    """Best-effort resolution of the actual client PUBLIC IP for geo
+    attribution, safe behind the Railway/reverse-proxy deployment.
+
+    Trust model (deliberately conservative — never blindly trusts XFF):
+      1. If the direct peer (remote_addr) is a PUBLIC address, the TCP
+         connection itself identifies the client — trust it outright.
+      2. Otherwise the peer is a trusted reverse proxy (Railway's edge
+         terminates TLS and forwards internally, so remote_addr is a
+         private hop).  Proxies APPEND to X-Forwarded-For, while a client
+         can plant arbitrary entries at the FRONT of the chain — so walk
+         the chain RIGHT to LEFT and take the first public address.  A
+         spoofed leftmost entry is therefore ignored.
+      3. If nothing public can be determined, return "" — callers treat
+         that as "no location", never guessing and never blocking login.
+    """
+    peer = request.remote_addr or ""
+    if not _is_private_ip(peer):
+        return peer
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    for candidate in reversed([c.strip() for c in forwarded.split(",")]):
+        if candidate and not _is_private_ip(candidate):
+            return candidate
+    return ""
+
+
 def _lookup_location(ip) -> dict:
     """Best-effort geo lookup for a public IP. Returns
     {"city", "region", "country"} or None. Never raises — a geolocation
     failure or timeout must not block login (2s cap, runs once per login).
+
+    Approximate network-level location only (IP registry data); fields the
+    provider does not return are normalised to None rather than empty
+    strings so the API never emits "undefined"-style values.
     """
-    if _is_private_ip(ip):
+    if not ip or _is_private_ip(ip):
         return None
     try:
         resp = requests.get(
@@ -74,11 +104,19 @@ def _lookup_location(ip) -> dict:
         return None
     if data.get("status") != "success":
         return None
-    return {
-        "city": data.get("city"),
-        "region": data.get("regionName"),
-        "country": data.get("country"),
+
+    def _clean(value):
+        value = (value or "").strip()
+        return value or None
+
+    location = {
+        "city": _clean(data.get("city")),
+        "region": _clean(data.get("regionName")),
+        "country": _clean(data.get("country")),
     }
+    if not any(location.values()):
+        return None
+    return location
 
 
 def _record_active_session(db, user_id: ObjectId):
@@ -88,16 +126,25 @@ def _record_active_session(db, user_id: ObjectId):
 
     The geo lookup is run in a background thread so it never blocks the login
     redirect (free-tier backends can add a 2s penalty otherwise).
+
+    Also captures User-Agent Client Hints (Sec-CH-UA-Platform /
+    Sec-CH-UA-Platform-Version) when the browser supplies them.  These are
+    the only reliable signal distinguishing Windows 11 from Windows 10 —
+    both report "Windows NT 10.0" in the plain User-Agent string.  The raw
+    values are stored server-side; nothing here is exposed verbatim to the
+    frontend (the sessions API returns parsed device/location metadata only).
     """
     now = datetime.now(timezone.utc)
     session_token = str(uuid.uuid4())
-    ip = request.remote_addr or ""
+    ip = _client_ip()
     session["session_token"] = session_token
     db.active_sessions.insert_one(
         {
             "user_id": ObjectId(user_id),
             "session_token": _hash_session_token(session_token),
             "user_agent": request.headers.get("User-Agent", ""),
+            "ch_platform": request.headers.get("Sec-CH-UA-Platform", ""),
+            "ch_platform_version": request.headers.get("Sec-CH-UA-Platform-Version", ""),
             "ip": ip,
             "location": None,
             "created_at": now,

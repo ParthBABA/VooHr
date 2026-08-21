@@ -406,6 +406,24 @@ def create_app():
             return jsonify({"error": "not_found"}), 404
         return send_from_directory(app.static_folder, "404.html"), 404
 
+    # ── User-Agent Client Hints opt-in ──────────────────────────────────
+    # Chromium only sends high-entropy hints such as
+    # Sec-CH-UA-Platform-Version after the origin opts in via Accept-CH.
+    # That hint is the ONLY reliable way to tell Windows 11 from Windows 10
+    # (both report "Windows NT 10.0" in the plain User-Agent), and it is
+    # captured server-side at login time by login_flow._record_active_session
+    # to power precise Active Sessions device labels.  Advertising it on
+    # every response means a browser that has loaded any page once will
+    # include the hints on its next login request.  Purely additive header;
+    # no request handling changes.
+    @app.after_request
+    def _advertise_client_hints(response):
+        response.headers.setdefault(
+            "Accept-CH",
+            "Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version",
+        )
+        return response
+
     # Safety net: any unhandled exception (or 404/500) under /api/* must come
     # back as JSON, never Flask/Werkzeug's HTML error/debugger page. Without
     # this, frontend `fetch(...).then(r => r.json())` calls blow up with
