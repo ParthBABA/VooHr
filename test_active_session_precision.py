@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import bson
 from bson import ObjectId
+from datetime import timedelta
 import unittest.mock as _mock
 
 # test_security_fixes.py may have replaced sys.modules["requests"] /
@@ -176,9 +177,11 @@ def _seed_user(oid, email_hash="eh"):
 
 
 def _insert_session(user_oid, ua=UA_WIN_CHROME, ip="", location=None,
-                    ch_platform="", ch_platform_version="", token_suffix=""):
+                    ch_platform="", ch_platform_version="", token_suffix="",
+                    age_seconds=0):
     raw_token = str(uuid.uuid4()) + token_suffix
     now = datetime.now(timezone.utc)
+    seen = now - timedelta(seconds=age_seconds)
     _FAKE_DB.active_sessions.insert_one({
         "user_id": ObjectId(user_oid),
         "session_token": hashlib.sha256(raw_token.encode()).hexdigest(),
@@ -187,8 +190,8 @@ def _insert_session(user_oid, ua=UA_WIN_CHROME, ip="", location=None,
         "ch_platform_version": ch_platform_version,
         "ip": ip,
         "location": location,
-        "created_at": now,
-        "last_seen": now,
+        "created_at": seen,
+        "last_seen": seen,
     })
     return raw_token
 
@@ -547,3 +550,120 @@ class TestActiveSessionsEndpoint:
             src = f.read()
         assert "Accept-CH" in src
         assert "Sec-CH-UA-Platform-Version" in src
+
+
+# ── Read-path enrichment: stale rows reach the UI precisely ──────────
+#
+# Sessions recorded BEFORE Client-Hint capture / trusted-IP geo existed
+# have no ch_* fields and location=None forever — the UI showed
+# "Chrome 151 on Windows" / "Local network" for them regardless of the
+# login-time fixes.  list_active_sessions now enriches such rows from the
+# requesting browser itself.
+
+_HINT_HEADERS = {
+    "User-Agent": UA_WIN_CHROME,
+    "Sec-CH-UA-Platform": "Windows",
+    "Sec-CH-UA-Platform-Version": "13.0.0",
+}
+
+
+class TestReadPathEnrichment:
+    def test_stale_current_session_gains_windows11_from_request_hints(
+            self, client, db):
+        _seed_user(_USER_A)
+        raw = _insert_session(_USER_A, ua=UA_WIN_CHROME)  # no hints stored
+        _login(client, _USER_A, raw)
+
+        resp = client.get("/api/sessions/active", headers=_HINT_HEADERS)
+        s = resp.get_json()["sessions"][0]
+        assert s["device"]["os"] == "Windows 11"
+        assert s["device"]["browser"] == "Chrome 151"
+
+        # Persisted: the next visit needs no backfill.
+        doc = db.active_sessions.docs[0]
+        assert doc["ch_platform"] == "Windows"
+        assert doc["ch_platform_version"] == "13.0.0"
+
+    def test_hints_not_applied_when_user_agent_differs(self, client, db):
+        _seed_user(_USER_A)
+        raw = _insert_session(_USER_A, ua=UA_MAC_SAFARI)
+        _login(client, _USER_A, raw)
+
+        resp = client.get("/api/sessions/active", headers=_HINT_HEADERS)
+        s = resp.get_json()["sessions"][0]
+        assert s["device"]["os"] == "macOS 10.15.7"   # parsed from its own UA
+        doc = db.active_sessions.docs[0]
+        assert doc["ch_platform_version"] == ""       # untouched
+
+    def test_location_backfilled_for_current_session(self, client, db):
+        _seed_user(_USER_A)
+        raw = _insert_session(_USER_A, ip="10.1.2.3", location=None)
+        _login(client, _USER_A, raw)
+
+        expected = {"city": "Dehradun", "region": "Uttarakhand", "country": "India"}
+        with _mock.patch.object(_api, "_lookup_location",
+                                return_value=expected) as lookup:
+            resp = client.get("/api/sessions/active",
+                              environ_base={"REMOTE_ADDR": "203.0.113.7"})
+        s = resp.get_json()["sessions"][0]
+        assert s["location"] == expected
+        lookup.assert_called_once_with("203.0.113.7")  # request's public IP
+
+        doc = db.active_sessions.docs[0]
+        assert doc["location"] == expected             # persisted
+
+    def test_known_location_never_relooked_up(self, client, db):
+        _seed_user(_USER_A)
+        raw = _insert_session(_USER_A, ip="203.0.113.7",
+                              location={"city": "Dehradun",
+                                        "region": "Uttarakhand",
+                                        "country": "India"})
+        _login(client, _USER_A, raw)
+
+        with _mock.patch.object(_api, "_lookup_location") as lookup:
+            resp = client.get("/api/sessions/active")
+        assert resp.get_json()["sessions"][0]["location"] == {
+            "city": "Dehradun", "region": "Uttarakhand", "country": "India",
+        }
+        lookup.assert_not_called()
+
+    def test_at_most_one_synchronous_lookup_per_request(self, client, db):
+        _seed_user(_USER_A)
+        raw_current = _insert_session(_USER_A, ip="10.9.9.9", location=None,
+                                      age_seconds=0)
+        _insert_session(_USER_A, ip="198.51.100.5", location=None,
+                        age_seconds=3600, token_suffix="-older")
+        _login(client, _USER_A, raw_current)
+
+        expected = {"city": "Dehradun", "region": "Uttarakhand", "country": "India"}
+
+        class _DeferredThread:
+            def __init__(self, target=None, args=(), daemon=False):
+                self._target, self._args = target, args
+
+            def start(self):
+                pass  # deferred backfill must NOT run inside the request
+
+        with _mock.patch.object(_api, "_lookup_location",
+                                return_value=expected) as lookup, \
+             _mock.patch.object(_api.threading, "Thread", _DeferredThread):
+            resp = client.get("/api/sessions/active",
+                              environ_base={"REMOTE_ADDR": "203.0.113.7"})
+        lookup.assert_called_once()                    # bounded latency
+        sessions = resp.get_json()["sessions"]
+        by_current = [s for s in sessions if s["is_current"]]
+        assert by_current and by_current[0]["location"] == expected
+
+    def test_enrichment_exposes_no_raw_ip(self, client, db):
+        _seed_user(_USER_A)
+        raw = _insert_session(_USER_A, ip="203.0.113.7", location=None)
+        _login(client, _USER_A, raw)
+
+        with _mock.patch.object(_api, "_lookup_location",
+                                return_value={"city": "X", "region": None,
+                                              "country": None}):
+            resp = client.get("/api/sessions/active",
+                              environ_base={"REMOTE_ADDR": "203.0.113.7"})
+        body = resp.get_data(as_text=True)
+        assert "203.0.113.7" not in body
+        assert '"ip"' not in body

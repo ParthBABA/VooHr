@@ -3,11 +3,12 @@ from bson.errors import InvalidId
 from flask import Blueprint, jsonify, request, session
 
 import re
+import threading
 
 from extensions import get_db
 from employees import _session_is_active, TOTPRequired
 from field_encryption import decrypt_fields, encrypt_fields
-from login_flow import _hash_session_token
+from login_flow import _client_ip, _hash_session_token, _is_private_ip, _lookup_location
 
 api_bp = Blueprint("api", __name__)
 
@@ -421,6 +422,104 @@ def _sanitize_location(raw) -> dict:
     return clean
 
 
+def _location_is_known(raw) -> bool:
+    return isinstance(raw, dict) and any(
+        raw.get(k) for k in ("city", "region", "country")
+    )
+
+
+def _backfill_location_by_id(db, doc_id, ip):
+    """Background geo backfill for a single stale session row. Never raises."""
+    try:
+        loc = _lookup_location(ip)
+        if loc:
+            db.active_sessions.update_one(
+                {"_id": doc_id}, {"$set": {"location": loc}}
+            )
+    except Exception:
+        pass
+
+
+def _backfill_stale_sessions(db, docs, current_hash):
+    """Enrich sessions recorded before Client-Hint capture / trusted-IP geo
+    existed, so the Active Sessions UI shows precise metadata for the user's
+    EXISTING logins instead of generic fallbacks.
+
+      * Client Hints: a row stored without Sec-CH-UA-Platform-Version can
+        never be parsed as Windows 10 vs 11 on its own.  When the requesting
+        browser presents hints AND its User-Agent exactly matches the row's
+        stored User-Agent (same browser ⇒ same hint values), adopt the
+        incoming hints and persist them onto the row.
+      * Location: a row with no location is retried using its own public IP;
+        for the CURRENT session row the request's resolved public IP is also
+        eligible (same browser, same login ⇒ same approximate network).
+        At most ONE synchronous lookup runs per request (bounded latency);
+        further eligible rows are backfilled by daemon threads so the next
+        visit already sees them.
+
+    Mutates the doc dicts in place.  Never raises; failures leave rows as-is.
+    """
+    ua_in = request.headers.get("User-Agent", "")
+    ch_platform = request.headers.get("Sec-CH-UA-Platform")
+    ch_version = request.headers.get("Sec-CH-UA-Platform-Version")
+
+    sync_lookups_left = 1
+    current_ip = None
+
+    for d in docs:
+        # ── Client-Hint backfill ────────────────────────────────────
+        if (
+            ch_version
+            and not (d.get("ch_platform_version") or "").strip()
+            and ua_in
+            and d.get("user_agent") == ua_in
+        ):
+            updates = {
+                "ch_platform": ch_platform or "",
+                "ch_platform_version": ch_version,
+            }
+            try:
+                db.active_sessions.update_one(
+                    {"_id": d["_id"]}, {"$set": updates}
+                )
+                d.update(updates)
+            except Exception:
+                pass
+
+        # ── Location backfill ───────────────────────────────────────
+        if _location_is_known(d.get("location")):
+            continue
+        candidates = []
+        doc_ip = d.get("ip") or ""
+        if doc_ip and not _is_private_ip(doc_ip):
+            candidates.append(doc_ip)
+        if d.get("session_token") == current_hash:
+            if current_ip is None:
+                current_ip = _client_ip()
+            if current_ip and not _is_private_ip(current_ip):
+                candidates.append(current_ip)
+        if not candidates:
+            continue
+        ip = candidates[0]
+        if sync_lookups_left > 0:
+            sync_lookups_left -= 1
+            loc = _lookup_location(ip)
+            if loc:
+                try:
+                    db.active_sessions.update_one(
+                        {"_id": d["_id"]}, {"$set": {"location": loc}}
+                    )
+                except Exception:
+                    pass
+                d["location"] = loc
+        else:
+            threading.Thread(
+                target=_backfill_location_by_id,
+                args=(db, d["_id"], ip),
+                daemon=True,
+            ).start()
+
+
 @api_bp.route("/sessions/active")
 def list_active_sessions():
     user_id = _check_auth()
@@ -430,7 +529,11 @@ def list_active_sessions():
     db = get_db()
     current_token = session.get("session_token")
     current_hash = _hash_session_token(current_token) if current_token else None
-    docs = db.active_sessions.find({"user_id": ObjectId(user_id)}).sort("last_seen", -1)
+    docs = list(
+        db.active_sessions.find({"user_id": ObjectId(user_id)}).sort("last_seen", -1)
+    )
+
+    _backfill_stale_sessions(db, docs, current_hash)
 
     sessions = []
     for d in docs:
