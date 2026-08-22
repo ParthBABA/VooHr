@@ -12,13 +12,13 @@
 /* ── TOTP background artwork (scoped) ──
    Layered onto the existing body background mechanism (same
    background-attachment:fixed pattern as style.css): a faint ink veil for
-   text contrast, the local totp-background.png artwork, then the original
+   text contrast, the local totp-background.webp artwork, then the original
    radial gradients. Purely decorative layer — no layout impact, sits
    behind the card (which keeps its solid var(--ink) background + z-index). */
 body{
   background-image:
     linear-gradient(rgba(8,10,15,0.32), rgba(8,10,15,0.32)),
-    url("/totp-background.png"),
+    url("/totp-background.webp"),
     radial-gradient(ellipse 80% 60% at 50% 0%, rgba(80,120,200,0.04) 0%, transparent 70%),
     radial-gradient(ellipse 60% 50% at 80% 100%, rgba(212,136,74,0.02) 0%, transparent 60%);
   background-size:cover, cover, auto, auto;
