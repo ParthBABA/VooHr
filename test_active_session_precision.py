@@ -667,3 +667,199 @@ class TestReadPathEnrichment:
         body = resp.get_data(as_text=True)
         assert "203.0.113.7" not in body
         assert '"ip"' not in body
+
+
+# ── Multi-session isolation: every session shows ITS OWN metadata ─────
+#
+# Regression guard for the core requirement: with several concurrent
+# logins for one user, each returned session must carry the device and
+# location captured for THAT login — never the current request's
+# device/IP/location broadcast across all rows.
+
+class TestMultiSessionIsolation:
+    def _doc_id_by_ua(self, db, ua):
+        return [str(d["_id"]) for d in db.active_sessions.docs
+                if d["user_agent"] == ua][0]
+
+    def test_each_session_reports_its_own_device(self, client, db):
+        """Sessions A-D were created from four different browsers; the API
+        must return four distinct, correctly-paired device breakdowns."""
+        _seed_user(_USER_A)
+        raw_a = _insert_session(_USER_A, ua=UA_WIN_CHROME,
+                                ch_platform="Windows",
+                                ch_platform_version="13.0.0")
+        _insert_session(_USER_A, ua=UA_WIN_FIREFOX, age_seconds=60,
+                        token_suffix="-b")
+        _insert_session(_USER_A, ua=UA_MAC_SAFARI, age_seconds=120,
+                        token_suffix="-c")
+        _insert_session(_USER_A, ua=UA_ANDROID, age_seconds=180,
+                        token_suffix="-d")
+        _login(client, _USER_A, raw_a)
+
+        sessions = client.get("/api/sessions/active").get_json()["sessions"]
+        by_id = {s["id"]: s for s in sessions}
+
+        expected = {
+            UA_WIN_CHROME: {"device_type": "Desktop", "browser": "Chrome 151",
+                            "os": "Windows 11"},
+            UA_WIN_FIREFOX: {"device_type": "Desktop", "browser": "Firefox 132",
+                             "os": "Windows"},
+            UA_MAC_SAFARI: {"device_type": "Desktop", "browser": "Safari 17",
+                            "os": "macOS 10.15.7"},
+            UA_ANDROID: {"device_type": "Mobile", "browser": "Chrome 151",
+                         "os": "Android 14"},
+        }
+        assert len(sessions) == len(expected)
+        for ua, want in expected.items():
+            got = by_id[self._doc_id_by_ua(db, ua)]["device"]
+            assert got == want, f"session {ua} must show its own device"
+
+    def test_each_session_reports_its_own_location(self, client, db):
+        """Three pre-located sessions keep their own cities; the read path
+        never overwrites or cross-applies locations between sessions."""
+        _seed_user(_USER_A)
+        raw = _insert_session(
+            _USER_A,
+            location={"city": "Dehradun", "region": "Uttarakhand",
+                      "country": "India"},
+        )
+        _insert_session(
+            _USER_A,
+            location={"city": "Delhi", "region": "Delhi", "country": "India"},
+            age_seconds=3600, token_suffix="-delhi",
+        )
+        _insert_session(
+            _USER_A,
+            location={"city": "Mumbai", "region": "Maharashtra",
+                      "country": "India"},
+            age_seconds=7200, token_suffix="-mumbai",
+        )
+        _login(client, _USER_A, raw)
+
+        with _mock.patch.object(_api, "_lookup_location") as lookup:
+            sessions = client.get(
+                "/api/sessions/active"
+            ).get_json()["sessions"]
+
+        lookup.assert_not_called()  # known locations are per-row facts
+
+        # Each stored row keeps exactly the location it was seeded with.
+        cities = sorted(s["location"]["city"] for s in sessions if s["location"])
+        assert cities == ["Dehradun", "Delhi", "Mumbai"]
+
+        # Pairing check: the row holding the Delhi doc is not the current row.
+        delhi_rows = [s for s in sessions
+                      if (s["location"] or {}).get("city") == "Delhi"]
+        assert len(delhi_rows) == 1
+        assert delhi_rows[0]["is_current"] is False
+
+    def test_current_and_other_sessions_correctly_flagged(self, client, db):
+        """Exactly the logged-in session is flagged CURRENT; every other
+        session stays non-current regardless of recency ordering."""
+        _seed_user(_USER_A)
+        raw_cur = _insert_session(_USER_A, ua=UA_WIN_CHROME, age_seconds=0)
+        _insert_session(_USER_A, ua=UA_WIN_FIREFOX, age_seconds=3600,
+                        token_suffix="-older1")
+        _insert_session(_USER_A, ua=UA_MAC_SAFARI, age_seconds=7200,
+                        token_suffix="-older2")
+        _login(client, _USER_A, raw_cur)
+
+        cur_hash = hashlib.sha256(raw_cur.encode()).hexdigest()
+        cur_doc = [d for d in db.active_sessions.docs
+                   if d["session_token"] == cur_hash][0]
+
+        sessions = client.get("/api/sessions/active").get_json()["sessions"]
+        flagged = [s for s in sessions if s["is_current"]]
+        unflagged = [s for s in sessions if not s["is_current"]]
+
+        assert len(flagged) == 1
+        assert flagged[0]["id"] == str(cur_doc["_id"])
+        assert len(unflagged) == 2
+        assert {s["is_current"] for s in unflagged} == {False}
+
+    def test_geolocation_uses_each_stored_ip_never_request_ip(self, client, db):
+        """Three stale rows (no location yet) each geolocate from THEIR OWN
+        stored public IP; the page-load request's IP is never substituted
+        for any of them."""
+        _seed_user(_USER_A)
+        raw_a = _insert_session(_USER_A, ua=UA_WIN_CHROME,
+                                ip="203.0.113.10", location=None,
+                                age_seconds=0)
+        _insert_session(_USER_A, ua=UA_WIN_FIREFOX, ip="198.51.100.20",
+                        location=None, age_seconds=3600, token_suffix="-b")
+        _insert_session(_USER_A, ua=UA_MAC_SAFARI, ip="192.0.2.30",
+                        location=None, age_seconds=7200, token_suffix="-c")
+        _login(client, _USER_A, raw_a)
+
+        UNRELATED_REQUEST_IP = "203.0.113.99"   # the IP of THIS page load
+        city_for_ip = {
+            "203.0.113.10": "Dehradun",   # session A's own IP -> its city
+            "198.51.100.20": "Delhi",     # session B's own IP -> its city
+            "192.0.2.30": "Mumbai",       # session C's own IP -> its city
+        }
+
+        class _DeferredThread:
+            """Captures backfill threads without running them, so all
+            assertions below stay deterministic."""
+            spawned = []
+
+            def __init__(self, target=None, args=(), daemon=False):
+                self._target, self._args = target, args
+                type(self).spawned.append(self)
+
+            def start(self):
+                pass
+
+        _DeferredThread.spawned = []
+        with _mock.patch.object(
+                _api, "_lookup_location",
+                side_effect=lambda ip: {
+                    "city": city_for_ip[ip], "region": "X", "country": "India",
+                }) as lookup, \
+             _mock.patch.object(_api.threading, "Thread", _DeferredThread):
+            resp = client.get(
+                "/api/sessions/active",
+                environ_base={"REMOTE_ADDR": UNRELATED_REQUEST_IP})
+
+            # Sync budget goes to the most recent stale row — using ITS OWN IP.
+            called_ips = [c.args[0] for c in lookup.call_args_list]
+            assert called_ips == ["203.0.113.10"]
+            assert UNRELATED_REQUEST_IP not in called_ips
+
+            # The other two rows are queued for backfill with their OWN IPs
+            # (_backfill_location_by_id signature: (db, doc_id, ip)).
+            deferred_ips = sorted(t._args[2] for t in _DeferredThread.spawned)
+            assert deferred_ips == ["192.0.2.30", "198.51.100.20"]
+
+            # Run the deferred backfills while still inside the patched
+            # context (no real network call ever fires), then re-load: each
+            # session now shows the city derived from its OWN historical IP.
+            for t in _DeferredThread.spawned:
+                t._target(*t._args)
+
+            second = client.get("/api/sessions/active").get_json()["sessions"]
+
+            # Every geo lookup across the whole flow consumed a STORED
+            # session IP — all three of them, and never the page-load
+            # request's IP.
+            all_lookup_ips = sorted(c.args[0] for c in lookup.call_args_list)
+            assert all_lookup_ips == [
+                "192.0.2.30", "198.51.100.20", "203.0.113.10",
+            ]
+            assert UNRELATED_REQUEST_IP not in all_lookup_ips
+
+        assert len(second) == 3
+
+        by_os_browser = {(s["device"]["browser"], s["device"]["os"]): s
+                         for s in second}
+        a = by_os_browser[("Chrome 151", "Windows")]
+        b = by_os_browser[("Firefox 132", "Windows")]
+        c = by_os_browser[("Safari 17", "macOS 10.15.7")]
+        assert a["location"]["city"] == "Dehradun"
+        assert b["location"]["city"] == "Delhi"
+        assert c["location"]["city"] == "Mumbai"
+
+        # First response already carried session A's freshly looked-up city.
+        first_a = [s for s in resp.get_json()["sessions"]
+                   if (s["location"] or {}).get("city") == "Dehradun"]
+        assert len(first_a) == 1

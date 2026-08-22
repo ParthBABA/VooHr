@@ -655,8 +655,11 @@ function clearFieldError(input){
   function deviceLabel(d){
     if (!d) return 'Unknown device';
     var parts = [];
-    if (d.browser) parts.push(d.browser);
-    if (d.os) parts.push(d.os);
+    // Treat absent/unparsed pieces ("Unknown") as missing so a session with
+    // no usable device metadata falls back cleanly instead of rendering
+    // the literal string "Unknown on Unknown".
+    if (d.browser && d.browser !== 'Unknown') parts.push(d.browser);
+    if (d.os && d.os !== 'Unknown') parts.push(d.os);
     return parts.length ? parts.join(' on ') : 'Unknown device';
   }
 
