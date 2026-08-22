@@ -243,6 +243,26 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
   function setErr(msg){ errorMsg.textContent = msg; successMsg.textContent = ''; }
   function setOk(msg){ successMsg.textContent = msg; errorMsg.textContent = ''; }
 
+  // Backend error-code -> human-readable message, per endpoint.
+  // Codes that mean the session/setup is gone also restart the flow.
+  var SETUP_LOAD_ERROR_MESSAGES = {
+    unauthenticated:  'Your session expired. Please sign in again.',
+    user_not_found:   'We could not find your account. Please sign in again.'
+  };
+  var VERIFY_ERROR_MESSAGES = {
+    invalid_code:      'Invalid code. Please check your authenticator app and try again.',
+    missing_code:      'Please enter the 6-digit code from your authenticator app.',
+    unauthenticated:   'Your session expired. Please sign in again.',
+    user_not_found:    'We could not find your account. Please sign in again.',
+    no_pending_setup:  'Your setup session expired. Restarting setup\u2026'
+  };
+  function redirectToSignIn(){
+    setTimeout(function(){ window.location.href = '/login'; }, 1800);
+  }
+  function restartSetup(){
+    setTimeout(function(){ window.location.reload(); }, 1800);
+  }
+
   // Step 1: Fetch TOTP setup data
   fetch('/auth/totp/setup', {method:'POST', headers:{'Content-Type':'application/json'}})
     .then(function(r){ return r.json(); })
@@ -252,7 +272,11 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
         setTimeout(function(){ window.location.href = '/dashboard'; }, 1500);
         return;
       }
-      if (d.error) { setErr(d.error); return; }
+      if (d.error) {
+        setErr(SETUP_LOAD_ERROR_MESSAGES[d.error] || 'Something went wrong. Please try again.');
+        if (d.error === 'unauthenticated' || d.error === 'user_not_found') redirectToSignIn();
+        return;
+      }
       qrImg.src = d.qr;
       qrArea.style.display = 'flex';
       qrLoading.style.display = 'none';
@@ -284,7 +308,10 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d.error) {
-        setErr(d.error === 'invalid_code' ? 'Invalid code. Try again.' : d.error);
+        if (d.retry_after) { setErr(d.error); return; } /* 429: already readable */
+        setErr(VERIFY_ERROR_MESSAGES[d.error] || 'Something went wrong. Please try again.');
+        if (d.error === 'unauthenticated' || d.error === 'user_not_found') { redirectToSignIn(); return; }
+        if (d.error === 'no_pending_setup') { restartSetup(); return; }
         verifyBtn.disabled = false;
         codeInput.value = '';
         codeInput.focus();

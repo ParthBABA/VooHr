@@ -238,6 +238,30 @@ document.addEventListener('DOMContentLoaded',function(){
   function setOk(m){ okBox.textContent=m; okBox.style.display=m?'block':'none'; errBox.style.display='none'; }
   function getCode(){ return segs.map(function(s){return s.value;}).join(''); }
 
+  /* Backend error-code -> human-readable message. Codes that mean the
+     session itself is gone also bounce the user back to sign-in. */
+  var LOGIN_ERROR_MESSAGES={
+    invalid_code:'Invalid code. Please check your authenticator app and try again.',
+    missing_code:'Please enter the 6-digit code from your authenticator app.',
+    unauthenticated:'Your session expired. Please sign in again.',
+    user_not_found:'We could not find your account. Please sign in again.',
+    totp_not_enabled:'Two-factor authentication is not set up for this account.'
+  };
+  var BACKUP_ERROR_MESSAGES={
+    invalid_code:'Invalid or already used backup code.',
+    missing_code:'Please enter a backup code.',
+    unauthenticated:'Your session expired. Please sign in again.',
+    user_not_found:'We could not find your account. Please sign in again.',
+    totp_not_enabled:'Two-factor authentication is not set up for this account.'
+  };
+  function isDeadSession(code){
+    return code==='unauthenticated'||code==='user_not_found';
+  }
+  function redirectToSignIn(){
+    /* Give the user a moment to read the message, then restart the flow. */
+    setTimeout(function(){ window.location.href='/login'; },1800);
+  }
+
   segs.forEach(function(inp,i){
     inp.addEventListener('input',function(){
       var v=inp.value.replace(/\D/g,'');
@@ -275,7 +299,9 @@ document.addEventListener('DOMContentLoaded',function(){
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.error){
-        setErr(d.error==='invalid_code'?'Invalid code. Please try again.':d.error);
+        if(d.retry_after){ setErr(d.error); return; } /* 429: already readable */
+        setErr(LOGIN_ERROR_MESSAGES[d.error]||'Something went wrong. Please try again.');
+        if(isDeadSession(d.error)){ redirectToSignIn(); return; }
         verifyBtn.disabled=false;
         segs.forEach(function(s){s.value='';});
         segs[0].focus();
@@ -346,7 +372,9 @@ document.addEventListener('DOMContentLoaded',function(){
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.error){
-        setErr(d.error==='invalid_code'?'Invalid or already used backup code.':d.error);
+        if(d.retry_after){ setErr(d.error); return; } /* 429: already readable */
+        setErr(BACKUP_ERROR_MESSAGES[d.error]||'Something went wrong. Please try again.');
+        if(isDeadSession(d.error)){ redirectToSignIn(); return; }
         backupVerifyBtn.disabled=false;
         backupInput.value='';
         backupInput.focus();
