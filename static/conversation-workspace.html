@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/csrf.js"></script>
+<script src="transcript-parser.js"></script>
 </head>
 <body style="visibility:hidden">
 <script>
@@ -142,6 +143,7 @@ fetch('/api/me').then(function(res){
               <option value="Employee">Employee</option>
             </select>
             <button class="ws-tool-btn" id="wsDensityBtn" title="View density">View: Standard</button>
+            <button class="ws-tool-btn ws-phrasing-btn" id="wsPhrasingBtn" title="Scan for phrasing &amp; psychological-safety issues">Phrasing Review</button>
           </div>
 
           <div class="ws-filter-pop" id="wsFilterPop" style="display:none;">
@@ -151,7 +153,7 @@ fetch('/api/me').then(function(res){
 
           <div class="ws-lines" id="wsLines" data-density="standard"></div>
 
-          <div class="ws-disclaimer">Speaker labels are inferred and may not reflect who actually spoke.</div>
+          <div class="ws-disclaimer" id="wsDisclaimer">Speaker labels are inferred and may not reflect who actually spoke.</div>
 
           <!-- Sticky audio player (disabled: no stored recording) -->
           <div class="ws-audio disabled" id="wsAudio">
@@ -207,6 +209,8 @@ fetch('/api/me').then(function(res){
     </div>
   </main>
 </div>
+
+<div class="ws-flag-popover" id="wsFlagPopover" style="display:none;"></div>
 
 <script>
 window.voohrInitWorkspace = function() {
@@ -273,61 +277,163 @@ window.voohrInitWorkspace = function() {
     loadingEl.textContent = msg;
   }
 
-  // ── Transcript parsing (heuristic) ──
+  // ── Transcript parsing (priority-based speaker attribution) ──
   function estimateDuration() {
     if (state.duration > 0) return state.duration;
     var words = state.transcriptText.trim().split(/\s+/).filter(Boolean).length;
     return Math.round(words / 2.5); // ~2.5 words/sec fallback
   }
 
+  // Speaker attribution is delegated to static/transcript-parser.js:
+  // explicit labels > known employee identity > HR labels > semantic
+  // inference; consecutive turns are preserved and alternation is never
+  // forced. Transcript text itself is never modified.
   function parseTranscript() {
-    var text = state.transcriptText;
-    if (!text) { state.lines = []; return; }
-    var rawLines = text.split(/\n+/).map(function(s) { return s.trim(); }).filter(Boolean);
-    var sentences = [];
-    rawLines.forEach(function(l) {
-      var parts = l.split(/(?<=[.!?])\s+/);
-      if (parts.length <= 1) sentences.push(l);
-      else parts.forEach(function(p) { if (p.trim()) sentences.push(p.trim()); });
+    var empName = (state.employee && state.employee.name) ? state.employee.name.trim() : '';
+    var result = window.VooHrTranscript.parse(state.transcriptText, {
+      employeeName: empName,
+      duration: estimateDuration()
     });
-    if (sentences.length > 200) sentences = sentences.slice(0, 200);
-
-    var totalChars = sentences.reduce(function(a, s) { return a + s.length; }, 0) || 1;
-    var cursor = 0;
-    var duration = estimateDuration();
-    state.lines = sentences.map(function(s, i) {
-      var start = duration * (cursor / totalChars);
-      cursor += s.length;
-      return {
-        idx: i,
-        text: s,
-        speaker: (i % 2 === 0) ? 'HR' : 'Employee',
-        time: start
-      };
-    });
+    state.lines = result.lines;
+    state.hasExplicitLabels = result.hasExplicitLabels;
+    var disclaimerEl = document.getElementById('wsDisclaimer');
+    if (disclaimerEl) {
+      disclaimerEl.textContent = state.hasExplicitLabels
+        ? 'Speaker labels follow the labels present in the transcript.'
+        : 'Speaker labels are inferred and may not reflect who actually spoke.';
+    }
   }
 
   // ── Rendering ──
-  function highlight(text) {
-    if (!state.query) return esc(text);
-    var q = state.query.toLowerCase();
-    var lower = text.toLowerCase();
-    var out = '';
-    var i = 0;
-    while (true) {
-      var j = lower.indexOf(q, i);
-      if (j === -1) { out += esc(text.slice(i)); break; }
-      out += esc(text.slice(i, j)) + '<mark class="ws-hl">' + esc(text.slice(j, j + q.length)) + '</mark>';
-      i = j + q.length;
+
+  // ── Phrasing Review: maps each flagged quote onto the line that contains
+  // it (exact substring match, since the LLM is instructed to return
+  // verbatim quotes) so the transcript can render a clickable red/violet
+  // mark instead of the AI re-writing the transcript itself.
+  function computeFlagMatches() {
+    state.flagsByKey = {};
+    state.flagMatches = {};
+    var pa = state.session && state.session.phrasing_analysis;
+    if (!pa) return;
+
+    var all = [];
+    (pa.hr_phrasing_flags || []).forEach(function(f, i) { all.push({ key: 'hr-' + i, type: 'hr', data: f }); });
+    (pa.employee_signals || []).forEach(function(f, i) { all.push({ key: 'emp-' + i, type: 'emp', data: f }); });
+    all.forEach(function(f) { state.flagsByKey[f.key] = f; });
+
+    (state.lines || []).forEach(function(l) {
+      var matches = [];
+      all.forEach(function(f) {
+        var q = f.data && f.data.quote;
+        if (!q) return;
+        var idx = l.text.indexOf(q);
+        if (idx !== -1) matches.push({ start: idx, end: idx + q.length, type: f.type, key: f.key });
+      });
+      if (matches.length) {
+        // Longest match first so nested/overlapping quotes don't fragment.
+        matches.sort(function(a, b) { return (b.end - b.start) - (a.end - a.start); });
+        state.flagMatches[l.idx] = matches;
+      }
+    });
+  }
+
+  function highlight(text, lineIdx) {
+    var flagRanges = ((lineIdx !== undefined && state.flagMatches[lineIdx]) || []).slice();
+    var searchRanges = [];
+    if (state.query) {
+      var q = state.query.toLowerCase();
+      var lower = text.toLowerCase();
+      var i = 0;
+      while (true) {
+        var j = lower.indexOf(q, i);
+        if (j === -1) break;
+        searchRanges.push({ start: j, end: j + q.length, type: 'search' });
+        i = j + q.length;
+      }
     }
+
+    var ranges = flagRanges.slice();
+    searchRanges.forEach(function(sr) {
+      var overlaps = flagRanges.some(function(fr) { return sr.start < fr.end && sr.end > fr.start; });
+      if (!overlaps) ranges.push(sr);
+    });
+    ranges.sort(function(a, b) { return a.start - b.start; });
+
+    if (!ranges.length) return esc(text);
+
+    var out = '';
+    var cursor = 0;
+    ranges.forEach(function(r) {
+      if (r.start < cursor) return; // skip ranges swallowed by an earlier overlapping one
+      out += esc(text.slice(cursor, r.start));
+      var seg = esc(text.slice(r.start, r.end));
+      if (r.type === 'search') {
+        out += '<mark class="ws-hl">' + seg + '</mark>';
+      } else {
+        out += '<mark class="ws-flag ws-flag-' + r.type + '" data-flag-key="' + r.key + '">' + seg + '</mark>';
+      }
+      cursor = r.end;
+    });
+    out += esc(text.slice(cursor));
     return out;
   }
+
+  // ── Flag popover: small, appears next to the clicked phrase, closes on
+  // outside click. Never a persistent panel — it's ephemeral by design.
+  function closeFlagPopover() {
+    var pop = document.getElementById('wsFlagPopover');
+    pop.style.display = 'none';
+    pop.innerHTML = '';
+  }
+
+  function openFlagPopover(markEl, key) {
+    var f = state.flagsByKey[key];
+    if (!f) return;
+    var pop = document.getElementById('wsFlagPopover');
+    var d = f.data;
+    var html = '<button class="ws-fp-close" data-fp-close="1">&times;</button>';
+    if (f.type === 'hr') {
+      html +=
+        '<div class="ws-fp-cat">' + esc((d.category || 'phrasing').replace(/_/g, ' ')) + (d.severity ? ' &middot; ' + esc(d.severity) : '') + '</div>' +
+        '<div class="ws-fp-issue">' + esc(d.issue || '') + '</div>' +
+        (d.better_rephrasing ? '<div class="ws-fp-suggest-label">Try saying it like this</div><div class="ws-fp-suggest">&ldquo;' + esc(d.better_rephrasing) + '&rdquo;</div>' : '') +
+        (d.why_it_works ? '<div class="ws-fp-why">' + esc(d.why_it_works) + '</div>' : '');
+    } else {
+      html +=
+        '<div class="ws-fp-cat">' + esc((d.signal || 'signal').replace(/_/g, ' ')) + (d.confidence !== undefined ? ' &middot; ' + esc(d.confidence) + '% conf.' : '') + '</div>' +
+        '<div class="ws-fp-issue">' + esc(d.evidence_basis || '') + '</div>' +
+        (d.hr_suggestion ? '<div class="ws-fp-suggest-label">What HR could do next</div><div class="ws-fp-suggest">' + esc(d.hr_suggestion) + '</div>' : '');
+    }
+    pop.className = 'ws-flag-popover ' + f.type;
+    pop.innerHTML = html;
+    pop.style.display = 'block';
+
+    var r = markEl.getBoundingClientRect();
+    var popW = 320;
+    var left = Math.min(Math.max(8, r.left), window.innerWidth - popW - 8);
+    var top = r.bottom + 8;
+    if (top + 160 > window.innerHeight) top = Math.max(8, r.top - 168); // flip above if no room below
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+  }
+
+  document.addEventListener('click', function(e) {
+    var mark = e.target.closest('.ws-flag');
+    if (mark) {
+      e.stopPropagation();
+      openFlagPopover(mark, mark.getAttribute('data-flag-key'));
+      return;
+    }
+    if (e.target.closest('[data-fp-close]') || !e.target.closest('.ws-flag-popover')) {
+      closeFlagPopover();
+    }
+  });
 
   function renderLines() {
     var container = document.getElementById('wsLines');
     container.setAttribute('data-density', state.density);
     var visible = state.lines.filter(function(l) {
-      if (state.speaker !== 'all' && l.speaker !== state.speaker) return false;
+      if (state.speaker !== 'all' && l.speakerType !== state.speaker.toLowerCase()) return false;
       if (state.pinnedOnly && !state.pinned[l.idx]) return false;
       if (state.query && l.text.toLowerCase().indexOf(state.query.toLowerCase()) === -1) return false;
       return true;
@@ -341,16 +447,23 @@ window.voohrInitWorkspace = function() {
     var empInitials = empName ? empName.split(/\s+/).map(function(p) { return p.charAt(0); }).slice(0, 2).join('').toUpperCase() : 'EE';
     var html = visible.map(function(l) {
       var pinned = !!state.pinned[l.idx];
-      var isHr = l.speaker === 'HR';
-      var avatarInner = isHr
-        ? 'HR'
-        : (empPhoto ? '<img src="' + esc(empPhoto) + '" alt="' + esc(empName || 'Employee') + '">' : esc(empInitials));
+      var isHr = l.speakerType === 'hr';
+      var isEmp = l.speakerType === 'employee';
+      var speakerName = l.speaker || (isEmp ? 'Employee' : 'Unknown');
+      var avatarInner;
+      if (isHr) {
+        avatarInner = 'HR';
+      } else if (isEmp) {
+        avatarInner = empPhoto ? '<img src="' + esc(empPhoto) + '" alt="' + esc(empName || 'Employee') + '">' : esc(empInitials);
+      } else {
+        avatarInner = esc(speakerName.split(/\s+/).map(function(p) { return p.charAt(0); }).slice(0, 2).join('').toUpperCase() || '?');
+      }
       return (
         '<div class="ws-line' + (pinned ? ' pinned' : '') + '" data-idx="' + l.idx + '">' +
           '<div class="ws-line-avatar ' + (isHr ? 'hr' : 'emp') + (!isHr && empPhoto ? ' has-photo' : '') + '">' + avatarInner + '</div>' +
           '<div class="ws-line-body">' +
             '<div class="ws-line-head">' +
-              '<span class="ws-line-speaker ' + (isHr ? 'hr' : 'emp') + '">' + (isHr ? 'HR' : esc(empName || 'Employee')) + '</span>' +
+              '<span class="ws-line-speaker ' + (isHr ? 'hr' : 'emp') + '">' + (isHr ? 'HR' : esc(speakerName)) + '</span>' +
               (state.showTime ? '<span class="ws-line-time">' + fmtTime(l.time) + '</span>' : '') +
             '</div>' +
             '<div class="ws-line-text">' + highlight(l.text) + '</div>' +
@@ -526,10 +639,13 @@ window.voohrInitWorkspace = function() {
   function renderAll() {
     var a = state.session.analysis || {};
     parseTranscript();
+    computeFlagMatches();
     loadingEl.style.display = 'none';
     bodyEl.style.display = '';
     document.getElementById('wsBreadcrumb').textContent = (state.employee && state.employee.name) ? state.employee.name : 'Conversation Workspace';
     document.getElementById('analysisTab').href = 'sync_room.html?session_id=' + sessionId + '&employee_id=' + employeeId;
+    var phrasingBtn = document.getElementById('wsPhrasingBtn');
+    if (state.session.phrasing_analysis) phrasingBtn.classList.add('active');
     renderLines();
     renderScore(a);
     renderCoach(a);
@@ -596,6 +712,38 @@ window.voohrInitWorkspace = function() {
         note.style.display = 'none';
         document.getElementById('runAnalysisBtn').disabled = false;
         showToast('Analysis failed: ' + err.message);
+      });
+  });
+
+  document.getElementById('wsPhrasingBtn').addEventListener('click', function() {
+    var btn = this;
+    if (!state.session || !state.session.analysis) {
+      showToast('Run the AI analysis first, then scan for phrasing.');
+      return;
+    }
+    btn.disabled = true;
+    var prevLabel = btn.textContent;
+    btn.textContent = 'Scanning\u2026';
+    fetch('/api/sessions/' + sessionId + '/phrasing', { method: 'POST' })
+      .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Phrasing review failed'); });
+        return r.json();
+      })
+      .then(function(s) {
+        state.session = s;
+        computeFlagMatches();
+        renderLines();
+        btn.classList.add('active');
+        var pa = s.phrasing_analysis || {};
+        var count = (pa.hr_phrasing_flags || []).length + (pa.employee_signals || []).length;
+        showToast(count ? (count + ' moment' + (count === 1 ? '' : 's') + ' flagged \u2014 click the highlighted text for suggestions') : 'No phrasing issues found in this conversation.');
+      })
+      .catch(function(err) {
+        showToast('Phrasing review failed: ' + err.message);
+      })
+      .finally(function() {
+        btn.disabled = false;
+        if (btn.textContent === 'Scanning\u2026') btn.textContent = prevLabel;
       });
   });
 

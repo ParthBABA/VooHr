@@ -1,0 +1,557 @@
+diff --git a/providers/llm.py b/providers/llm.py
+index 5c281bc..6cf46e0 100644
+--- a/providers/llm.py
++++ b/providers/llm.py
+@@ -617,6 +617,14 @@ FALLBACK_ANALYSIS = {
+ }
+ 
+ 
++FALLBACK_PHRASING_ANALYSIS = {
++    "overall_tone_score": 0,
++    "hr_phrasing_flags": [],
++    "employee_signals": [],
++    "positive_moments": [],
++}
++
++
+ FALLBACK_DRIFT_EXPLANATION = {
+     "is_genuine_pattern": False,
+     "headline": "",
+@@ -632,11 +640,127 @@ FALLBACK_DRIFT_EXPLANATION = {
+ }
+ 
+ 
++def _build_phrasing_prompt() -> str:
++    """Build the Phrasing & Psychological-Safety Review prompt.
++
++    Unlike _build_v2_prompt() (deep post-conversation analysis), this scans
++    the transcript line-by-line for two things:
++      1. HR phrasing that could reduce psychological safety/trust — with a
++         verbatim quote (for UI highlighting) and a better rephrasing.
++      2. Employee language signals (nervousness, hesitation, concealment,
++         defensiveness) grounded in observable evidence, never a diagnosis.
++    """
++    return """You are a Communication & Psychological-Safety Reviewer for HR conversation transcripts. You draw on established, peer-reviewed frameworks — psychological safety (Edmondson), Nonviolent Communication (Rosenberg), active listening, and motivational interviewing — but you NEVER name these frameworks in your output. You write like a skilled human coach, not an academic.
++
++YOUR TWO JOBS
++
++JOB 1 — HR Phrasing Review
++Read every line spoken by HR/manager. Flag lines that could reduce psychological safety, sound judgmental, invalidate the employee's experience, put them on the defensive, or ask a leading/closed question instead of an open one. For each flagged line, extract the EXACT quote (verbatim, character-for-character substring copied from the transcript — this is used to highlight the text in the UI, so it must match exactly, including punctuation and casing) and propose a warmer, safer rephrasing that says the same thing without the problem.
++
++JOB 2 — Employee Signal Review
++Read every line spoken by the employee. Identify moments where the language itself carries a signal worth HR's attention — hesitation, hedging ("I guess", "maybe it's fine"), short/deflective answers after a direct question, sudden topic changes, minimizing language, or conversely genuine openness. For each, extract the EXACT quote (verbatim substring, same rule as above) and name the signal using probabilistic, non-diagnostic language. Never diagnose a mental health condition or label personality. Ground every signal in a specific observable pattern in the text, not a vibe.
++
++GOLDEN RULES
++- "quote" fields MUST be an exact, verbatim, contiguous substring of the transcript as given — do not paraphrase, trim mid-word, translate, or fix typos. If you cannot find an exact substring, do not include that flag.
++- Keep each quote short and specific: one sentence or clause (roughly 3–25 words), not a whole paragraph.
++- Only flag genuine issues/signals with real evidence. Do not force a minimum count — a clean, healthy conversation can have very few or zero HR flags.
++- Cap output at a maximum of 8 hr_phrasing_flags, 8 employee_signals, and 4 positive_moments — pick the most important ones.
++- Use probabilistic language for employee_signals ("appears", "may indicate", "possible") — never "the employee is anxious" as a fact.
++- Never diagnose mental health conditions or assign personality labels.
++- Also capture positive_moments: HR lines that were done well (specific, empathetic, safety-building) so HR sees what to keep doing, not just what to fix.
++- Short, casual, or Hindi-English code-mixed transcripts are still valid evidence — do not skip analysis just because the language is informal or mixed.
++
++Return a JSON object with exactly these fields:
++- overall_tone_score: 0-100, how psychologically safe and empathetic the HR side of this conversation felt overall
++- hr_phrasing_flags: [
++    {
++      "quote": "exact verbatim substring of the HR line being flagged",
++      "category": "judgmental_tone | invalidating | leading_question | blame_language | dismissive | interrupting_defensive | clarity",
++      "severity": "low | medium | high",
++      "issue": "One short sentence: what's wrong with this phrasing and why it could reduce trust",
++      "better_rephrasing": "A warmer, psychologically-safer way to say the same thing",
++      "why_it_works": "One short sentence explaining why the rewrite is better, grounded in evidence/communication principles, without naming any framework by name"
++    }
++  ]
++- employee_signals: [
++    {
++      "quote": "exact verbatim substring of the employee line being flagged",
++      "signal": "nervous_hesitant | possible_concealment | defensive_guarded | minimizing | frustrated | genuinely_open",
++      "confidence": 0-100,
++      "evidence_basis": "The specific observable pattern that suggests this (e.g. hedging words, short answer after a direct question, topic deflection, tone shift) — not a generic statement",
++      "hr_suggestion": "One short, specific thing HR could say or do next to create more safety for this employee, grounded in what was actually said"
++    }
++  ]
++- positive_moments: [
++    { "quote": "exact verbatim substring of a well-handled HR line", "why_it_works": "One short sentence on why this built trust or safety" }
++  ]
++
++Return ONLY valid JSON, no markdown formatting, no code fences."""
++
++
++def validate_phrasing_analysis(result: dict) -> dict:
++    """Defensively normalize the phrasing-review LLM output so the frontend
++    can always rely on the expected shape, even if the model returns a
++    slightly different structure (e.g. a flag list as a single dict)."""
++    if not isinstance(result, dict):
++        return dict(FALLBACK_PHRASING_ANALYSIS)
++
++    out = dict(FALLBACK_PHRASING_ANALYSIS)
++
++    score = result.get("overall_tone_score", 0)
++    try:
++        out["overall_tone_score"] = max(0, min(100, int(score)))
++    except (TypeError, ValueError):
++        out["overall_tone_score"] = 0
++
++    def _clean_list(key, required_fields):
++        val = result.get(key)
++        if isinstance(val, dict):
++            val = [val]
++        if not isinstance(val, list):
++            return []
++        cleaned = []
++        for item in val:
++            if not isinstance(item, dict):
++                continue
++            quote = item.get("quote")
++            if not quote or not isinstance(quote, str) or not quote.strip():
++                continue
++            row = {f: item.get(f, "") for f in required_fields}
++            row["quote"] = quote
++            if "confidence" in row:
++                try:
++                    row["confidence"] = max(0, min(100, int(row["confidence"])))
++                except (TypeError, ValueError):
++                    row["confidence"] = 0
++            cleaned.append(row)
++        return cleaned[:8]
++
++    out["hr_phrasing_flags"] = _clean_list(
++        "hr_phrasing_flags",
++        ["quote", "category", "severity", "issue", "better_rephrasing", "why_it_works"],
++    )
++    out["employee_signals"] = _clean_list(
++        "employee_signals",
++        ["quote", "signal", "confidence", "evidence_basis", "hr_suggestion"],
++    )
++    out["positive_moments"] = _clean_list("positive_moments", ["quote", "why_it_works"])[:4]
++
++    return out
++
++
+ class BaseLLM(ABC):
+     @abstractmethod
+     def analyze(self, transcript: str) -> dict:
+         ...
+ 
++    @abstractmethod
++    def analyze_phrasing(self, transcript: str) -> dict:
++        """Line-level phrasing/psych-safety review: flags HR lines that could
++        reduce trust (with a rephrasing suggestion) and employee lines that
++        carry a communication signal (hesitation, concealment, openness)."""
++        ...
++
+     @abstractmethod
+     def explain_drift(self, sessions: list) -> dict:
+         """Explain whether risk across multiple syncs forms a genuine pattern.
+@@ -856,6 +980,27 @@ Return ONLY valid JSON, no markdown formatting."""
+         except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
+             return dict(FALLBACK_DRIFT_EXPLANATION)
+ 
++    def analyze_phrasing(self, transcript: str) -> dict:
++        from openai import OpenAI
++
++        client = OpenAI(api_key=self.api_key)
++
++        resp = client.chat.completions.create(
++            model=self.model,
++            messages=[
++                {"role": "system", "content": _build_phrasing_prompt()},
++                {"role": "user", "content": transcript},
++            ],
++            response_format={"type": "json_object"},
++            temperature=0.2,
++        )
++
++        try:
++            result = json.loads(resp.choices[0].message.content)
++            return validate_phrasing_analysis(result)
++        except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
++            return dict(FALLBACK_PHRASING_ANALYSIS)
++
+ 
+ class DeepSeekLLM(BaseLLM):
+     """HR transcript analysis using DeepSeek's chat API.
+@@ -1082,3 +1227,31 @@ Return ONLY valid JSON, no markdown formatting, no code fences."""
+ 
+         result = validate_drift_explanation(result)
+         return result
++
++    def analyze_phrasing(self, transcript: str) -> dict:
++        from openai import OpenAI
++
++        client = OpenAI(api_key=self.api_key, base_url=self.base_url)
++
++        resp = client.chat.completions.create(
++            model=self.model,
++            messages=[
++                {"role": "system", "content": _build_phrasing_prompt()},
++                {"role": "user", "content": transcript},
++            ],
++            temperature=0.2,
++            stream=False,
++        )
++
++        raw_content = resp.choices[0].message.content or ""
++        # DeepSeek doesn't reliably support response_format=json_object, so
++        # strip markdown code fences defensively before parsing.
++        content = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_content.strip())
++
++        try:
++            result = json.loads(content)
++        except json.JSONDecodeError:
++            logger.warning("DeepSeek analyze_phrasing: JSON parse failed")
++            return dict(FALLBACK_PHRASING_ANALYSIS)
++
++        return validate_phrasing_analysis(result)
+diff --git a/sessions.py b/sessions.py
+index d630bfd..c4ab5e0 100644
+--- a/sessions.py
++++ b/sessions.py
+@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
+ # calls.  These are intentionally generous for legitimate HR workflows
+ # but prevent automated flooding.
+ _ANALYZE_MAX = 15            # max analyze requests per window
++_PHRASING_MAX = 15          # max phrasing-review requests per window
+ _TRANSCRIBE_MAX = 30        # max transcription requests per window
+ _OCR_MAX = 20               # max image OCR requests per window
+ _API_RATE_WINDOW = 900      # 15-minute sliding window in seconds
+@@ -121,8 +122,11 @@ def _session_to_json(s) -> dict:
+         "transcript": s.get("transcript", {"raw": "", "edited": "", "word_count": 0}),
+         "analysis": s.get("analysis"),
+         "analysis_version": s.get("analysis_version", 0),
++        "phrasing_analysis": s.get("phrasing_analysis"),
++        "phrasing_analysis_version": s.get("phrasing_analysis_version", 0),
+         "last_transcript_update": s["last_transcript_update"].isoformat() if s.get("last_transcript_update") else None,
+         "last_analyzed_at": s["last_analyzed_at"].isoformat() if s.get("last_analyzed_at") else None,
++        "last_phrasing_analyzed_at": s["last_phrasing_analyzed_at"].isoformat() if s.get("last_phrasing_analyzed_at") else None,
+         "created_at": s["created_at"].isoformat() if s.get("created_at") else None,
+         "updated_at": s["updated_at"].isoformat() if s.get("updated_at") else None,
+     }
+@@ -528,6 +532,73 @@ def analyze_session(session_id: str):
+         return jsonify({"error": "Analysis failed. Please try again."}), 500
+ 
+ 
++@sessions_bp.route("/sessions/<session_id>/phrasing", methods=["POST"])
++def analyze_phrasing(session_id: str):
++    """Line-level phrasing & psychological-safety review.
++
++    Separate from /analyze (which produces the deep post-conversation
++    report). This scans the transcript for specific HR lines that could
++    reduce trust (with a rephrasing suggestion) and specific employee lines
++    that carry a communication signal (hesitation, possible concealment,
++    guardedness, openness). Each flagged item carries a verbatim quote so
++    the frontend can highlight the exact text in the transcript view.
++    """
++    org_id = _require_auth()
++    if not org_id:
++        return jsonify({"error": "not_authenticated"}), 401
++
++    user_id_str = session.get("user_id", "")
++    allowed, retry_after = _check_api_rate_limit(user_id_str, "phrasing", _PHRASING_MAX)
++    if not allowed:
++        return jsonify({
++            "error": "Too many requests. Please try again later.",
++            "retry_after": retry_after,
++        }), 429, {"Retry-After": str(retry_after)}
++
++    db = get_db()
++    try:
++        s = db.sessions.find_one({"_id": ObjectId(session_id), "org_id": ObjectId(org_id)})
++    except InvalidId:
++        return jsonify({"error": "invalid_id"}), 400
++
++    if not s:
++        return jsonify({"error": "not_found"}), 404
++
++    transcript = (s.get("transcript") or {}).get("edited") or (s.get("transcript") or {}).get("raw", "")
++    if not transcript:
++        return jsonify({"error": "no_transcript_to_analyze"}), 400
++
++    # Same truncation strategy as /analyze: the full transcript stays in the
++    # DB untouched, only the LLM call itself is capped.
++    llm_transcript = transcript[:MAX_LLM_TRANSCRIPT_CHARS]
++
++    try:
++        llm = get_llm_provider()
++        phrasing = llm.analyze_phrasing(llm_transcript)
++
++        now = datetime.now(timezone.utc)
++        db.sessions.update_one(
++            {"_id": ObjectId(session_id)},
++            {
++                "$set": {
++                    "phrasing_analysis": phrasing,
++                    "phrasing_analysis_version": (s.get("phrasing_analysis_version", 0) + 1),
++                    "last_phrasing_analyzed_at": now,
++                    "updated_at": now,
++                }
++            },
++        )
++
++        s = db.sessions.find_one({"_id": ObjectId(session_id)})
++        if not s:
++            return jsonify({"error": "session_disappeared_after_analysis"}), 500
++        return jsonify(_session_to_json(s))
++
++    except Exception:
++        logger.exception("Phrasing review failed (session=%s)", session_id)
++        return jsonify({"error": "Phrasing review failed. Please try again."}), 500
++
++
+ @sessions_bp.route("/transcribe", methods=["POST"])
+ def transcribe_audio():
+     org_id = _require_auth()
+diff --git a/static/conversation-workspace.html b/static/conversation-workspace.html
+index 7f80d48..099b0e4 100644
+--- a/static/conversation-workspace.html
++++ b/static/conversation-workspace.html
+@@ -142,6 +142,7 @@ fetch('/api/me').then(function(res){
+               <option value="Employee">Employee</option>
+             </select>
+             <button class="ws-tool-btn" id="wsDensityBtn" title="View density">View: Standard</button>
++            <button class="ws-tool-btn ws-phrasing-btn" id="wsPhrasingBtn" title="Scan for phrasing &amp; psychological-safety issues">Phrasing Review</button>
+           </div>
+ 
+           <div class="ws-filter-pop" id="wsFilterPop" style="display:none;">
+@@ -208,6 +209,8 @@ fetch('/api/me').then(function(res){
+   </main>
+ </div>
+ 
++<div class="ws-flag-popover" id="wsFlagPopover" style="display:none;"></div>
++
+ <script>
+ window.voohrInitWorkspace = function() {
+   var params = new URLSearchParams(window.location.search);
+@@ -308,21 +311,130 @@ window.voohrInitWorkspace = function() {
+   }
+ 
+   // ── Rendering ──
+-  function highlight(text) {
+-    if (!state.query) return esc(text);
+-    var q = state.query.toLowerCase();
+-    var lower = text.toLowerCase();
+-    var out = '';
+-    var i = 0;
+-    while (true) {
+-      var j = lower.indexOf(q, i);
+-      if (j === -1) { out += esc(text.slice(i)); break; }
+-      out += esc(text.slice(i, j)) + '<mark class="ws-hl">' + esc(text.slice(j, j + q.length)) + '</mark>';
+-      i = j + q.length;
++
++  // ── Phrasing Review: maps each flagged quote onto the line that contains
++  // it (exact substring match, since the LLM is instructed to return
++  // verbatim quotes) so the transcript can render a clickable red/violet
++  // mark instead of the AI re-writing the transcript itself.
++  function computeFlagMatches() {
++    state.flagsByKey = {};
++    state.flagMatches = {};
++    var pa = state.session && state.session.phrasing_analysis;
++    if (!pa) return;
++
++    var all = [];
++    (pa.hr_phrasing_flags || []).forEach(function(f, i) { all.push({ key: 'hr-' + i, type: 'hr', data: f }); });
++    (pa.employee_signals || []).forEach(function(f, i) { all.push({ key: 'emp-' + i, type: 'emp', data: f }); });
++    all.forEach(function(f) { state.flagsByKey[f.key] = f; });
++
++    (state.lines || []).forEach(function(l) {
++      var matches = [];
++      all.forEach(function(f) {
++        var q = f.data && f.data.quote;
++        if (!q) return;
++        var idx = l.text.indexOf(q);
++        if (idx !== -1) matches.push({ start: idx, end: idx + q.length, type: f.type, key: f.key });
++      });
++      if (matches.length) {
++        // Longest match first so nested/overlapping quotes don't fragment.
++        matches.sort(function(a, b) { return (b.end - b.start) - (a.end - a.start); });
++        state.flagMatches[l.idx] = matches;
++      }
++    });
++  }
++
++  function highlight(text, lineIdx) {
++    var flagRanges = ((lineIdx !== undefined && state.flagMatches[lineIdx]) || []).slice();
++    var searchRanges = [];
++    if (state.query) {
++      var q = state.query.toLowerCase();
++      var lower = text.toLowerCase();
++      var i = 0;
++      while (true) {
++        var j = lower.indexOf(q, i);
++        if (j === -1) break;
++        searchRanges.push({ start: j, end: j + q.length, type: 'search' });
++        i = j + q.length;
++      }
+     }
++
++    var ranges = flagRanges.slice();
++    searchRanges.forEach(function(sr) {
++      var overlaps = flagRanges.some(function(fr) { return sr.start < fr.end && sr.end > fr.start; });
++      if (!overlaps) ranges.push(sr);
++    });
++    ranges.sort(function(a, b) { return a.start - b.start; });
++
++    if (!ranges.length) return esc(text);
++
++    var out = '';
++    var cursor = 0;
++    ranges.forEach(function(r) {
++      if (r.start < cursor) return; // skip ranges swallowed by an earlier overlapping one
++      out += esc(text.slice(cursor, r.start));
++      var seg = esc(text.slice(r.start, r.end));
++      if (r.type === 'search') {
++        out += '<mark class="ws-hl">' + seg + '</mark>';
++      } else {
++        out += '<mark class="ws-flag ws-flag-' + r.type + '" data-flag-key="' + r.key + '">' + seg + '</mark>';
++      }
++      cursor = r.end;
++    });
++    out += esc(text.slice(cursor));
+     return out;
+   }
+ 
++  // ── Flag popover: small, appears next to the clicked phrase, closes on
++  // outside click. Never a persistent panel — it's ephemeral by design.
++  function closeFlagPopover() {
++    var pop = document.getElementById('wsFlagPopover');
++    pop.style.display = 'none';
++    pop.innerHTML = '';
++  }
++
++  function openFlagPopover(markEl, key) {
++    var f = state.flagsByKey[key];
++    if (!f) return;
++    var pop = document.getElementById('wsFlagPopover');
++    var d = f.data;
++    var html = '<button class="ws-fp-close" data-fp-close="1">&times;</button>';
++    if (f.type === 'hr') {
++      html +=
++        '<div class="ws-fp-cat">' + esc((d.category || 'phrasing').replace(/_/g, ' ')) + (d.severity ? ' &middot; ' + esc(d.severity) : '') + '</div>' +
++        '<div class="ws-fp-issue">' + esc(d.issue || '') + '</div>' +
++        (d.better_rephrasing ? '<div class="ws-fp-suggest-label">Try saying it like this</div><div class="ws-fp-suggest">&ldquo;' + esc(d.better_rephrasing) + '&rdquo;</div>' : '') +
++        (d.why_it_works ? '<div class="ws-fp-why">' + esc(d.why_it_works) + '</div>' : '');
++    } else {
++      html +=
++        '<div class="ws-fp-cat">' + esc((d.signal || 'signal').replace(/_/g, ' ')) + (d.confidence !== undefined ? ' &middot; ' + esc(d.confidence) + '% conf.' : '') + '</div>' +
++        '<div class="ws-fp-issue">' + esc(d.evidence_basis || '') + '</div>' +
++        (d.hr_suggestion ? '<div class="ws-fp-suggest-label">What HR could do next</div><div class="ws-fp-suggest">' + esc(d.hr_suggestion) + '</div>' : '');
++    }
++    pop.className = 'ws-flag-popover ' + f.type;
++    pop.innerHTML = html;
++    pop.style.display = 'block';
++
++    var r = markEl.getBoundingClientRect();
++    var popW = 320;
++    var left = Math.min(Math.max(8, r.left), window.innerWidth - popW - 8);
++    var top = r.bottom + 8;
++    if (top + 160 > window.innerHeight) top = Math.max(8, r.top - 168); // flip above if no room below
++    pop.style.left = left + 'px';
++    pop.style.top = top + 'px';
++  }
++
++  document.addEventListener('click', function(e) {
++    var mark = e.target.closest('.ws-flag');
++    if (mark) {
++      e.stopPropagation();
++      openFlagPopover(mark, mark.getAttribute('data-flag-key'));
++      return;
++    }
++    if (e.target.closest('[data-fp-close]') || !e.target.closest('.ws-flag-popover')) {
++      closeFlagPopover();
++    }
++  });
++
+   function renderLines() {
+     var container = document.getElementById('wsLines');
+     container.setAttribute('data-density', state.density);
+@@ -353,7 +465,7 @@ window.voohrInitWorkspace = function() {
+               '<span class="ws-line-speaker ' + (isHr ? 'hr' : 'emp') + '">' + (isHr ? 'HR' : esc(empName || 'Employee')) + '</span>' +
+               (state.showTime ? '<span class="ws-line-time">' + fmtTime(l.time) + '</span>' : '') +
+             '</div>' +
+-            '<div class="ws-line-text">' + highlight(l.text) + '</div>' +
++            '<div class="ws-line-text">' + highlight(l.text, l.idx) + '</div>' +
+           '</div>' +
+           '<div class="ws-line-actions">' +
+             '<button class="ws-line-action" data-action="pin" title="' + (pinned ? 'Unpin' : 'Pin') + '">' +
+@@ -526,10 +638,13 @@ window.voohrInitWorkspace = function() {
+   function renderAll() {
+     var a = state.session.analysis || {};
+     parseTranscript();
++    computeFlagMatches();
+     loadingEl.style.display = 'none';
+     bodyEl.style.display = '';
+     document.getElementById('wsBreadcrumb').textContent = (state.employee && state.employee.name) ? state.employee.name : 'Conversation Workspace';
+     document.getElementById('analysisTab').href = 'sync_room.html?session_id=' + sessionId + '&employee_id=' + employeeId;
++    var phrasingBtn = document.getElementById('wsPhrasingBtn');
++    if (state.session.phrasing_analysis) phrasingBtn.classList.add('active');
+     renderLines();
+     renderScore(a);
+     renderCoach(a);
+@@ -599,6 +714,38 @@ window.voohrInitWorkspace = function() {
+       });
+   });
+ 
++  document.getElementById('wsPhrasingBtn').addEventListener('click', function() {
++    var btn = this;
++    if (!state.session || !state.session.analysis) {
++      showToast('Run the AI analysis first, then scan for phrasing.');
++      return;
++    }
++    btn.disabled = true;
++    var prevLabel = btn.textContent;
++    btn.textContent = 'Scanning\u2026';
++    fetch('/api/sessions/' + sessionId + '/phrasing', { method: 'POST' })
++      .then(function(r) {
++        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Phrasing review failed'); });
++        return r.json();
++      })
++      .then(function(s) {
++        state.session = s;
++        computeFlagMatches();
++        renderLines();
++        btn.classList.add('active');
++        var pa = s.phrasing_analysis || {};
++        var count = (pa.hr_phrasing_flags || []).length + (pa.employee_signals || []).length;
++        showToast(count ? (count + ' moment' + (count === 1 ? '' : 's') + ' flagged \u2014 click the highlighted text for suggestions') : 'No phrasing issues found in this conversation.');
++      })
++      .catch(function(err) {
++        showToast('Phrasing review failed: ' + err.message);
++      })
++      .finally(function() {
++        btn.disabled = false;
++        if (btn.textContent === 'Scanning\u2026') btn.textContent = prevLabel;
++      });
++  });
++
+   document.getElementById('wsSearch').addEventListener('input', function(e) {
+     state.query = e.target.value.trim();
+     renderLines();
+diff --git a/static/style.css b/static/style.css
+index 2c80ab5..81d35da 100644
+--- a/static/style.css
++++ b/static/style.css
+@@ -1011,4 +1011,20 @@ body.lang-hi [data-lang-block="en"]{display:none;}
+  
+    . s i d e b a r . i c o n - o n l y   . n a v - i t e m . a c t i v e { c o l o r : v a r ( - - i v o r y ) ; b a c k g r o u n d : v a r ( - - i v o r y - g h o s t ) ; b o r d e r - l e f t - c o l o r : v a r ( - - a m b e r ) ; } 
+  
+- 
+\ No newline at end of file
++ 
++/* ── Phrasing Review: red = HR mistake, violet = employee signal ── */
++.ws-phrasing-btn.active{color:var(--red);border-color:rgba(232,69,69,0.4);background:var(--red-soft);}
++.ws-flag{cursor:pointer;padding:0 1px;border-radius:2px;transition:filter 0.15s;}
++.ws-flag:hover{filter:brightness(1.15);}
++.ws-flag-hr{background:var(--red-soft);color:var(--red);outline:1px solid rgba(232,69,69,0.4);border-bottom:1px dashed var(--red);}
++.ws-flag-emp{background:var(--violet-soft);color:var(--violet);outline:1px solid rgba(123,79,255,0.4);border-bottom:1px dashed var(--violet);}
++.ws-flag-popover{position:fixed;z-index:999;max-width:320px;background:var(--ink);border:1px solid var(--border-lit);box-shadow:0 12px 32px rgba(0,0,0,0.4);padding:0.9rem 1rem 0.8rem;border-radius:8px;font-family:var(--font-lato);font-size:0.78rem;line-height:1.55;color:var(--ivory);}
++.ws-flag-popover .ws-fp-cat{font-family:var(--font-m);font-weight:700;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.45rem;}
++.ws-flag-popover.hr .ws-fp-cat{color:var(--red);}
++.ws-flag-popover.emp .ws-fp-cat{color:var(--violet);}
++.ws-flag-popover .ws-fp-issue{margin-bottom:0.55rem;color:var(--ivory);}
++.ws-flag-popover .ws-fp-suggest-label{font-family:var(--font-m);font-size:0.52rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--amber);margin-bottom:0.25rem;}
++.ws-flag-popover .ws-fp-suggest{background:var(--surface);border-left:2px solid var(--amber);padding:0.5rem 0.65rem;margin-bottom:0.5rem;font-style:italic;}
++.ws-flag-popover .ws-fp-why{color:var(--ivory-dim);font-size:0.7rem;}
++.ws-flag-popover .ws-fp-close{position:absolute;top:6px;right:9px;cursor:pointer;color:var(--ivory-faint);background:none;border:none;font-size:1rem;line-height:1;padding:2px;}
++.ws-flag-popover .ws-fp-close:hover{color:var(--ivory);}

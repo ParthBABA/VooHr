@@ -1012,3 +1012,19 @@ body.lang-hi [data-lang-block="en"]{display:none;}
    . s i d e b a r . i c o n - o n l y   . n a v - i t e m . a c t i v e { c o l o r : v a r ( - - i v o r y ) ; b a c k g r o u n d : v a r ( - - i v o r y - g h o s t ) ; b o r d e r - l e f t - c o l o r : v a r ( - - a m b e r ) ; } 
  
  
+/* ── Phrasing Review: red = HR mistake, violet = employee signal ── */
+.ws-phrasing-btn.active{color:var(--red);border-color:rgba(232,69,69,0.4);background:var(--red-soft);}
+.ws-flag{cursor:pointer;padding:0 1px;border-radius:2px;transition:filter 0.15s;}
+.ws-flag:hover{filter:brightness(1.15);}
+.ws-flag-hr{background:var(--red-soft);color:var(--red);outline:1px solid rgba(232,69,69,0.4);border-bottom:1px dashed var(--red);}
+.ws-flag-emp{background:var(--violet-soft);color:var(--violet);outline:1px solid rgba(123,79,255,0.4);border-bottom:1px dashed var(--violet);}
+.ws-flag-popover{position:fixed;z-index:999;max-width:320px;background:var(--ink);border:1px solid var(--border-lit);box-shadow:0 12px 32px rgba(0,0,0,0.4);padding:0.9rem 1rem 0.8rem;border-radius:8px;font-family:var(--font-lato);font-size:0.78rem;line-height:1.55;color:var(--ivory);}
+.ws-flag-popover .ws-fp-cat{font-family:var(--font-m);font-weight:700;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.45rem;}
+.ws-flag-popover.hr .ws-fp-cat{color:var(--red);}
+.ws-flag-popover.emp .ws-fp-cat{color:var(--violet);}
+.ws-flag-popover .ws-fp-issue{margin-bottom:0.55rem;color:var(--ivory);}
+.ws-flag-popover .ws-fp-suggest-label{font-family:var(--font-m);font-size:0.52rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--amber);margin-bottom:0.25rem;}
+.ws-flag-popover .ws-fp-suggest{background:var(--surface);border-left:2px solid var(--amber);padding:0.5rem 0.65rem;margin-bottom:0.5rem;font-style:italic;}
+.ws-flag-popover .ws-fp-why{color:var(--ivory-dim);font-size:0.7rem;}
+.ws-flag-popover .ws-fp-close{position:absolute;top:6px;right:9px;cursor:pointer;color:var(--ivory-faint);background:none;border:none;font-size:1rem;line-height:1;padding:2px;}
+.ws-flag-popover .ws-fp-close:hover{color:var(--ivory);}

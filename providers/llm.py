@@ -617,6 +617,14 @@ FALLBACK_ANALYSIS = {
 }
 
 
+FALLBACK_PHRASING_ANALYSIS = {
+    "overall_tone_score": 0,
+    "hr_phrasing_flags": [],
+    "employee_signals": [],
+    "positive_moments": [],
+}
+
+
 FALLBACK_DRIFT_EXPLANATION = {
     "is_genuine_pattern": False,
     "headline": "",
@@ -632,9 +640,125 @@ FALLBACK_DRIFT_EXPLANATION = {
 }
 
 
+def _build_phrasing_prompt() -> str:
+    """Build the Phrasing & Psychological-Safety Review prompt.
+
+    Unlike _build_v2_prompt() (deep post-conversation analysis), this scans
+    the transcript line-by-line for two things:
+      1. HR phrasing that could reduce psychological safety/trust — with a
+         verbatim quote (for UI highlighting) and a better rephrasing.
+      2. Employee language signals (nervousness, hesitation, concealment,
+         defensiveness) grounded in observable evidence, never a diagnosis.
+    """
+    return """You are a Communication & Psychological-Safety Reviewer for HR conversation transcripts. You draw on established, peer-reviewed frameworks — psychological safety (Edmondson), Nonviolent Communication (Rosenberg), active listening, and motivational interviewing — but you NEVER name these frameworks in your output. You write like a skilled human coach, not an academic.
+
+YOUR TWO JOBS
+
+JOB 1 — HR Phrasing Review
+Read every line spoken by HR/manager. Flag lines that could reduce psychological safety, sound judgmental, invalidate the employee's experience, put them on the defensive, or ask a leading/closed question instead of an open one. For each flagged line, extract the EXACT quote (verbatim, character-for-character substring copied from the transcript — this is used to highlight the text in the UI, so it must match exactly, including punctuation and casing) and propose a warmer, safer rephrasing that says the same thing without the problem.
+
+JOB 2 — Employee Signal Review
+Read every line spoken by the employee. Identify moments where the language itself carries a signal worth HR's attention — hesitation, hedging ("I guess", "maybe it's fine"), short/deflective answers after a direct question, sudden topic changes, minimizing language, or conversely genuine openness. For each, extract the EXACT quote (verbatim substring, same rule as above) and name the signal using probabilistic, non-diagnostic language. Never diagnose a mental health condition or label personality. Ground every signal in a specific observable pattern in the text, not a vibe.
+
+GOLDEN RULES
+- "quote" fields MUST be an exact, verbatim, contiguous substring of the transcript as given — do not paraphrase, trim mid-word, translate, or fix typos. If you cannot find an exact substring, do not include that flag.
+- Keep each quote short and specific: one sentence or clause (roughly 3–25 words), not a whole paragraph.
+- Only flag genuine issues/signals with real evidence. Do not force a minimum count — a clean, healthy conversation can have very few or zero HR flags.
+- Cap output at a maximum of 8 hr_phrasing_flags, 8 employee_signals, and 4 positive_moments — pick the most important ones.
+- Use probabilistic language for employee_signals ("appears", "may indicate", "possible") — never "the employee is anxious" as a fact.
+- Never diagnose mental health conditions or assign personality labels.
+- Also capture positive_moments: HR lines that were done well (specific, empathetic, safety-building) so HR sees what to keep doing, not just what to fix.
+- Short, casual, or Hindi-English code-mixed transcripts are still valid evidence — do not skip analysis just because the language is informal or mixed.
+
+Return a JSON object with exactly these fields:
+- overall_tone_score: 0-100, how psychologically safe and empathetic the HR side of this conversation felt overall
+- hr_phrasing_flags: [
+    {
+      "quote": "exact verbatim substring of the HR line being flagged",
+      "category": "judgmental_tone | invalidating | leading_question | blame_language | dismissive | interrupting_defensive | clarity",
+      "severity": "low | medium | high",
+      "issue": "One short sentence: what's wrong with this phrasing and why it could reduce trust",
+      "better_rephrasing": "A warmer, psychologically-safer way to say the same thing",
+      "why_it_works": "One short sentence explaining why the rewrite is better, grounded in evidence/communication principles, without naming any framework by name"
+    }
+  ]
+- employee_signals: [
+    {
+      "quote": "exact verbatim substring of the employee line being flagged",
+      "signal": "nervous_hesitant | possible_concealment | defensive_guarded | minimizing | frustrated | genuinely_open",
+      "confidence": 0-100,
+      "evidence_basis": "The specific observable pattern that suggests this (e.g. hedging words, short answer after a direct question, topic deflection, tone shift) — not a generic statement",
+      "hr_suggestion": "One short, specific thing HR could say or do next to create more safety for this employee, grounded in what was actually said"
+    }
+  ]
+- positive_moments: [
+    { "quote": "exact verbatim substring of a well-handled HR line", "why_it_works": "One short sentence on why this built trust or safety" }
+  ]
+
+Return ONLY valid JSON, no markdown formatting, no code fences."""
+
+
+def validate_phrasing_analysis(result: dict) -> dict:
+    """Defensively normalize the phrasing-review LLM output so the frontend
+    can always rely on the expected shape, even if the model returns a
+    slightly different structure (e.g. a flag list as a single dict)."""
+    if not isinstance(result, dict):
+        return dict(FALLBACK_PHRASING_ANALYSIS)
+
+    out = dict(FALLBACK_PHRASING_ANALYSIS)
+
+    score = result.get("overall_tone_score", 0)
+    try:
+        out["overall_tone_score"] = max(0, min(100, int(score)))
+    except (TypeError, ValueError):
+        out["overall_tone_score"] = 0
+
+    def _clean_list(key, required_fields):
+        val = result.get(key)
+        if isinstance(val, dict):
+            val = [val]
+        if not isinstance(val, list):
+            return []
+        cleaned = []
+        for item in val:
+            if not isinstance(item, dict):
+                continue
+            quote = item.get("quote")
+            if not quote or not isinstance(quote, str) or not quote.strip():
+                continue
+            row = {f: item.get(f, "") for f in required_fields}
+            row["quote"] = quote
+            if "confidence" in row:
+                try:
+                    row["confidence"] = max(0, min(100, int(row["confidence"])))
+                except (TypeError, ValueError):
+                    row["confidence"] = 0
+            cleaned.append(row)
+        return cleaned[:8]
+
+    out["hr_phrasing_flags"] = _clean_list(
+        "hr_phrasing_flags",
+        ["quote", "category", "severity", "issue", "better_rephrasing", "why_it_works"],
+    )
+    out["employee_signals"] = _clean_list(
+        "employee_signals",
+        ["quote", "signal", "confidence", "evidence_basis", "hr_suggestion"],
+    )
+    out["positive_moments"] = _clean_list("positive_moments", ["quote", "why_it_works"])[:4]
+
+    return out
+
+
 class BaseLLM(ABC):
     @abstractmethod
     def analyze(self, transcript: str) -> dict:
+        ...
+
+    @abstractmethod
+    def analyze_phrasing(self, transcript: str) -> dict:
+        """Line-level phrasing/psych-safety review: flags HR lines that could
+        reduce trust (with a rephrasing suggestion) and employee lines that
+        carry a communication signal (hesitation, concealment, openness)."""
         ...
 
     @abstractmethod
@@ -855,6 +979,27 @@ Return ONLY valid JSON, no markdown formatting."""
             return result
         except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
             return dict(FALLBACK_DRIFT_EXPLANATION)
+
+    def analyze_phrasing(self, transcript: str) -> dict:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=self.api_key)
+
+        resp = client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": _build_phrasing_prompt()},
+                {"role": "user", "content": transcript},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+        )
+
+        try:
+            result = json.loads(resp.choices[0].message.content)
+            return validate_phrasing_analysis(result)
+        except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
+            return dict(FALLBACK_PHRASING_ANALYSIS)
 
 
 class DeepSeekLLM(BaseLLM):
@@ -1082,3 +1227,31 @@ Return ONLY valid JSON, no markdown formatting, no code fences."""
 
         result = validate_drift_explanation(result)
         return result
+
+    def analyze_phrasing(self, transcript: str) -> dict:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+
+        resp = client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": _build_phrasing_prompt()},
+                {"role": "user", "content": transcript},
+            ],
+            temperature=0.2,
+            stream=False,
+        )
+
+        raw_content = resp.choices[0].message.content or ""
+        # DeepSeek doesn't reliably support response_format=json_object, so
+        # strip markdown code fences defensively before parsing.
+        content = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_content.strip())
+
+        try:
+            result = json.loads(content)
+        except json.JSONDecodeError:
+            logger.warning("DeepSeek analyze_phrasing: JSON parse failed")
+            return dict(FALLBACK_PHRASING_ANALYSIS)
+
+        return validate_phrasing_analysis(result)

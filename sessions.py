@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 # calls.  These are intentionally generous for legitimate HR workflows
 # but prevent automated flooding.
 _ANALYZE_MAX = 15            # max analyze requests per window
+_PHRASING_MAX = 15          # max phrasing-review requests per window
 _TRANSCRIBE_MAX = 30        # max transcription requests per window
 _OCR_MAX = 20               # max image OCR requests per window
 _API_RATE_WINDOW = 900      # 15-minute sliding window in seconds
@@ -121,8 +122,11 @@ def _session_to_json(s) -> dict:
         "transcript": s.get("transcript", {"raw": "", "edited": "", "word_count": 0}),
         "analysis": s.get("analysis"),
         "analysis_version": s.get("analysis_version", 0),
+        "phrasing_analysis": s.get("phrasing_analysis"),
+        "phrasing_analysis_version": s.get("phrasing_analysis_version", 0),
         "last_transcript_update": s["last_transcript_update"].isoformat() if s.get("last_transcript_update") else None,
         "last_analyzed_at": s["last_analyzed_at"].isoformat() if s.get("last_analyzed_at") else None,
+        "last_phrasing_analyzed_at": s["last_phrasing_analyzed_at"].isoformat() if s.get("last_phrasing_analyzed_at") else None,
         "created_at": s["created_at"].isoformat() if s.get("created_at") else None,
         "updated_at": s["updated_at"].isoformat() if s.get("updated_at") else None,
     }
@@ -526,6 +530,73 @@ def analyze_session(session_id: str):
             {"$set": {"status": "failed", "updated_at": datetime.now(timezone.utc)}},
         )
         return jsonify({"error": "Analysis failed. Please try again."}), 500
+
+
+@sessions_bp.route("/sessions/<session_id>/phrasing", methods=["POST"])
+def analyze_phrasing(session_id: str):
+    """Line-level phrasing & psychological-safety review.
+
+    Separate from /analyze (which produces the deep post-conversation
+    report). This scans the transcript for specific HR lines that could
+    reduce trust (with a rephrasing suggestion) and specific employee lines
+    that carry a communication signal (hesitation, possible concealment,
+    guardedness, openness). Each flagged item carries a verbatim quote so
+    the frontend can highlight the exact text in the transcript view.
+    """
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    user_id_str = session.get("user_id", "")
+    allowed, retry_after = _check_api_rate_limit(user_id_str, "phrasing", _PHRASING_MAX)
+    if not allowed:
+        return jsonify({
+            "error": "Too many requests. Please try again later.",
+            "retry_after": retry_after,
+        }), 429, {"Retry-After": str(retry_after)}
+
+    db = get_db()
+    try:
+        s = db.sessions.find_one({"_id": ObjectId(session_id), "org_id": ObjectId(org_id)})
+    except InvalidId:
+        return jsonify({"error": "invalid_id"}), 400
+
+    if not s:
+        return jsonify({"error": "not_found"}), 404
+
+    transcript = (s.get("transcript") or {}).get("edited") or (s.get("transcript") or {}).get("raw", "")
+    if not transcript:
+        return jsonify({"error": "no_transcript_to_analyze"}), 400
+
+    # Same truncation strategy as /analyze: the full transcript stays in the
+    # DB untouched, only the LLM call itself is capped.
+    llm_transcript = transcript[:MAX_LLM_TRANSCRIPT_CHARS]
+
+    try:
+        llm = get_llm_provider()
+        phrasing = llm.analyze_phrasing(llm_transcript)
+
+        now = datetime.now(timezone.utc)
+        db.sessions.update_one(
+            {"_id": ObjectId(session_id)},
+            {
+                "$set": {
+                    "phrasing_analysis": phrasing,
+                    "phrasing_analysis_version": (s.get("phrasing_analysis_version", 0) + 1),
+                    "last_phrasing_analyzed_at": now,
+                    "updated_at": now,
+                }
+            },
+        )
+
+        s = db.sessions.find_one({"_id": ObjectId(session_id)})
+        if not s:
+            return jsonify({"error": "session_disappeared_after_analysis"}), 500
+        return jsonify(_session_to_json(s))
+
+    except Exception:
+        logger.exception("Phrasing review failed (session=%s)", session_id)
+        return jsonify({"error": "Phrasing review failed. Please try again."}), 500
 
 
 @sessions_bp.route("/transcribe", methods=["POST"])
