@@ -336,15 +336,21 @@ window.voohrInitWorkspace = function() {
       container.innerHTML = '<div class="ws-empty">' + (state.lines.length ? 'No lines match your filters.' : 'No transcript available for this session.') + '</div>';
       return;
     }
+    var empName = (state.employee && state.employee.name) ? state.employee.name.trim() : '';
+    var empPhoto = state.employee && state.employee.photo;
+    var empInitials = empName ? empName.split(/\s+/).map(function(p) { return p.charAt(0); }).slice(0, 2).join('').toUpperCase() : 'EE';
     var html = visible.map(function(l) {
       var pinned = !!state.pinned[l.idx];
-      var initials = l.speaker === 'HR' ? 'HR' : 'EE';
+      var isHr = l.speaker === 'HR';
+      var avatarInner = isHr
+        ? 'HR'
+        : (empPhoto ? '<img src="' + esc(empPhoto) + '" alt="' + esc(empName || 'Employee') + '">' : esc(empInitials));
       return (
         '<div class="ws-line' + (pinned ? ' pinned' : '') + '" data-idx="' + l.idx + '">' +
-          '<div class="ws-line-avatar ' + (l.speaker === 'HR' ? 'hr' : 'emp') + '">' + initials + '</div>' +
+          '<div class="ws-line-avatar ' + (isHr ? 'hr' : 'emp') + (!isHr && empPhoto ? ' has-photo' : '') + '">' + avatarInner + '</div>' +
           '<div class="ws-line-body">' +
             '<div class="ws-line-head">' +
-              '<span class="ws-line-speaker ' + (l.speaker === 'HR' ? 'hr' : 'emp') + '">' + l.speaker + '</span>' +
+              '<span class="ws-line-speaker ' + (isHr ? 'hr' : 'emp') + '">' + (isHr ? 'HR' : esc(empName || 'Employee')) + '</span>' +
               (state.showTime ? '<span class="ws-line-time">' + fmtTime(l.time) + '</span>' : '') +
             '</div>' +
             '<div class="ws-line-text">' + highlight(l.text) + '</div>' +
