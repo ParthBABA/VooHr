@@ -466,7 +466,7 @@ window.voohrInitWorkspace = function() {
               '<span class="ws-line-speaker ' + (isHr ? 'hr' : 'emp') + '">' + (isHr ? 'HR' : esc(speakerName)) + '</span>' +
               (state.showTime ? '<span class="ws-line-time">' + fmtTime(l.time) + '</span>' : '') +
             '</div>' +
-            '<div class="ws-line-text">' + highlight(l.text) + '</div>' +
+            '<div class="ws-line-text">' + highlight(l.text, l.idx) + '</div>' +
           '</div>' +
           '<div class="ws-line-actions">' +
             '<button class="ws-line-action" data-action="pin" title="' + (pinned ? 'Unpin' : 'Pin') + '">' +
