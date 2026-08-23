@@ -694,35 +694,53 @@ function buildGuidelineItems(list, containerId, isAvoid) {
   });
 }
 
+var ANALYSIS_TONE_CLASSES = {
+  'var(--violet)': '', 'var(--amber)': ' analysis-card--amber', 'var(--teal)': ' analysis-card--teal',
+  'var(--red)': ' analysis-card--red', 'var(--ivory-faint)': ' analysis-card--faint', 'var(--ivory-dim)': ' analysis-card--muted'
+};
+
+function analysisCardClass(extra, defaultBorderColor) {
+  var borderColor = (extra && extra.borderColor) || defaultBorderColor || 'var(--violet)';
+  var cls = 'analysis-card' + (ANALYSIS_TONE_CLASSES[borderColor] !== undefined ? ANALYSIS_TONE_CLASSES[borderColor] : '');
+  if (extra && extra.valueColor === 'var(--ivory-dim)') cls += ' analysis-card--dim-value';
+  return cls;
+}
+
 function renderCard(label, value, extra) {
   if (!value || value === 'Limited transcript evidence.') return '';
-  var labelColor = (extra && extra.labelColor) || 'var(--ivory-faint)';
-  var borderColor = (extra && extra.borderColor) || 'var(--violet)';
-  var valueColor = (extra && extra.valueColor) || 'var(--ivory)';
-  return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:0.8rem;border-left:3px solid ' + borderColor + ';">' +
-    '<div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:' + labelColor + ';margin-bottom:2px;">' + escHtml(label) + '</div>' +
-    '<div style="font-family:var(--font-rc);font-size:0.82rem;color:' + valueColor + ';line-height:1.5;">' + escHtml(value) + '</div></div>';
+  return '<div class="' + analysisCardClass(extra) + '">' +
+    '<div class="analysis-card-label">' + escHtml(label) + '</div>' +
+    '<div class="analysis-card-value">' + escHtml(value) + '</div></div>';
 }
 
 function renderConfidence(score) {
   if (score == null || score === 0) return '';
-  var color = score > 80 ? 'var(--teal)' : score > 50 ? 'var(--amber)' : 'var(--red)';
-  return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.7rem 1rem;margin-bottom:0.8rem;display:flex;justify-content:space-between;align-items:center;">' +
-    '<span style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);">Confidence</span>' +
-    '<span style="font-family:var(--font-rc);font-size:0.82rem;font-weight:600;color:' + color + ';">' + score + '%</span></div>';
+  var level = score > 80 ? 'is-high' : score > 50 ? 'is-mid' : 'is-low';
+  return '<div class="analysis-confidence">' +
+    '<span class="analysis-confidence-label">Confidence</span>' +
+    '<span class="analysis-confidence-value ' + level + '">' + score + '%</span></div>';
 }
 
 function renderListCard(label, items, opts) {
   if (!items || !items.length) return '';
-  var borderColor = (opts && opts.borderColor) || 'var(--teal)';
-  var html = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:0.8rem;border-left:3px solid ' + borderColor + ';">' +
-    '<div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:4px;">' + escHtml(label) + '</div>' +
-    '<div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);line-height:1.6;">';
+  var html = '<div class="' + analysisCardClass(opts, 'var(--teal)') + ' analysis-list-card">' +
+    '<div class="analysis-card-label">' + escHtml(label) + '</div>' +
+    '<div class="analysis-list-body">';
   items.forEach(function(item) {
-    html += '<div style="padding:2px 0;">• ' + escHtml(item) + '</div>';
+    html += '<div class="analysis-list-item">• ' + escHtml(item) + '</div>';
   });
   html += '</div></div>';
   return html;
+}
+
+function renderQuote(text) {
+  if (!text) return '';
+  return '<div class="analysis-quote">"' + escHtml(text) + '"</div>';
+}
+
+function renderTakeaway(text) {
+  if (!text) return '';
+  return '<div class="analysis-takeaway"><div class="analysis-takeaway-label">Key Takeaway</div><div class="analysis-takeaway-value">' + escHtml(text) + '</div></div>';
 }
 
 // ── Step 2 Population ──
@@ -732,8 +750,7 @@ function populateStep2(d) {
 
   var cards = document.getElementById('step2Cards');
   if (cards) {
-    var html = '';
-    if (d.title_question) html += '<div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--violet);font-weight:600;margin-bottom:1rem;font-style:italic;">"' + escHtml(d.title_question) + '"</div>';
+    var html = renderQuote(d.title_question);
     html += renderCard('Behaviour Summary', d.behaviour_summary, {borderColor:'var(--amber)'});
     html += renderCard('Observed Behaviour', d.observed_behaviour, {borderColor:'var(--amber)'});
     html += renderCard('Behaviour Pattern', d.behaviour_pattern);
@@ -742,7 +759,7 @@ function populateStep2(d) {
     html += renderCard('Alternative Interpretation', d.alternative_interpretation, {borderColor:'var(--ivory-faint)', valueColor:'var(--ivory-dim)'});
     html += renderCard('Conversation Direction', d.conversation_direction, {borderColor:'var(--violet)'});
     html += renderConfidence(d.confidence);
-    if (d.key_takeaway) html += '<div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:10px;padding:1rem;margin-top:0.5rem;"><div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--violet);margin-bottom:4px;">Key Takeaway</div><div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);font-style:italic;">' + escHtml(d.key_takeaway) + '</div></div>';
+    html += renderTakeaway(d.key_takeaway);
     cards.innerHTML = html;
   }
 
@@ -760,8 +777,7 @@ function populateStep3(d) {
 
   var cards = document.getElementById('step3Cards');
   if (cards) {
-    var html = '';
-    if (d.title_question) html += '<div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--violet);font-weight:600;margin-bottom:1rem;font-style:italic;">"' + escHtml(d.title_question) + '"</div>';
+    var html = renderQuote(d.title_question);
     html += renderCard('Primary Trigger', d.primary_trigger, {borderColor:'var(--red)'});
     html += renderListCard('Secondary Contributors', d.secondary_contributors, {borderColor:'var(--amber)'});
     html += renderListCard('Supporting Evidence', d.supporting_evidence, {borderColor:'var(--teal)'});
@@ -769,7 +785,7 @@ function populateStep3(d) {
     html += renderListCard('Missing Information', d.missing_information, {borderColor:'var(--ivory-faint)'});
     html += renderCard('AI Reasoning', d.ai_reasoning, {borderColor:'var(--amber)'});
     html += renderConfidence(d.confidence);
-    if (d.key_takeaway) html += '<div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:10px;padding:1rem;margin-top:0.5rem;"><div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--violet);margin-bottom:4px;">Key Takeaway</div><div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);font-style:italic;">' + escHtml(d.key_takeaway) + '</div></div>';
+    html += renderTakeaway(d.key_takeaway);
     cards.innerHTML = html;
   }
 
@@ -787,8 +803,7 @@ function populateStep4(d) {
 
   var cards = document.getElementById('step4Cards');
   if (cards) {
-    var html = '';
-    if (d.title_question) html += '<div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--violet);font-weight:600;margin-bottom:1rem;font-style:italic;">"' + escHtml(d.title_question) + '"</div>';
+    var html = renderQuote(d.title_question);
     html += renderCard('Immediate Action', d.immediate, {borderColor:'var(--teal)'});
     html += renderCard('This Week', d.this_week, {borderColor:'var(--amber)'});
     html += renderCard('Manager Action', d.manager_action, {borderColor:'var(--violet)'});
@@ -796,10 +811,8 @@ function populateStep4(d) {
     html += renderCard('Environment', d.environment, {borderColor:'var(--ivory-faint)'});
     html += renderCard('Success Metric', d.success_metric, {borderColor:'var(--teal)'});
     html += renderCard('Expected Outcome', d.expected_outcome, {borderColor:'var(--amber)'});
-    html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:0.8rem;border-left:3px solid var(--violet);">' +
-      '<div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:2px;">Why This Works</div>' +
-      '<div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory-dim);line-height:1.5;font-style:italic;">' + escHtml(d.why_it_works || '') + '</div></div>';
-    if (d.key_takeaway) html += '<div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:10px;padding:1rem;margin-top:0.5rem;"><div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--violet);margin-bottom:4px;">Key Takeaway</div><div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);font-style:italic;">' + escHtml(d.key_takeaway) + '</div></div>';
+    html += '<div class="analysis-card analysis-card--violet"><div class="analysis-card-label">Why This Works</div><div class="analysis-why-it-works">' + escHtml(d.why_it_works || '') + '</div></div>';
+    html += renderTakeaway(d.key_takeaway);
     cards.innerHTML = html;
   }
 
@@ -817,8 +830,7 @@ function populateStep5(d) {
 
   var cards = document.getElementById('step5Cards');
   if (cards) {
-    var html = '';
-    if (d.title_question) html += '<div style="font-family:var(--font-rc);font-size:0.85rem;color:var(--violet);font-weight:600;margin-bottom:1rem;font-style:italic;">"' + escHtml(d.title_question) + '"</div>';
+    var html = renderQuote(d.title_question);
     html += renderCard('Conversation Goal', d.conversation_goal, {borderColor:'var(--violet)'});
     html += renderCard('Conversation Focus', d.conversation_focus, {borderColor:'var(--amber)'});
     html += renderCard('Opening Question', d.opening_question, {borderColor:'var(--teal)'});
@@ -827,7 +839,7 @@ function populateStep5(d) {
     html += renderCard('Suggested HR Reply', d.suggested_reply, {borderColor:'var(--teal)'});
     html += renderListCard('What to Listen For', d.what_to_listen_for, {borderColor:'var(--red)'});
     html += renderCard('Success Indicator', d.success_indicator, {borderColor:'var(--teal)'});
-    if (d.key_takeaway) html += '<div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:10px;padding:1rem;margin-top:0.5rem;"><div style="font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--violet);margin-bottom:4px;">Key Takeaway</div><div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);font-style:italic;">' + escHtml(d.key_takeaway) + '</div></div>';
+    html += renderTakeaway(d.key_takeaway);
     cards.innerHTML = html;
   }
 

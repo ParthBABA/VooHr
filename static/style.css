@@ -413,6 +413,33 @@ h1,h2,h3,h4,h5,h6{font-family:var(--font-d);font-weight:600;text-transform:upper
 .guideline .g-icon.avoid{color:var(--red);}
 .guideline .g-icon.tip{color:var(--amber);}
 
+/* ANALYSIS CARDS — sync_room Analysis tab (Steps 2-5). Replaces the
+   former per-card inline styles; values mirror them exactly. */
+.analysis-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:0.8rem;border-left:3px solid var(--violet);}
+.analysis-card--violet{border-left-color:var(--violet);}
+.analysis-card--amber{border-left-color:var(--amber);}
+.analysis-card--teal{border-left-color:var(--teal);}
+.analysis-card--red{border-left-color:var(--red);}
+.analysis-card--faint{border-left-color:var(--ivory-faint);}
+.analysis-card--muted{border-left-color:var(--ivory-dim);}
+.analysis-card-label{font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:2px;}
+.analysis-card-value{font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);line-height:1.5;}
+.analysis-card--dim-value .analysis-card-value{color:var(--ivory-dim);}
+.analysis-confidence{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.7rem 1rem;margin-bottom:0.8rem;display:flex;justify-content:space-between;align-items:center;}
+.analysis-confidence-label{font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);}
+.analysis-confidence-value{font-family:var(--font-rc);font-size:0.82rem;font-weight:600;}
+.analysis-confidence-value.is-high{color:var(--teal);}
+.analysis-confidence-value.is-mid{color:var(--amber);}
+.analysis-confidence-value.is-low{color:var(--red);}
+.analysis-list-card .analysis-card-label{margin-bottom:4px;}
+.analysis-list-body{font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);line-height:1.6;}
+.analysis-list-item{padding:2px 0;}
+.analysis-quote{font-family:var(--font-rc);font-size:0.85rem;color:var(--violet);font-weight:600;margin-bottom:1rem;font-style:italic;}
+.analysis-takeaway{background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:10px;padding:1rem;margin-top:0.5rem;}
+.analysis-takeaway-label{font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--violet);margin-bottom:4px;}
+.analysis-takeaway-value{font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);font-style:italic;}
+.analysis-why-it-works{font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory-dim);line-height:1.5;font-style:italic;}
+
 /* INPUT AREAS */
 .note-area{width:100%;min-height:120px;padding:1rem;background:var(--surface);border:1px solid var(--border);color:var(--ivory);font-size:0.9rem;resize:vertical;outline:none;transition:border-color 0.3s;line-height:1.7;}
 .note-area:focus{border-color:var(--amber);}

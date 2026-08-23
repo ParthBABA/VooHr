@@ -8,7 +8,13 @@ import threading
 from extensions import get_db
 from employees import _session_is_active, TOTPRequired
 from field_encryption import decrypt_fields, encrypt_fields
-from login_flow import _client_ip, _hash_session_token, _is_private_ip, _lookup_location
+from login_flow import (
+    _clean_ch,
+    _client_ip,
+    _hash_session_token,
+    _is_private_ip,
+    _lookup_location,
+)
 
 api_bp = Blueprint("api", __name__)
 
@@ -347,6 +353,10 @@ def _parse_device(user_agent: str, ch_platform=None, ch_platform_version=None) -
     active_sessions doc).  They are required to tell Windows 11 apart from
     Windows 10; without them the OS degrades to plain "Windows".
     """
+    # Rows recorded before login_flow._clean_ch existed may hold the raw
+    # structured-field values WITH surrounding quotes (e.g. '"Windows"').
+    ch_platform = _clean_ch(ch_platform)
+    ch_platform_version = _clean_ch(ch_platform_version)
     ua = user_agent or ""
 
     # device_type
@@ -426,6 +436,13 @@ def _location_is_known(raw) -> bool:
     return isinstance(raw, dict) and any(
         raw.get(k) for k in ("city", "region", "country")
     )
+
+
+def _ip_is_local(doc) -> bool:
+    """True when a stored session row came from a non-routable address
+    (loopback/RFC1918/CGNAT/link-local) or recorded no usable address.
+    Lets the UI explain an absent location without ever exposing the IP."""
+    return _is_private_ip(doc.get("ip") or "")
 
 
 def _backfill_location_by_id(db, doc_id, ip):
@@ -546,6 +563,11 @@ def list_active_sessions():
                     d.get("ch_platform_version"),
                 ),
                 "location": _sanitize_location(d.get("location")),
+                # Lets the UI distinguish WHY a location is absent: a truly
+                # local/private address ("Local network") vs a routable IP
+                # the geo provider couldn't resolve ("Location unavailable",
+                # e.g. ISP CGNAT like Jio's 100.64.x.x).
+                "ip_private": _ip_is_local(d),
                 "created_at": d.get("created_at").isoformat() if d.get("created_at") else None,
                 "last_seen": d.get("last_seen").isoformat() if d.get("last_seen") else None,
                 "is_current": d.get("session_token") == current_hash,

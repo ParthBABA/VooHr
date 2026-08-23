@@ -654,24 +654,21 @@ function clearFieldError(input){
 
   function deviceLabel(d){
     if (!d) return 'Unknown device';
-    // Show a simple, friendly device name (Laptop/Phone/Tablet) rather than
-    // the raw browser/OS string. Falls back to the detailed browser+OS combo
-    // for device types we don't have a friendly name for.
-    if (d.device_type === 'Desktop') return 'Laptop';
-    if (d.device_type === 'Mobile') return 'Phone';
-    if (d.device_type === 'Tablet') return 'Tablet';
+    var type = d.device_type === 'Mobile' ? 'Phone'
+             : d.device_type === 'Tablet' ? 'Tablet'
+             : 'Laptop';
     var parts = [];
     if (d.browser && d.browser !== 'Unknown') parts.push(d.browser);
     if (d.os && d.os !== 'Unknown') parts.push(d.os);
-    return parts.length ? parts.join(' on ') : 'Unknown device';
+    return parts.length ? type + ' \u00b7 ' + parts.join(' on ') : type;
   }
 
-  function locationLabel(loc){
-    // Real per-IP geo lookup (see login_flow.py:_lookup_location). This only
-    // shows "Local network" when the session's IP genuinely couldn't be
-    // geolocated (private/local IP, or the lookup failed) — it is never a
-    // hardcoded value, so each session reflects its own actual city/region.
-    if (!loc) return 'Local network';
+  function locationLabel(loc, ipPrivate){
+    // Real per-IP geo lookup (see login_flow.py:_lookup_location). When no
+    // location exists, say WHY: private/local IPs (LAN, Tailscale, localhost)
+    // are "Local network"; a routable IP the provider couldn't resolve
+    // (e.g. ISP CGNAT 100.64.x.x, or lookup failure) is "Location unavailable".
+    if (!loc) return ipPrivate ? 'Local network' : 'Location unavailable';
     var parts = [];
     if (loc.city) parts.push(loc.city);
     if (loc.region) parts.push(loc.region);
@@ -700,7 +697,7 @@ function clearFieldError(input){
       device.textContent = deviceLabel(s.device);
       var loc = document.createElement('div');
       loc.className = 'session-loc';
-      loc.textContent = locationLabel(s.location);
+      loc.textContent = locationLabel(s.location, s.ip_private);
       meta.appendChild(device);
       meta.appendChild(loc);
 

@@ -280,6 +280,35 @@ class TestWindowsDetection:
         assert d["browser"] == "Edge 141"
         assert d["os"] == "Windows 11"
 
+    def test_windows11_via_quoted_client_hints(self, db):
+        # Chromium sends structured-field strings WITH surrounding quotes
+        # (Sec-CH-UA-Platform: "Windows").  Rows recorded before the
+        # quote-stripping fix stored them verbatim — they must still parse.
+        d = _api._parse_device(UA_WIN_CHROME, '"Windows"', '"13.0.0"')
+        assert d["os"] == "Windows 11"
+        assert d["browser"] == "Chrome 151"
+
+    def test_quoted_contradicting_platform_hint_not_trusted(self, db):
+        d = _api._parse_device(UA_WIN_CHROME, '"macOS"', '"13.0.0"')
+        assert d["os"] == "Windows"
+
+
+class TestCleanClientHint:
+    def test_strips_structured_field_quotes(self):
+        assert _login_flow._clean_ch('"Windows"') == "Windows"
+        assert _login_flow._clean_ch('"13.0.0"') == "13.0.0"
+
+    def test_plain_values_untouched(self):
+        assert _login_flow._clean_ch("Windows") == "Windows"
+        assert _login_flow._clean_ch(" 13.0.0 ") == "13.0.0"
+
+    def test_missing_and_garbage_are_safe(self):
+        assert _login_flow._clean_ch(None) == ""
+        assert _login_flow._clean_ch("") == ""
+        assert _login_flow._clean_ch('"') == '"'
+        # A lone embedded quote is not a wrapping pair — keep verbatim.
+        assert _login_flow._clean_ch('a"b') == 'a"b'
+
 
 class TestBrowserAndOsParsing:
     def test_chrome_version_major_only(self, db):
@@ -403,7 +432,25 @@ class TestLocationLookup:
         with _mock.patch.object(_login_flow.requests, "get") as g:
             assert _login_flow._lookup_location("192.168.1.42") is None
             assert _login_flow._lookup_location("") is None
+            # RFC6598 CGNAT (Tailscale / many Indian ISPs) — not routable.
+            assert _login_flow._lookup_location("100.64.12.19") is None
+            assert _login_flow._lookup_location("100.127.255.254") is None
+            # Link-local (APIPA).
+            assert _login_flow._lookup_location("169.254.3.7") is None
             g.assert_not_called()
+
+    def test_public_cgnat_adjacent_ranges_still_lookup(self, db):
+        # 100.63.x.x and 100.128.x.x are OUTSIDE 100.64/10 — must be treated
+        # as public and reach the provider.
+        resp = _mock.MagicMock()
+        resp.json.return_value = {
+            "status": "success", "city": "Dehradun",
+            "regionName": "Uttarakhand", "country": "India",
+        }
+        with _mock.patch.object(_login_flow.requests, "get", return_value=resp) as g:
+            assert _login_flow._lookup_location("100.63.0.1") is not None
+            assert _login_flow._lookup_location("100.128.0.1") is not None
+            assert g.call_count == 2
 
 
 # ── Session recording captures precision metadata ─────────────────────
@@ -441,6 +488,35 @@ class TestRecordActiveSession:
         assert doc["user_agent"] == UA_WIN_CHROME
         assert len(doc["session_token"]) == 64       # sha-256 hex, not raw
         assert doc["location"] is None               # filled async, later
+
+    def test_quoted_client_hints_stored_clean(self, db):
+        """Chromium sends hints WITH structured-field quotes; the stored doc
+        must carry the bare value so Windows 10 vs 11 stays resolvable."""
+        class _SyncThread:
+            def __init__(self, target=None, args=(), daemon=False):
+                pass
+
+            def start(self):
+                pass
+
+        with _mock.patch.object(_login_flow.threading, "Thread", _SyncThread):
+            with _test_app.test_request_context(
+                "/",
+                method="POST",
+                environ_base={"REMOTE_ADDR": "10.9.9.9"},
+                headers={
+                    "User-Agent": UA_WIN_CHROME,
+                    "Sec-CH-UA-Platform": '"Windows"',
+                    "Sec-CH-UA-Platform-Version": '"13.0.0"',
+                },
+            ):
+                _login_flow._record_active_session(db, ObjectId(_USER_A))
+
+        doc = db.active_sessions.docs[0]
+        assert doc["ch_platform"] == "Windows"
+        assert doc["ch_platform_version"] == "13.0.0"
+        # CGNAT peer + no public XFF hop -> nothing geolocatable is stored.
+        assert doc["ip"] == ""
 
     def test_parsed_label_roundtrip_for_recorded_session(self, db):
         """End-to-end: record with Win11 hints -> API parses 'Windows 11'."""
@@ -493,6 +569,45 @@ class TestActiveSessionsEndpoint:
 
         sessions = client.get("/api/sessions/active").get_json()["sessions"]
         assert sessions[0]["location"] is None
+
+    def test_ip_private_flag_explains_missing_location(self, client, db):
+        """The flag must let the UI tell apart 'genuinely local' from
+        'routable but unresolvable' (ISP CGNAT / provider failure)."""
+        _seed_user(_USER_A)
+        # RFC1918 LAN login — no location possible.
+        _insert_session(_USER_A, ip="192.168.0.9", location=None,
+                        token_suffix="a")
+        # ISP CGNAT (Jio-style) — arrived "public-shaped" but is reserved
+        # space every geo provider rejects.
+        _insert_session(_USER_A, ip="100.64.12.19", location=None,
+                        ch_platform="Windows",
+                        ch_platform_version="13.0.0",
+                        token_suffix="b")
+        # Routable IP WITH a stored location — no lookups will fire.
+        raw_pub = _insert_session(
+            _USER_A, ip="203.0.113.7", token_suffix="c",
+            location={"city": "Dehradun", "region": "Uttarakhand",
+                      "country": "India"},
+        )
+        _login(client, _USER_A, raw_pub)
+
+        resp = client.get("/api/sessions/active")
+        assert resp.status_code == 200
+        sessions = resp.get_json()["sessions"]
+        assert len(sessions) == 3
+        current = next(s for s in sessions if s["is_current"])
+        others = [s for s in sessions if not s["is_current"]]
+        assert len(others) == 2
+
+        lan = next(s for s in others
+                   if s["device"]["os"] == "Windows" and s["location"] is None)
+        cgnat = next(s for s in others if s["device"]["os"] == "Windows 11")
+        pub = current
+
+        assert lan["ip_private"] is True
+        assert cgnat["ip_private"] is True
+        assert pub["ip_private"] is False
+        assert pub["location"]["city"] == "Dehradun"
 
     def test_raw_ip_never_in_response(self, client, db):
         _seed_user(_USER_A)

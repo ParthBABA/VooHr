@@ -32,7 +32,10 @@ def _hash_session_token(token: str) -> str:
 
 
 def _is_private_ip(ip) -> bool:
-    """True for loopback/private/local addresses that can never geolocate."""
+    """True for addresses that are not globally routable and therefore can
+    never be geolocated: loopback, RFC1918 private ranges, RFC6598 CGNAT
+    (100.64.0.0/10 — used by Tailscale and many Indian ISPs), IPv6 (incl.
+    ::1) and link-local."""
     if not ip:
         return True
     if ip == "::1":
@@ -53,6 +56,12 @@ def _is_private_ip(ip) -> bool:
     if a == 172 and 16 <= b <= 31:
         return True
     if a == 192 and b == 168:
+        return True
+    # RFC6598 shared address space (CGNAT / Tailscale) — not routable.
+    if a == 100 and 64 <= b <= 127:
+        return True
+    # Link-local (APIPA) — never geolocatable.
+    if a == 169 and b == 254:
         return True
     return False
 
@@ -81,6 +90,19 @@ def _client_ip() -> str:
         if candidate and not _is_private_ip(candidate):
             return candidate
     return ""
+
+
+def _clean_ch(value) -> str:
+    """Normalise a User-Agent Client Hint header value.
+
+    Chromium sends structured-field strings WITH their surrounding quotes —
+    e.g. ``Sec-CH-UA-Platform: "Windows"`` arrives as ``'"Windows"'``.
+    Downstream matching (api._windows_display_name) expects the bare value,
+    so strip whitespace and one pair of surrounding double quotes."""
+    v = (value or "").strip()
+    if len(v) >= 2 and v[0] == '"' and v[-1] == '"':
+        v = v[1:-1].strip()
+    return v
 
 
 def _lookup_location(ip) -> dict:
@@ -143,8 +165,10 @@ def _record_active_session(db, user_id: ObjectId):
             "user_id": ObjectId(user_id),
             "session_token": _hash_session_token(session_token),
             "user_agent": request.headers.get("User-Agent", ""),
-            "ch_platform": request.headers.get("Sec-CH-UA-Platform", ""),
-            "ch_platform_version": request.headers.get("Sec-CH-UA-Platform-Version", ""),
+            "ch_platform": _clean_ch(request.headers.get("Sec-CH-UA-Platform")),
+            "ch_platform_version": _clean_ch(
+                request.headers.get("Sec-CH-UA-Platform-Version")
+            ),
             "ip": ip,
             "location": None,
             "created_at": now,
