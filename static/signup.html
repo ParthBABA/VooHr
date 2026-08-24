@@ -164,7 +164,7 @@
           const data = await res.json();
           if (data.ok) {
             // redirect to email verification or dashboard
-            window.location.href = data.redirect || '/email-verify.html';
+            window.location.href = data.redirect || '/verify-email';
           } else {
             alert(data.message || 'Sign up failed');
           }

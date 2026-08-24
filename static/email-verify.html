@@ -283,7 +283,7 @@ document.getElementById('signupForm').addEventListener('submit', function(event)
   .then(function(res) {
     if (res.data && res.data.ok) {
       sessionStorage.setItem('voohr_pending_email', email);
-      window.location.href = '/otp-verify.html';
+      window.location.href = '/verify-otp';
       return;
     }
     btn.disabled = false;

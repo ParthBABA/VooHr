@@ -25,7 +25,7 @@
 <body style="visibility:hidden">
 <script>
 fetch('/api/me').then(function(res){
-  if (!res.ok) { window.location.href = 'signin.html'; return null; }
+  if (!res.ok) { window.location.href = '/signin'; return null; }
   return res.json();
 }).then(function(data){
   if (!data) return;
@@ -38,7 +38,7 @@ fetch('/api/me').then(function(res){
   document.body.style.visibility = 'visible';
   window.voohrInitWorkspace && window.voohrInitWorkspace();
 }).catch(function(){
-  window.location.href = 'signin.html';
+  window.location.href = '/signin';
 });
 </script>
 <button class="mobile-toggle" id="mobileToggle">

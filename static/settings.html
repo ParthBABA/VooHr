@@ -74,7 +74,7 @@
   }
 
   fetch('/api/me').then(function(res){
-    if (!res.ok) { window.location.href = 'signin.html'; return null; }
+    if (!res.ok) { window.location.href = '/signin'; return null; }
     return res.json();
   }).then(function(data){
     if (!data) return;
@@ -84,7 +84,7 @@
       populate(data);
     }
   }).catch(function(){
-    window.location.href = 'signin.html';
+    window.location.href = '/signin';
   });
 })();
 </script>
@@ -383,7 +383,7 @@ function showToast(msg) {
 
 document.getElementById('signOutBtn').addEventListener('click', async function(){
   try { await fetch('/auth/logout', { method: 'POST' }); } catch (err) {}
-  window.location.href = 'signin.html';
+  window.location.href = '/signin';
 });
 
 // Top-bar light/dark theme toggle (theme.js applies + persists).
@@ -485,7 +485,7 @@ function clearFieldError(input){
         saveBtn.disabled = false;
         saveBtn.textContent = 'Save Changes';
         if (err && err.code === 'not_authenticated') {
-          window.location.href = 'signin.html';
+          window.location.href = '/signin';
           return;
         }
         var msg = (err && err.code === 'name_required') ? 'Name is required'
@@ -551,7 +551,7 @@ function clearFieldError(input){
       saveBtn.disabled = false;
       saveBtn.textContent = 'Save Changes';
       if (err && err.code === 'not_authenticated') {
-        window.location.href = 'signin.html';
+        window.location.href = '/signin';
         return;
       }
       if (err && err.code === 'forbidden') {

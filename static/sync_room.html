@@ -1556,7 +1556,7 @@ sessionPromise.then(function(s) {
     })
     .then(r => r.json())
     .then(data => {
-      window.location.href = 'dashboard.html?employee_id=' + employeeId + '&status=completed';
+      window.location.href = '/dashboard?employee_id=' + employeeId + '&status=completed';
     })
     .catch(err => {
       console.error('Complete sync failed:', err);

@@ -235,7 +235,7 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
 (async function(){
   try {
     var res = await fetch('/api/me');
-    if (!res.ok) { window.location.href = 'signin.html'; return; }
+    if (!res.ok) { window.location.href = '/signin'; return; }
     var data = await res.json();
     var firstName = (data.name || '').split(' ')[0] || 'there';
     document.getElementById('successUserName').textContent = firstName;
@@ -243,7 +243,7 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
       document.getElementById('successOrgName').textContent = data.organization.name;
     }
   } catch (err) {
-    window.location.href = 'signin.html';
+    window.location.href = '/signin';
   }
 })();
 

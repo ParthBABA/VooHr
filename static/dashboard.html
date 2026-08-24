@@ -111,7 +111,7 @@
   }
 
   fetch('/api/me').then(function(res){
-    if (!res.ok) { window.location.href = 'signin.html'; return null; }
+    if (!res.ok) { window.location.href = '/signin'; return null; }
     return res.json();
   }).then(function(data){
     if (!data) return;
@@ -126,7 +126,7 @@
       onReady();
     }
   }).catch(function(){
-    window.location.href = 'signin.html';
+    window.location.href = '/signin';
   });
 })();
 </script>
@@ -998,7 +998,7 @@ function escHtml(str) {
     // Fire-and-forget: optimistically mark read, then navigate.
     fetch('/api/notifications/' + id + '/read', { method: 'PUT' }).catch(function() {});
     closeDropdown();
-    window.location.href = 'risk-drift.html?notification=' + id;
+    window.location.href = '/risk-drift?notification=' + id;
   }
 
   function openDropdown() {

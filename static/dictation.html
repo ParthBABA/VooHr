@@ -23,7 +23,7 @@
 <body style="visibility:hidden">
 <script>
 fetch('/api/me').then(function(res){
-  if (!res.ok) { window.location.href = 'signin.html'; return null; }
+  if (!res.ok) { window.location.href = '/signin'; return null; }
   return res.json();
 }).then(function(data){
   if (!data) return;
@@ -36,7 +36,7 @@ fetch('/api/me').then(function(res){
   document.body.style.visibility = 'visible';
   loadEmployee();
 }).catch(function(){
-  window.location.href = 'signin.html';
+  window.location.href = '/signin';
 });
 
 var employeeId = new URLSearchParams(window.location.search).get('employee_id');
@@ -225,7 +225,7 @@ function saveSession() {
   }).then(function() {
     showToast('Session saved successfully. Ready for AI Sync.');
     setTimeout(function() {
-      window.location.href = 'dashboard.html';
+      window.location.href = '/dashboard';
     }, 2000);
   }).catch(function(err) {
     document.getElementById('saveBtn').disabled = false;
@@ -238,7 +238,7 @@ function discardSession() {
   if (document.getElementById('transcriptArea').value.trim()) {
     if (!confirm('Discard this recording?')) return;
   }
-  window.location.href = 'dashboard.html';
+  window.location.href = '/dashboard';
 }
 
 function showToast(msg, type) {

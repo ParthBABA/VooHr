@@ -37,7 +37,7 @@
   }
 
   fetch('/api/me').then(function(res){
-    if (!res.ok) { window.location.href = 'signin.html'; return null; }
+    if (!res.ok) { window.location.href = '/signin'; return null; }
     return res.json();
   }).then(function(data){
     if (!data) return;
@@ -51,7 +51,7 @@
       window.voohrInitRiskDrift && window.voohrInitRiskDrift();
     }
   }).catch(function(){
-    window.location.href = 'signin.html';
+    window.location.href = '/signin';
   });
 })();
 </script>
@@ -311,7 +311,7 @@
   function openNotification(id) {
     fetch('/api/notifications/' + id + '/read', { method: 'PUT' }).catch(function() {});
     closeDropdown();
-    window.location.href = 'risk-drift.html?notification=' + id;
+    window.location.href = '/risk-drift?notification=' + id;
   }
 
   function openDropdown() {
@@ -624,7 +624,7 @@ window.voohrInitRiskDrift = function() {
       row.appendChild(body);
       row.appendChild(conf);
       row.addEventListener('click', function() {
-        window.location.href = 'risk-drift.html?notification=' + n.id;
+        window.location.href = '/risk-drift?notification=' + n.id;
       });
       list.appendChild(row);
     });

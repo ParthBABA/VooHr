@@ -489,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data.requires_otp) {
           // Store email for OTP flow
           sessionStorage.setItem('voohr_pending_email', email);
-          window.location.href = '/otp-verify.html';
+          window.location.href = '/verify-otp';
         } else {
           window.location.href = data.redirect;
         }
@@ -501,7 +501,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorBox.textContent = 'This account requires OTP verification. A code has been sent to your email.';
         // Store email for OTP flow
         sessionStorage.setItem('voohr_pending_email', email);
-        window.location.href = '/otp-verify.html';
+        window.location.href = '/verify-otp';
       } else if (data.error === 'google_only_account') {
         errorBox.style.display = 'block';
         errorBox.textContent = 'This account uses Google sign-in only. Please use Continue with Google instead.';
@@ -518,7 +518,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Forgot password link
   document.getElementById('forgotPasswordLink').addEventListener('click', function() {
-    window.location.href = '/email-verify.html';
+    window.location.href = '/verify-email';
   });
 
   // Initial GSAP animation

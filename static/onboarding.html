@@ -466,7 +466,7 @@ document.getElementById('setupForm').addEventListener('submit', async function(e
       body: JSON.stringify({ orgName: orgName, industry: industry, companySize: companySize })
     });
     if (!res.ok) throw new Error('save_failed');
-    window.location.href = 'email-verify.html';
+    window.location.href = '/verify-email';
   } catch (err) {
     btn.textContent = originalText;
     btn.disabled = false;
