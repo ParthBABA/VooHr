@@ -766,8 +766,6 @@ body.lang-hi [data-lang-block="en"]{display:none;}
 .ws-line{display:flex;gap:0.85rem;padding:0.75rem 0.4rem;border-bottom:1px solid var(--border);border-left:2px solid transparent;border-radius:4px;transition:background 0.2s;}
 .ws-line:hover{background:var(--ivory-ghost);}
 .ws-line.pinned{background:rgba(212,136,74,0.05);border-left-color:var(--amber);}
-.ws-lines[data-density="comfortable"] .ws-line{padding:1.1rem 0.6rem;}
-.ws-lines[data-density="condensed"] .ws-line{padding:0.4rem 0.3rem;}
 .ws-line-avatar{flex-shrink:0;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:0.58rem;font-weight:700;letter-spacing:0.04em;margin-top:1px;}
 .ws-line-avatar.hr{background:var(--violet-soft);border:1px solid rgba(123,79,255,0.35);color:var(--violet);}
 .ws-line-avatar.emp{background:var(--teal-soft);border:1px solid rgba(51,160,143,0.35);color:var(--teal);}
@@ -780,7 +778,6 @@ body.lang-hi [data-lang-block="en"]{display:none;}
 .ws-line-speaker.emp{color:var(--teal);}
 .ws-line-time{font-family:var(--font-m);font-size:0.56rem;letter-spacing:0.08em;color:var(--ivory-faint);}
 .ws-line-text{font-size:0.92rem;line-height:1.65;color:var(--ivory);}
-.ws-lines[data-density="condensed"] .ws-line-text{font-size:0.86rem;line-height:1.5;}
 .ws-hl{background:var(--amber-soft);color:var(--amber);outline:1px solid rgba(212,136,74,0.35);padding:0 1px;}
 .ws-line-actions{display:flex;align-items:flex-start;gap:0.2rem;opacity:0;transition:opacity 0.2s;position:relative;}
 .ws-line:hover .ws-line-actions{opacity:1;}
@@ -807,6 +804,43 @@ body.lang-hi [data-lang-block="en"]{display:none;}
 .ws-audio.disabled .ws-audio-vol{opacity:0.3;}
 
 .ws-coach{display:flex;flex-direction:column;gap:1.2rem;}
+
+/* ── Conversation Review card ── */
+.ws-review-card{position:relative;padding:1.3rem 1.5rem;overflow:hidden;}
+.ws-review-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 4%,var(--violet-glow) 32%,var(--amber-glow) 68%,transparent 96%);}
+.ws-review-head{display:flex;align-items:flex-start;justify-content:space-between;gap:0.8rem;flex-wrap:wrap;}
+.ws-review-eyebrow{font-family:var(--font-m);font-size:0.55rem;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:var(--amber);margin-bottom:0.35rem;}
+.ws-review-title{font-family:var(--font-lato);font-weight:800;font-size:1.02rem;letter-spacing:-0.01em;color:var(--ivory);}
+.ws-review-badge{display:inline-flex;align-items:center;gap:0.45rem;font-family:var(--font-m);font-size:0.56rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--teal);border:1px solid rgba(51,160,143,0.35);background:var(--teal-soft);padding:0.3rem 0.7rem;border-radius:100px;white-space:nowrap;flex-shrink:0;margin-top:0.1rem;}
+.ws-review-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal-glow);}
+.ws-review-sub{font-size:0.8rem;line-height:1.6;color:var(--ivory-dim);margin-top:0.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border);}
+.ws-phases{list-style:none;display:flex;flex-direction:column;gap:0.3rem;margin:0.9rem 0 0;}
+.ws-phase{display:flex;align-items:center;gap:0.7rem;padding:0.45rem 0.6rem;border:1px solid transparent;border-radius:6px;transition:border-color 0.2s,background 0.2s;}
+.ws-phase-icon{width:20px;height:20px;border-radius:50%;border:1px solid var(--border-lit);background:var(--surface);color:var(--ivory-faint);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-m);font-size:0.58rem;font-weight:700;}
+.ws-phase-body{display:flex;align-items:baseline;gap:0.55rem;min-width:0;}
+.ws-phase-body b{font-family:var(--font-lato);font-weight:700;font-size:0.72rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--ivory-dim);}
+.ws-phase-body small{font-family:var(--font-m);font-size:0.62rem;letter-spacing:0.03em;color:var(--ivory-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ws-phase.done .ws-phase-icon{border-color:rgba(51,160,143,0.35);background:var(--teal-soft);color:var(--teal);}
+.ws-phase.done .ws-phase-body b{color:var(--ivory-dim);}
+.ws-phase.active{border-color:rgba(123,79,255,0.38);background:linear-gradient(90deg,var(--violet-soft),transparent 82%);box-shadow:0 0 18px rgba(123,79,255,0.12);}
+.ws-phase.active .ws-phase-icon{border-color:transparent;background:var(--violet);color:#fff;box-shadow:0 0 12px var(--violet-glow);}
+.ws-phase.active .ws-phase-body b{color:var(--ivory);}
+.ws-phase.active .ws-phase-body small{color:rgba(232,236,244,0.75);}
+html[data-theme="light"] .ws-phase.active .ws-phase-body small{color:#3d3654;}
+.ws-review-meta{display:flex;flex-wrap:wrap;gap:0.6rem 1.6rem;margin-top:1rem;padding-top:0.95rem;border-top:1px solid var(--border);}
+.ws-review-meta-item{display:flex;flex-direction:column;gap:0.2rem;min-width:64px;}
+.ws-review-meta-item small{font-family:var(--font-m);font-size:0.52rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--ivory-faint);}
+.ws-review-meta-item b{font-family:var(--font-lato);font-weight:800;font-size:0.8rem;letter-spacing:0.01em;color:var(--ivory);}
+.ws-review-meta-item b.high,.ws-review-meta-item b.good{color:var(--teal);}
+.ws-review-meta-item b.medium,.ws-review-meta-item b.warn{color:var(--amber);}
+.ws-review-meta-item b.low{color:var(--red);}
+
+/* Phrasing Review tool — violet-tinted review action */
+.ws-tool-btn.ws-phrasing-btn{color:var(--violet);border-color:rgba(123,79,255,0.35);background:var(--violet-soft);}
+.ws-tool-btn.ws-phrasing-btn:hover{color:var(--ivory);border-color:rgba(123,79,255,0.65);background:rgba(123,79,255,0.14);}
+.ws-tool-btn.ws-phrasing-btn.active{color:#fff;background:var(--violet);border-color:transparent;text-shadow:none;}
+.ws-tool-btn.ws-phrasing-btn:disabled{opacity:0.6;cursor:progress;}
+
 .ws-score-card{padding:1.3rem 1.5rem;}
 .ws-score-card .card-title{display:flex;align-items:center;gap:0.5rem;}
 .ws-score-card .card-title .ws-coach-pill{margin-left:auto;}

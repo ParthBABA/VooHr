@@ -142,7 +142,6 @@ fetch('/api/me').then(function(res){
               <option value="HR">HR</option>
               <option value="Employee">Employee</option>
             </select>
-            <button class="ws-tool-btn" id="wsDensityBtn" title="View density">View: Standard</button>
             <button class="ws-tool-btn ws-phrasing-btn" id="wsPhrasingBtn" title="Scan for phrasing &amp; psychological-safety issues">Phrasing Review</button>
           </div>
 
@@ -151,7 +150,7 @@ fetch('/api/me').then(function(res){
             <label class="ws-filter-opt"><input type="checkbox" id="wsPinnedOnly"> Pinned lines only</label>
           </div>
 
-          <div class="ws-lines" id="wsLines" data-density="standard"></div>
+          <div class="ws-lines" id="wsLines"></div>
 
           <div class="ws-disclaimer" id="wsDisclaimer">Speaker labels are inferred and may not reflect who actually spoke.</div>
 
@@ -172,6 +171,41 @@ fetch('/api/me').then(function(res){
 
         <!-- RIGHT: CONVERSATION COACH -->
         <section class="ws-coach">
+          <!-- Conversation review status -->
+          <div class="card ws-review-card">
+            <div class="ws-review-head">
+              <div class="ws-review-heading">
+                <div class="ws-review-eyebrow">Review</div>
+                <div class="ws-review-title">Conversation Review</div>
+              </div>
+              <span class="ws-review-badge" id="wsReviewBadge"><span class="ws-review-badge-dot"></span><span id="wsReviewBadgeText">Pending</span></span>
+            </div>
+            <p class="ws-review-sub" id="wsReviewSub">Reading this conversation for safety, phrasing and follow-up quality.</p>
+            <ol class="ws-phases" id="wsPhases">
+              <li class="ws-phase" data-phase="transcript">
+                <span class="ws-phase-icon"></span>
+                <span class="ws-phase-body"><b>Transcript</b><small>Parsed &amp; attributed</small></span>
+              </li>
+              <li class="ws-phase" data-phase="signals">
+                <span class="ws-phase-icon"></span>
+                <span class="ws-phase-body"><b>Key Signals</b><small>Safety &amp; behaviour read</small></span>
+              </li>
+              <li class="ws-phase" data-phase="review">
+                <span class="ws-phase-icon"></span>
+                <span class="ws-phase-body"><b>Review</b><small id="wsPhaseReviewDetail">Phrasing scan</small></span>
+              </li>
+              <li class="ws-phase" data-phase="followup">
+                <span class="ws-phase-icon"></span>
+                <span class="ws-phase-body"><b>Follow-up</b><small id="wsPhaseFollowDetail">Plan next sync</small></span>
+              </li>
+            </ol>
+            <div class="ws-review-meta">
+              <div class="ws-review-meta-item"><small>Status</small><b id="wsMetaStatus">&mdash;</b></div>
+              <div class="ws-review-meta-item"><small>Safety</small><b id="wsMetaSafety">&mdash;</b></div>
+              <div class="ws-review-meta-item"><small>Flagged</small><b id="wsMetaFlags">&mdash;</b></div>
+            </div>
+          </div>
+
           <!-- Score -->
           <div class="card ws-score-card">
             <div class="card-header">
@@ -226,7 +260,6 @@ window.voohrInitWorkspace = function() {
     lines: [],
     query: '',
     speaker: 'all',
-    density: 'standard',
     showTime: true,
     pinnedOnly: false,
     pinned: {}
@@ -431,7 +464,6 @@ window.voohrInitWorkspace = function() {
 
   function renderLines() {
     var container = document.getElementById('wsLines');
-    container.setAttribute('data-density', state.density);
     var visible = state.lines.filter(function(l) {
       if (state.speaker !== 'all' && l.speakerType !== state.speaker.toLowerCase()) return false;
       if (state.pinnedOnly && !state.pinned[l.idx]) return false;
@@ -615,6 +647,63 @@ window.voohrInitWorkspace = function() {
     container.innerHTML = html;
   }
 
+  // ── Conversation review status (visual only — derives from already-loaded session data) ──
+  var PHASE_ICONS = {
+    done: '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>',
+    active: '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3"><line x1="4" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>',
+    todo: ''
+  };
+
+  function renderReview() {
+    var s = state.session || {};
+    var a = s.analysis || {};
+    var pa = s.phrasing_analysis || null;
+    var flags = ((pa && pa.hr_phrasing_flags) || []).length + ((pa && pa.employee_signals) || []).length;
+    var ps = a.psychological_safety || {};
+    var safety = (ps.safety_score !== null && ps.safety_score !== undefined) ? ps.safety_score : null;
+
+    var badgeText = document.getElementById('wsReviewBadgeText');
+    if (badgeText) badgeText.textContent = 'Reviewed';
+
+    document.querySelectorAll('#wsPhases .ws-phase').forEach(function(li) {
+      var phase = li.getAttribute('data-phase');
+      var icon = li.querySelector('.ws-phase-icon');
+      li.classList.remove('done', 'active', 'todo');
+      if (phase === 'transcript') {
+        li.classList.toggle('done', !!state.lines.length);
+        li.classList.toggle('todo', !state.lines.length);
+        icon.innerHTML = state.lines.length ? PHASE_ICONS.done : PHASE_ICONS.todo;
+      } else if (phase === 'signals') {
+        li.classList.add('done');
+        icon.innerHTML = PHASE_ICONS.done;
+      } else if (phase === 'review') {
+        li.classList.add('active');
+        icon.innerHTML = PHASE_ICONS.active;
+      } else {
+        li.classList.add('todo');
+        icon.innerHTML = PHASE_ICONS.todo;
+      }
+    });
+
+    var reviewDetail = document.getElementById('wsPhaseReviewDetail');
+    if (reviewDetail) reviewDetail.textContent = pa ? (flags ? flags + ' moment' + (flags === 1 ? '' : 's') + ' flagged' : 'Scan complete \u2014 clean') : 'Run Phrasing Review';
+    var followDetail = document.getElementById('wsPhaseFollowDetail');
+    if (followDetail) followDetail.textContent = pa ? 'Plan next sync' : 'After review';
+
+    var metaStatus = document.getElementById('wsMetaStatus');
+    if (metaStatus) metaStatus.textContent = 'Analyzed';
+    var metaSafety = document.getElementById('wsMetaSafety');
+    if (metaSafety) {
+      metaSafety.textContent = safety !== null ? safety + '/100' : 'Not measured';
+      metaSafety.className = safety !== null ? scoreBand(safety).cls : '';
+    }
+    var metaFlags = document.getElementById('wsMetaFlags');
+    if (metaFlags) {
+      metaFlags.textContent = pa ? (flags ? String(flags) : 'None') : 'Not scanned';
+      metaFlags.className = pa ? (flags ? 'warn' : 'good') : '';
+    }
+  }
+
   // ── Export / Share ──
   function exportTranscript() {
     if (!state.transcriptText) { showToast('No transcript to export'); return; }
@@ -650,11 +739,12 @@ window.voohrInitWorkspace = function() {
     renderScore(a);
     renderCoach(a);
     renderMoments(a);
+    renderReview();
 
     if (window.gsap) {
       var el = document.getElementById('wsLines');
       var lines = el.querySelectorAll('.ws-line');
-      var cards = bodyEl.querySelectorAll('.ws-score-card, .ws-coach-card, .ws-moments-card');
+      var cards = bodyEl.querySelectorAll('.ws-review-card, .ws-score-card, .ws-coach-card, .ws-moments-card');
       gsap.fromTo('.ws-title-row', { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' });
       gsap.fromTo(cards, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, stagger: 0.08, ease: 'power3.out', delay: 0.1 });
       gsap.fromTo(lines, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.35, stagger: 0.02, ease: 'power3.out', delay: 0.15 });
@@ -754,14 +844,6 @@ window.voohrInitWorkspace = function() {
 
   document.getElementById('wsSpeakerSelect').addEventListener('change', function(e) {
     state.speaker = e.target.value;
-    renderLines();
-  });
-
-  document.getElementById('wsDensityBtn').addEventListener('click', function() {
-    var order = ['standard', 'comfortable', 'condensed'];
-    var next = order[(order.indexOf(state.density) + 1) % order.length];
-    state.density = next;
-    this.textContent = 'View: ' + next.charAt(0).toUpperCase() + next.slice(1);
     renderLines();
   });
 
