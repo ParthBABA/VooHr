@@ -171,58 +171,28 @@ fetch('/api/me').then(function(res){
 
         <!-- RIGHT: CONVERSATION INTELLIGENCE -->
         <section class="ws-coach">
-          <!-- Conversation review status -->
-          <div class="card ws-review-card">
-            <div class="ws-review-head">
-              <div class="ws-review-heading">
-                <div class="ws-review-eyebrow">Review</div>
-                <div class="ws-review-title">Conversation Review</div>
+          <!-- LIVE CONVERSATION SCORE — primary intelligence hero -->
+          <section class="card ws-hero" aria-label="Live Conversation Score">
+            <div class="wsx-score-head">
+              <h2 class="wsx-score-title">Live Conversation Score</h2>
+              <span class="wsx-score-status unmeasured" id="wsScoreStatus" style="display:none;">Not measured</span>
+            </div>
+            <div class="wsx-score-main">
+              <span class="ws-score-num unmeasured" id="wsScoreNum">--</span>
+              <span class="wsx-score-denom">/ 100</span>
+              <div class="ws-score-meta">
+                <div class="ws-score-label" id="wsScoreLabel">Not measured</div>
+                <div class="ws-score-sub">Psychological safety read of this conversation</div>
               </div>
-              <span class="ws-review-badge" id="wsReviewBadge"><span class="ws-review-badge-dot"></span><span id="wsReviewBadgeText">Pending</span></span>
             </div>
-            <p class="ws-review-sub" id="wsReviewSub">Reading this conversation for safety, phrasing and follow-up quality.</p>
-            <ol class="ws-phases" id="wsPhases">
-              <li class="ws-phase" data-phase="transcript">
-                <span class="ws-phase-icon"></span>
-                <span class="ws-phase-body"><b>Transcript</b><small>Parsed &amp; attributed</small></span>
-              </li>
-              <li class="ws-phase" data-phase="signals">
-                <span class="ws-phase-icon"></span>
-                <span class="ws-phase-body"><b>Key Signals</b><small>Safety &amp; behaviour read</small></span>
-              </li>
-              <li class="ws-phase" data-phase="review">
-                <span class="ws-phase-icon"></span>
-                <span class="ws-phase-body"><b>Review</b><small id="wsPhaseReviewDetail">Phrasing scan</small></span>
-              </li>
-              <li class="ws-phase" data-phase="followup">
-                <span class="ws-phase-icon"></span>
-                <span class="ws-phase-body"><b>Follow-up</b><small id="wsPhaseFollowDetail">Plan next sync</small></span>
-              </li>
-            </ol>
-            <div class="ws-review-meta">
-              <div class="ws-review-meta-item"><small>Status</small><b id="wsMetaStatus">&mdash;</b></div>
-              <div class="ws-review-meta-item"><small>Safety</small><b id="wsMetaSafety">&mdash;</b></div>
-              <div class="ws-review-meta-item"><small>Flagged</small><b id="wsMetaFlags">&mdash;</b></div>
-            </div>
-          </div>
+            <p class="wsx-score-note" id="wsScoreNote" style="display:none;"></p>
+            <div class="wsx-score-evidence" id="wsScoreEvidence" style="display:none;"></div>
+            <div class="wsx-dims" id="wsScoreDims" style="display:none;"></div>
+            <div class="wsx-facts" id="wsScoreFacts" style="display:none;"></div>
+          </section>
 
-          <!-- INTELLIGENCE PANEL -->
+          <!-- INTELLIGENCE PANEL — secondary insights -->
           <section class="card ws-intel">
-            <!-- Live Conversation Score -->
-            <div class="wsx-score">
-              <div class="card-header">
-                <div class="card-title">Live Conversation Score</div>
-              </div>
-              <div class="ws-score-row">
-                <div class="ws-score-num" id="wsScoreNum">--</div>
-                <div class="ws-score-meta">
-                  <div class="ws-score-label" id="wsScoreLabel">Not measured</div>
-                  <div class="ws-score-sub">Out of 100</div>
-                </div>
-              </div>
-              <div class="ws-chips" id="wsScoreChips"></div>
-            </div>
-
             <!-- 1 · WHAT MATTERS -->
             <div class="wsx-section">
               <div class="wsx-section-head">
@@ -576,11 +546,51 @@ window.voohrInitWorkspace = function() {
     }
   }
 
-  // ── Score card ──
+  // ── Score hero ──
+  // Every value below is read from the stored analysis/phrasing analysis —
+  // nothing is invented client-side; missing data renders as "not measured".
+  function numVal(v) {
+    if (v === null || v === undefined || v === '' || isNaN(v)) return null;
+    return Math.round(parseFloat(v));
+  }
+
+  function buildScoreNote(ps, psych) {
+    var parts = [];
+    var interp = cleanVal(ps.interpretation);
+    if (interp) parts.push(interp);
+    var ctx = [];
+    var openness = cleanVal(ps.openness);
+    var style = cleanVal(ps.communication_style);
+    var trust = cleanVal(ps.trust_level);
+    var sent = cleanVal(psych.sentiment);
+    if (openness) ctx.push('openness read as ' + openness.toLowerCase());
+    if (style) ctx.push('the exchange carried a "' + style.toLowerCase() + '" tone');
+    if (trust) {
+      ctx.push(trust.toLowerCase() === 'insufficient evidence' ? 'trust signals were inconclusive' : 'trust signals looked ' + trust.toLowerCase());
+    }
+    if (sent && sent.toLowerCase() !== 'unknown') ctx.push('overall sentiment was ' + sent.toLowerCase());
+    if (ctx.length) parts.push('In this conversation, ' + ctx.join('; ') + '.');
+    return parts.join(' ');
+  }
+
+  function dimRow(d) {
+    return (
+      '<div class="wsx-dim">' +
+        '<div class="wsx-dim-head">' +
+          '<span class="wsx-dim-label">' + esc(d.label) + '</span>' +
+          '<span class="wsx-dim-value ' + d.cls + '">' + d.value + (d.suffix || '') + '</span>' +
+        '</div>' +
+        '<div class="wsx-dim-bar"><span class="wsx-dim-fill ' + d.cls + '" style="width:' + Math.max(0, Math.min(100, d.value)) + '%"></span></div>' +
+      '</div>'
+    );
+  }
+
   function renderScore(a) {
-    var ps = a && a.psychological_safety || {};
-    var psych = a && a.psychology || {};
-    var safety = (ps.safety_score !== null && ps.safety_score !== undefined) ? ps.safety_score : null;
+    var ps = (a && a.psychological_safety) || {};
+    var psych = (a && a.psychology) || {};
+    var pa = state.session && state.session.phrasing_analysis;
+    var safety = numVal(ps.safety_score);
+    var band = scoreBand(safety);
     var numEl = document.getElementById('wsScoreNum');
     var labelEl = document.getElementById('wsScoreLabel');
 
@@ -590,27 +600,59 @@ window.voohrInitWorkspace = function() {
       labelEl.textContent = 'Not measured';
     } else {
       numEl.textContent = safety;
-      numEl.className = 'ws-score-num ' + scoreBand(safety).cls;
+      numEl.className = 'ws-score-num ' + band.cls;
       labelEl.textContent = 'Psychological Safety';
     }
 
-    var chips = [];
-    if (safety !== null) {
-      chips.push({ label: 'Psych. Safety', value: safety + '/100', cls: scoreBand(safety).cls });
-    } else {
-      chips.push({ label: 'Psych. Safety', value: 'Not measured', cls: 'unmeasured' });
+    var statusEl = document.getElementById('wsScoreStatus');
+    if (statusEl) {
+      if (safety === null) {
+        statusEl.style.display = 'none';
+      } else {
+        statusEl.textContent = band.label;
+        statusEl.className = 'wsx-score-status ' + band.cls;
+        statusEl.style.display = '';
+      }
     }
-    if (psych.sentiment_score !== null && psych.sentiment_score !== undefined) {
-      chips.push({ label: 'Sentiment', value: Math.round(psych.sentiment_score * 100) + '%', cls: 'medium' });
-    } else {
-      chips.push({ label: 'Sentiment', value: 'Not measured', cls: 'unmeasured' });
+
+    var noteEl = document.getElementById('wsScoreNote');
+    if (noteEl) {
+      var note = buildScoreNote(ps, psych);
+      noteEl.style.display = note ? '' : 'none';
+      noteEl.textContent = note;
     }
-    ['Empathy', 'Clarity', 'Curiosity', 'Leading Qs'].forEach(function(m) {
-      chips.push({ label: m, value: 'Not measured', cls: 'unmeasured' });
-    });
-    document.getElementById('wsScoreChips').innerHTML = chips.map(function(c) {
-      return '<span class="ws-chip ' + c.cls + '"><b>' + esc(c.label) + '</b>' + esc(c.value) + '</span>';
-    }).join('');
+
+    var evidenceEl = document.getElementById('wsScoreEvidence');
+    if (evidenceEl) {
+      var ev = cleanVal(ps.evidence);
+      evidenceEl.style.display = ev ? '' : 'none';
+      evidenceEl.innerHTML = ev ? '<div class="wsx-quote">&ldquo;' + esc(ev) + '&rdquo;<span class="wsx-quote-foot">' + evLink(ev) + '</span></div>' : '';
+    }
+
+    var dimsEl = document.getElementById('wsScoreDims');
+    if (dimsEl) {
+      var dims = [];
+      var sentPct = (psych.sentiment_score !== null && psych.sentiment_score !== undefined && !isNaN(psych.sentiment_score)) ? Math.round(psych.sentiment_score * 100) : null;
+      if (sentPct !== null) dims.push({ label: 'Sentiment', value: sentPct, suffix: '%', cls: scoreBand(sentPct).cls });
+      var tone = numVal(pa && pa.overall_tone_score);
+      if (tone !== null) dims.push({ label: 'Phrasing tone', value: tone, suffix: '', cls: scoreBand(tone).cls });
+      var conf = numVal(ps.confidence);
+      if (conf !== null) dims.push({ label: 'Assessment confidence', value: conf, suffix: '%', cls: scoreBand(conf).cls });
+      dimsEl.style.display = dims.length ? '' : 'none';
+      dimsEl.innerHTML = dims.map(dimRow).join('');
+    }
+
+    var factsEl = document.getElementById('wsScoreFacts');
+    if (factsEl) {
+      var defs = cleanVal(ps.defensive_behaviour);
+      if (defs && defs.toLowerCase() !== 'none observed') {
+        factsEl.style.display = '';
+        factsEl.innerHTML = '<span class="wsx-fact warn"><b>Watch for</b>' + esc(defs) + '</span>';
+      } else {
+        factsEl.style.display = 'none';
+        factsEl.innerHTML = '';
+      }
+    }
   }
 
   // ── Intelligence panel helpers (every string below comes from the stored
@@ -758,45 +800,14 @@ window.voohrInitWorkspace = function() {
     host.innerHTML = html;
   }
 
-  // ── CONVERSATION SIGNALS: compact indicator rows, never clinical claims ──
+  // ── CONVERSATION SIGNALS: compact indicator rows, never clinical claims.
+  // The safety score, its interpretation and measured dimensions live in the
+  // Live Conversation Score hero above; this section carries the remaining
+  // qualitative engagement read only. ──
   function renderSignals(a) {
     var host = document.getElementById('wsSignals');
     var ps = a.psychological_safety || {};
-    var psy = a.psychology || {};
     var html = '';
-
-    var safety = (ps.safety_score !== null && ps.safety_score !== undefined && !isNaN(ps.safety_score)) ? ps.safety_score : null;
-    var safetyExp = cleanVal(ps.interpretation);
-    var safetyMeta = [cleanVal(ps.openness), cleanVal(ps.communication_style)].filter(Boolean);
-    if (safety !== null || safetyExp || safetyMeta.length) {
-      html +=
-        '<div class="wsx-signal">' +
-          '<div class="wsx-signal-head">' +
-            '<span class="wsx-signal-label">Psychological safety</span>' +
-            '<span class="wsx-signal-value ' + (safety !== null ? scoreBand(safety).cls : 'unmeasured') + '">' + (safety !== null ? safety + '/100' : 'Not measured') + '</span>' +
-            safetyMeta.map(function(m) { return '<span class="wsx-tag">' + esc(m) + '</span>'; }).join('') +
-          '</div>' +
-          (safetyExp ? '<p class="wsx-body">' + esc(safetyExp) + '</p>' : '') +
-          (cleanVal(ps.evidence) ?
-            '<div class="wsx-quote">&ldquo;' + esc(cleanVal(ps.evidence)) + '&rdquo;<span class="wsx-quote-foot">' + evLink(ps.evidence) + '</span></div>' : '') +
-        '</div>';
-    }
-
-    var sLabel = cleanVal(psy.sentiment);
-    var sScore = (psy.sentiment_score !== null && psy.sentiment_score !== undefined && !isNaN(psy.sentiment_score)) ? Math.round(psy.sentiment_score * 100) : null;
-    if (sLabel || sScore !== null) {
-      var sentExp = sLabel
-        ? 'Language cues across this conversation read as ' + sLabel.toLowerCase() + '. This is a directional tone indicator, not a diagnosis.'
-        : 'A directional tone indicator derived from this conversation \u2014 not a diagnosis.';
-      html +=
-        '<div class="wsx-signal">' +
-          '<div class="wsx-signal-head">' +
-            '<span class="wsx-signal-label">Sentiment</span>' +
-            '<span class="wsx-signal-value medium">' + (sLabel ? esc(sLabel.charAt(0).toUpperCase() + sLabel.slice(1)) : '') + (sScore !== null ? ' \u00b7 ' + sScore + '%' : '') + '</span>' +
-          '</div>' +
-          '<p class="wsx-body">' + esc(sentExp) + '</p>' +
-        '</div>';
-    }
 
     var open = cleanVal(ps.openness);
     var defb = cleanVal(ps.defensive_behaviour);
@@ -867,63 +878,6 @@ window.voohrInitWorkspace = function() {
     renderAsk(a);
   }
 
-  // ── Conversation review status (visual only — derives from already-loaded session data) ──
-  var PHASE_ICONS = {
-    done: '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>',
-    active: '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3"><line x1="4" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>',
-    todo: ''
-  };
-
-  function renderReview() {
-    var s = state.session || {};
-    var a = s.analysis || {};
-    var pa = s.phrasing_analysis || null;
-    var flags = ((pa && pa.hr_phrasing_flags) || []).length + ((pa && pa.employee_signals) || []).length;
-    var ps = a.psychological_safety || {};
-    var safety = (ps.safety_score !== null && ps.safety_score !== undefined) ? ps.safety_score : null;
-
-    var badgeText = document.getElementById('wsReviewBadgeText');
-    if (badgeText) badgeText.textContent = 'Reviewed';
-
-    document.querySelectorAll('#wsPhases .ws-phase').forEach(function(li) {
-      var phase = li.getAttribute('data-phase');
-      var icon = li.querySelector('.ws-phase-icon');
-      li.classList.remove('done', 'active', 'todo');
-      if (phase === 'transcript') {
-        li.classList.toggle('done', !!state.lines.length);
-        li.classList.toggle('todo', !state.lines.length);
-        icon.innerHTML = state.lines.length ? PHASE_ICONS.done : PHASE_ICONS.todo;
-      } else if (phase === 'signals') {
-        li.classList.add('done');
-        icon.innerHTML = PHASE_ICONS.done;
-      } else if (phase === 'review') {
-        li.classList.add('active');
-        icon.innerHTML = PHASE_ICONS.active;
-      } else {
-        li.classList.add('todo');
-        icon.innerHTML = PHASE_ICONS.todo;
-      }
-    });
-
-    var reviewDetail = document.getElementById('wsPhaseReviewDetail');
-    if (reviewDetail) reviewDetail.textContent = pa ? (flags ? flags + ' moment' + (flags === 1 ? '' : 's') + ' flagged' : 'Scan complete \u2014 clean') : 'Run Phrasing Review';
-    var followDetail = document.getElementById('wsPhaseFollowDetail');
-    if (followDetail) followDetail.textContent = pa ? 'Plan next sync' : 'After review';
-
-    var metaStatus = document.getElementById('wsMetaStatus');
-    if (metaStatus) metaStatus.textContent = 'Analyzed';
-    var metaSafety = document.getElementById('wsMetaSafety');
-    if (metaSafety) {
-      metaSafety.textContent = safety !== null ? safety + '/100' : 'Not measured';
-      metaSafety.className = safety !== null ? scoreBand(safety).cls : '';
-    }
-    var metaFlags = document.getElementById('wsMetaFlags');
-    if (metaFlags) {
-      metaFlags.textContent = pa ? (flags ? String(flags) : 'None') : 'Not scanned';
-      metaFlags.className = pa ? (flags ? 'warn' : 'good') : '';
-    }
-  }
-
   // ── Export / Share ──
   function exportTranscript() {
     if (!state.transcriptText) { showToast('No transcript to export'); return; }
@@ -958,12 +912,11 @@ window.voohrInitWorkspace = function() {
     renderLines();
     renderScore(a);
     renderIntel(a);
-    renderReview();
 
     if (window.gsap) {
       var el = document.getElementById('wsLines');
       var lines = el.querySelectorAll('.ws-line');
-      var cards = bodyEl.querySelectorAll('.ws-review-card, .ws-intel');
+      var cards = bodyEl.querySelectorAll('.ws-hero, .ws-intel');
       gsap.fromTo('.ws-title-row', { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' });
       gsap.fromTo(cards, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, stagger: 0.08, ease: 'power3.out', delay: 0.1 });
       gsap.fromTo(lines, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.35, stagger: 0.02, ease: 'power3.out', delay: 0.15 });
