@@ -20,7 +20,7 @@
 
 <div class="page-wrapper">
   <!-- SIDEBAR -->
-  <nav class="sidebar gsap-hidden">
+  <nav class="sidebar icon-only gsap-hidden">
     <div class="sidebar-header">
       <div class="sidebar-logo">
         <div class="logo-mark">HR</div>
@@ -612,6 +612,20 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Signed-in HR identity for the sidebar footer (replaces placeholder) ──
+fetch('/api/me').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }).then(function(me) {
+  if (!me) return;
+  var nameEl = document.getElementById('userName');
+  var roleEl = document.getElementById('userRole');
+  var avatarEl = document.getElementById('userAvatar');
+  if (nameEl && me.name) nameEl.textContent = me.name;
+  if (roleEl) roleEl.textContent = me.role === 'admin' ? 'HR Admin' : (me.role || 'HR');
+  if (avatarEl) {
+    if (me.picture) avatarEl.innerHTML = '<img src="' + escHtml(me.picture) + '" alt="">';
+    else avatarEl.textContent = (me.name || 'U').trim().charAt(0).toUpperCase();
+  }
+});
+
 function formatDate(ts) {
   if (!ts) return '—';
   var d = new Date(ts);
@@ -932,7 +946,14 @@ sessionPromise.then(function(s) {
   // ── Employee Context Card ──
   if (emp) {
     var initials = (emp.name || '--').split(' ').map(function(w) { return w[0]; }).join('').substring(0,2).toUpperCase();
-    document.getElementById('empAvatarBox').textContent = initials || '--';
+    var avatarBox = document.getElementById('empAvatarBox');
+    if (emp.photo) {
+      avatarBox.style.background = 'none';
+      avatarBox.style.padding = '0';
+      avatarBox.innerHTML = '<img src="' + escHtml(emp.photo) + '" alt="' + escHtml(emp.name || 'Employee') + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">';
+    } else {
+      avatarBox.textContent = initials || '--';
+    }
     document.getElementById('empNameText').textContent = emp.name || '—';
     document.getElementById('empPositionText').textContent = emp.position || '—';
     document.getElementById('empDeptText').textContent = emp.department || '—';
