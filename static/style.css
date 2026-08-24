@@ -339,6 +339,10 @@ h1,h2,h3,h4,h5,h6{font-family:var(--font-d);font-weight:600;text-transform:upper
 .page-btn:hover:not(:disabled){border-color:var(--border-lit);color:var(--ivory);}
 .page-btn.active{background:linear-gradient(135deg,var(--violet),var(--amber));border-color:transparent;color:#fff;}
 .page-btn:disabled{opacity:0.35;cursor:default;}
+/* Directory table footer — mirrors .emp-table cell rhythm so the last-row
+   divider sits centered between the final row and the footer, with the
+   footer aligned to the same left/right column edges */
+.pagination-bar.dir-table-footer{padding:0.8rem 1rem;}
 
 /* BUTTONS */
 .btn{font-family:var(--font-lato);font-weight:700;font-size:0.85rem;letter-spacing:0.04em;text-transform:uppercase;padding:0.75rem 1.8rem;border:1px solid var(--border);background:transparent;color:var(--ivory);display:inline-flex;align-items:center;gap:0.6rem;}
