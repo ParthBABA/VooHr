@@ -12,44 +12,196 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   /* =========================================================
-     STEP 2–5 VISUAL UPGRADE
-     (Step 1 / Psychological Safety intentionally left untouched)
+     STEP 2–5 VISUAL POLISH — semantic enterprise design system
+     (Step 1 / Psychological Safety intentionally left untouched;
+      all rules below are scoped to #stepContent2–#stepContent5,
+      except the progress stepper which Section 18 sanctions)
      ========================================================= */
   :root{
-    --step-heading-font: 'Sora', var(--font-b, sans-serif);
-    --step-body-font: 'Inter', var(--font-m, sans-serif);
-    --step-heading-color: #ffb454;     /* warm gold for step titles */
-    --step-subheading-color: #7dd3fc;  /* sky blue for descriptions / labels */
-    --step-content-color: #eceaf5;     /* high-contrast off-white for body copy */
-    --step-speech-color: #ffd9a0;      /* warm tint for spoken script text */
-    --step-speech-bg: rgba(255, 180, 84, 0.12);
-    --step-quote-color: #a5f3e0;
+    /* Surfaces */
+    --step-bg: #0B0A10;
+    --step-surface: #121019;
+    --step-surface-raised: #181521;
+
+    /* Borders */
+    --step-border: rgba(255,255,255,0.07);
+    --step-border-strong: rgba(255,255,255,0.11);
+
+    /* Identity */
+    --step-primary: #8B5CF6;
+    --step-primary-soft: #A78BFA;
+
+    /* Text */
+    --step-text: #F5F3FF;
+    --step-text-secondary: #C9C5D8;
+    --step-text-muted: #8E899F;
+
+    /* Semantics */
+    --step-info: #60A5FA;
+    --step-success: #34D399;
+    --step-warning: #FBBF24;
+    --step-danger: #F87171;
+
+    /* Derived component tokens */
+    --step-heading-font: 'Sora', sans-serif;
+    --step-body-font: 'Inter', sans-serif;
+    --step-quote-color: #A7F3D0;
+    --step-card-bg: rgba(255,255,255,0.025);
+    --step-row-bg: rgba(255,255,255,0.02);
+    --step-row-bg-hover: rgba(255,255,255,0.045);
+    --step-accent-tint: rgba(139,92,246,0.055);
+    --step-accent-line: rgba(139,92,246,0.12);
+    --step-shadow: 0 8px 30px rgba(0,0,0,0.18);
+    --step-glow: 0 0 24px rgba(139,92,246,0.12);
+  }
+  html[data-theme="light"]{
+    --step-surface: #FFFFFF;
+    --step-surface-raised: #F6F5FA;
+    --step-border: rgba(11,10,16,0.08);
+    --step-border-strong: rgba(11,10,16,0.14);
+    --step-text: #17141F;
+    --step-text-secondary: #4A4658;
+    --step-text-muted: #7A7590;
+    --step-quote-color: #0F766E;
+    --step-card-bg: rgba(11,10,16,0.03);
+    --step-row-bg: rgba(11,10,16,0.025);
+    --step-row-bg-hover: rgba(11,10,16,0.05);
+    --step-accent-tint: rgba(139,92,246,0.06);
+    --step-shadow: 0 8px 30px rgba(23,20,31,0.08);
+    --step-glow: 0 0 24px rgba(139,92,246,0.10);
   }
 
-  /* ---- Headings (Step title, e.g. "Behavioural Intelligence") ---- */
+  /* ---------- Step headers ---------- */
+  #stepContent2 .step-number,
+  #stepContent3 .step-number,
+  #stepContent4 .step-number,
+  #stepContent5 .step-number{
+    font-family: var(--step-body-font);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
   #stepContent2 .step-title,
   #stepContent3 .step-title,
   #stepContent4 .step-title,
   #stepContent5 .step-title{
-    font-family: var(--step-heading-font) !important;
-    color: var(--step-heading-color) !important;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    text-shadow: 0 0 26px rgba(255,180,84,0.18);
+    font-family: var(--step-heading-font);
+    font-size: clamp(28px, 3vw, 34px);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--step-text);
+    text-shadow: var(--step-glow);
   }
-
-  /* ---- Subheadings (Step description under the title) ---- */
   #stepContent2 .step-desc,
   #stepContent3 .step-desc,
   #stepContent4 .step-desc,
   #stepContent5 .step-desc{
-    font-family: var(--step-body-font) !important;
-    color: var(--step-subheading-color) !important;
-    font-weight: 500;
-    line-height: 1.65;
+    font-family: var(--step-body-font);
+    font-size: 14.5px;
+    font-weight: 400;
+    line-height: 1.7;
+    color: var(--step-text-secondary);
   }
 
-  /* ---- Card / section labels (Behaviour Summary, Primary Trigger, etc.) ---- */
+  /* ---------- Suggested Language block ---------- */
+  #stepContent2 .script-block,
+  #stepContent3 .script-block,
+  #stepContent4 .script-block,
+  #stepContent5 .script-block{
+    background: var(--step-accent-tint);
+    border: 1px solid var(--step-accent-line);
+    border-left: 2px solid var(--step-primary);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 24px 0;
+    box-shadow: var(--step-shadow);
+  }
+  #stepContent2 .script-block::before,
+  #stepContent3 .script-block::before,
+  #stepContent4 .script-block::before,
+  #stepContent5 .script-block::before{
+    content: 'SUGGESTED LANGUAGE';
+    position: static;
+    display: inline-block;
+    background: none;
+    padding: 0;
+    margin-bottom: 8px;
+    font-family: var(--step-body-font);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--step-primary-soft);
+  }
+  #stepContent2 .script-text,
+  #stepContent3 .script-text,
+  #stepContent4 .script-text,
+  #stepContent5 .script-text{
+    font-family: var(--step-body-font);
+    font-style: normal;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--step-text);
+    background: none;
+    padding: 0;
+    border-radius: 0;
+  }
+  /* Per-step semantic accent on the language block (Section 10) */
+  #stepContent2 .script-block{ border-left-color: var(--step-info); }
+  #stepContent4 .script-block{ border-left-color: var(--step-success); }
+
+  /* ---------- Analysis card surfaces ---------- */
+  #stepContent2 > #step2Cards,
+  #stepContent3 > #step3Cards,
+  #stepContent4 > #step4Cards,
+  #stepContent5 > #step5Cards{
+    display: grid;
+    gap: 12px;
+    margin: 24px 0;
+  }
+  #stepContent2 .analysis-card,
+  #stepContent3 .analysis-card,
+  #stepContent4 .analysis-card,
+  #stepContent5 .analysis-card{
+    background: var(--step-card-bg);
+    border: 1px solid var(--step-border);
+    border-left: 2px solid var(--step-border-strong);
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: var(--step-shadow);
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  #stepContent2 .analysis-card:hover,
+  #stepContent3 .analysis-card:hover,
+  #stepContent4 .analysis-card:hover,
+  #stepContent5 .analysis-card:hover{
+    transform: translateY(-1px);
+    border-color: var(--step-border-strong);
+  }
+  /* Tiny semantic accents — neutral surface, hairline tone marker */
+  #stepContent2 .analysis-card--amber,
+  #stepContent3 .analysis-card--amber,
+  #stepContent4 .analysis-card--amber,
+  #stepContent5 .analysis-card--amber{ border-left-color: var(--step-warning); }
+  #stepContent2 .analysis-card--teal,
+  #stepContent3 .analysis-card--teal,
+  #stepContent4 .analysis-card--teal,
+  #stepContent5 .analysis-card--teal{ border-left-color: var(--step-success); }
+  #stepContent2 .analysis-card--red,
+  #stepContent3 .analysis-card--red,
+  #stepContent4 .analysis-card--red,
+  #stepContent5 .analysis-card--red{ border-left-color: var(--step-danger); }
+  #stepContent2 .analysis-card--faint,
+  #stepContent3 .analysis-card--faint,
+  #stepContent4 .analysis-card--faint,
+  #stepContent5 .analysis-card--faint,
+  #stepContent2 .analysis-card--muted,
+  #stepContent3 .analysis-card--muted,
+  #stepContent4 .analysis-card--muted,
+  #stepContent5 .analysis-card--muted{ border-left-color: var(--step-border); }
+
+  /* ---------- Card typography ---------- */
   #stepContent2 .analysis-card-label,
   #stepContent3 .analysis-card-label,
   #stepContent4 .analysis-card-label,
@@ -62,65 +214,212 @@
   #stepContent3 .analysis-confidence-label,
   #stepContent4 .analysis-confidence-label,
   #stepContent5 .analysis-confidence-label{
-    font-family: var(--step-heading-font) !important;
-    color: var(--step-subheading-color) !important;
+    font-family: var(--step-heading-font);
+    font-size: 10px;
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    font-size: 0.68rem;
+    color: var(--step-text-muted);
+    margin-bottom: 6px;
   }
-
-  /* ---- Body / content text — kept high-contrast for easy reading ---- */
   #stepContent2 .analysis-card-value,
   #stepContent3 .analysis-card-value,
   #stepContent4 .analysis-card-value,
   #stepContent5 .analysis-card-value,
-  #stepContent2 .analysis-list-item,
-  #stepContent3 .analysis-list-item,
-  #stepContent4 .analysis-list-item,
-  #stepContent5 .analysis-list-item,
-  #stepContent2 .analysis-takeaway-value,
-  #stepContent3 .analysis-takeaway-value,
-  #stepContent4 .analysis-takeaway-value,
-  #stepContent5 .analysis-takeaway-value,
   #stepContent2 .analysis-why-it-works,
   #stepContent3 .analysis-why-it-works,
   #stepContent4 .analysis-why-it-works,
-  #stepContent5 .analysis-why-it-works,
-  #stepContent2 .guideline span,
-  #stepContent3 .guideline span,
-  #stepContent4 .guideline span,
-  #stepContent5 .guideline span{
-    font-family: var(--step-body-font) !important;
-    color: var(--step-content-color) !important;
-    line-height: 1.7;
+  #stepContent5 .analysis-why-it-works{
+    font-family: var(--step-body-font);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.65;
+    color: var(--step-text);
+  }
+  #stepContent2 .analysis-card--dim-value .analysis-card-value,
+  #stepContent3 .analysis-card--dim-value .analysis-card-value,
+  #stepContent4 .analysis-card--dim-value .analysis-card-value,
+  #stepContent5 .analysis-card--dim-value .analysis-card-value{
+    color: var(--step-text-secondary);
+  }
+  #stepContent2 .analysis-list-item,
+  #stepContent3 .analysis-list-item,
+  #stepContent4 .analysis-list-item,
+  #stepContent5 .analysis-list-item{
+    font-family: var(--step-body-font);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--step-text-secondary);
+    padding: 2px 0;
   }
 
-  /* ---- Speech / dialogue: suggested scripts — italic + soft highlight ---- */
-  #stepContent2 .script-text,
-  #stepContent3 .script-text,
-  #stepContent4 .script-text,
-  #stepContent5 .script-text{
-    font-family: var(--step-body-font) !important;
-    font-style: italic;
-    color: var(--step-speech-color) !important;
-    background: var(--step-speech-bg);
-    padding: 0.6rem 0.8rem;
-    border-radius: 6px;
-    line-height: 1.7;
-  }
-
-  /* ---- Speech / dialogue: quoted lines (title questions) — italic + underline ---- */
+  /* ---------- Quoted question ---------- */
   #stepContent2 .analysis-quote,
   #stepContent3 .analysis-quote,
   #stepContent4 .analysis-quote,
   #stepContent5 .analysis-quote{
-    font-family: var(--step-body-font) !important;
+    font-family: var(--step-body-font);
+    font-size: 14px;
     font-style: italic;
-    color: var(--step-quote-color) !important;
-    text-decoration: underline;
-    text-decoration-color: rgba(165,243,224,0.55);
-    text-underline-offset: 3px;
+    line-height: 1.7;
+    color: var(--step-quote-color);
+    text-decoration: none;
+    padding: 2px 0 2px 14px;
+    border-left: 2px solid var(--step-accent-line);
+    margin-bottom: 4px;
+  }
+
+  /* ---------- Confidence metric ---------- */
+  #stepContent2 .analysis-confidence,
+  #stepContent3 .analysis-confidence,
+  #stepContent4 .analysis-confidence,
+  #stepContent5 .analysis-confidence{
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    background: var(--step-row-bg);
+    border: 1px solid var(--step-border);
+    border-radius: 8px;
+    padding: 10px 16px;
+  }
+  #stepContent2 .analysis-confidence-label,
+  #stepContent3 .analysis-confidence-label,
+  #stepContent4 .analysis-confidence-label,
+  #stepContent5 .analysis-confidence-label{ margin-bottom: 0; }
+  #stepContent2 .analysis-confidence-value,
+  #stepContent3 .analysis-confidence-value,
+  #stepContent4 .analysis-confidence-value,
+  #stepContent5 .analysis-confidence-value{
+    font-family: var(--step-heading-font);
+    font-size: 16px;
+    font-weight: 600;
+  }
+  #stepContent2 .analysis-confidence-value.is-high,
+  #stepContent3 .analysis-confidence-value.is-high,
+  #stepContent4 .analysis-confidence-value.is-high,
+  #stepContent5 .analysis-confidence-value.is-high{ color: var(--step-success); }
+  #stepContent2 .analysis-confidence-value.is-mid,
+  #stepContent3 .analysis-confidence-value.is-mid,
+  #stepContent4 .analysis-confidence-value.is-mid,
+  #stepContent5 .analysis-confidence-value.is-mid{ color: var(--step-warning); }
+  #stepContent2 .analysis-confidence-value.is-low,
+  #stepContent3 .analysis-confidence-value.is-low,
+  #stepContent4 .analysis-confidence-value.is-low,
+  #stepContent5 .analysis-confidence-value.is-low{ color: var(--step-danger); }
+
+  /* ---------- Key Takeaway ---------- */
+  #stepContent2 .analysis-takeaway,
+  #stepContent3 .analysis-takeaway,
+  #stepContent4 .analysis-takeaway,
+  #stepContent5 .analysis-takeaway{
+    background: var(--step-accent-tint);
+    border: 1px solid var(--step-accent-line);
+    border-left: 2px solid var(--step-primary);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  #stepContent2 .analysis-takeaway .analysis-takeaway-label,
+  #stepContent3 .analysis-takeaway .analysis-takeaway-label,
+  #stepContent4 .analysis-takeaway .analysis-takeaway-label,
+  #stepContent5 .analysis-takeaway .analysis-takeaway-label{
+    color: var(--step-primary-soft);
+  }
+  #stepContent2 .analysis-takeaway-value,
+  #stepContent3 .analysis-takeaway-value,
+  #stepContent4 .analysis-takeaway-value,
+  #stepContent5 .analysis-takeaway-value{
+    font-family: var(--step-body-font);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.6;
+    color: var(--step-text);
+  }
+
+  /* ---------- Recommended / Avoid guidelines ---------- */
+  #stepContent2 .guideline,
+  #stepContent3 .guideline,
+  #stepContent4 .guideline,
+  #stepContent5 .guideline{
+    background: var(--step-row-bg);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: var(--step-body-font);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--step-text-secondary);
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  #stepContent2 .guideline:hover,
+  #stepContent3 .guideline:hover,
+  #stepContent4 .guideline:hover,
+  #stepContent5 .guideline:hover{
+    background: var(--step-row-bg-hover);
+    border-color: var(--step-border);
+  }
+  #stepContent2 .guideline .g-icon,
+  #stepContent3 .guideline .g-icon,
+  #stepContent4 .guideline .g-icon,
+  #stepContent5 .guideline .g-icon{
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(52,211,153,0.10);
+    color: var(--step-success);
+  }
+  #stepContent2 .guideline .g-icon.avoid,
+  #stepContent3 .guideline .g-icon.avoid,
+  #stepContent4 .guideline .g-icon.avoid,
+  #stepContent5 .guideline .g-icon.avoid{
+    background: rgba(248,113,113,0.10);
+    color: var(--step-danger);
+  }
+  #stepContent2 .guideline .g-icon.tip,
+  #stepContent3 .guideline .g-icon.tip,
+  #stepContent4 .guideline .g-icon.tip,
+  #stepContent5 .guideline .g-icon.tip{
+    background: rgba(139,92,246,0.10);
+    color: var(--step-primary-soft);
+  }
+  #stepContent2 .guideline span,
+  #stepContent3 .guideline span,
+  #stepContent4 .guideline span,
+  #stepContent5 .guideline span{
+    font-family: var(--step-body-font);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--step-text-secondary);
+  }
+
+  /* ---------- Notes input focus ---------- */
+  #stepContent2 .note-area:focus,
+  #stepContent3 .note-area:focus,
+  #stepContent4 .note-area:focus,
+  #stepContent5 .note-area:focus{ border-color: var(--step-primary); }
+
+  /* ---------- Progress stepper (visual states only) ---------- */
+  .journey-progress .step-dot{ box-shadow: none; }
+  .journey-progress .step-node.locked .step-dot{
+    opacity: 1;
+    border-color: var(--step-border);
+    color: var(--step-text-muted);
+  }
+  .journey-progress .step-node.completed .step-dot{
+    border-color: rgba(52,211,153,0.45);
+    background: rgba(52,211,153,0.10);
+    color: var(--step-success);
+  }
+  .journey-progress .step-node.active .step-dot{
+    border-color: var(--step-primary);
+    background: var(--step-primary);
+    color: #FFFFFF;
+    box-shadow: 0 0 16px rgba(139,92,246,0.35);
+    transform: scale(1.08);
+  }
+  .journey-progress .step-node.active .step-label{ color: var(--step-primary-soft); }
+  .journey-progress .step-connector{ background: var(--step-border); }
+  .journey-progress .step-connector.filled{
+    background: linear-gradient(90deg, var(--step-success), var(--step-primary));
   }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
