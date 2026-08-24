@@ -9,6 +9,120 @@
 <style>
   .gsap-hidden { opacity: 0 !important; }
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* =========================================================
+     STEP 2–5 VISUAL UPGRADE
+     (Step 1 / Psychological Safety intentionally left untouched)
+     ========================================================= */
+  :root{
+    --step-heading-font: 'Sora', var(--font-b, sans-serif);
+    --step-body-font: 'Inter', var(--font-m, sans-serif);
+    --step-heading-color: #ffb454;     /* warm gold for step titles */
+    --step-subheading-color: #7dd3fc;  /* sky blue for descriptions / labels */
+    --step-content-color: #eceaf5;     /* high-contrast off-white for body copy */
+    --step-speech-color: #ffd9a0;      /* warm tint for spoken script text */
+    --step-speech-bg: rgba(255, 180, 84, 0.12);
+    --step-quote-color: #a5f3e0;
+  }
+
+  /* ---- Headings (Step title, e.g. "Behavioural Intelligence") ---- */
+  #stepContent2 .step-title,
+  #stepContent3 .step-title,
+  #stepContent4 .step-title,
+  #stepContent5 .step-title{
+    font-family: var(--step-heading-font) !important;
+    color: var(--step-heading-color) !important;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-shadow: 0 0 26px rgba(255,180,84,0.18);
+  }
+
+  /* ---- Subheadings (Step description under the title) ---- */
+  #stepContent2 .step-desc,
+  #stepContent3 .step-desc,
+  #stepContent4 .step-desc,
+  #stepContent5 .step-desc{
+    font-family: var(--step-body-font) !important;
+    color: var(--step-subheading-color) !important;
+    font-weight: 500;
+    line-height: 1.65;
+  }
+
+  /* ---- Card / section labels (Behaviour Summary, Primary Trigger, etc.) ---- */
+  #stepContent2 .analysis-card-label,
+  #stepContent3 .analysis-card-label,
+  #stepContent4 .analysis-card-label,
+  #stepContent5 .analysis-card-label,
+  #stepContent2 .analysis-takeaway-label,
+  #stepContent3 .analysis-takeaway-label,
+  #stepContent4 .analysis-takeaway-label,
+  #stepContent5 .analysis-takeaway-label,
+  #stepContent2 .analysis-confidence-label,
+  #stepContent3 .analysis-confidence-label,
+  #stepContent4 .analysis-confidence-label,
+  #stepContent5 .analysis-confidence-label{
+    font-family: var(--step-heading-font) !important;
+    color: var(--step-subheading-color) !important;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+  }
+
+  /* ---- Body / content text — kept high-contrast for easy reading ---- */
+  #stepContent2 .analysis-card-value,
+  #stepContent3 .analysis-card-value,
+  #stepContent4 .analysis-card-value,
+  #stepContent5 .analysis-card-value,
+  #stepContent2 .analysis-list-item,
+  #stepContent3 .analysis-list-item,
+  #stepContent4 .analysis-list-item,
+  #stepContent5 .analysis-list-item,
+  #stepContent2 .analysis-takeaway-value,
+  #stepContent3 .analysis-takeaway-value,
+  #stepContent4 .analysis-takeaway-value,
+  #stepContent5 .analysis-takeaway-value,
+  #stepContent2 .analysis-why-it-works,
+  #stepContent3 .analysis-why-it-works,
+  #stepContent4 .analysis-why-it-works,
+  #stepContent5 .analysis-why-it-works,
+  #stepContent2 .guideline span,
+  #stepContent3 .guideline span,
+  #stepContent4 .guideline span,
+  #stepContent5 .guideline span{
+    font-family: var(--step-body-font) !important;
+    color: var(--step-content-color) !important;
+    line-height: 1.7;
+  }
+
+  /* ---- Speech / dialogue: suggested scripts — italic + soft highlight ---- */
+  #stepContent2 .script-text,
+  #stepContent3 .script-text,
+  #stepContent4 .script-text,
+  #stepContent5 .script-text{
+    font-family: var(--step-body-font) !important;
+    font-style: italic;
+    color: var(--step-speech-color) !important;
+    background: var(--step-speech-bg);
+    padding: 0.6rem 0.8rem;
+    border-radius: 6px;
+    line-height: 1.7;
+  }
+
+  /* ---- Speech / dialogue: quoted lines (title questions) — italic + underline ---- */
+  #stepContent2 .analysis-quote,
+  #stepContent3 .analysis-quote,
+  #stepContent4 .analysis-quote,
+  #stepContent5 .analysis-quote{
+    font-family: var(--step-body-font) !important;
+    font-style: italic;
+    color: var(--step-quote-color) !important;
+    text-decoration: underline;
+    text-decoration-color: rgba(165,243,224,0.55);
+    text-underline-offset: 3px;
+  }
+</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="/csrf.js"></script>
