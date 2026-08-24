@@ -59,6 +59,10 @@ fetch('/api/me').then(function(res){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         Dashboard
       </a>
+      <a href="/sync" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14"/></svg>
+        Sync
+      </a>
       <a href="settings.html" class="nav-item">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
         Settings
@@ -229,9 +233,17 @@ var selectedSessionId = null;
 function loadEmployee() {
   if (!employeeId) {
     document.getElementById('syncTitle').textContent = 'AI Sync';
-    document.getElementById('syncBreadcrumb').textContent = 'No employee selected';
-    document.getElementById('sessionEmployeeName').textContent = 'Employee Not Selected';
-    document.getElementById('sessionEmpty').style.display = 'block';
+    document.getElementById('syncBreadcrumb').textContent = 'Select an employee';
+    document.getElementById('sessionEmployeeName').textContent = 'Select an Employee';
+    var nsBtn = document.getElementById('newSessionBtn');
+    if (nsBtn) nsBtn.style.display = 'none';
+    var emptyEl = document.getElementById('sessionEmpty');
+    emptyEl.innerHTML =
+      '<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--ivory-dim)" stroke-width="1.5" style="margin-bottom:1rem;"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>' +
+      '<div style="font-family:var(--font-rc);font-size:0.9rem;color:var(--ivory-dim);margin-bottom:0.5rem;">No employee selected</div>' +
+      '<div style="font-family:var(--font-m);font-size:0.65rem;color:var(--ivory-faint);margin-bottom:1.2rem;">Choose an employee from your directory to view their sync sessions</div>' +
+      '<a href="/directory" class="btn btn-sm btn-outline" style="text-decoration:none;">Open Employee Directory</a>';
+    emptyEl.style.display = 'block';
     return;
   }
 
