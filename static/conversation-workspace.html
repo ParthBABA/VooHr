@@ -169,7 +169,7 @@ fetch('/api/me').then(function(res){
           </div>
         </section>
 
-        <!-- RIGHT: CONVERSATION COACH -->
+        <!-- RIGHT: CONVERSATION INTELLIGENCE -->
         <section class="ws-coach">
           <!-- Conversation review status -->
           <div class="card ws-review-card">
@@ -206,38 +206,64 @@ fetch('/api/me').then(function(res){
             </div>
           </div>
 
-          <!-- Score -->
-          <div class="card ws-score-card">
-            <div class="card-header">
-              <div class="card-title">Live Conversation Score</div>
-            </div>
-            <div class="ws-score-row">
-              <div class="ws-score-num" id="wsScoreNum">--</div>
-              <div class="ws-score-meta">
-                <div class="ws-score-label" id="wsScoreLabel">Not measured</div>
-                <div class="ws-score-sub">Out of 100</div>
+          <!-- INTELLIGENCE PANEL -->
+          <section class="card ws-intel">
+            <!-- Live Conversation Score -->
+            <div class="wsx-score">
+              <div class="card-header">
+                <div class="card-title">Live Conversation Score</div>
               </div>
+              <div class="ws-score-row">
+                <div class="ws-score-num" id="wsScoreNum">--</div>
+                <div class="ws-score-meta">
+                  <div class="ws-score-label" id="wsScoreLabel">Not measured</div>
+                  <div class="ws-score-sub">Out of 100</div>
+                </div>
+              </div>
+              <div class="ws-chips" id="wsScoreChips"></div>
             </div>
-            <div class="ws-chips" id="wsScoreChips"></div>
-          </div>
 
-          <!-- AI Coach -->
-          <div class="card ws-coach-card">
-            <div class="card-header">
-              <div class="card-title">Coaching Tips</div>
-              <span class="ws-coach-pill">AI</span>
+            <!-- 1 · WHAT MATTERS -->
+            <div class="wsx-section">
+              <div class="wsx-section-head">
+                <h3 class="wsx-section-title">What Matters</h3>
+                <span class="wsx-section-rule"></span>
+              </div>
+              <div id="wsMatters"></div>
             </div>
-            <div class="ws-coach-feed" id="wsCoachFeed"></div>
-          </div>
 
-          <!-- Highlighted moments -->
-          <div class="card ws-moments-card">
-            <div class="card-header">
-              <div class="card-title">Highlighted Moments</div>
-              <a class="ws-view-all" id="wsViewAll" href="#">View All</a>
+            <!-- 2 · FOLLOW-UP PLAN -->
+            <div class="wsx-section">
+              <div class="wsx-section-head">
+                <h3 class="wsx-section-title">Follow-up Plan</h3>
+                <span class="wsx-section-rule"></span>
+              </div>
+              <div id="wsFollow"></div>
             </div>
-            <div class="ws-moments" id="wsMoments"></div>
-          </div>
+
+            <!-- 3 · CONVERSATION SIGNALS -->
+            <div class="wsx-section">
+              <div class="wsx-section-head">
+                <h3 class="wsx-section-title">Conversation Signals</h3>
+                <span class="wsx-section-rule"></span>
+              </div>
+              <div id="wsSignals"></div>
+            </div>
+
+            <!-- 4 · ASK ABOUT THIS CONVERSATION -->
+            <div class="wsx-section">
+              <div class="wsx-section-head">
+                <h3 class="wsx-section-title">Ask About This Conversation</h3>
+                <span class="wsx-section-rule"></span>
+              </div>
+              <div id="wsAsk"></div>
+            </div>
+
+            <div class="wsx-footer">
+              <a id="wsViewAll" href="#">Open the full analysis &amp; strategy guide</a>
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+          </section>
         </section>
       </div>
     </div>
@@ -457,6 +483,18 @@ window.voohrInitWorkspace = function() {
       openFlagPopover(mark, mark.getAttribute('data-flag-key'));
       return;
     }
+    var evBtn = e.target.closest('.wsx-ev');
+    if (evBtn) {
+      var idx = parseInt(evBtn.getAttribute('data-line-idx'), 10);
+      var lineEl = isNaN(idx) ? null : document.querySelector('.ws-line[data-idx="' + idx + '"]');
+      if (!lineEl) { showToast('That passage is hidden by your current filters'); return; }
+      lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      lineEl.classList.remove('flash');
+      void lineEl.offsetWidth;
+      lineEl.classList.add('flash');
+      setTimeout(function() { lineEl.classList.remove('flash'); }, 2000);
+      return;
+    }
     if (e.target.closest('[data-fp-close]') || !e.target.closest('.ws-flag-popover')) {
       closeFlagPopover();
     }
@@ -575,76 +613,258 @@ window.voohrInitWorkspace = function() {
     }).join('');
   }
 
-  // ── Coaching feed ──
-  function renderCoach(a) {
-    var feed = document.getElementById('wsCoachFeed');
-    var coach = (a && a.conversation_coach) || [];
-    var html = '';
-    coach.forEach(function(item) {
-      if (item.better_follow_up_question) {
-        html +=
-          '<div class="ws-coach-card-item good">' +
-            '<div class="ws-coach-type">' +
-              '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
-              'Better Question Detected' +
-            '</div>' +
-            '<blockquote class="ws-coach-quote">&ldquo;' + esc(item.better_follow_up_question) + '&rdquo;</blockquote>' +
-            (item.why_it_works ? '<p class="ws-coach-why">' + esc(item.why_it_works) + '</p>' : '') +
-          '</div>';
-      }
-      if (item.avoid_saying || item.immediate_response) {
-        html +=
-          '<div class="ws-coach-card-item improve">' +
-            '<div class="ws-coach-type">' +
-              '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-              'Potential Improvement' +
-            '</div>' +
-            (item.avoid_saying ? '<p class="ws-coach-avoid">' + esc(item.avoid_saying) + '</p>' : '') +
-            (item.immediate_response ? '<div class="ws-coach-try"><span class="ws-coach-try-label">Try Instead</span><p>' + esc(item.immediate_response) + '</p></div>' : '') +
-            (item.immediate_response ? '<button class="ws-use-btn" data-use="' + esc(item.immediate_response) + '">Use This</button>' : '') +
-          '</div>';
-      }
-    });
-    if (!html) {
-      html = '<div class="ws-empty">No coaching tips for this session yet.</div>';
-    }
-    feed.innerHTML = html;
-    feed.querySelectorAll('.ws-use-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        navigator.clipboard && navigator.clipboard.writeText(btn.getAttribute('data-use'));
-        showToast('Suggested wording copied to clipboard');
-      });
-    });
+  // ── Intelligence panel helpers (every string below comes from the stored
+  // analysis — nothing is invented client-side; empty data renders as such) ──
+  function cleanVal(v) {
+    if (typeof v !== 'string') return '';
+    var t = v.trim();
+    if (!t || t.toLowerCase() === 'limited transcript evidence.') return '';
+    return t;
   }
 
-  // ── Highlighted moments ──
-  function renderMoments(a) {
-    var container = document.getElementById('wsMoments');
-    var viewAll = document.getElementById('wsViewAll');
-    viewAll.href = 'sync_room.html?session_id=' + sessionId + '&employee_id=' + employeeId;
+  function findLineIdx(quote) {
+    quote = String(quote || '').trim();
+    if (!quote) return null;
+    // Locate the quote in the RAW transcript first — evidence must stay
+    // traceable to the original conversation, never re-written.
+    var text = state.transcriptText.toLowerCase();
+    var rel = text.indexOf(String(quote).toLowerCase());
+    // Primary: exact substring match against parsed dialogue lines.
+    var probes = [quote.toLowerCase().slice(0, 80), quote.toLowerCase().slice(0, 40)];
+    for (var p = 0; p < probes.length; p++) {
+      for (var i = 0; i < state.lines.length; i++) {
+        if (state.lines[i].text.toLowerCase().indexOf(probes[p]) !== -1) return i;
+      }
+    }
+    // Fallback: convert the raw-transcript position into an estimated
+    // timestamp and jump to the closest parsed turn.
+    if (rel >= 0 && text.length && state.lines.length) {
+      var t = Math.round((rel / text.length) * estimateDuration());
+      var best = null;
+      var bestDist = Infinity;
+      for (i = 0; i < state.lines.length; i++) {
+        var d = Math.abs((state.lines[i].time || 0) - t);
+        if (d < bestDist) { bestDist = d; best = i; }
+      }
+      if (best !== null && bestDist <= 45) return best;
+    }
+    return null;
+  }
 
-    var items = (a && a.psychology && a.psychology.behavioural_interpretation) || [];
-    if (!items.length) {
-      container.innerHTML = '<div class="ws-empty">No highlighted moments for this session yet.</div>';
+  function evLink(text) {
+    var idx = findLineIdx(text);
+    if (idx === null) return '';
+    return '<button class="wsx-ev" data-line-idx="' + idx + '">View in transcript<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="8 7 17 7 17 16"/></svg></button>';
+  }
+
+  function confBadge(c) {
+    var n = parseInt(c, 10);
+    if (isNaN(n)) return '';
+    return '<span class="wsx-conf">' + n + '% conf.</span>';
+  }
+
+  // ── WHAT MATTERS: behavioural interpretations, topped up from the
+  // behavioural/root-cause steps when the conversation supports it ──
+  function renderMatters(a) {
+    var host = document.getElementById('wsMatters');
+    var html = '';
+    var lead = cleanVal(a.summary);
+    if (lead) html += '<p class="wsx-lead">' + esc(lead) + '</p>';
+
+    var insights = [];
+    ((a.psychology && a.psychology.behavioural_interpretation) || []).forEach(function(o) {
+      var title = cleanVal(o.observed_behaviour);
+      var body = cleanVal(o.interpretation);
+      if (!title && !body) return;
+      insights.push({
+        title: title || 'Conversation signal',
+        body: body,
+        evidence: cleanVal(o.evidence),
+        conf: o.confidence
+      });
+    });
+    if (insights.length < 3) {
+      var s2 = a.step2_behavioural_intelligence || {};
+      var t2 = cleanVal(s2.behaviour_summary) || cleanVal(s2.observed_behaviour);
+      if ((t2 || cleanVal(s2.ai_interpretation)) && !insights.some(function(x) { return x.title === t2; })) {
+        insights.push({ title: t2 || 'Behavioural pattern', body: cleanVal(s2.ai_interpretation), evidence: cleanVal(s2.supporting_evidence), conf: s2.confidence });
+      }
+    }
+    if (insights.length < 3) {
+      var s3 = a.step3_root_cause_analysis || {};
+      var t3 = cleanVal(s3.primary_trigger);
+      if ((t3 || cleanVal(s3.ai_reasoning)) && !insights.some(function(x) { return x.title === t3; })) {
+        insights.push({ title: t3 || 'Likely trigger', body: cleanVal(s3.ai_reasoning), evidence: '', conf: s3.confidence });
+      }
+    }
+    insights = insights.slice(0, 3);
+
+    if (!insights.length && !lead) {
+      host.innerHTML = '<div class="wsx-empty">Not enough analysed evidence yet for this conversation.</div>';
       return;
     }
-    var text = state.transcriptText.toLowerCase();
-    var html = items.slice(0, 5).map(function(item) {
-      var quote = item.evidence || '';
-      var rel = text.indexOf(String(quote).toLowerCase());
-      var t = rel >= 0 ? Math.round((rel / text.length) * estimateDuration()) : null;
+    html += insights.map(function(ins) {
       return (
-        '<div class="ws-moment">' +
-          (t !== null ? '<span class="ws-moment-time">' + fmtTime(t) + '</span>' : '') +
-          '<p class="ws-moment-text">&ldquo;' + esc(quote) + '&rdquo;</p>' +
-          '<div class="ws-moment-tags">' +
-            (item.observed_behaviour ? '<span class="ws-tag">' + esc(item.observed_behaviour) + '</span>' : '') +
-            (item.confidence !== null && item.confidence !== undefined ? '<span class="ws-tag">' + esc(item.confidence) + '% conf.</span>' : '') +
+        '<article class="wsx-insight">' +
+          '<div class="wsx-insight-top">' +
+            '<h4 class="wsx-insight-title' + (ins.title.length <= 48 ? ' upper' : '') + '">' + esc(ins.title) + '</h4>' +
+            confBadge(ins.conf) +
+          '</div>' +
+          (ins.body ? '<p class="wsx-body">' + esc(ins.body) + '</p>' : '') +
+          (ins.evidence ?
+            '<div class="wsx-quote">&ldquo;' + esc(ins.evidence) + '&rdquo;' +
+              '<span class="wsx-quote-foot">' + evLink(ins.evidence) + '</span></div>' : '') +
+        '</article>'
+      );
+    }).join('');
+    host.innerHTML = html;
+  }
+
+  // ── FOLLOW-UP PLAN: action blueprint first, realistic solutions as
+  // fallback, coach wording only when the plan is thin ──
+  function renderFollow(a) {
+    var host = document.getElementById('wsFollow');
+    var bp = a.step4_action_blueprint || {};
+    var rs = a.realistic_solutions || {};
+    var acts = [];
+    function add(kick, txt) {
+      txt = cleanVal(txt);
+      if (txt && !acts.some(function(x) { return x.text === txt; })) acts.push({ kick: kick, text: txt });
+    }
+    add('Do right now', bp.immediate || rs.immediate);
+    add('This week', bp.this_week || rs.this_week);
+    add('Manager approach', bp.manager_action || rs.manager);
+    add('Working environment', bp.environment || rs.environment);
+    if (acts.length < 3) {
+      (a.conversation_coach || []).forEach(function(c) {
+        if (acts.length >= 3) return;
+        add('In the conversation', c.immediate_response);
+      });
+    }
+    if (!acts.length) {
+      host.innerHTML = '<div class="wsx-empty">No follow-up actions were generated for this conversation yet.</div>';
+      return;
+    }
+    var html = acts.slice(0, 4).map(function(x) {
+      return (
+        '<div class="wsx-action">' +
+          '<div class="wsx-kick">' + esc(x.kick) + '</div>' +
+          '<p class="wsx-body">' + esc(x.text) + '</p>' +
+        '</div>'
+      );
+    }).join('');
+    var metric = cleanVal(bp.success_metric) || cleanVal(bp.expected_outcome);
+    if (metric) html += '<div class="wsx-metric"><span>Success looks like</span>' + esc(metric) + '</div>';
+    host.innerHTML = html;
+  }
+
+  // ── CONVERSATION SIGNALS: compact indicator rows, never clinical claims ──
+  function renderSignals(a) {
+    var host = document.getElementById('wsSignals');
+    var ps = a.psychological_safety || {};
+    var psy = a.psychology || {};
+    var html = '';
+
+    var safety = (ps.safety_score !== null && ps.safety_score !== undefined && !isNaN(ps.safety_score)) ? ps.safety_score : null;
+    var safetyExp = cleanVal(ps.interpretation);
+    var safetyMeta = [cleanVal(ps.openness), cleanVal(ps.communication_style)].filter(Boolean);
+    if (safety !== null || safetyExp || safetyMeta.length) {
+      html +=
+        '<div class="wsx-signal">' +
+          '<div class="wsx-signal-head">' +
+            '<span class="wsx-signal-label">Psychological safety</span>' +
+            '<span class="wsx-signal-value ' + (safety !== null ? scoreBand(safety).cls : 'unmeasured') + '">' + (safety !== null ? safety + '/100' : 'Not measured') + '</span>' +
+            safetyMeta.map(function(m) { return '<span class="wsx-tag">' + esc(m) + '</span>'; }).join('') +
+          '</div>' +
+          (safetyExp ? '<p class="wsx-body">' + esc(safetyExp) + '</p>' : '') +
+          (cleanVal(ps.evidence) ?
+            '<div class="wsx-quote">&ldquo;' + esc(cleanVal(ps.evidence)) + '&rdquo;<span class="wsx-quote-foot">' + evLink(ps.evidence) + '</span></div>' : '') +
+        '</div>';
+    }
+
+    var sLabel = cleanVal(psy.sentiment);
+    var sScore = (psy.sentiment_score !== null && psy.sentiment_score !== undefined && !isNaN(psy.sentiment_score)) ? Math.round(psy.sentiment_score * 100) : null;
+    if (sLabel || sScore !== null) {
+      var sentExp = sLabel
+        ? 'Language cues across this conversation read as ' + sLabel.toLowerCase() + '. This is a directional tone indicator, not a diagnosis.'
+        : 'A directional tone indicator derived from this conversation \u2014 not a diagnosis.';
+      html +=
+        '<div class="wsx-signal">' +
+          '<div class="wsx-signal-head">' +
+            '<span class="wsx-signal-label">Sentiment</span>' +
+            '<span class="wsx-signal-value medium">' + (sLabel ? esc(sLabel.charAt(0).toUpperCase() + sLabel.slice(1)) : '') + (sScore !== null ? ' \u00b7 ' + sScore + '%' : '') + '</span>' +
+          '</div>' +
+          '<p class="wsx-body">' + esc(sentExp) + '</p>' +
+        '</div>';
+    }
+
+    var open = cleanVal(ps.openness);
+    var defb = cleanVal(ps.defensive_behaviour);
+    var trust = cleanVal(ps.trust_level);
+    if (open || defb || trust) {
+      var engParts = [];
+      if (open) engParts.push(open.charAt(0).toUpperCase() + open.slice(1) + ' communication.');
+      if (defb && defb.toLowerCase() !== 'none observed') engParts.push(defb + '.');
+      else if (defb) engParts.push('No defensive patterns came through in what was said.');
+      var trustTag = trust ? '<span class="wsx-tag">Trust: ' + esc(trust) + '</span>' : '';
+      html +=
+        '<div class="wsx-signal">' +
+          '<div class="wsx-signal-head">' +
+            '<span class="wsx-signal-label">Engagement</span>' +
+            trustTag +
+          '</div>' +
+          (engParts.length ? '<p class="wsx-body">' + esc(engParts.join(' ')) + '</p>' : '') +
+        '</div>';
+    }
+
+    host.innerHTML = html || '<div class="wsx-empty">No conversation signals were measured for this session yet.</div>';
+  }
+
+  // ── ASK ABOUT THIS CONVERSATION: probing questions grounded in the exchange ──
+  function renderAsk(a) {
+    var host = document.getElementById('wsAsk');
+    var qs = [];
+    (a.conversation_coach || []).forEach(function(c) {
+      var q = cleanVal(c.better_follow_up_question);
+      if (q && !qs.some(function(x) { return x.q === q; })) qs.push({ q: q, why: cleanVal(c.why_it_works) });
+    });
+    (a.next_conversation_plan || []).forEach(function(p) {
+      var q = cleanVal(p.question);
+      if (q && !qs.some(function(x) { return x.q === q; })) qs.push({ q: q, why: cleanVal(p.purpose) });
+    });
+    var s5 = a.step5_conversation_strategy || {};
+    ['opening_question', 'follow_up_question'].forEach(function(key) {
+      if (qs.length >= 3) return;
+      var q = cleanVal(s5[key]);
+      if (q && !qs.some(function(x) { return x.q === q; })) {
+        var focus = cleanVal(s5.conversation_focus);
+        qs.push({ q: q, why: focus ? 'Anchored to the agreed focus of the next discussion: ' + focus.toLowerCase() : '' });
+      }
+    });
+    if (!qs.length) {
+      host.innerHTML = '<div class="wsx-empty">No suggested questions for this conversation yet.</div>';
+      return;
+    }
+    host.innerHTML = qs.slice(0, 3).map(function(item, i) {
+      return (
+        '<div class="wsx-ask">' +
+          '<span class="wsx-qnum">Q' + (i + 1) + '</span>' +
+          '<div class="wsx-ask-body">' +
+            '<p class="wsx-ask-q">&ldquo;' + esc(item.q) + '&rdquo;</p>' +
+            (item.why ? '<p class="wsx-body">' + esc(item.why) + '</p>' : '') +
           '</div>' +
         '</div>'
       );
     }).join('');
-    container.innerHTML = html;
+  }
+
+  function renderIntel(a) {
+    var viewAll = document.getElementById('wsViewAll');
+    if (viewAll) viewAll.href = 'sync_room.html?session_id=' + sessionId + '&employee_id=' + employeeId;
+    renderMatters(a);
+    renderFollow(a);
+    renderSignals(a);
+    renderAsk(a);
   }
 
   // ── Conversation review status (visual only — derives from already-loaded session data) ──
@@ -737,14 +957,13 @@ window.voohrInitWorkspace = function() {
     if (state.session.phrasing_analysis) phrasingBtn.classList.add('active');
     renderLines();
     renderScore(a);
-    renderCoach(a);
-    renderMoments(a);
+    renderIntel(a);
     renderReview();
 
     if (window.gsap) {
       var el = document.getElementById('wsLines');
       var lines = el.querySelectorAll('.ws-line');
-      var cards = bodyEl.querySelectorAll('.ws-review-card, .ws-score-card, .ws-coach-card, .ws-moments-card');
+      var cards = bodyEl.querySelectorAll('.ws-review-card, .ws-intel');
       gsap.fromTo('.ws-title-row', { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' });
       gsap.fromTo(cards, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, stagger: 0.08, ease: 'power3.out', delay: 0.1 });
       gsap.fromTo(lines, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.35, stagger: 0.02, ease: 'power3.out', delay: 0.15 });
