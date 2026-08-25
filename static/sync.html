@@ -33,10 +33,9 @@
 
   /* ── Folder Grid ── */
   .folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1.2rem 1rem;padding-top:14px;}
-  .folder-card{position:relative;margin-top:12px;overflow:visible;background-color:var(--ink);border-bottom-left-radius:8px;border-bottom-right-radius:8px;border-top-left-radius:8px;padding:1.2rem;cursor:pointer;transition:transform 0.25s var(--ease-out),border-color 0.25s var(--ease-out),box-shadow 0.25s var(--ease-out);}
-  .folder-card::before{content:'';position:absolute;top:-12px;right:0;width:35%;height:12px;background-color:transparent;border-bottom:12px solid var(--ink);border-left:12px solid transparent;border-top-right-radius:8px;transition:border-bottom-color 0.25s var(--ease-out),transform 0.25s var(--ease-out);}
-  .folder-card:hover{transform:translateY(-3px);border:1px solid var(--border-lit);box-shadow:var(--shadow-md);}
-  .folder-card:hover::before{transform:translateY(-1px);}
+  .folder-card{position:relative;margin-top:12px;overflow:visible;background-color:var(--ink);border-bottom-left-radius:8px;border-bottom-right-radius:8px;border-top-left-radius:8px;padding:1.2rem;cursor:pointer;transition:transform 0.25s var(--ease-out),border-color 0.25s var(--ease-out),box-shadow 0.25s var(--ease-out);transform-origin:center bottom;}
+  .folder-card::before{content:'';position:absolute;top:-12px;right:0;width:35%;height:12px;background-color:transparent;border-bottom:12px solid var(--ink);border-left:12px solid transparent;border-top-right-radius:8px;transition:border-bottom-color 0.25s var(--ease-out);}
+  .folder-card:hover{transform:scale(1.035);border:1px solid var(--border-lit);box-shadow:var(--shadow-md);}
   .folder-card-top{display:flex;align-items:center;gap:0.8rem;margin-bottom:0.9rem;}
   .folder-card-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--amber));display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:0.72rem;font-weight:700;color:var(--void);flex-shrink:0;overflow:hidden;}
   .folder-card-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;}
