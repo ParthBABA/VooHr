@@ -38,7 +38,8 @@
   .folder-card:hover{border-color:var(--border-lit);transform:translateY(-2px);box-shadow:var(--shadow-md);}
   .folder-card:hover::before{transform:scaleX(1);}
   .folder-card-top{display:flex;align-items:center;gap:0.8rem;margin-bottom:0.9rem;}
-  .folder-card-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--amber));display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:0.72rem;font-weight:700;color:var(--void);flex-shrink:0;}
+  .folder-card-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--amber));display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:0.72rem;font-weight:700;color:var(--void);flex-shrink:0;overflow:hidden;}
+  .folder-card-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;}
   .folder-card-name{font-family:var(--font-d);font-size:0.95rem;font-weight:600;color:var(--ivory);line-height:1.2;}
   .folder-card-id{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.06em;color:var(--ivory-faint);margin-top:2px;}
   .folder-card-dept{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--ivory-dim);padding:0.2rem 0.5rem;background:var(--surface);border:1px solid var(--border);border-radius:4px;display:inline-block;margin-bottom:0.7rem;}
@@ -347,7 +348,8 @@ function applyGridFilters() {
 
   var filtered = employees.filter(function(e) {
     var hay = ((e.name || '') + ' ' + (e.employee_id || '') + ' ' + (e.email || '') + ' ' + (e.department || '')).toLowerCase();
-    if (q && hay.indexOf(q) === -1) return false;
+    var queryWords = q.split(/\s+/).filter(Boolean);
+    if (q && !queryWords.every(function(word) { return hay.indexOf(word) !== -1; })) return false;
     if (dept && e.department !== dept) return false;
     return true;
   });
@@ -378,10 +380,16 @@ function renderFolderCards(container, list) {
   list.forEach(function(emp) {
     var ini = initials(emp.name);
     var id = emp.id == null ? '' : emp.id;
+    var avatarInner;
+    if (emp.photo) {
+      avatarInner = '<img src="' + escHtml(emp.photo) + '" alt="' + escHtml(emp.name || '') + '" onerror="this.style.display=\'none\';this.parentNode.textContent=\'' + ini + '\'">';
+    } else {
+      avatarInner = ini;
+    }
     frag +=
       '<div class="folder-card" data-emp-id="' + escHtml(id) + '">' +
         '<div class="folder-card-top">' +
-          '<div class="folder-card-avatar">' + ini + '</div>' +
+          '<div class="folder-card-avatar">' + avatarInner + '</div>' +
           '<div>' +
             '<div class="folder-card-name">' + escHtml(emp.name || 'Unnamed') + '</div>' +
             '<div class="folder-card-id">' + escHtml(emp.employee_id || '') + '</div>' +
