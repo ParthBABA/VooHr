@@ -25,6 +25,7 @@
   --violet:#7B4FFF;--violet-glow:rgba(123,79,255,0.3);--violet-soft:rgba(123,79,255,0.08);
   --teal:#33A08F;--teal-glow:rgba(51,160,143,0.3);--teal-soft:rgba(51,160,143,0.08);
   --red:#E84545;--red-glow:rgba(232,69,69,0.3);--red-soft:rgba(232,69,69,0.08);
+  --pink:#E06090;--pink-glow:rgba(224,96,144,0.35);--pink-soft:rgba(224,96,144,0.08);
 
   /* ── Borders — blue-tinted for cohesion ── */
   --border:rgba(130,160,220,0.08);
@@ -64,6 +65,7 @@ html[data-theme="light"]{
   --violet:#6A3FE0;--violet-glow:rgba(106,63,224,0.32);--violet-soft:rgba(106,63,224,0.08);
   --teal:#1F8574;--teal-glow:rgba(31,133,116,0.32);--teal-soft:rgba(31,133,116,0.08);
   --red:#D33636;--red-glow:rgba(211,54,54,0.34);--red-soft:rgba(211,54,54,0.09);
+  --pink:#C94A78;--pink-glow:rgba(201,74,120,0.4);--pink-soft:rgba(201,74,120,0.10);
 
   --border:rgba(20,30,60,0.11);
   --border-lit:rgba(20,30,60,0.2);
@@ -263,6 +265,27 @@ h1,h2,h3,h4,h5,h6{font-family:var(--font-d);font-weight:600;text-transform:upper
 .badge.info{color:var(--violet);border-color:rgba(107,70,193,0.28);background:var(--violet-soft);}
 .badge.draft{color:var(--ivory-faint);border-color:var(--border);background:var(--surface);}
 .badge.not-assessed{color:var(--ivory-faint);border-color:var(--border);background:var(--surface);}
+
+/* FOLDER CARD */
+.ffolder{position:relative;font-family:var(--font-rc);font-weight:600;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;display:inline-flex;align-items:center;padding:0.55rem 1rem 0.55rem 1.15rem;border-radius:0 6px 6px 6px;background:var(--ink);color:var(--ivory);border:1px solid var(--border);box-shadow:var(--shadow-sm);transition:all 0.35s var(--ease-out);cursor:default;}
+.ffolder::before{content:'';position:absolute;top:-7px;left:0;width:1.6rem;height:7px;border-radius:4px 4px 0 0;background:inherit;border:1px solid var(--border);border-bottom:none;}
+.ffolder span{position:relative;z-index:1;line-height:1;}
+.ffolder:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:var(--border-lit);}
+.ffolder.big{font-size:0.82rem;padding:0.7rem 1.25rem 0.7rem 1.4rem;}
+.ffolder.big::before{top:-8px;width:1.9rem;height:8px;}
+.ffolder.pink{background:linear-gradient(135deg,var(--pink),#c94a78);color:#fff;border-color:rgba(224,96,144,0.3);}
+.ffolder.pink::before{background:linear-gradient(135deg,var(--pink),#c94a78);border-color:rgba(224,96,144,0.3);}
+.ffolder.pink:hover{border-color:rgba(224,96,144,0.5);box-shadow:0 4px 20px var(--pink-glow);}
+.ffolder.teal{background:linear-gradient(135deg,var(--teal),#1f8574);color:#fff;border-color:rgba(51,160,143,0.3);}
+.ffolder.teal::before{background:linear-gradient(135deg,var(--teal),#1f8574);border-color:rgba(51,160,143,0.3);}
+.ffolder.teal:hover{border-color:rgba(51,160,143,0.5);box-shadow:0 4px 20px var(--teal-glow);}
+.ffolder.amber{background:linear-gradient(135deg,var(--amber),#b96a2c);color:#fff;border-color:rgba(212,136,74,0.3);}
+.ffolder.amber::before{background:linear-gradient(135deg,var(--amber),#b96a2c);border-color:rgba(212,136,74,0.3);}
+.ffolder.amber:hover{border-color:rgba(212,136,74,0.5);box-shadow:0 4px 20px var(--amber-glow);}
+.ffolder.violet{background:linear-gradient(135deg,var(--violet),#6a3fe0);color:#fff;border-color:rgba(123,79,255,0.3);}
+.ffolder.violet::before{background:linear-gradient(135deg,var(--violet),#6a3fe0);border-color:rgba(123,79,255,0.3);}
+.ffolder.violet:hover{border-color:rgba(123,79,255,0.5);box-shadow:0 4px 20px var(--violet-glow);}
+@media(max-width:640px){.ffolder{font-size:0.65rem;padding:0.45rem 0.8rem 0.45rem 0.95rem;}.ffolder.big{font-size:0.72rem;padding:0.55rem 0.95rem 0.55rem 1.1rem;}.ffolder.big::before{width:1.5rem;height:7px;top:-7px;}}
 
 /* ── Attention Glow — pulsing highlight for rows/badges needing special attention ──
    Mirrors the "urgent attention" signal that used to live in a separate alerts

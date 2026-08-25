@@ -256,7 +256,7 @@
                 <h3 class="card-title" data-lang="en">Employee Directory</h3>
                 <h3 class="card-title" data-lang="hi">Employee Directory</h3>
               </div>
-              <span class="badge healthy" id="dashEmpCount">8 Employees</span>
+              <div class="ffolder big pink" id="dashEmpCount"><span>8 Employees</span></div>
             </div>
             <div class="card-header-actions">
               <button class="btn btn-sm btn-outline" type="button" title="Filter options">
@@ -508,7 +508,7 @@
     });
 
     if (footerText) footerText.textContent = 'Showing ' + (visible ? 1 : 0) + ' to ' + visible + ' of ' + total + ' employees';
-    if (countBadge) countBadge.textContent = total + ' Employees';
+    if (countBadge) { var lbl = countBadge.querySelector('span'); if (lbl) lbl.textContent = total + ' Employees'; }
   };
 
   if (search) search.addEventListener('input', window.dashApplyFilters);
