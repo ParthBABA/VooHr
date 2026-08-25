@@ -15,32 +15,92 @@
 })();
 </script>
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
   .gsap-hidden { opacity: 0 !important; }
 
-  /* ── Sidebar: Employees folder + search (native sidebar tokens) ── */
-  .sidebar-emp-nav{ border-top:1px solid var(--border); padding:0.4rem 0 0.8rem; }
-  .emp-folder-header{ display:flex; align-items:center; gap:0.6rem; width:100%; background:none; border:none; padding:1rem 1.5rem 0.5rem; font-family:var(--font-lato); font-weight:700; font-size:0.58rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--ivory-faint); cursor:pointer; transition:color 0.2s; }
-  .emp-folder-header:hover{ color:var(--ivory-dim); }
-  .emp-folder-header span{ flex:1; text-align:left; }
-  .emp-folder-chevron{ opacity:0.5; transition:transform 0.25s ease; flex-shrink:0; }
-  .emp-folder-header.collapsed .emp-folder-chevron{ transform:rotate(-90deg); }
-  .emp-search-box{ display:flex; align-items:center; gap:0.5rem; margin:0 1rem 0.6rem; padding:0.45rem 0.7rem; background:var(--surface); border:1px solid var(--border); border-radius:6px; transition:border-color 0.2s; }
-  .emp-search-box:focus-within{ border-color:var(--border-lit); }
-  .emp-search-box svg{ opacity:0.45; flex-shrink:0; }
-  .emp-search-box input{ flex:1; min-width:0; background:none; border:none; outline:none; color:var(--ivory); font-family:var(--font-m); font-size:0.72rem; }
-  .emp-search-box input::placeholder{ color:var(--ivory-faint); }
-  .emp-nav-list{ display:flex; flex-direction:column; gap:1px; max-height:38vh; overflow-y:auto; }
-  .emp-nav-item{ display:block; margin:0 0.8rem; padding:0.45rem 0.7rem; border-radius:6px; border-left:2px solid transparent; text-decoration:none; transition:background 0.15s ease; }
-  .emp-nav-item:hover{ background:var(--ivory-ghost); }
-  .emp-nav-item.active{ background:var(--ivory-ghost); border-left-color:var(--amber); }
-  .emp-nav-name{ display:block; font-size:0.78rem; font-weight:600; color:var(--ivory-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color 0.15s ease; }
-  .emp-nav-item:hover .emp-nav-name,
-  .emp-nav-item.active .emp-nav-name{ color:var(--ivory); }
-  .emp-nav-meta{ display:block; font-family:var(--font-m); font-size:0.55rem; letter-spacing:0.06em; color:var(--ivory-faint); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .emp-nav-empty{ padding:0.5rem 1.5rem 0.3rem; font-family:var(--font-m); font-size:0.65rem; font-style:italic; color:var(--ivory-faint); }
+  /* ── Filter Toolbar ── */
+  .filter-bar{display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;margin-bottom:1.5rem;}
+  .filter-search{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.8rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;flex:1;min-width:180px;max-width:340px;transition:border-color 0.2s;}
+  .filter-search:focus-within{border-color:var(--border-lit);}
+  .filter-search svg{opacity:0.45;flex-shrink:0;}
+  .filter-search input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--ivory);font-family:var(--font-m);font-size:0.75rem;}
+  .filter-search input::placeholder{color:var(--ivory-faint);}
+  .filter-select{padding:0.5rem 0.8rem;background:var(--surface);border:1px solid var(--border);color:var(--ivory-dim);font-family:var(--font-m);font-size:0.72rem;cursor:pointer;transition:border-color 0.2s;appearance:auto;}
+  .filter-select:focus{border-color:var(--amber);outline:none;}
+  .filter-label{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);white-space:nowrap;}
+
+  /* ── Folder Grid ── */
+  .folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1rem;}
+  .folder-card{background:var(--ink);border:1px solid var(--border);border-radius:10px;padding:1.2rem;cursor:pointer;transition:all 0.3s var(--ease-out);position:relative;overflow:hidden;box-shadow:var(--shadow-sm);}
+  .folder-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,var(--violet),var(--amber));transform:scaleX(0);transform-origin:left;transition:transform 0.4s var(--ease-out);}
+  .folder-card:hover{border-color:var(--border-lit);transform:translateY(-2px);box-shadow:var(--shadow-md);}
+  .folder-card:hover::before{transform:scaleX(1);}
+  .folder-card-top{display:flex;align-items:center;gap:0.8rem;margin-bottom:0.9rem;}
+  .folder-card-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--amber));display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:0.72rem;font-weight:700;color:var(--void);flex-shrink:0;}
+  .folder-card-name{font-family:var(--font-d);font-size:0.95rem;font-weight:600;color:var(--ivory);line-height:1.2;}
+  .folder-card-id{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.06em;color:var(--ivory-faint);margin-top:2px;}
+  .folder-card-dept{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--ivory-dim);padding:0.2rem 0.5rem;background:var(--surface);border:1px solid var(--border);border-radius:4px;display:inline-block;margin-bottom:0.7rem;}
+  .folder-card-meta{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-m);font-size:0.6rem;color:var(--ivory-faint);margin-top:auto;}
+  .folder-card-meta .folder-empty-hint{font-style:italic;color:var(--ivory-faint);opacity:0.6;}
+  .folder-grid-empty{text-align:center;padding:4rem 2rem;}
+  .folder-grid-empty svg{margin-bottom:1rem;opacity:0.3;}
+  .folder-grid-empty .fge-title{font-family:var(--font-rc);font-size:1rem;color:var(--ivory-dim);margin-bottom:0.4rem;}
+  .folder-grid-empty .fge-sub{font-family:var(--font-m);font-size:0.68rem;color:var(--ivory-faint);}
+
+  /* ── Folder View ── */
+  .folder-view{display:none;}
+  .folder-breadcrumb{font-family:var(--font-m);font-size:0.68rem;color:var(--ivory-faint);margin-bottom:1.2rem;display:flex;align-items:center;gap:0.4rem;}
+  .folder-breadcrumb a{color:var(--amber);text-decoration:none;transition:color 0.2s;}
+  .folder-breadcrumb a:hover{color:var(--ivory);}
+  .folder-breadcrumb .bc-sep{color:var(--ivory-faint);opacity:0.5;}
+  .folder-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;}
+  .folder-header-left{display:flex;align-items:center;gap:1rem;}
+  .folder-header-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--amber));display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:0.9rem;font-weight:700;color:var(--void);flex-shrink:0;}
+  .folder-header-name{font-family:var(--font-d);font-size:1.2rem;font-weight:600;color:var(--ivory);}
+  .folder-header-meta{font-family:var(--font-m);font-size:0.65rem;color:var(--ivory-faint);margin-top:3px;}
+  .folder-header-actions{display:flex;align-items:center;gap:0.6rem;}
+
+  /* ── New Session Box ── */
+  .new-session-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin-bottom:1.5rem;transition:border-color 0.2s;}
+  .new-session-box:focus-within{border-color:var(--border-lit);}
+  .nsb-label{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:0.6rem;}
+  .nsb-textarea{width:100%;min-height:80px;max-height:240px;padding:0.7rem;background:var(--ink);border:1px solid var(--border);border-radius:6px;color:var(--ivory);font-family:var(--font-rc);font-size:0.85rem;line-height:1.6;resize:vertical;outline:none;transition:border-color 0.2s;}
+  .nsb-textarea:focus{border-color:var(--amber);}
+  .nsb-textarea::placeholder{color:var(--ivory-faint);}
+  .nsb-controls{display:flex;align-items:center;justify-content:space-between;margin-top:0.8rem;flex-wrap:wrap;gap:0.6rem;}
+  .nsb-controls-left{display:flex;align-items:center;gap:0.6rem;}
+  .nsb-source-select{padding:0.4rem 0.7rem;background:var(--ink);border:1px solid var(--border);border-radius:5px;color:var(--ivory-dim);font-family:var(--font-m);font-size:0.68rem;cursor:pointer;outline:none;}
+  .nsb-source-select:focus{border-color:var(--amber);}
+
+  /* ── Sessions List inside Folder ── */
+  .folder-sessions-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;}
+  .folder-sessions-title{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);}
+  .folder-sessions-count{font-family:var(--font-m);font-size:0.6rem;color:var(--ivory-dim);}
+  .folder-sessions-filter{display:flex;align-items:center;gap:0.5rem;}
+  .fs-filter-input{padding:0.4rem 0.7rem;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--ivory);font-family:var(--font-m);font-size:0.7rem;width:180px;outline:none;transition:border-color 0.2s;}
+  .fs-filter-input:focus{border-color:var(--border-lit);}
+  .fs-filter-input::placeholder{color:var(--ivory-faint);}
+  .session-list{display:flex;flex-direction:column;gap:8px;}
+  .session-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0.85rem 1rem;border:1px solid var(--border);background:rgba(130,160,220,0.02);border-radius:8px;transition:all 0.2s;cursor:default;}
+  .session-row:hover{border-color:var(--border-lit);background:var(--ivory-ghost);}
+  .session-row-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+  .session-row-info{min-width:0;}
+  .session-row-date{font-family:var(--font-rc);font-size:0.8rem;color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .session-row-snippet{font-family:var(--font-m);font-size:0.58rem;color:var(--ivory-faint);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px;}
+  .session-row-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .session-row-chips{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+  .preview-chip{font-family:var(--font-m);font-size:0.52rem;font-weight:600;letter-spacing:0.04em;padding:0.15rem 0.45rem;border-radius:3px;white-space:nowrap;}
+  .preview-chip.high{color:var(--teal);background:var(--teal-soft);}
+  .preview-chip.medium{color:var(--amber);background:var(--amber-soft);}
+  .preview-chip.low{color:var(--red);background:var(--red-soft);}
+  .preview-chip.pending{color:var(--ivory-faint);background:var(--surface);}
+  .preview-chip.warn{color:var(--amber);background:var(--amber-soft);}
+  .folder-empty{text-align:center;padding:3rem 1rem;}
+  .folder-empty svg{margin-bottom:0.8rem;opacity:0.25;}
+  .folder-empty .fe-title{font-family:var(--font-rc);font-size:0.9rem;color:var(--ivory-dim);margin-bottom:0.3rem;}
+  .folder-empty .fe-sub{font-family:var(--font-m);font-size:0.62rem;color:var(--ivory-faint);}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/csrf.js"></script>
@@ -91,22 +151,6 @@ fetch('/api/me').then(function(res){
       </a>
     </div>
 
-    <div class="sidebar-emp-nav">
-      <button type="button" class="emp-folder-header" id="empFolderToggle" aria-expanded="true">
-        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-        <span>Employees</span>
-        <svg class="emp-folder-chevron" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-      <div class="emp-folder-body" id="empFolderBody">
-        <div class="emp-search-box">
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="empSearchInput" placeholder="Search employees..." autocomplete="off">
-        </div>
-        <div class="emp-nav-list" id="empNavList"></div>
-        <div class="emp-nav-empty" id="empNavEmpty" style="display:none;">No employees found</div>
-      </div>
-    </div>
-
     <div class="sidebar-footer">
       <div class="avatar" id="userAvatar">K</div>
       <div class="user-info">
@@ -120,8 +164,8 @@ fetch('/api/me').then(function(res){
     <div class="top-bar">
       <div class="top-bar-left">
         <div>
-          <div class="page-title" id="syncTitle">AI Sync</div>
-          <div class="breadcrumb"><span>Dashboard</span> / <span>AI Sync</span> / <span id="syncBreadcrumb">Select an employee</span></div>
+          <div class="page-title" id="pageTitle">AI Sync</div>
+          <div class="breadcrumb" id="breadcrumbRow"><span>Dashboard</span> / <span>AI Sync</span></div>
         </div>
       </div>
       <div class="top-bar-right">
@@ -131,101 +175,20 @@ fetch('/api/me').then(function(res){
       </div>
     </div>
 
-    <div class="content-area" style="padding:1.5rem;">
-      <div class="sync-layout" style="display:grid;grid-template-columns:1fr 340px;gap:1.5rem;align-items:start;">
-        <!-- LEFT: SESSIONS + ANALYSIS -->
-        <div>
-          <!-- Employee header with New Session button -->
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
-            <div>
-              <h2 style="font-family:var(--font-d);font-size:1.1rem;font-weight:600;color:var(--ivory);margin:0;" id="sessionEmployeeName">Employee Not Selected</h2>
-              <div style="font-family:var(--font-m);font-size:0.65rem;color:var(--ivory-faint);margin-top:4px;" id="sessionEmpMeta"></div>
-            </div>
-            <a id="newSessionBtn" href="#" class="btn-session" style="text-decoration:none;">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
-              New Session
-            </a>
-          </div>
-
-          <!-- Session selector tabs -->
-          <div style="display:flex;gap:0;margin-bottom:0;border-bottom:1px solid var(--border);">
-            <button class="sync-tab active" data-tab="transcript" style="flex:1;padding:0.7rem 1rem;font-family:var(--font-m);font-size:0.65rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;border:none;background:none;color:var(--ivory);border-bottom:2px solid var(--violet);cursor:pointer;transition:all 0.2s;">
-              Transcript
-            </button>
-          </div>
-
-          <!-- Sessions list — always visible -->
-          <div id="sessionsPanel" style="padding:1.2rem 0;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-              <div style="font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);">Past Dictation Sessions</div>
-              <span id="sessionCount" style="font-family:var(--font-m);font-size:0.6rem;color:var(--ivory-dim);">0 sessions</span>
-            </div>
-            <div id="sessionList" style="display:flex;flex-direction:column;gap:8px;"></div>
-            <div id="sessionEmpty" style="display:none;text-align:center;padding:2rem 0;">
-              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--ivory-dim)" stroke-width="1.5" style="margin-bottom:1rem;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
-              <div style="font-family:var(--font-rc);font-size:0.9rem;color:var(--ivory-dim);margin-bottom:0.5rem;">No sessions yet</div>
-              <div style="font-family:var(--font-m);font-size:0.65rem;color:var(--ivory-faint);">Start a new dictation session to begin</div>
-            </div>
-          </div>
-
-          <!-- Transcript tab -->
-          <div class="sync-tab-content" id="tab-transcript" style="display:block;">
-            <div style="padding:1.5rem 0;">
-              <div style="font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:0.8rem;">Session: <span id="transcriptSessionLabel">—</span></div>
-              <div id="transcriptContent" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;min-height:200px;font-family:var(--font-rc);font-size:0.9rem;line-height:1.7;color:var(--ivory);white-space:pre-wrap;"></div>
-              <div id="transcriptEmpty" style="display:none;text-align:center;padding:3rem 0;color:var(--ivory-dim);font-family:var(--font-rc);font-size:0.9rem;">Select a session to view its transcript</div>
-            </div>
-          </div>
-
-
-        </div>
-
-        <!-- RIGHT: Employee context card -->
-        <div>
-          <div class="card fade-in gsap-hidden">
-            <div class="card-header">
-              <div class="card-title">Employee Context</div>
-            </div>
-            <div id="employeeContext">
-              <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1.2rem;">
-                <div id="empAvatar" style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--amber));display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:0.8rem;font-weight:700;color:var(--void);flex-shrink:0;">--</div>
-                <div>
-                  <div id="empName" style="font-weight:600;">Loading...</div>
-                  <div id="empPosition" style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);">--</div>
-                </div>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:8px;">
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-                  <span style="color:var(--ivory-dim);">Employee ID</span><span id="empIdText">--</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-                  <span style="color:var(--ivory-dim);">Department</span><span id="empDept">--</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-                  <span style="color:var(--ivory-dim);">Position</span><span id="empPosText">--</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-                  <span style="color:var(--ivory-dim);">Wellness Index</span>
-                  <span id="empWellness" style="font-weight:600;">--</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-                  <span style="color:var(--ivory-dim);">Joining Date</span><span id="empJoining">--</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-                  <span style="color:var(--ivory-dim);">Status</span>
-                  <span id="empStatusText" style="font-weight:600;">--</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="content-area" id="contentArea" style="padding:1.5rem;">
     </div>
   </main>
 </div>
 
 <script>
-var employeeId = new URLSearchParams(window.location.search).get('employee_id');
+/* ═══════════════════════════════════════════════════════════════
+   AI SYNC — Folder-based Employee Sync View
+   ═══════════════════════════════════════════════════════════════ */
+
+var employees = [];
+var folderCache = {};
+var currentView = 'grid';
+var currentFolderId = null;
 
 function escHtml(str) {
   if (!str) return '';
@@ -234,61 +197,76 @@ function escHtml(str) {
   return d.innerHTML;
 }
 
-// ── Sidebar: Employees folder (search + navigation) ──
-(function() {
-  var listEl = document.getElementById('empNavList');
-  var input = document.getElementById('empSearchInput');
-  var emptyEl = document.getElementById('empNavEmpty');
-  var toggle = document.getElementById('empFolderToggle');
-  var body = document.getElementById('empFolderBody');
-  if (!listEl || !input || !emptyEl) return;
-
-  var employees = [];
-
-  function renderItems(filter) {
-    var q = (filter || '').trim().toLowerCase();
-    var html = '';
-    employees.forEach(function(emp) {
-      var hay = ((emp.name || '') + ' ' + (emp.employee_id || '') + ' ' + (emp.email || '') + ' ' + (emp.department || '')).toLowerCase();
-      if (q && hay.indexOf(q) === -1) return;
-      var activeCls = (employeeId && String(emp.id) === String(employeeId)) ? ' active' : '';
-      html += '<a href="/sync?employee_id=' + encodeURIComponent(emp.id == null ? '' : emp.id) + '" class="emp-nav-item' + activeCls + '">' +
-        '<span class="emp-nav-name">' + escHtml(emp.name || 'Unnamed') + '</span>' +
-        '<span class="emp-nav-meta">' + escHtml(emp.employee_id || emp.department || '') + '</span>' +
-        '</a>';
-    });
-    listEl.innerHTML = html;
-    listEl.style.display = html ? '' : 'none';
-    emptyEl.style.display = html ? 'none' : 'block';
-  }
-
-  fetch('/api/employees')
-    .then(function(r) { if (!r.ok) throw new Error('Failed to load'); return r.json(); })
-    .then(function(data) {
-      employees = (data && data.employees) || [];
-      renderItems(input.value);
-    })
-    .catch(function() {
-      employees = [];
-      renderItems('');
-      emptyEl.textContent = 'Could not load employees';
-    });
-
-  input.addEventListener('input', function() { renderItems(this.value); });
-
-  if (toggle && body) {
-    toggle.addEventListener('click', function() {
-      var collapsed = toggle.classList.toggle('collapsed');
-      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-      body.style.display = collapsed ? 'none' : '';
-    });
-  }
-})();
-
 function formatDate(d) {
   if (!d) return '—';
   var dt = new Date(d);
   return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function relativeTime(dateStr) {
+  if (!dateStr) return '';
+  var now = Date.now();
+  var then = new Date(dateStr).getTime();
+  var diff = Math.max(0, now - then);
+  var sec = Math.floor(diff / 1000);
+  if (sec < 60) return 'just now';
+  var min = Math.floor(sec / 60);
+  if (min < 60) return min + 'm ago';
+  var hr = Math.floor(min / 60);
+  if (hr < 24) return hr + 'h ago';
+  var days = Math.floor(hr / 24);
+  if (days === 1) return 'yesterday';
+  if (days < 30) return days + 'd ago';
+  var months = Math.floor(days / 30);
+  if (months < 12) return months + 'mo ago';
+  return Math.floor(months / 12) + 'y ago';
+}
+
+function debounce(fn, delay) {
+  var timer;
+  return function() {
+    var args = arguments;
+    var ctx = this;
+    clearTimeout(timer);
+    timer = setTimeout(function() { fn.apply(ctx, args); }, delay);
+  };
+}
+
+function showToast(msg, isError) {
+  var t = document.createElement('div');
+  t.className = 'toast-notification';
+  t.textContent = msg;
+  if (isError) {
+    t.style.background = 'var(--red-soft)';
+    t.style.borderColor = 'rgba(232,69,69,0.3)';
+    t.style.color = 'var(--red)';
+  }
+  document.body.appendChild(t);
+  if (window.gsap) {
+    gsap.set(t, { y: 60, opacity: 0 });
+    gsap.to(t, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
+    setTimeout(function() {
+      gsap.to(t, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { t.remove(); }});
+    }, 4000);
+  } else {
+    setTimeout(function() { t.remove(); }, 4000);
+  }
+}
+
+function initials(name) {
+  return (name || '').trim().split(' ').map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2) || '?';
+}
+
+function sessionStatusLabel(s) {
+  if (!s) return 'Draft';
+  var map = { draft:'Draft', transcribed:'Transcribed', processing:'Processing', completed:'Completed', failed:'Failed' };
+  return map[s] || s;
+}
+
+function sessionBadgeClass(s) {
+  if (!s) return 'badge draft';
+  var map = { draft:'badge draft', transcribed:'badge info', processing:'badge warning', completed:'badge healthy', failed:'badge critical' };
+  return map[s] || 'badge draft';
 }
 
 function analysisPreviewChips(s) {
@@ -297,216 +275,483 @@ function analysisPreviewChips(s) {
   var chips = [];
   var risks = a.risks || {};
   var rf = (risks.risk_factors || [])[0];
-  if (rf) chips.push('<span class="preview-chip warn">⚠ ' + escHtml(rf) + '</span>');
+  if (rf) chips.push('<span class="preview-chip warn">' + escHtml(rf) + '</span>');
   var ps = a.psychological_safety || {};
   var safety = ps.safety_score;
   if (safety !== null && safety !== undefined) {
     var sCls = safety >= 70 ? 'high' : (safety >= 40 ? 'medium' : 'low');
-    chips.push('<span class="preview-chip ' + sCls + '"><b>Psych Safety</b>' + safety + '/100</span>');
+    chips.push('<span class="preview-chip ' + sCls + '">Psych Safety ' + safety + '/100</span>');
   }
   var follow = Math.max(risks.burnout_index || 0, risks.attrition_risk_pct || 0);
   var fCls = follow >= 70 ? 'high' : (follow >= 40 ? 'medium' : 'low');
-  var fLabel = follow >= 70 ? 'High priority' : (follow >= 40 ? 'Medium priority' : 'Low priority');
-  chips.push('<span class="preview-chip ' + fCls + '"><b>Follow-up</b>' + fLabel + '</span>');
+  var fLabel = follow >= 70 ? 'High priority' : (follow >= 40 ? 'Medium priority' : 'Low');
+  chips.push('<span class="preview-chip ' + fCls + '">Follow-up: ' + fLabel + '</span>');
   return chips.join('');
 }
 
-// Tab switching
-document.querySelectorAll('.sync-tab').forEach(function(tab) {
-  tab.addEventListener('click', function() {
-    switchTab(this.getAttribute('data-tab'));
+/* ── Department list (derived from employees) ── */
+function getDepartments() {
+  var seen = {};
+  var list = [];
+  employees.forEach(function(e) {
+    var d = e.department || '';
+    if (d && !seen[d]) { seen[d] = 1; list.push(d); }
   });
-});
+  return list.sort();
+}
 
-var selectedSessionId = null;
+/* ═══════════════════════════════════════════════════════════
+   VIEW: GRID (Folder cards)
+   ═══════════════════════════════════════════════════════════ */
 
-function loadEmployee() {
-  if (!employeeId) {
-    document.getElementById('syncTitle').textContent = 'AI Sync';
-    document.getElementById('syncBreadcrumb').textContent = 'Select an employee';
-    document.getElementById('sessionEmployeeName').textContent = 'Select an Employee';
-    var nsBtn = document.getElementById('newSessionBtn');
-    if (nsBtn) nsBtn.style.display = 'none';
-    var emptyEl = document.getElementById('sessionEmpty');
-    emptyEl.innerHTML =
-      '<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--ivory-dim)" stroke-width="1.5" style="margin-bottom:1rem;"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>' +
-      '<div style="font-family:var(--font-rc);font-size:0.9rem;color:var(--ivory-dim);margin-bottom:0.5rem;">No employee selected</div>' +
-      '<div style="font-family:var(--font-m);font-size:0.65rem;color:var(--ivory-faint);margin-bottom:1.2rem;">Choose an employee from your directory to view their sync sessions</div>' +
-      '<a href="/dashboard" class="btn btn-sm btn-outline" style="text-decoration:none;">View All Employees</a>';
-    emptyEl.style.display = 'block';
+function renderGrid() {
+  currentView = 'grid';
+  currentFolderId = null;
+
+  document.getElementById('pageTitle').textContent = 'AI Sync';
+  document.getElementById('breadcrumbRow').innerHTML = '<span>Dashboard</span> / <span>AI Sync</span>';
+
+  var depts = getDepartments();
+  var deptOpts = '<option value="">All Departments</option>';
+  depts.forEach(function(d) { deptOpts += '<option value="' + escHtml(d) + '">' + escHtml(d) + '</option>'; });
+
+  var html =
+    '<div class="filter-bar">' +
+      '<div class="filter-search">' +
+        '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+        '<input type="text" id="gridSearch" placeholder="Search by name, ID, email, or department..." autocomplete="off">' +
+      '</div>' +
+      '<select class="filter-select" id="gridDeptFilter">' + deptOpts + '</select>' +
+      '<select class="filter-select" id="gridSort">' +
+        '<option value="name">Sort: Name</option>' +
+        '<option value="department">Sort: Department</option>' +
+        '<option value="id">Sort: Employee ID</option>' +
+      '</select>' +
+    '</div>' +
+    '<div class="folder-grid" id="folderGrid"></div>';
+
+  document.getElementById('contentArea').innerHTML = html;
+
+  var gridEl = document.getElementById('folderGrid');
+  renderFolderCards(gridEl, employees);
+
+  document.getElementById('gridSearch').addEventListener('input', debounce(function() { applyGridFilters(); }, 150));
+  document.getElementById('gridDeptFilter').addEventListener('change', function() { applyGridFilters(); });
+  document.getElementById('gridSort').addEventListener('change', function() { applyGridFilters(); });
+}
+
+function applyGridFilters() {
+  var q = (document.getElementById('gridSearch').value || '').trim().toLowerCase();
+  var dept = document.getElementById('gridDeptFilter').value;
+  var sort = document.getElementById('gridSort').value;
+
+  var filtered = employees.filter(function(e) {
+    var hay = ((e.name || '') + ' ' + (e.employee_id || '') + ' ' + (e.email || '') + ' ' + (e.department || '')).toLowerCase();
+    if (q && hay.indexOf(q) === -1) return false;
+    if (dept && e.department !== dept) return false;
+    return true;
+  });
+
+  filtered.sort(function(a, b) {
+    if (sort === 'name') return (a.name || '').localeCompare(b.name || '');
+    if (sort === 'department') return (a.department || '').localeCompare(b.department || '') || (a.name || '').localeCompare(b.name || '');
+    if (sort === 'id') return (a.employee_id || '').localeCompare(b.employee_id || '');
+    return 0;
+  });
+
+  var gridEl = document.getElementById('folderGrid');
+  renderFolderCards(gridEl, filtered);
+}
+
+function renderFolderCards(container, list) {
+  if (!list.length) {
+    container.innerHTML =
+      '<div class="folder-grid-empty" style="grid-column:1/-1;">' +
+        '<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="var(--ivory-dim)" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>' +
+        '<div class="fge-title">No employees found</div>' +
+        '<div class="fge-sub">Try adjusting your search or filters</div>' +
+      '</div>';
     return;
   }
 
-  fetch('/api/employees/' + employeeId)
-    .then(function(r) {
-      if (!r.ok) throw new Error('Failed to load employee');
-      return r.json();
-    })
-    .then(function(emp) {
-      document.getElementById('sessionEmployeeName').textContent = emp.name || 'Employee';
-      document.getElementById('sessionEmpMeta').textContent = (emp.department || '') + ' · ' + (emp.position || '');
-      document.getElementById('newSessionBtn').href = 'dictation.html?employee_id=' + employeeId;
+  var frag = '';
+  list.forEach(function(emp) {
+    var ini = initials(emp.name);
+    var id = emp.id == null ? '' : emp.id;
+    frag +=
+      '<div class="folder-card" data-emp-id="' + escHtml(id) + '">' +
+        '<div class="folder-card-top">' +
+          '<div class="folder-card-avatar">' + ini + '</div>' +
+          '<div>' +
+            '<div class="folder-card-name">' + escHtml(emp.name || 'Unnamed') + '</div>' +
+            '<div class="folder-card-id">' + escHtml(emp.employee_id || '') + '</div>' +
+          '</div>' +
+        '</div>' +
+        (emp.department ? '<div class="folder-card-dept">' + escHtml(emp.department) + '</div>' : '') +
+        '<div class="folder-card-meta">' +
+          '<span class="folder-empty-hint">Click to view syncs</span>' +
+          '<span></span>' +
+        '</div>' +
+      '</div>';
+  });
+  container.innerHTML = frag;
 
-      var initials = (emp.name || '').trim().split(' ').map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2) || '?';
-      document.getElementById('empAvatar').textContent = initials;
-      document.getElementById('empName').textContent = emp.name;
-      document.getElementById('empPosition').textContent = emp.position || '—';
-      document.getElementById('empIdText').textContent = emp.employee_id || '—';
-      document.getElementById('empDept').textContent = emp.department || '—';
-      document.getElementById('empPosText').textContent = emp.position || '—';
-
-      var hasScore = emp.wellness_score !== null && emp.wellness_score !== undefined;
-      var ws = hasScore ? emp.wellness_score : 0;
-      var wsColor = !hasScore ? 'var(--ivory-faint)' : (ws >= 70 ? 'var(--teal)' : (ws >= 40 ? 'var(--amber)' : 'var(--red)'));
-      document.getElementById('empWellness').textContent = hasScore ? (ws + '/100') : '-- (not assessed yet)';
-      document.getElementById('empWellness').style.color = wsColor;
-
-      document.getElementById('empJoining').textContent = emp.joining_date || '—';
-      var statusEl = document.getElementById('empStatusText');
-      var statusLabel = !hasScore ? 'Not Assessed' : (emp.wellness_status === 'critical' ? 'At Risk' : (emp.wellness_status === 'warning' ? 'Watch' : 'Healthy'));
-      var statusColor = !hasScore ? 'var(--ivory-faint)' : (emp.wellness_status === 'critical' ? 'var(--red)' : (emp.wellness_status === 'warning' ? 'var(--amber)' : 'var(--teal)'));
-      statusEl.textContent = statusLabel;
-      statusEl.style.color = statusColor;
-
-      loadSessions();
-    })
-    .catch(function(err) {
-      console.error('Failed to load employee:', err);
+  container.querySelectorAll('.folder-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      var empId = card.getAttribute('data-emp-id');
+      if (empId) openFolder(empId);
     });
+  });
+
+  if (window.gsap) {
+    var cards = container.querySelectorAll('.folder-card');
+    gsap.set(cards, { opacity: 0, y: 12 });
+    gsap.to(cards, { opacity: 1, y: 0, duration: 0.35, stagger: 0.04, ease: 'power3.out' });
+  }
 }
 
-function loadSessions() {
-  fetch('/api/sessions?employee_id=' + employeeId + '&_t=' + Date.now())
+/* ═══════════════════════════════════════════════════════════
+   VIEW: FOLDER (Opened employee sessions)
+   ═══════════════════════════════════════════════════════════ */
+
+function openFolder(empId) {
+  var emp = employees.find(function(e) { return String(e.id) === String(empId); });
+  if (!emp) {
+    showToast('Employee not found — it may have been removed.', true);
+    renderGrid();
+    return;
+  }
+
+  currentView = 'folder';
+  currentFolderId = empId;
+
+  document.getElementById('pageTitle').textContent = emp.name || 'Employee';
+  document.getElementById('breadcrumbRow').innerHTML =
+    '<a href="#" id="bcGrid">Dashboard</a> <span class="bc-sep">/</span> ' +
+    '<a href="#" id="bcSync">AI Sync</a> <span class="bc-sep">/</span> ' +
+    '<span>' + escHtml(emp.name || '') + '</span>';
+
+  document.getElementById('bcGrid').addEventListener('click', function(e) { e.preventDefault(); showGrid(); });
+  document.getElementById('bcSync').addEventListener('click', function(e) { e.preventDefault(); showGrid(); });
+
+  var ini = initials(emp.name);
+  var html =
+    '<div class="folder-view" id="folderView" style="display:block;">' +
+      '<div class="folder-header">' +
+        '<div class="folder-header-left">' +
+          '<div class="folder-header-avatar">' + ini + '</div>' +
+          '<div>' +
+            '<div class="folder-header-name">' + escHtml(emp.name || 'Employee') + '</div>' +
+            '<div class="folder-header-meta">' +
+              escHtml(emp.employee_id || '') +
+              (emp.department ? ' · ' + escHtml(emp.department) : '') +
+              (emp.position ? ' · ' + escHtml(emp.position) : '') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="folder-header-actions">' +
+          '<a href="dictation.html?employee_id=' + encodeURIComponent(empId) + '" class="btn btn-sm btn-outline" style="text-decoration:none;">' +
+            '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>' +
+            'Record via Dictation' +
+          '</a>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="new-session-box">' +
+        '<div class="nsb-label">New Session</div>' +
+        '<textarea class="nsb-textarea" id="nsTextarea" placeholder="Type or paste a conversation, script, or notes..."></textarea>' +
+        '<div class="nsb-controls">' +
+          '<div class="nsb-controls-left">' +
+            '<select class="nsb-source-select" id="nsSource">' +
+              '<option value="manual_entry">Manual Entry</option>' +
+              '<option value="pasted_script">Pasted Script</option>' +
+              '<option value="pasted_conversation">Pasted Conversation</option>' +
+            '</select>' +
+          '</div>' +
+          '<button class="btn-session" id="nsSaveBtn">' +
+            '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>' +
+            'Save Session' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="folder-sessions-header">' +
+        '<div style="display:flex;align-items:center;gap:0.8rem;">' +
+          '<div class="folder-sessions-title">Sessions</div>' +
+          '<div class="folder-sessions-count" id="fsCount"></div>' +
+        '</div>' +
+        '<div class="folder-sessions-filter">' +
+          '<input type="text" class="fs-filter-input" id="fsKeyword" placeholder="Search transcripts...">' +
+          '<select class="filter-select" id="fsStatusFilter" style="font-size:0.68rem;padding:0.4rem 0.6rem;">' +
+            '<option value="">All Statuses</option>' +
+            '<option value="transcribed">Transcribed</option>' +
+            '<option value="processing">Processing</option>' +
+            '<option value="completed">Completed</option>' +
+            '<option value="failed">Failed</option>' +
+            '<option value="draft">Draft</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div class="session-list" id="sessionList"></div>' +
+      '<div class="folder-empty" id="folderEmpty" style="display:none;">' +
+        '<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--ivory-dim)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="16" x2="15" y2="16"/></svg>' +
+        '<div class="fe-title">No sessions yet</div>' +
+        '<div class="fe-sub">Add a new session above or record via dictation</div>' +
+      '</div>' +
+    '</div>';
+
+  document.getElementById('contentArea').innerHTML = html;
+
+  document.getElementById('nsSaveBtn').addEventListener('click', function() { handleCreateSession(empId); });
+  document.getElementById('nsTextarea').addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') handleCreateSession(empId);
+  });
+  document.getElementById('fsKeyword').addEventListener('input', debounce(function() { filterSessions(); }, 200));
+  document.getElementById('fsStatusFilter').addEventListener('change', function() { filterSessions(); });
+
+  if (window.history && window.history.pushState) {
+    window.history.pushState({ employee_id: empId }, '', '/sync?employee_id=' + encodeURIComponent(empId));
+  }
+
+  loadFolderSessions(empId);
+}
+
+function showGrid() {
+  currentView = 'grid';
+  currentFolderId = null;
+
+  if (window.history && window.history.pushState) {
+    window.history.pushState({}, '', '/sync');
+  }
+
+  renderGrid();
+}
+
+function loadFolderSessions(empId) {
+  var listEl = document.getElementById('sessionList');
+  var countEl = document.getElementById('fsCount');
+  var emptyEl = document.getElementById('folderEmpty');
+  if (!listEl) return;
+
+  listEl.innerHTML = '';
+  emptyEl.style.display = 'none';
+  countEl.textContent = 'Loading...';
+
+  fetch('/api/sessions?employee_id=' + encodeURIComponent(empId) + '&_t=' + Date.now())
     .then(function(r) {
       if (!r.ok) throw new Error('Failed to load sessions');
       return r.json();
     })
     .then(function(data) {
       var sessions = (data && data.sessions) || [];
-      var listEl = document.getElementById('sessionList');
-      var countEl = document.getElementById('sessionCount');
-      var emptyEl = document.getElementById('sessionEmpty');
-
-      listEl.innerHTML = '';
-
-      if (!sessions.length) {
-        emptyEl.style.display = 'block';
-        countEl.textContent = '0 sessions';
-        return;
-      }
-
-      emptyEl.style.display = 'none';
-      countEl.textContent = sessions.length + ' session' + (sessions.length > 1 ? 's' : '');
-
-      sessions.forEach(function(s) {
-        var statusClass = 'badge ' + (s.status === 'completed' ? 'healthy' : s.status === 'processing' ? 'warning' : s.status === 'transcribed' ? 'info' : '');
-        var statusLabel = s.status === 'draft' ? 'Draft' : s.status === 'transcribed' ? 'Transcribed' : s.status === 'processing' ? 'Processing' : s.status === 'completed' ? 'Completed' : s.status || 'Draft';
-        var hasAnalysis = s.analysis && s.analysis.summary;
-        var wordCount = (s.transcript && s.transcript.word_count) || 0;
-        var isAnalyzing = s.status === 'processing';
-
-        var item = document.createElement('div');
-        item.className = 'card';
-        item.setAttribute('data-session-id', s.id);
-        item.style.cssText = 'padding:0.8rem 1rem;border:1px solid var(--border);border-radius:8px;transition:all 0.2s;' + (selectedSessionId === s.id ? 'border-color:var(--violet);box-shadow:0 0 12px var(--violet-glow);' : '');
-        item.innerHTML =
-          '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">' +
-            '<div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer;" data-role="select-session">' +
-              '<span class="' + statusClass + '" style="flex-shrink:0;">' + statusLabel + '</span>' +
-              '<div style="min-width:0;">' +
-                '<div style="font-family:var(--font-rc);font-size:0.82rem;color:var(--ivory);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + formatDate(s.created_at) + '</div>' +
-                '<div style="font-family:var(--font-m);font-size:0.55rem;color:var(--ivory-faint);margin-top:2px;">' +
-                  (wordCount ? wordCount + ' words' : '') +
-                  (hasAnalysis ? ' · Analyzed' : '') +
-                '</div>' +
-              '</div>' +
-            '</div>' +
-            '<button class="btn btn-sm' + (hasAnalysis ? '' : ' btn-primary') + '" data-role="open-workspace" data-session-id="' + s.id + '" ' + (isAnalyzing ? 'disabled' : '') + ' style="flex-shrink:0;gap:6px;white-space:nowrap;">' +
-              '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
-              (isAnalyzing ? 'Analyzing…' : 'Open Workspace') +
-            '</button>' +
-          '</div>' +
-          '<div class="session-preview">' + analysisPreviewChips(s) + '</div>';
-        item.querySelector('[data-role="select-session"]').addEventListener('click', function() { selectSession(s.id); });
-        item.querySelector('[data-role="open-workspace"]').addEventListener('click', function(e) {
-          e.stopPropagation();
-          window.location.href = '/workspace?session_id=' + s.id + '&employee_id=' + employeeId;
-        });
-        listEl.appendChild(item);
-      });
+      folderCache[empId] = sessions;
+      renderSessionList(sessions);
     })
     .catch(function(err) {
       console.error('Failed to load sessions:', err);
+      countEl.textContent = 'Failed to load';
+      showToast('Could not load sessions', true);
     });
 }
 
-function switchTab(name) {
-  document.querySelectorAll('.sync-tab').forEach(function(t) { t.classList.remove('active'); t.style.color = 'var(--ivory-faint)'; t.style.borderBottomColor = 'transparent'; });
-  var tabBtn = document.querySelector('.sync-tab[data-tab="' + name + '"]');
-  tabBtn.classList.add('active');
-  tabBtn.style.color = 'var(--ivory)';
-  tabBtn.style.borderBottomColor = 'var(--violet)';
-  document.querySelectorAll('.sync-tab-content').forEach(function(c) { c.style.display = 'none'; });
-  document.getElementById('tab-' + name).style.display = 'block';
-}
+function renderSessionList(sessions) {
+  var listEl = document.getElementById('sessionList');
+  var countEl = document.getElementById('fsCount');
+  var emptyEl = document.getElementById('folderEmpty');
+  if (!listEl) return;
 
-function selectSession(sessionId) {
-  selectedSessionId = sessionId;
+  var keyword = ((document.getElementById('fsKeyword') || {}).value || '').trim().toLowerCase();
+  var statusF = ((document.getElementById('fsStatusFilter') || {}).value || '').trim();
 
-  // Highlight selected
-  document.querySelectorAll('#sessionList .card').forEach(function(c) {
-    c.style.borderColor = 'var(--border)';
-    c.style.boxShadow = 'none';
-  });
-  document.querySelectorAll('#sessionList .card').forEach(function(c) {
-    if (c.getAttribute('data-session-id') === sessionId) {
-      c.style.borderColor = 'var(--violet)';
-      c.style.boxShadow = '0 0 12px var(--violet-glow)';
+  var filtered = sessions.filter(function(s) {
+    if (statusF && s.status !== statusF) return false;
+    if (keyword) {
+      var hay = ((s.transcript && (s.transcript.edited || s.transcript.raw)) || '').toLowerCase();
+      var src = (s.source || '').toLowerCase();
+      if (hay.indexOf(keyword) === -1 && src.indexOf(keyword) === -1) return false;
     }
+    return true;
   });
 
-  return fetch('/api/sessions/' + sessionId)
-    .then(function(r) {
-      if (!r.ok) throw new Error('Failed to load session');
-      return r.json();
-    })
-    .then(function(s) {
-      // Show transcript
-      document.getElementById('transcriptSessionLabel').textContent = formatDate(s.created_at);
-      var transcriptEl = document.getElementById('transcriptContent');
-      var transcriptText = s.transcript && (s.transcript.edited || s.transcript.raw);
-      if (transcriptText) {
-        transcriptEl.textContent = transcriptText;
-        transcriptEl.style.display = 'block';
-        document.getElementById('transcriptEmpty').style.display = 'none';
-      } else {
-        transcriptEl.style.display = 'none';
-        document.getElementById('transcriptEmpty').style.display = 'block';
-      }
-      return s;
-    })
-    .catch(function(err) {
-      console.error('Failed to load session details:', err);
+  listEl.innerHTML = '';
+  countEl.textContent = sessions.length + ' session' + (sessions.length !== 1 ? 's' : '') + (filtered.length !== sessions.length ? ' (' + filtered.length + ' shown)' : '');
+
+  if (!filtered.length) {
+    emptyEl.style.display = 'block';
+    if (sessions.length && filtered.length === 0) {
+      emptyEl.querySelector('.fe-title').textContent = 'No matching sessions';
+      emptyEl.querySelector('.fe-sub').textContent = 'Try adjusting your search or filter';
+    } else {
+      emptyEl.querySelector('.fe-title').textContent = 'No sessions yet';
+      emptyEl.querySelector('.fe-sub').textContent = 'Add a new session above or record via dictation';
+    }
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  filtered.forEach(function(s) {
+    var statusCls = sessionBadgeClass(s.status);
+    var statusLbl = sessionStatusLabel(s.status);
+    var wordCount = (s.transcript && s.transcript.word_count) || 0;
+    var snippet = s.transcript && (s.transcript.edited || s.transcript.raw);
+    if (snippet && snippet.length > 120) snippet = snippet.substring(0, 120) + '...';
+    var isAnalyzing = s.status === 'processing';
+
+    var row = document.createElement('div');
+    row.className = 'session-row';
+    row.innerHTML =
+      '<div class="session-row-left">' +
+        '<span class="' + statusCls + '" style="flex-shrink:0;">' + escHtml(statusLbl) + '</span>' +
+        '<div class="session-row-info">' +
+          '<div class="session-row-date">' + formatDate(s.created_at) + (wordCount ? ' · ' + wordCount + ' words' : '') + '</div>' +
+          (snippet ? '<div class="session-row-snippet">' + escHtml(snippet) + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="session-row-right">' +
+        '<div class="session-row-chips">' + analysisPreviewChips(s) + '</div>' +
+        '<button class="btn btn-sm' + (s.analysis && s.analysis.summary ? '' : ' btn-primary') + '" data-role="open-workspace" data-session-id="' + s.id + '" ' + (isAnalyzing ? 'disabled' : '') + ' style="gap:6px;white-space:nowrap;">' +
+          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
+          (isAnalyzing ? 'Analyzing...' : 'Open') +
+        '</button>' +
+      '</div>';
+
+    row.querySelector('[data-role="open-workspace"]').addEventListener('click', function(e) {
+      e.stopPropagation();
+      window.location.href = '/workspace?session_id=' + s.id + '&employee_id=' + currentFolderId;
     });
+
+    listEl.appendChild(row);
+  });
+
+  if (window.gsap) {
+    var rows = listEl.querySelectorAll('.session-row');
+    gsap.set(rows, { opacity: 0, y: 8 });
+    gsap.to(rows, { opacity: 1, y: 0, duration: 0.3, stagger: 0.03, ease: 'power3.out' });
+  }
 }
+
+function filterSessions() {
+  var empId = currentFolderId;
+  if (!empId || !folderCache[empId]) return;
+  renderSessionList(folderCache[empId]);
+}
+
+/* ── Create Session ── */
+function handleCreateSession(empId) {
+  var textarea = document.getElementById('nsTextarea');
+  var sourceSel = document.getElementById('nsSource');
+  var saveBtn = document.getElementById('nsSaveBtn');
+  if (!textarea || !saveBtn) return;
+
+  var rawText = (textarea.value || '').trim();
+  if (!rawText) {
+    showToast('Enter some text before saving', true);
+    textarea.focus();
+    return;
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving...';
+
+  fetch('/api/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      employee_id: empId,
+      raw_text: rawText,
+      edited_text: rawText,
+      source: (sourceSel && sourceSel.value) || 'manual_entry',
+      language: 'en'
+    })
+  })
+  .then(function(r) {
+    if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'save failed'); });
+    return r.json();
+  })
+  .then(function(newSession) {
+    textarea.value = '';
+    showToast('Session saved successfully');
+
+    if (!folderCache[empId]) folderCache[empId] = [];
+    folderCache[empId].unshift(newSession);
+    renderSessionList(folderCache[empId]);
+
+    saveBtn.disabled = false;
+    saveBtn.innerHTML =
+      '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>' +
+      'Save Session';
+  })
+  .catch(function(err) {
+    console.error('Failed to save session:', err);
+    showToast('Failed to save: ' + err.message, true);
+    saveBtn.disabled = false;
+    saveBtn.innerHTML =
+      '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>' +
+      'Save Session';
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INIT & HISTORY
+   ═══════════════════════════════════════════════════════════ */
+
+function handlePopState() {
+  var empId = new URLSearchParams(window.location.search).get('employee_id');
+  if (empId) {
+    var emp = employees.find(function(e) { return String(e.id) === String(empId); });
+    if (emp) {
+      openFolder(empId);
+    } else {
+      showToast('Employee not found', true);
+      renderGrid();
+    }
+  } else {
+    renderGrid();
+  }
+}
+
+window.addEventListener('popstate', handlePopState);
 
 document.addEventListener('DOMContentLoaded', function() {
-  loadEmployee();
+  fetch('/api/employees')
+    .then(function(r) {
+      if (!r.ok) throw new Error('Failed to load');
+      return r.json();
+    })
+    .then(function(data) {
+      employees = (data && data.employees) || [];
 
-  var sidebar = document.querySelector('.sidebar');
-  if (sidebar && window.gsap) {
-    gsap.set(sidebar, { x: -72, opacity: 0 });
-    gsap.to(sidebar, { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
-  }
+      var empId = new URLSearchParams(window.location.search).get('employee_id');
+      if (empId) {
+        var emp = employees.find(function(e) { return String(e.id) === String(empId); });
+        if (emp) {
+          openFolder(empId);
+        } else {
+          showToast('Employee not found — showing all employees', true);
+          renderGrid();
+        }
+      } else {
+        renderGrid();
+      }
 
-  var cards = document.querySelectorAll('.card.gsap-hidden');
-  if (cards.length && window.gsap) {
-    gsap.set(cards, { opacity: 0, y: 10 });
-    gsap.to(cards, { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power3.out' });
-  }
+      var sidebar = document.querySelector('.sidebar');
+      if (sidebar && window.gsap) {
+        gsap.set(sidebar, { x: -72, opacity: 0 });
+        gsap.to(sidebar, { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
+      }
+    })
+    .catch(function(err) {
+      console.error('Failed to load employees:', err);
+      document.getElementById('contentArea').innerHTML =
+        '<div class="folder-grid-empty">' +
+          '<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="var(--ivory-dim)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>' +
+          '<div class="fge-title">Could not load employees</div>' +
+          '<div class="fge-sub">Please try refreshing the page</div>' +
+        '</div>';
+    });
 });
 
-// Theme toggle
+/* ── Theme toggle ── */
 (function() {
   var btn = document.getElementById('themeToggle');
   if (!btn) return;
