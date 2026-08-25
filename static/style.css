@@ -273,18 +273,18 @@ h1,h2,h3,h4,h5,h6{font-family:var(--font-d);font-weight:600;text-transform:upper
 .ffolder:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:var(--border-lit);}
 .ffolder.big{font-size:0.82rem;padding:0.7rem 1.25rem 0.7rem 1.4rem;}
 .ffolder.big::before{top:-8px;width:1.9rem;height:8px;}
-.ffolder.pink{background:linear-gradient(135deg,var(--pink),#c94a78);color:#fff;border-color:rgba(224,96,144,0.3);}
-.ffolder.pink::before{background:linear-gradient(135deg,var(--pink),#c94a78);border-color:rgba(224,96,144,0.3);}
-.ffolder.pink:hover{border-color:rgba(224,96,144,0.5);box-shadow:0 4px 20px var(--pink-glow);}
-.ffolder.teal{background:linear-gradient(135deg,var(--teal),#1f8574);color:#fff;border-color:rgba(51,160,143,0.3);}
-.ffolder.teal::before{background:linear-gradient(135deg,var(--teal),#1f8574);border-color:rgba(51,160,143,0.3);}
-.ffolder.teal:hover{border-color:rgba(51,160,143,0.5);box-shadow:0 4px 20px var(--teal-glow);}
-.ffolder.amber{background:linear-gradient(135deg,var(--amber),#b96a2c);color:#fff;border-color:rgba(212,136,74,0.3);}
-.ffolder.amber::before{background:linear-gradient(135deg,var(--amber),#b96a2c);border-color:rgba(212,136,74,0.3);}
-.ffolder.amber:hover{border-color:rgba(212,136,74,0.5);box-shadow:0 4px 20px var(--amber-glow);}
-.ffolder.violet{background:linear-gradient(135deg,var(--violet),#6a3fe0);color:#fff;border-color:rgba(123,79,255,0.3);}
-.ffolder.violet::before{background:linear-gradient(135deg,var(--violet),#6a3fe0);border-color:rgba(123,79,255,0.3);}
-.ffolder.violet:hover{border-color:rgba(123,79,255,0.5);box-shadow:0 4px 20px var(--violet-glow);}
+.ffolder.pink{background:var(--pink-soft);color:var(--pink);border-color:rgba(224,96,144,0.28);}
+.ffolder.pink::before{background:var(--pink-soft);border-color:rgba(224,96,144,0.28);}
+.ffolder.pink:hover{border-color:rgba(224,96,144,0.5);box-shadow:0 4px 16px var(--pink-glow);}
+.ffolder.teal{background:var(--teal-soft);color:var(--teal);border-color:rgba(51,160,143,0.28);}
+.ffolder.teal::before{background:var(--teal-soft);border-color:rgba(51,160,143,0.28);}
+.ffolder.teal:hover{border-color:rgba(51,160,143,0.5);box-shadow:0 4px 16px var(--teal-glow);}
+.ffolder.amber{background:var(--amber-soft);color:var(--amber);border-color:rgba(212,136,74,0.28);}
+.ffolder.amber::before{background:var(--amber-soft);border-color:rgba(212,136,74,0.28);}
+.ffolder.amber:hover{border-color:rgba(212,136,74,0.5);box-shadow:0 4px 16px var(--amber-glow);}
+.ffolder.violet{background:var(--violet-soft);color:var(--violet);border-color:rgba(123,79,255,0.28);}
+.ffolder.violet::before{background:var(--violet-soft);border-color:rgba(123,79,255,0.28);}
+.ffolder.violet:hover{border-color:rgba(123,79,255,0.5);box-shadow:0 4px 16px var(--violet-glow);}
 @media(max-width:640px){.ffolder{font-size:0.65rem;padding:0.45rem 0.8rem 0.45rem 0.95rem;}.ffolder.big{font-size:0.72rem;padding:0.55rem 0.95rem 0.55rem 1.1rem;}.ffolder.big::before{width:1.5rem;height:7px;top:-7px;}}
 
 /* ── Attention Glow — pulsing highlight for rows/badges needing special attention ──
