@@ -145,7 +145,6 @@ def create_app():
 
     _PROTECTED_PAGES = frozenset({
         "/dashboard",
-        "/directory",
         "/dictation",
         "/workspace",
         "/settings",
@@ -259,12 +258,6 @@ def create_app():
         if guard: return guard
         return send_from_directory(app.static_folder, "dashboard.html")
 
-    @app.route("/directory")
-    def directory():
-        guard = _require_page_login()
-        if guard: return guard
-        return send_from_directory(app.static_folder, "directory.html")
-
     @app.route("/dictation")
     def dictation():
         guard = _require_page_login()
@@ -358,10 +351,6 @@ def create_app():
     @app.route("/dashboard.html")
     def dashboard_html_redirect():
         return _html_redirect("/dashboard")
-
-    @app.route("/directory.html")
-    def directory_html_redirect():
-        return _html_redirect("/directory")
 
     @app.route("/dictation.html")
     def dictation_html_redirect():
