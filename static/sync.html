@@ -713,6 +713,17 @@ function handlePopState() {
 window.addEventListener('popstate', handlePopState);
 
 document.addEventListener('DOMContentLoaded', function() {
+  /* ── Reveal sidebar immediately (no dependency on API call) ── */
+  var sidebar = document.querySelector('.sidebar');
+  if (sidebar) {
+    if (window.gsap) {
+      gsap.set(sidebar, { x: -72, opacity: 0 });
+      gsap.to(sidebar, { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
+    } else {
+      sidebar.classList.remove('gsap-hidden');
+    }
+  }
+
   fetch('/api/employees')
     .then(function(r) {
       if (!r.ok) throw new Error('Failed to load');
@@ -732,12 +743,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       } else {
         renderGrid();
-      }
-
-      var sidebar = document.querySelector('.sidebar');
-      if (sidebar && window.gsap) {
-        gsap.set(sidebar, { x: -72, opacity: 0 });
-        gsap.to(sidebar, { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
       }
     })
     .catch(function(err) {
