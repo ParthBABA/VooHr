@@ -112,7 +112,10 @@
   .session-row:hover{border-color:var(--border-lit);background:var(--ivory-ghost);}
   .session-row-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
   .session-row-info{min-width:0;}
-  .session-row-date{font-family:var(--font-rc);font-size:0.8rem;color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .session-row-date{font-family:var(--font-rc);font-size:0.72rem;color:var(--ivory-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .session-row-title{font-family:var(--font-d);font-size:0.82rem;font-weight:600;color:var(--ivory);line-height:1.3;margin-bottom:2px;}
+  .session-row-title.unanalyzed{font-style:italic;color:var(--ivory-faint);font-weight:400;font-family:var(--font-rc);font-size:0.78rem;}
+  .session-row-unanalyzed-hint{font-family:var(--font-m);font-size:0.52rem;color:var(--ivory-faint);opacity:0.5;margin-left:4px;}
   .session-row-snippet{font-family:var(--font-m);font-size:0.58rem;color:var(--ivory-faint);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px;}
   .session-row-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
   .session-row-chips{display:flex;align-items:center;gap:4px;flex-shrink:0;}
@@ -633,14 +636,27 @@ function renderSessionList(sessions) {
     if (snippet && snippet.length > 120) snippet = snippet.substring(0, 120) + '...';
     var isAnalyzing = s.status === 'processing';
 
+    var hasTitle = s.analysis && s.analysis.title;
+    var rowTitle, rowTitleClass;
+    if (hasTitle) {
+      rowTitle = s.analysis.title;
+      rowTitleClass = 'session-row-title';
+    } else {
+      var fallback = s.transcript && (s.transcript.edited || s.transcript.raw);
+      rowTitle = fallback ? fallback.substring(0, 50) + (fallback.length > 50 ? '...' : '') : 'Untitled session';
+      rowTitleClass = 'session-row-title unanalyzed';
+    }
+
     var row = document.createElement('div');
     row.className = 'session-row';
     row.innerHTML =
       '<div class="session-row-left">' +
         '<span class="' + statusCls + '" style="flex-shrink:0;">' + escHtml(statusLbl) + '</span>' +
         '<div class="session-row-info">' +
+          '<div class="' + rowTitleClass + '">' + escHtml(rowTitle) +
+            (hasTitle ? '' : '<span class="session-row-unanalyzed-hint">· Not analyzed yet</span>') +
+          '</div>' +
           '<div class="session-row-date">' + formatDate(s.created_at) + (wordCount ? ' · ' + wordCount + ' words' : '') + '</div>' +
-          (snippet ? '<div class="session-row-snippet">' + escHtml(snippet) + '</div>' : '') +
         '</div>' +
       '</div>' +
       '<div class="session-row-right">' +

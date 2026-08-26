@@ -410,6 +410,7 @@ INTERNAL VERIFICATION (silently check before generating output):
 ✔ No content repeated across steps
 
 Return a JSON object with these fields:
+- title: A short, specific 4-7 word title for this exact conversation, written in title case, based on its actual content (e.g. "Discussed Q3 Workload Concerns", "Raised Concerns About Team Conflict", "Positive Career Growth Check-in"). Never generic like "HR Sync Session" or "Employee Conversation".
 - summary: Maximum 2-line summary of the conversation. Focus on the core issue, not generic recap.
 - psychology: {
     "sentiment": "positive|neutral|anxious|frustrated|engaged|disengaged",
@@ -434,7 +435,6 @@ Return a JSON object with these fields:
 - realistic_solutions: {
     "immediate": "Something practical that can be done right now",
     "this_week": "Actionable step for the coming week",
-    "manager": "What the manager can change in their approach",
     "environment": "Work environment or tooling adjustment"
   }
 - next_conversation_plan: [
@@ -811,6 +811,7 @@ INTERNAL VERIFICATION (silently check before generating output):
 - No content repeated across steps
 
 Return a JSON object with these fields:
+- title: A short, specific 4-7 word title for this exact conversation, written in title case, based on its actual content (e.g. "Discussed Q3 Workload Concerns", "Raised Concerns About Team Conflict", "Positive Career Growth Check-in"). Never generic like "HR Sync Session" or "Employee Conversation".
 - summary: Maximum 2-line summary of the conversation. Focus on the core issue, not generic recap.
 - psychology: {
     "sentiment": "positive|neutral|anxious|frustrated|engaged|disengaged",
@@ -1048,6 +1049,7 @@ INTERNAL VERIFICATION (silently check before generating output):
 - No content repeated across steps
 
 Return a JSON object with these fields:
+- title: A short, specific 4-7 word title for this exact conversation, written in title case, based on its actual content (e.g. "Discussed Q3 Workload Concerns", "Raised Concerns About Team Conflict", "Positive Career Growth Check-in"). Never generic like "HR Sync Session" or "Employee Conversation".
 - summary: Maximum 2-line summary of the conversation. Focus on the core issue, not generic recap.
 - psychology: {
     "sentiment": "positive|neutral|anxious|frustrated|engaged|disengaged",
@@ -1166,7 +1168,7 @@ Return a JSON object with these fields:
 
 Judge each field on its own: only set an individual string field to "Limited transcript evidence." (or a list field to empty) if that specific field has no relevant signal in the transcript. Do not blank an entire step just because one field in it is weak — most fields should stay populated with a cautious, evidence-based answer. Short or code-mixed (e.g. Hindi-English) transcripts still count as evidence; never invent generic advice not grounded in the transcript.
 
-Return ONLY valid JSON, no markdown formatting, no code fences."""
+Return ONLY valid JSON, no markdown formatting."""
 
         resp = client.chat.completions.create(
             model=self.model,
