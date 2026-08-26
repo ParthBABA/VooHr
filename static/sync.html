@@ -31,21 +31,44 @@
   .filter-select:focus{border-color:var(--amber);outline:none;}
   .filter-label{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);white-space:nowrap;}
 
+  /* ── FFolders.css Integration (file folder cards) ── */
+  .ffolder{position:relative;display:inline-block;text-align:center}
+  .ffolder:after,.ffolder:before{content:'';display:block;position:absolute}
+  .ffolder.big{margin-top:24px;width:100%;height:180px;border-radius:0 14px 14px 14px}
+  .ffolder:after{width:0;height:0}
+  .ffolder.big:before{top:-24px;left:0;width:96px;height:24px;border-radius:14px 0 0}
+  .ffolder.big:after{top:-48px;left:72px;border:24px solid transparent}
+  .ffolder span,.ffolder i{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+  .ffolder span{font-size:12px;padding:2px 8px;border-radius:15px;white-space:nowrap}
+  .ffolder.big i{font-size:53px}
+  .ffolder.ffolder-transparent{background-color:rgba(255,255,255,0.04)}
+  .ffolder.ffolder-transparent:before,.ffolder.ffolder-transparent span{background-color:rgba(255,255,255,0.07)}
+  .ffolder.ffolder-transparent:after{border-bottom-color:rgba(255,255,255,0.07)}
+  .ffolder.ffolder-transparent span{color:var(--ivory-dim);background:rgba(255,255,255,0.06)}
+  .ffolder.ffolder-transparent i{color:var(--ivory-faint)}
+  [data-theme="light"] .ffolder.ffolder-transparent{background-color:rgba(0,0,0,0.04)}
+  [data-theme="light"] .ffolder.ffolder-transparent:before,[data-theme="light"] .ffolder.ffolder-transparent span{background-color:rgba(0,0,0,0.07)}
+  [data-theme="light"] .ffolder.ffolder-transparent:after{border-bottom-color:rgba(0,0,0,0.07)}
+  [data-theme="light"] .folder-card-dept{background:rgba(0,0,0,0.04);border-color:rgba(0,0,0,0.1);}
+  [data-theme="light"] .folder-card-meta{border-top-color:rgba(0,0,0,0.08);}
+  [data-theme="light"] .folder-card:hover .ffolder{box-shadow:0 8px 24px rgba(0,0,0,0.12);}
+
   /* ── Folder Grid ── */
-  .folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1.2rem 1rem;padding-top:14px;overflow:visible;}
-  .folder-card{position:relative;margin-top:12px;overflow:hidden;background-color:var(--ink);border-bottom-left-radius:8px;border-bottom-right-radius:8px;border-top-left-radius:8px;padding:1.2rem;cursor:pointer;transition:transform 0.25s var(--ease-out),border-color 0.25s var(--ease-out),box-shadow 0.25s var(--ease-out);transform-origin:center bottom;}
-  .folder-card::before{content:'';position:absolute;top:-12px;right:0;width:35%;height:12px;background-color:transparent;border-bottom:12px solid var(--ink);border-left:12px solid transparent;border-top-right-radius:8px;transition:border-bottom-color 0.25s var(--ease-out);}
-  .folder-card::after{content:'';position:absolute;width:100%;height:100%;top:-100%;left:-100%;background:linear-gradient(45deg,transparent,var(--ivory-ghost),transparent);transition:all 0.5s ease;pointer-events:none;}
-  .folder-card:hover{transform:scale(1.035);border:1px solid var(--border-lit);box-shadow:var(--shadow-md);}
-  .folder-card:hover::after{top:100%;left:100%;}
-  .folder-card-top{display:flex;align-items:center;gap:0.8rem;margin-bottom:0.9rem;}
-  .folder-card-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--amber));display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:0.72rem;font-weight:700;color:var(--void);flex-shrink:0;overflow:hidden;}
+  .folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1.5rem 1.2rem;padding-top:14px;overflow:visible;}
+  .folder-card{position:relative;cursor:pointer;transition:transform 0.3s var(--ease-out),filter 0.3s var(--ease-out);transform-origin:center bottom;}
+  .folder-card:hover{transform:translateY(-6px) scale(1.02);filter:brightness(1.1);}
+  .folder-card:hover .ffolder{box-shadow:0 12px 32px rgba(0,0,0,0.35);}
+  .folder-card-inner{padding:1.4rem 1.2rem 1rem;display:flex;flex-direction:column;gap:0.6rem;position:relative;z-index:1;}
+  .folder-card-inner span,.folder-card-inner div{position:static;transform:none;top:auto;left:auto;}
+  .folder-card-top{display:flex;align-items:center;gap:0.8rem;}
+  .folder-card-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--amber));display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:0.72rem;font-weight:700;color:var(--void);flex-shrink:0;overflow:hidden;border:2px solid rgba(255,255,255,0.12);}
   .folder-card-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;}
-  .folder-card-name{font-family:var(--font-d);font-size:0.95rem;font-weight:600;color:var(--ivory);line-height:1.2;}
-  .folder-card-id{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.06em;color:var(--ivory-faint);margin-top:2px;}
-  .folder-card-dept{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--ivory-dim);padding:0.2rem 0.5rem;background:var(--surface);border:1px solid var(--border);border-radius:4px;display:inline-block;margin-bottom:0.7rem;}
-  .folder-card-meta{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-m);font-size:0.6rem;color:var(--ivory-faint);margin-top:auto;}
-  .folder-card-meta .folder-empty-hint{font-style:italic;color:var(--ivory-faint);opacity:0.6;}
+  .folder-card-name{font-family:var(--font-d);font-size:0.92rem;font-weight:600;color:var(--ivory);line-height:1.2;}
+  .folder-card-id{font-family:var(--font-m);font-size:0.58rem;letter-spacing:0.06em;color:var(--ivory-faint);margin-top:2px;}
+  .folder-card-dept{font-family:var(--font-m);font-size:0.56rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--ivory-dim);padding:0.18rem 0.5rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:4px;display:inline-block;align-self:flex-start;}
+  .folder-card-meta{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-m);font-size:0.58rem;color:var(--ivory-faint);margin-top:0.3rem;padding-top:0.5rem;border-top:1px solid rgba(255,255,255,0.06);}
+  .folder-card-meta .folder-empty-hint{font-style:italic;color:var(--ivory-faint);opacity:0.5;}
+  .folder-card-session-count{font-family:var(--font-m);font-size:0.55rem;color:var(--amber);letter-spacing:0.04em;}
   .folder-grid-empty{text-align:center;padding:4rem 2rem;}
   .folder-grid-empty svg{margin-bottom:1rem;opacity:0.3;}
   .folder-grid-empty .fge-title{font-family:var(--font-rc);font-size:1rem;color:var(--ivory-dim);margin-bottom:0.4rem;}
@@ -389,17 +412,21 @@ function renderFolderCards(container, list) {
     }
     frag +=
       '<div class="folder-card" data-emp-id="' + escHtml(id) + '">' +
-        '<div class="folder-card-top">' +
-          '<div class="folder-card-avatar">' + avatarInner + '</div>' +
-          '<div>' +
-            '<div class="folder-card-name">' + escHtml(emp.name || 'Unnamed') + '</div>' +
-            '<div class="folder-card-id">' + escHtml(emp.employee_id || '') + '</div>' +
+        '<div class="ffolder big ffolder-transparent">' +
+          '<div class="folder-card-inner">' +
+            '<div class="folder-card-top">' +
+              '<div class="folder-card-avatar">' + avatarInner + '</div>' +
+              '<div>' +
+                '<div class="folder-card-name">' + escHtml(emp.name || 'Unnamed') + '</div>' +
+                '<div class="folder-card-id">' + escHtml(emp.employee_id || '') + '</div>' +
+              '</div>' +
+            '</div>' +
+            (emp.department ? '<div class="folder-card-dept">' + escHtml(emp.department) + '</div>' : '') +
+            '<div class="folder-card-meta">' +
+              '<span class="folder-empty-hint">Click to view syncs</span>' +
+              '<span class="folder-card-session-count"></span>' +
+            '</div>' +
           '</div>' +
-        '</div>' +
-        (emp.department ? '<div class="folder-card-dept">' + escHtml(emp.department) + '</div>' : '') +
-        '<div class="folder-card-meta">' +
-          '<span class="folder-empty-hint">Click to view syncs</span>' +
-          '<span></span>' +
         '</div>' +
       '</div>';
   });
