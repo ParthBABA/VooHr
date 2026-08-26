@@ -89,9 +89,16 @@ html[data-theme="light"] .stat-card .stat-value{background:linear-gradient(135de
 .theme-toggle .icon-sun{display:none;}
 html[data-theme="light"] .theme-toggle .icon-moon{display:none;}
 html[data-theme="light"] .theme-toggle .icon-sun{display:block;}
+html[data-theme="light"] .drawer-backdrop{background:rgba(20,30,60,0.40);}
+html[data-theme="light"] .modal-overlay{background:rgba(20,30,60,0.50);}
+html[data-theme="light"] .cheatsheet-drawer .drawer-section-title{color:var(--ivory);}
+html[data-theme="light"] .modal-box{border-color:rgba(20,30,60,0.12);}
+html[data-theme="light"] .consent-check label span{color:var(--ivory-dim);}
 
 html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;}
 html::-webkit-scrollbar{width:6px;}
+html[data-theme="light"] ::-webkit-scrollbar-track{background:#E3E6EC;}
+html[data-theme="light"] ::-webkit-scrollbar-thumb{background:rgba(20,30,60,0.15);border-radius:3px;}
 html::-webkit-scrollbar-track{background:#080A0F;}
 html::-webkit-scrollbar-thumb{background:rgba(130,160,220,0.15);border-radius:3px;}
 body{
