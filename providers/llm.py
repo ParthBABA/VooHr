@@ -410,7 +410,7 @@ INTERNAL VERIFICATION (silently check before generating output):
 ✔ No content repeated across steps
 
 Return a JSON object with these fields:
-- title: A short, specific 4-7 word title for this exact conversation, written in title case, based on its actual content (e.g. "Discussed Q3 Workload Concerns", "Raised Concerns About Team Conflict", "Positive Career Growth Check-in"). Never generic like "HR Sync Session" or "Employee Conversation".
+- title: Read the ENTIRE conversation carefully before writing this. Write a short, specific 4-7 word title in title case that captures the CORE CONCLUSION or MAIN MOTIVE of the conversation — what was the employee really trying to say, what was the real issue underneath, or what was the key outcome. Think: "If HR could only remember one thing from this session, what would it be?" Examples of GOOD titles: "Burnout Risk From Unclear Expectations", "Team Conflict Escalating Without Manager Support", "Employee Considering Exit Over Pay Gap", "Genuine Engagement Despite Role Misalignment". BAD titles (never write these): "HR Sync Session", "Employee Conversation", "Discussed Work Concerns", "General Check-in", "Team Discussion". The title must prove you understood the conversation deeply, not just skimmed the topic.
 - summary: Maximum 2-line summary of the conversation. Focus on the core issue, not generic recap.
 - psychology: {
     "sentiment": "positive|neutral|anxious|frustrated|engaged|disengaged",
@@ -811,7 +811,7 @@ INTERNAL VERIFICATION (silently check before generating output):
 - No content repeated across steps
 
 Return a JSON object with these fields:
-- title: A short, specific 4-7 word title for this exact conversation, written in title case, based on its actual content (e.g. "Discussed Q3 Workload Concerns", "Raised Concerns About Team Conflict", "Positive Career Growth Check-in"). Never generic like "HR Sync Session" or "Employee Conversation".
+- title: Read the ENTIRE conversation carefully before writing this. Write a short, specific 4-7 word title in title case that captures the CORE CONCLUSION or MAIN MOTIVE of the conversation — what was the employee really trying to say, what was the real issue underneath, or what was the key outcome. Think: "If HR could only remember one thing from this session, what would it be?" Examples of GOOD titles: "Burnout Risk From Unclear Expectations", "Team Conflict Escalating Without Manager Support", "Employee Considering Exit Over Pay Gap", "Genuine Engagement Despite Role Misalignment". BAD titles (never write these): "HR Sync Session", "Employee Conversation", "Discussed Work Concerns", "General Check-in", "Team Discussion". The title must prove you understood the conversation deeply, not just skimmed the topic.
 - summary: Maximum 2-line summary of the conversation. Focus on the core issue, not generic recap.
 - psychology: {
     "sentiment": "positive|neutral|anxious|frustrated|engaged|disengaged",
@@ -1049,7 +1049,7 @@ INTERNAL VERIFICATION (silently check before generating output):
 - No content repeated across steps
 
 Return a JSON object with these fields:
-- title: A short, specific 4-7 word title for this exact conversation, written in title case, based on its actual content (e.g. "Discussed Q3 Workload Concerns", "Raised Concerns About Team Conflict", "Positive Career Growth Check-in"). Never generic like "HR Sync Session" or "Employee Conversation".
+- title: Read the ENTIRE conversation carefully before writing this. Write a short, specific 4-7 word title in title case that captures the CORE CONCLUSION or MAIN MOTIVE of the conversation — what was the employee really trying to say, what was the real issue underneath, or what was the key outcome. Think: "If HR could only remember one thing from this session, what would it be?" Examples of GOOD titles: "Burnout Risk From Unclear Expectations", "Team Conflict Escalating Without Manager Support", "Employee Considering Exit Over Pay Gap", "Genuine Engagement Despite Role Misalignment". BAD titles (never write these): "HR Sync Session", "Employee Conversation", "Discussed Work Concerns", "General Check-in", "Team Discussion". The title must prove you understood the conversation deeply, not just skimmed the topic.
 - summary: Maximum 2-line summary of the conversation. Focus on the core issue, not generic recap.
 - psychology: {
     "sentiment": "positive|neutral|anxious|frustrated|engaged|disengaged",
