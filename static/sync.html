@@ -129,6 +129,10 @@
   .folder-empty svg{margin-bottom:0.8rem;opacity:0.25;}
   .folder-empty .fe-title{font-family:var(--font-rc);font-size:0.9rem;color:var(--ivory-dim);margin-bottom:0.3rem;}
   .folder-empty .fe-sub{font-family:var(--font-m);font-size:0.62rem;color:var(--ivory-faint);}
+
+  .nsb-loading-text{display:none;font-family:var(--font-m);font-size:0.72rem;color:var(--ivory-dim);margin-top:0.5rem;opacity:0;transition:opacity 0.6s ease;}
+  .nsb-loading-text.visible{display:block;}
+  .nsb-loading-text.fade-in{opacity:1;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/csrf.js"></script>
@@ -513,6 +517,7 @@ function openFolder(empId) {
           '</button>' +
         '</div>' +
       '</div>' +
+      '<div class="nsb-loading-text" id="nsbLoadingText"></div>' +
 
       '<div class="folder-sessions-header">' +
         '<div style="display:flex;align-items:center;gap:0.8rem;">' +
@@ -689,10 +694,18 @@ function filterSessions() {
 }
 
 /* ── Create Session ── */
+var NSB_LOADING_MESSAGES = [
+  "Reading through the conversation...",
+  "Understanding the context...",
+  "Our intelligence is working through the details...",
+  "Almost done putting it together..."
+];
+
 function handleCreateSession(empId) {
   var textarea = document.getElementById('nsTextarea');
   var sourceSel = document.getElementById('nsSource');
   var saveBtn = document.getElementById('nsSaveBtn');
+  var loadingText = document.getElementById('nsbLoadingText');
   if (!textarea || !saveBtn) return;
 
   var rawText = (textarea.value || '').trim();
@@ -704,6 +717,32 @@ function handleCreateSession(empId) {
 
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving...';
+
+  var msgIdx = 0;
+  var msgTimer = null;
+
+  function cycleMessage() {
+    if (!loadingText) return;
+    loadingText.textContent = NSB_LOADING_MESSAGES[msgIdx];
+    loadingText.classList.add('visible');
+    setTimeout(function() { loadingText.classList.add('fade-in'); }, 30);
+    msgTimer = setTimeout(function() {
+      loadingText.classList.remove('fade-in');
+      msgTimer = setTimeout(function() {
+        msgIdx = (msgIdx + 1) % NSB_LOADING_MESSAGES.length;
+        cycleMessage();
+      }, 600);
+    }, 2000);
+  }
+  cycleMessage();
+
+  function stopMessageLoop() {
+    if (msgTimer) { clearTimeout(msgTimer); msgTimer = null; }
+    if (loadingText) {
+      loadingText.classList.remove('visible', 'fade-in');
+      loadingText.textContent = '';
+    }
+  }
 
   fetch('/api/sessions', {
     method: 'POST',
@@ -721,6 +760,7 @@ function handleCreateSession(empId) {
     return r.json();
   })
   .then(function(newSession) {
+    stopMessageLoop();
     textarea.value = '';
     showToast('Session saved successfully');
 
@@ -734,6 +774,7 @@ function handleCreateSession(empId) {
       'Save Session';
   })
   .catch(function(err) {
+    stopMessageLoop();
     console.error('Failed to save session:', err);
     showToast('Failed to save: ' + err.message, true);
     saveBtn.disabled = false;
