@@ -1121,3 +1121,10 @@ html[data-theme="light"] .wsx-insight-title{color:#5A34D8;text-shadow:none;}
 .ws-flag-popover .ws-fp-why{color:var(--ivory-dim);font-size:0.7rem;}
 .ws-flag-popover .ws-fp-close{position:absolute;top:6px;right:9px;cursor:pointer;color:var(--ivory-faint);background:none;border:none;font-size:1rem;line-height:1;padding:2px;}
 .ws-flag-popover .ws-fp-close:hover{color:var(--ivory);}
+
+/* ── Conversation Workspace: coach-panel polish — humanized, evidence-led feel ── */
+.ws-coach .wsx-section-title{text-shadow:none;background:linear-gradient(135deg,var(--ivory),var(--amber));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+html[data-theme="light"] .ws-coach .wsx-section-title{background:linear-gradient(135deg,var(--violet),var(--amber));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.ws-coach .wsx-quote{font-style:italic;border-left-color:rgba(51,160,143,0.5);background:var(--teal-soft);}
+.ws-coach .wsx-ev{color:var(--teal);}
+.ws-coach .wsx-conf{color:var(--ivory-dim);border-color:rgba(212,136,74,0.3);background:var(--amber-soft);}

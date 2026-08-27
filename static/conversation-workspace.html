@@ -221,7 +221,16 @@ fetch('/api/me').then(function(res){
               <div id="wsFollow"></div>
             </div>
 
-            <!-- 3 · CONVERSATION SIGNALS -->
+            <!-- 3 · DON'T BRING THIS BACK UP -->
+            <div class="wsx-section" id="wsAvoidTopicsSection" style="display:none;">
+              <div class="wsx-section-head">
+                <h3 class="wsx-section-title">Don't Bring This Back Up</h3>
+                <span class="wsx-section-rule"></span>
+              </div>
+              <div id="wsAvoidTopics"></div>
+            </div>
+
+            <!-- 4 · CONVERSATION SIGNALS -->
             <div class="wsx-section">
               <div class="wsx-section-head">
                 <h3 class="wsx-section-title">Conversation Signals</h3>
@@ -230,7 +239,7 @@ fetch('/api/me').then(function(res){
               <div id="wsSignals"></div>
             </div>
 
-            <!-- 4 · ASK ABOUT THIS CONVERSATION -->
+            <!-- 5 · ASK ABOUT THIS CONVERSATION -->
             <div class="wsx-section">
               <div class="wsx-section-head">
                 <h3 class="wsx-section-title">Ask About This Conversation</h3>
@@ -439,7 +448,7 @@ window.voohrInitWorkspace = function() {
         (d.why_it_works ? '<div class="ws-fp-why">' + esc(d.why_it_works) + '</div>' : '');
     } else {
       html +=
-        '<div class="ws-fp-cat">' + esc((d.signal || 'signal').replace(/_/g, ' ')) + (d.confidence !== undefined ? ' &middot; ' + esc(d.confidence) + '% conf.' : '') + '</div>' +
+        '<div class="ws-fp-cat">' + esc((d.signal || 'signal').replace(/_/g, ' ')) + (d.confidence_label ? ' &middot; ' + esc(d.confidence_label) : '') + '</div>' +
         '<div class="ws-fp-issue">' + esc(d.evidence_basis || '') + '</div>' +
         (d.hr_suggestion ? '<div class="ws-fp-suggest-label">What HR could do next</div><div class="ws-fp-suggest">' + esc(d.hr_suggestion) + '</div>' : '');
     }
@@ -646,8 +655,6 @@ window.voohrInitWorkspace = function() {
       if (sentPct !== null) dims.push({ label: 'Sentiment', value: sentPct, suffix: '%', cls: scoreBand(sentPct).cls });
       var tone = numVal(pa && pa.overall_tone_score);
       if (tone !== null) dims.push({ label: 'Phrasing tone', value: tone, suffix: '', cls: scoreBand(tone).cls });
-      var conf = numVal(ps.confidence);
-      if (conf !== null) dims.push({ label: 'Assessment confidence', value: conf, suffix: '%', cls: scoreBand(conf).cls });
       dimsEl.style.display = dims.length ? '' : 'none';
       dimsEl.innerHTML = dims.map(dimRow).join('');
     }
@@ -655,13 +662,18 @@ window.voohrInitWorkspace = function() {
     var factsEl = document.getElementById('wsScoreFacts');
     if (factsEl) {
       var defs = cleanVal(ps.defensive_behaviour);
-      if (defs && defs.toLowerCase() !== 'none observed') {
-        factsEl.style.display = '';
-        factsEl.innerHTML = '<span class="wsx-fact warn"><b>Watch for</b>' + esc(defs) + '</span>';
+      var confLbl = ps && ps.confidence_label;
+      var facts = '';
+      if (defs) {
+        facts += '<span class="wsx-fact warn"><b>Watch for</b>' + esc(defs) + '</span>';
       } else {
-        factsEl.style.display = 'none';
-        factsEl.innerHTML = '';
+        facts += '<span class="wsx-fact"><b>Noted</b>Nothing flagged in this conversation.</span>';
       }
+      if (confLbl) {
+        facts += '<span class="wsx-fact"><b>Signal</b>' + confBadge(confLbl) + '</span>';
+      }
+      factsEl.style.display = facts ? '' : 'none';
+      factsEl.innerHTML = facts;
     }
   }
 
@@ -710,9 +722,9 @@ window.voohrInitWorkspace = function() {
   }
 
   function confBadge(c) {
-    var n = parseInt(c, 10);
-    if (isNaN(n)) return '';
-    return '<span class="wsx-conf">' + n + '% conf.</span>';
+    var s = String(c == null ? '' : c).trim();
+    if (!s || /^\d+$/.test(s)) return '';
+    return '<span class="wsx-conf">' + esc(s) + '</span>';
   }
 
   // ── WHAT MATTERS: behavioural interpretations, topped up from the
@@ -732,21 +744,21 @@ window.voohrInitWorkspace = function() {
         title: title || 'Conversation signal',
         body: body,
         evidence: cleanVal(o.evidence),
-        conf: o.confidence
+        conf: o.confidence_label || o.confidence
       });
     });
     if (insights.length < 3) {
       var s2 = a.step2_behavioural_intelligence || {};
       var t2 = cleanVal(s2.behaviour_summary) || cleanVal(s2.observed_behaviour);
       if ((t2 || cleanVal(s2.ai_interpretation)) && !insights.some(function(x) { return x.title === t2; })) {
-        insights.push({ title: t2 || 'Behavioural pattern', body: cleanVal(s2.ai_interpretation), evidence: cleanVal(s2.supporting_evidence), conf: s2.confidence });
+        insights.push({ title: t2 || 'Behavioural pattern', body: cleanVal(s2.ai_interpretation), evidence: cleanVal(s2.supporting_evidence), conf: s2.confidence_label || s2.confidence });
       }
     }
     if (insights.length < 3) {
       var s3 = a.step3_root_cause_analysis || {};
       var t3 = cleanVal(s3.primary_trigger);
       if ((t3 || cleanVal(s3.ai_reasoning)) && !insights.some(function(x) { return x.title === t3; })) {
-        insights.push({ title: t3 || 'Likely trigger', body: cleanVal(s3.ai_reasoning), evidence: '', conf: s3.confidence });
+        insights.push({ title: t3 || 'Likely trigger', body: cleanVal(s3.ai_reasoning), evidence: '', conf: s3.confidence_label || s3.confidence });
       }
     }
     insights = insights.slice(0, 3);
@@ -825,8 +837,8 @@ window.voohrInitWorkspace = function() {
     if (open || defb || trust) {
       var engParts = [];
       if (open) engParts.push(open.charAt(0).toUpperCase() + open.slice(1) + ' communication.');
-      if (defb && defb.toLowerCase() !== 'none observed') engParts.push(defb + '.');
-      else if (defb) engParts.push('No defensive patterns came through in what was said.');
+      if (defb) engParts.push(defb + '.');
+      else engParts.push('Nothing flagged in this conversation.');
       var trustTag = trust ? '<span class="wsx-tag">Trust: ' + esc(trust) + '</span>' : '';
       html +=
         '<div class="wsx-signal">' +
@@ -879,11 +891,36 @@ window.voohrInitWorkspace = function() {
     }).join('');
   }
 
+  // ── DON'T BRING THIS BACK UP: topics the employee volunteered once,
+  // unprompted. HR should not re-raise these proactively next time. ──
+  function renderAvoidTopics(a) {
+    var section = document.getElementById('wsAvoidTopicsSection');
+    var host = document.getElementById('wsAvoidTopics');
+    var topics = (a.topics_to_avoid || []).filter(function(t) {
+      return t && cleanVal(t.topic);
+    });
+    if (!topics.length) {
+      section.style.display = 'none';
+      host.innerHTML = '';
+      return;
+    }
+    section.style.display = '';
+    host.innerHTML = topics.slice(0, 4).map(function(t) {
+      return (
+        '<div class="wsx-action">' +
+          '<div class="wsx-kick">' + esc(t.topic) + '</div>' +
+          '<p class="wsx-body">' + esc(cleanVal(t.reason) || '') + '</p>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
   function renderIntel(a) {
     var viewAll = document.getElementById('wsViewAll');
     if (viewAll) viewAll.href = 'sync_room.html?session_id=' + sessionId + '&employee_id=' + employeeId;
     renderMatters(a);
     renderFollow(a);
+    renderAvoidTopics(a);
     renderSignals(a);
     renderAsk(a);
   }
