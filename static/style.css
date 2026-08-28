@@ -1170,8 +1170,18 @@ html[data-theme="light"] .ws-coach .wsx-section-title{background:linear-gradient
   50%{box-shadow:0 0 38px rgba(232,69,69,0.5);}
 }
 .timer{font-family:var(--font-m);font-size:2.05rem;font-weight:700;color:var(--ivory);letter-spacing:0.04em;}
-.waveform{display:flex;align-items:flex-end;justify-content:center;gap:4px;height:36px;}
-.wf-bar{width:4px;background:var(--violet);border-radius:2px;transition:height 0.15s ease;height:4px;flex-shrink:0;}
+
+/* Live waveform: thin bars centered on a horizontal baseline, with soft
+   purple/blue accent and a gentle falloff toward the edges. */
+.waveform{position:relative;width:100%;height:64px;overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);}
+.wf-baseline{position:absolute;left:0;right:0;top:50%;height:1px;transform:translateY(-50%);
+  background:linear-gradient(90deg,transparent,rgba(150,125,255,0.28),transparent);}
+.wf-bar{position:absolute;top:50%;width:3px;height:4px;transform:translateX(-50%) translateY(-50%);
+  background:linear-gradient(180deg,rgba(96,130,255,0.05),var(--violet),rgba(120,140,255,0.05));
+  border-radius:2px;box-shadow:0 0 6px rgba(130,115,255,0.30);
+  will-change:height;pointer-events:none;}
 
 /* small settings/info cards (Quality, Language, Auto Punctuation) */
 .rec-settings{display:grid;grid-template-columns:repeat(3,1fr);gap:0.7rem;width:100%;margin-top:auto;}

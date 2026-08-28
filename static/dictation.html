@@ -46,6 +46,18 @@ var recordingTimer = null;
 var recordingSeconds = 0;
 var isRecording = false;
 
+/* ── Live waveform visualizer (Web Audio API) ── */
+var wfAudioCtx = null;
+var wfAnalyser = null;
+var wfSource = null;
+var wfStream = null;
+var wfBars = [];
+var wfHeights = [];
+var wfFlow = [];
+var wfRafId = null;
+var wfRunning = false;
+var wfReducedMotion = false;
+
 var activeInputTab = 'record';
 var audioFile = null;
 var imageFile = null;
@@ -101,17 +113,123 @@ function setStatus(text) {
   document.getElementById('recordingStatus').textContent = text;
 }
 
-function updateWaveform(active) {
-  var bars = document.querySelectorAll('.wf-bar');
-  bars.forEach(function(bar, i) {
-    if (active) {
-      var h = 4 + Math.random() * 28;
-      bar.style.height = h + 'px';
-      bar.style.animationDelay = (i * 0.1) + 's';
-    } else {
-      bar.style.height = '4px';
-    }
-  });
+/* ── Live waveform visualizer ─────────────────────────────────────
+   Builds many thin vertical bars centered on a horizontal baseline.
+   Each bar responds to the real microphone signal via AnalyserNode,
+   with smoothing + interpolation and a left-to-right flowing decay so
+   new signal enters from the left and older signal fades rightward.
+   Uses a single rAF loop and stops everything cleanly.           */
+
+function wfBuildBars() {
+  var wrap = document.getElementById('waveform');
+  if (!wrap) return;
+  var old = wrap.querySelectorAll('.wf-bar');
+  for (var i = 0; i < old.length; i++) old[i].remove();
+  wfBars = [];
+  wfHeights = [];
+  wfFlow = [];
+  var W = wrap.clientWidth;
+  var count = Math.max(48, Math.min(110, Math.floor(W / 6)));
+  for (var n = 0; n < count; n++) {
+    var b = document.createElement('div');
+    b.className = 'wf-bar';
+    var pos = count === 1 ? 0.5 : n / (count - 1);
+    b.style.left = (pos * 100).toFixed(2) + '%';
+    wrap.appendChild(b);
+    wfBars.push(b);
+    wfHeights.push(0);
+    wfFlow.push(0);
+  }
+}
+
+function wfStartVisualizer(stream) {
+  if (!window.AudioContext && !window.webkitAudioContext) return;
+  if (wfRunning) return;
+
+  try {
+    wfReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    wfAudioCtx = new AC();
+    wfAnalyser = wfAudioCtx.createAnalyser();
+    wfAnalyser.fftSize = 128;
+    wfAnalyser.smoothingTimeConstant = 0.82;
+    wfSource = wfAudioCtx.createMediaStreamSource(stream);
+    wfSource.connect(wfAnalyser);
+  } catch (e) { return; }
+
+  wfStream = stream;
+  wfRunning = true;
+  wfBuildBars();
+  if (wfReducedMotion) {
+    wfSettle(false);
+    return;
+  }
+  wfRafId = requestAnimationFrame(wfTick);
+}
+
+function wfSettle(flowing) {
+  for (var i = 0; i < wfBars.length; i++) {
+    var t = flowing ? 0.05 : 0.12;
+    wfHeights[i] += (0 - wfHeights[i]) * t;
+  }
+  wfApply();
+}
+
+function wfTick() {
+  if (!wfRunning || !wfAnalyser) return;
+  var data = new Uint8Array(wfAnalyser.frequencyBinCount);
+  wfAnalyser.getByteFrequencyData(data);
+
+  var sum = 0;
+  for (var i = 0; i < data.length; i++) sum += data[i];
+  var avg = sum / data.length;
+
+  var n = wfBars.length;
+  var fresh = [];
+  for (var k = 0; k < n; k++) {
+    /* mirrored envelope: middle maps to the mid-frequency bins, edges roll off */
+    var norm = k / (n - 1 || 1);
+    var centered = 1 - Math.abs(norm * 2 - 1);
+    var bin = Math.floor(centered * (data.length - 1));
+    var raw = data[bin] / 255;
+    fresh[k] = raw * 110;
+  }
+
+  /* left-to-right flow: newest energy enters at the left and drifts
+     rightward while older energy smoothly decays (traveling + fade) */
+  for (var b = n - 1; b > 0; b--) {
+    wfFlow[b] = wfFlow[b] * 0.90 + wfFlow[b - 1] * 0.10;
+  }
+  wfFlow[0] = fresh[0];
+
+  /* subtle baseline so silence settles near the center, not to zero */
+  var base = 3 + avg * 0.10;
+
+  for (var x = 0; x < n; x++) {
+    var combined = wfFlow[x] + fresh[x] * 0.55;
+    var target = base + combined;
+    /* interpolate toward the target (smoothing, avoids jitter) */
+    wfHeights[x] += (target - wfHeights[x]) * 0.34;
+  }
+  wfApply();
+  wfRafId = requestAnimationFrame(wfTick);
+}
+
+function wfApply() {
+  for (var i = 0; i < wfBars.length; i++) {
+    wfBars[i].style.height = wfHeights[i].toFixed(1) + 'px';
+  }
+}
+
+function wfStopVisualizer() {
+  if (wfRafId) { cancelAnimationFrame(wfRafId); wfRafId = null; }
+  wfRunning = false;
+  if (wfSource) { try { wfSource.disconnect(); } catch (e) {} wfSource = null; }
+  if (wfAnalyser) { wfAnalyser.disconnect && wfAnalyser.disconnect(); wfAnalyser = null; }
+  if (wfAudioCtx && wfAudioCtx.close) { try { wfAudioCtx.close(); } catch (e) {} }
+  wfAudioCtx = null;
+  wfStream = null;
+  wfSettle(false);
 }
 
 function startRecording() {
@@ -121,15 +239,16 @@ function startRecording() {
     audioChunks = [];
     recordingSeconds = 0;
     updateTimer();
+    wfStartVisualizer(stream);
     mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
     mediaRecorder.ondataavailable = function(e) {
       if (e.data.size > 0) audioChunks.push(e.data);
     };
     mediaRecorder.onstop = function() {
       stream.getTracks().forEach(function(t) { t.stop(); });
+      wfStopVisualizer();
       isRecording = false;
       clearInterval(recordingTimer);
-      updateWaveform(false);
       setStatus('Processing audio...');
       document.getElementById('micBtn').classList.remove('recording');
       processAudio();
@@ -141,7 +260,6 @@ function startRecording() {
     }, 1000);
     setStatus('Recording... tap to stop');
     document.getElementById('micBtn').classList.add('recording');
-    updateWaveform(true);
     document.getElementById('recordIcon').style.display = 'none';
     document.getElementById('stopIcon').style.display = '';
   }).catch(function(err) {
@@ -570,6 +688,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (clearBtn) clearBtn.addEventListener('click', clearTranscript);
 
   updateTabCaption();
+  wfBuildBars();
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') discardSession();
@@ -676,11 +795,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     <svg id="stopIcon" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none;"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
                   </button>
                   <div class="timer" id="recordingTimer">00:00</div>
-                  <div class="waveform" id="waveform">
-                    <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
-                    <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
-                    <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
-                    <div class="wf-bar"></div>
+                  <div class="waveform" id="waveform" role="img" aria-label="Live audio waveform" aria-hidden="false">
+                    <div class="wf-baseline"></div>
                   </div>
                   <div class="rec-settings">
                     <div class="rec-settings-card">
