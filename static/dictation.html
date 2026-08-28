@@ -82,8 +82,8 @@ function loadEmployee() {
       if (!emp) return;
       document.getElementById('sessionEmployeeName').textContent = emp.name;
       document.getElementById('sessionBreadcrumb').textContent = emp.employee_id + ' — ' + (emp.department || '');
-      var initials = (emp.name || '').trim().split(' ').map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2) || '?';
-      document.getElementById('sessionAvatar').textContent = initials;
+      var el = document.getElementById('sessionAvatar');
+      if (el) el.textContent = initials;
     });
 }
 
@@ -636,15 +636,6 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="content-area">
       <div class="dictation-page">
         <div class="dictation-main">
-
-          <!-- Heading -->
-          <div class="dictation-heading">
-            <div class="dictation-heading-text">
-              <h1 class="dictation-title">AI Dictation</h1>
-              <p class="dictation-subtitle">Record voice or import a file to build a transcript for this employee's AI Sync session.</p>
-            </div>
-            <div class="dictation-employee" id="sessionAvatar" title="Recording for employee">?</div>
-          </div>
 
           <!-- Mode selector -->
           <div class="input-tabs" id="inputTabs" role="tablist" aria-label="How to add a transcript">
