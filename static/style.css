@@ -910,7 +910,7 @@ html[data-theme="light"] .wsx-insight-title{color:#5A34D8;text-shadow:none;}
 .wsx-body{font-size:0.85rem;line-height:1.65;color:var(--ivory-dim);}
 
 /* Evidence quotes + transcript jump links */
-.wsx-quote{margin-top:0.6rem;padding:0.6rem 0.8rem;border-left:2px solid rgba(212,136,74,0.45);background:var(--amber-soft);font-family:var(--font-serif);font-size:0.82rem;line-height:1.6;color:var(--ivory-dim);}
+.wsx-quote{margin-top:0.6rem;padding:1rem 1.2rem;border-left:3px solid rgba(212,136,74,0.45);border-radius:4px;background:var(--amber-soft);font-family:var(--font-serif);font-size:0.82rem;line-height:1.6;color:var(--ivory);}
 .wsx-quote-foot{display:block;margin-top:0.45rem;}
 .wsx-ev{display:inline-flex;align-items:center;gap:0.35rem;background:transparent;border:none;padding:0;color:var(--violet);font-family:var(--font-m);font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:color 0.2s;}
 .wsx-ev:hover{color:var(--ivory);}
@@ -923,6 +923,25 @@ html[data-theme="light"] .wsx-insight-title{color:#5A34D8;text-shadow:none;}
 .wsx-kick{display:inline-block;font-family:var(--font-m);font-size:0.55rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--amber);text-shadow:0 0 12px var(--amber-glow);margin-bottom:0.35rem;}
 .wsx-metric{margin-top:0.85rem;padding-top:0.85rem;border-top:1px dashed var(--border-lit);font-size:0.8rem;line-height:1.6;color:var(--ivory-dim);}
 .wsx-metric span{display:block;font-family:var(--font-m);font-size:0.52rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--teal);text-shadow:0 0 10px var(--teal-glow);margin-bottom:0.25rem;}
+
+/* Horizontal connected follow-up steps (mirrors the si-step tracker) */
+.wsx-steps{display:flex;align-items:flex-start;gap:0;margin-top:0.5rem;}
+.wsx-step{display:flex;flex-direction:column;align-items:center;text-align:center;flex:1;min-width:0;}
+.wsx-step-dot{width:36px;height:36px;border-radius:50%;border:2px solid var(--amber);display:flex;align-items:center;justify-content:center;font-family:var(--font-lato);font-weight:700;font-size:0.85rem;color:var(--void);background:var(--amber);box-shadow:0 0 14px var(--amber-glow);flex-shrink:0;}
+.wsx-step-dot svg{width:16px;height:16px;color:var(--void);}
+.wsx-step-connector{flex:1;height:2px;background:var(--border);margin-top:18px;border-radius:1px;}
+.wsx-step-kick{margin-top:0.5rem;font-family:var(--font-lato);font-weight:700;font-size:0.72rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--amber);}
+.wsx-step-body{margin-top:0.35rem;font-size:0.82rem;color:var(--ivory-dim);line-height:1.5;}
+/* Destination / outcome step reads as the outcome the earlier steps build toward */
+.wsx-step-dest .wsx-step-dot{border-color:var(--teal);background:var(--teal);box-shadow:0 0 14px var(--teal-glow);}
+.wsx-step-dest .wsx-step-kick{color:var(--teal);}
+.wsx-step-connector-dest{background:var(--teal);box-shadow:0 0 8px var(--teal-glow);}
+@media (max-width:640px){
+  .wsx-steps{flex-direction:column;align-items:stretch;gap:0.9rem;}
+  .wsx-step{flex-direction:row;align-items:center;text-align:left;gap:0.8rem;}
+  .wsx-step-connector{display:none;}
+  .wsx-step-kick,.wsx-step-body{margin-top:0;}
+}
 
 /* CONVERSATION SIGNALS — compact indicator rows */
 .wsx-signal+.wsx-signal{margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid var(--border);}
@@ -1125,7 +1144,7 @@ html[data-theme="light"] .wsx-insight-title{color:#5A34D8;text-shadow:none;}
 /* ── Conversation Workspace: coach-panel polish — humanized, evidence-led feel ── */
 .ws-coach .wsx-section-title{text-shadow:none;background:linear-gradient(135deg,var(--ivory),var(--amber));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
 html[data-theme="light"] .ws-coach .wsx-section-title{background:linear-gradient(135deg,var(--violet),var(--amber));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
-.ws-coach .wsx-quote{font-style:italic;border-left-color:rgba(51,160,143,0.5);background:var(--teal-soft);}
+.ws-coach .wsx-quote{font-style:italic;border-left-color:rgba(51,160,143,0.5);background:rgba(51,160,143,0.14);}
 .ws-coach .wsx-ev{color:var(--teal);}
 .ws-coach .wsx-conf{color:var(--ivory-dim);border-color:rgba(212,136,74,0.3);background:var(--amber-soft);}
 

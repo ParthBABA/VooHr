@@ -162,11 +162,57 @@ def _parse_confidence_label(val):
                 return label
         if stripped in CONFIDENCE_KEYWORD:
             return CONFIDENCE_KEYWORD[stripped]
-        try:
-            return _confidence_label_from_score(stripped)
-        except (TypeError, ValueError):
-            pass
+    try:
+        return _confidence_label_from_score(stripped)
+    except (TypeError, ValueError):
+        pass
     return "Light Signal"
+
+
+# ── Qualitative emotional-tone label replaces the old numeric sentiment
+# score. See _parse_sentiment_label for coercion rules. ──
+SENTIMENT_LABELS = ["Positive", "Reflective", "Anxious", "Strained", "Mixed"]
+_SENTIMENT_LEGACY = {
+    "positive": "Positive",
+    "engaged": "Positive",
+    "neutral": "Reflective",
+    "mixed": "Mixed",
+    "anxious": "Anxious",
+    "frustrated": "Strained",
+    "disengaged": "Strained",
+}
+
+
+def _parse_sentiment_label(val):
+    """Coerce the emotion tone to the qualitative label enum, returning an
+    empty string when nothing usable is present. Handles the label, a legacy
+    keyword, or (as a last resort) a numeric 0-100 legacy sentiment score —
+    never a number in the output."""
+    if val is None:
+        return ""
+    if isinstance(val, (int, float)):
+        try:
+            num = float(val)
+        except (TypeError, ValueError):
+            return ""
+        score = max(0, min(100, num * 100 if num <= 1.0 else num))
+        return "Positive" if score >= 70 else ("Reflective" if score >= 40 else "Mixed")
+    if isinstance(val, str):
+        stripped = val.strip().lower()
+        if not stripped:
+            return ""
+        for label in SENTIMENT_LABELS:
+            if label.lower() == stripped:
+                return label
+        if stripped in _SENTIMENT_LEGACY:
+            return _SENTIMENT_LEGACY[stripped]
+        try:
+            num = float(stripped.replace("%", "").strip())
+            score = max(0, min(100, num * 100 if num <= 1.0 else num))
+            return "Positive" if score >= 70 else ("Reflective" if score >= 40 else "Mixed")
+        except (TypeError, ValueError):
+            return ""
+    return ""
 
 
 def _parse_confidence_score(val):
@@ -221,7 +267,7 @@ def validate_analysis(result, depth=0):
     DICT_KEYS = {"psychological_safety", "risks", "realistic_solutions",
                  "step2_behavioural_intelligence", "step3_root_cause_analysis",
                  "step4_action_blueprint", "step5_conversation_strategy"}
-    PSYCHOLOGY_DEFAULTS = {"sentiment": "unknown", "sentiment_score": 0.0, "behavioural_interpretation": []}
+    PSYCHOLOGY_DEFAULTS = {"sentiment_label": "", "behavioural_interpretation": []}
 
     required = [
         "summary", "psychology", "conversation_coach", "realistic_solutions",
@@ -281,6 +327,25 @@ def validate_analysis(result, depth=0):
                 node[field] = _parse_confidence_label(node.get(field) or node.get("confidence"))
                 if "confidence" in node:
                     del node["confidence"]
+
+    # Normalize the emotional-tone field. The old `psychology.sentiment`
+    # (numeric 0-100 or legacy keyword) and `psychology.sentiment_score` are
+    # folded into the qualitative `sentiment_label` and then removed so the
+    # UI never receives a numeric sentiment value.
+    psych = result.get("psychology")
+    if isinstance(psych, dict):
+        legacy_val = (
+            psych.get("sentiment_label")
+            if psych.get("sentiment_label") not in (None, "", False)
+            else psych.get("sentiment")
+        )
+        if legacy_val is not None and legacy_val != "":
+            psych["sentiment_label"] = _parse_sentiment_label(legacy_val)
+        else:
+            psych["sentiment_label"] = ""
+        for legacy_key in ("sentiment", "sentiment_score"):
+            if legacy_key in psych:
+                del psych[legacy_key]
 
     # Clean topics_to_avoid: keep only well-formed object entries.
     topics_avoid = result.get("topics_to_avoid")
@@ -450,6 +515,7 @@ INTERNAL REASONING FRAMEWORKS (silently evaluate every transcript using these):
 GOLDEN RULES
 - This tool exists to help HR remember what to follow up on — it does not score, rank, or rate the employee. Never phrase output as a judgment of the employee (e.g. avoid framing like "Harshit scored 75% positive sentiment"). Frame output as guidance for HR's next action (e.g. "These are the things worth following up on next time").
 - Never attach a clinical or trait label to the employee (e.g. "perfectionist tendency", "self-critical inner dialogue", "anxiety pattern"). Instead, describe the specific behaviour in plain, descriptive language anchored to what they actually said — e.g. "Harshit named a pattern of blaming himself after small mistakes" rather than "perfectionist tendency".
+- Do not speculate about the employee's underlying motives, fears, or psychological needs beyond what they explicitly said. Avoid phrases like "possibly because...", "this suggests he may be...", "indicating a need for..." — these are unstated inferences, not observations. Stick to describing what was said and what pattern it forms in behavior, not why it exists internally. If a reasonable behavioral observation is useful, phrase it as a description of the pattern itself, not a theory about its psychological cause — e.g. write "Harshit shared this without being asked" rather than "this suggests he may feel isolated and needs to unload."
 - Never emit a bare status word for a signal or flag field (e.g. "None observed", "N/A", "Not observed"). If nothing is flagged, write a brief natural sentence such as "Nothing flagged — the conversation felt open and low-stress."
 - Every confidence_label field must use exactly one value: Strong Signal | Moderate Signal | Light Signal. Strong Signal = multiple clear, direct pieces of transcript evidence. Moderate Signal = some supporting evidence but with a plausible alternative reading. Light Signal = a single weak or indirect cue. Never output a number.
 - Never expose framework names in output.
@@ -484,17 +550,17 @@ Return a JSON object with these fields:
 - title: 4-7 word title in title case — the CORE CONCLUSION of this conversation (as instructed above)
 - summary: Maximum 2-line summary of the conversation. Focus on the core issue, not generic recap.
 - psychology: {
-    "sentiment": "positive|neutral|anxious|frustrated|engaged|disengaged",
-    "sentiment_score": 0.0-1.0,
+    "sentiment_label": "Positive | Reflective | Anxious | Strained | Mixed",
     "behavioural_interpretation": [
       {
         "observed_behaviour": "What the employee actually did or said",
         "evidence": "Direct quote or specific observation from transcript",
-        "interpretation": "What this behaviour likely indicates (use probabilistic language) — never attach a clinical or trait label; describe the specific behaviour in plain, descriptive language anchored to what they actually said",
+        "interpretation": "What this behaviour likely indicates (use probabilistic language) — never attach a clinical or trait label; describe the specific behaviour in plain, descriptive language anchored to what they actually said; never speculate about unstated motives, fears, or needs (no 'possibly because...', no 'this suggests he may be...')",
         "confidence_label": "Strong Signal | Moderate Signal | Light Signal"
       }
     ]
   }
+  For sentiment_label only: Never output a numeric sentiment score. Describe the emotional tone in one or two words, grounded in what was actually said. Pick the single best descriptor that reflects the tone of the exchange itself — never a number.
 - conversation_coach: [
     {
       "immediate_response": "What HR should say right now in this conversation",
@@ -534,7 +600,7 @@ Return a JSON object with these fields:
     "defensive_behaviour": "A short natural sentence describing any defensive behaviour observed. If none is present, write a brief natural sentence such as 'Nothing flagged — the conversation felt open and low-stress.' Never return a bare status label like 'None observed'.",
     "communication_style": "e.g. direct, hesitant, emotional, analytical, passive",
     "evidence": "Transcript evidence supporting the safety assessment",
-    "interpretation": "What the safety signals likely indicate",
+    "interpretation": "What the safety signals likely indicate — ground this in observable behaviour from the transcript; never speculate about unstated motives, fears, or needs (no 'possibly because...', no 'this suggests he may be...')",
     "confidence_label": "Strong Signal | Moderate Signal | Light Signal"
   }
 - risks: { "burnout_index": 0-100, "attrition_risk_pct": 0-100, "risk_factors": ["list of specific risk factors observed"] }
@@ -545,7 +611,7 @@ Return a JSON object with these fields:
     "observed_behaviour": "What the employee actually did or said",
     "behaviour_pattern": "Recurring pattern detected (e.g. deflection, rationalisation, openness)",
     "supporting_evidence": "Direct quote or specific observation from transcript",
-    "ai_interpretation": "What this pattern likely indicates (use probabilistic language) — never attach a clinical or trait label; describe the specific behaviour in plain, descriptive language anchored to what they said",
+    "ai_interpretation": "What this pattern likely indicates (use probabilistic language) — never attach a clinical or trait label; describe the specific behaviour in plain, descriptive language anchored to what they said; never speculate about unstated motives, fears, or needs (no 'possibly because...', no 'this suggests he may be...')",
     "alternative_interpretation": "A different plausible explanation if evidence is limited",
     "conversation_direction": "exploratory | solution-seeking | emotional | defensive | uncertain",
     "confidence_label": "Strong Signal | Moderate Signal | Light Signal",
@@ -562,7 +628,7 @@ Return a JSON object with these fields:
     "supporting_evidence": ["List of specific evidence points from transcript"],
     "evidence_strength": "Strong | Moderate | Limited",
     "missing_information": ["What information would improve confidence"],
-    "ai_reasoning": "Explain why this is the most likely cause, referencing transcript evidence — describe the specific behaviour in plain, descriptive language, never a clinical or trait label",
+    "ai_reasoning": "Explain why this is the most likely cause, referencing transcript evidence — describe the specific behaviour in plain, descriptive language, never a clinical or trait label; never speculate about unstated motives, fears, or needs (no 'possibly because...', no 'indicating a need for...', no 'this suggests he may feel...')",
     "confidence_label": "Strong Signal | Moderate Signal | Light Signal",
     "suggested_script": "A question that helps HR validate the suspected cause",
     "recommended_actions": ["3-5 practical investigation steps"],
@@ -577,7 +643,7 @@ Return a JSON object with these fields:
     "manager_action": "What the manager can change in their approach",
     "employee_action": "What the employee can do",
     "environment": "Work environment or tooling adjustment",
-    "success_metric": "How to measure if the action worked",
+    "success_metric": "What HR should notice or check on next time — do NOT frame this as a target or milestone the employee needs to reach (avoid 'Success looks like: [employee] does X'). Phrase it as an observation for HR's attention, e.g. 'Next check-in: notice whether Harshit has found it easier to ask for support, without treating it as a milestone he needs to hit.'",
     "expected_outcome": "What improvement HR should realistically expect",
     "why_it_works": "Explanation of why the suggested approach is effective",
     "suggested_script": "How HR should present the action plan to the employee",
@@ -630,8 +696,9 @@ STRICT RULES
 7. Tone: 50% Professional, 30% Calm Stoic, 20% Casual Human. Never sound like therapy or corporate HR templates.
 8. This tool exists to help HR remember what to follow up on — it does not score, rank, or rate the employee. Never phrase output as a judgment of the employee (e.g. avoid framing like "Harshit scored 75% positive sentiment"). Frame output as guidance for HR's next action (e.g. "These are the things worth following up on next time").
 9. Never attach a clinical or trait label to the employee (e.g. "perfectionist tendency", "self-critical inner dialogue", "anxiety pattern"). Instead, describe the specific behaviour in plain, descriptive language anchored to what they actually said — e.g. "Harshit named a pattern of blaming himself after small mistakes" rather than "perfectionist tendency".
-10. Never emit a bare status word for a signal or flag field (e.g. "None observed", "N/A", "Not observed"). If nothing is flagged, write a brief natural sentence such as "Nothing flagged — the conversation felt open and low-stress."
-11. Every confidence_label field must use exactly one value: Strong Signal | Moderate Signal | Light Signal. Strong Signal = multiple clear, direct pieces of transcript evidence. Moderate Signal = some supporting evidence but with a plausible alternative reading. Light Signal = a single weak or indirect cue. Never output a number.
+10. Do not speculate about the employee's underlying motives, fears, or psychological needs beyond what they explicitly said. Avoid phrases like "possibly because...", "this suggests he may be...", "indicating a need for..." — these are unstated inferences, not observations. Stick to describing what was said and what pattern it forms in behavior, not why it exists internally. If a reasonable behavioral observation is useful, phrase it as a description of the pattern itself, not a theory about its psychological cause — e.g. write "Harshit shared this without being asked" rather than "this suggests he may feel isolated and needs to unload."
+11. Never emit a bare status word for a signal or flag field (e.g. "None observed", "N/A", "Not observed"). If nothing is flagged, write a brief natural sentence such as "Nothing flagged — the conversation felt open and low-stress."
+12. Every confidence_label field must use exactly one value: Strong Signal | Moderate Signal | Light Signal. Strong Signal = multiple clear, direct pieces of transcript evidence. Moderate Signal = some supporting evidence but with a plausible alternative reading. Light Signal = a single weak or indirect cue. Never output a number.
 
 INTERNAL VERIFICATION (silently check before generating output):
 - Evidence exists
@@ -651,17 +718,17 @@ Return a JSON object with these fields:
 - title: 4-7 word title in title case — the CORE CONCLUSION of this conversation (as instructed above)
 - summary: Maximum 2-line summary of the conversation. Focus on the core issue, not generic recap.
 - psychology: {
-    "sentiment": "positive|neutral|anxious|frustrated|engaged|disengaged",
-    "sentiment_score": 0.0-1.0,
+    "sentiment_label": "Positive | Reflective | Anxious | Strained | Mixed",
     "behavioural_interpretation": [
       {
         "observed_behaviour": "What the employee actually did or said",
         "evidence": "Direct quote or specific observation from transcript",
-        "interpretation": "What this behaviour likely indicates (use probabilistic language) — never attach a clinical or trait label; describe the specific behaviour in plain, descriptive language anchored to what they actually said",
+        "interpretation": "What this behaviour likely indicates (use probabilistic language) — never attach a clinical or trait label; describe the specific behaviour in plain, descriptive language anchored to what they actually said; never speculate about unstated motives, fears, or needs (no 'possibly because...', no 'this suggests he may be...')",
         "confidence_label": "Strong Signal | Moderate Signal | Light Signal"
       }
     ]
   }
+  For sentiment_label only: Never output a numeric sentiment score. Describe the emotional tone in one or two words, grounded in what was actually said. Pick the single best descriptor that reflects the tone of the exchange itself — never a number.
 - conversation_coach: [
     {
       "immediate_response": "What HR should say right now in this conversation",
@@ -703,7 +770,7 @@ Return a JSON object with these fields:
     "defensive_behaviour": "A short natural sentence describing any defensive behaviour observed. If none is present, write a brief natural sentence such as 'Nothing flagged — the conversation felt open and low-stress.' Never return a bare status label like 'None observed'.",
     "communication_style": "e.g. direct, hesitant, emotional, analytical, passive",
     "evidence": "Transcript evidence supporting the safety assessment",
-    "interpretation": "What the safety signals likely indicate",
+    "interpretation": "What the safety signals likely indicate — ground this in observable behaviour from the transcript; never speculate about unstated motives, fears, or needs (no 'possibly because...', no 'this suggests he may be...')",
     "confidence_label": "Strong Signal | Moderate Signal | Light Signal"
   }
 - risks: { "burnout_index": 0-100, "attrition_risk_pct": 0-100, "risk_factors": ["list of specific risk factors observed"] }
@@ -714,7 +781,7 @@ Return a JSON object with these fields:
     "observed_behaviour": "What the employee actually did or said",
     "behaviour_pattern": "Recurring pattern detected (e.g. deflection, rationalisation, openness)",
     "supporting_evidence": "Direct quote or specific observation from transcript",
-    "ai_interpretation": "What this pattern likely indicates (use probabilistic language) — never attach a clinical or trait label; describe the specific behaviour in plain, descriptive language anchored to what they said",
+    "ai_interpretation": "What this pattern likely indicates (use probabilistic language) — never attach a clinical or trait label; describe the specific behaviour in plain, descriptive language anchored to what they said; never speculate about unstated motives, fears, or needs (no 'possibly because...', no 'this suggests he may be...')",
     "alternative_interpretation": "A different plausible explanation if evidence is limited",
     "conversation_direction": "exploratory | solution-seeking | emotional | defensive | uncertain",
     "confidence_label": "Strong Signal | Moderate Signal | Light Signal",
@@ -731,7 +798,7 @@ Return a JSON object with these fields:
     "supporting_evidence": ["List of specific evidence points from transcript"],
     "evidence_strength": "Strong | Moderate | Limited",
     "missing_information": ["What information would improve confidence"],
-    "ai_reasoning": "Explain why this is the most likely cause, referencing transcript evidence — describe the specific behaviour in plain, descriptive language, never a clinical or trait label",
+    "ai_reasoning": "Explain why this is the most likely cause, referencing transcript evidence — describe the specific behaviour in plain, descriptive language, never a clinical or trait label; never speculate about unstated motives, fears, or needs (no 'possibly because...', no 'indicating a need for...', no 'this suggests he may feel...')",
     "confidence_label": "Strong Signal | Moderate Signal | Light Signal",
     "suggested_script": "A question that helps HR validate the suspected cause",
     "recommended_actions": ["3-5 practical investigation steps"],
@@ -746,7 +813,7 @@ Return a JSON object with these fields:
     "manager_action": "What the manager can change in their approach",
     "employee_action": "What the employee can do",
     "environment": "Work environment or tooling adjustment",
-    "success_metric": "How to measure if the action worked",
+    "success_metric": "What HR should notice or check on next time — do NOT frame this as a target or milestone the employee needs to reach (avoid 'Success looks like: [employee] does X'). Phrase it as an observation for HR's attention, e.g. 'Next check-in: notice whether Harshit has found it easier to ask for support, without treating it as a milestone he needs to hit.'",
     "expected_outcome": "What improvement HR should realistically expect",
     "why_it_works": "Explanation of why the suggested approach is effective",
     "suggested_script": "How HR should present the action plan to the employee",
@@ -826,7 +893,7 @@ Return ONLY valid JSON, no markdown formatting, no code fences."""
 
 FALLBACK_ANALYSIS = {
     "summary": "Analysis failed — could not parse AI response.",
-    "psychology": {"sentiment": "unknown", "sentiment_score": 0.0, "behavioural_interpretation": []},
+    "psychology": {"sentiment_label": "", "behavioural_interpretation": []},
     "conversation_coach": [],
     "realistic_solutions": {"immediate": "", "this_week": "", "manager": "", "environment": ""},
     "next_conversation_plan": [],

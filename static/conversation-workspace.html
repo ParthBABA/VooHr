@@ -581,7 +581,7 @@ window.voohrInitWorkspace = function() {
     var openness = cleanVal(ps.openness);
     var style = cleanVal(ps.communication_style);
     var trust = cleanVal(ps.trust_level);
-    var sent = cleanVal(psych.sentiment);
+    var sent = cleanVal(psych.sentiment_label) || cleanVal(psych.sentiment);
     if (openness) ctx.push('openness read as ' + openness.toLowerCase());
     if (style) ctx.push('the exchange carried a "' + style.toLowerCase() + '" tone');
     if (trust) {
@@ -651,8 +651,6 @@ window.voohrInitWorkspace = function() {
     var dimsEl = document.getElementById('wsScoreDims');
     if (dimsEl) {
       var dims = [];
-      var sentPct = (psych.sentiment_score !== null && psych.sentiment_score !== undefined && !isNaN(psych.sentiment_score)) ? Math.round(psych.sentiment_score * 100) : null;
-      if (sentPct !== null) dims.push({ label: 'Sentiment', value: sentPct, suffix: '%', cls: scoreBand(sentPct).cls });
       var tone = numVal(pa && pa.overall_tone_score);
       if (tone !== null) dims.push({ label: 'Phrasing tone', value: tone, suffix: '', cls: scoreBand(tone).cls });
       dimsEl.style.display = dims.length ? '' : 'none';
@@ -663,6 +661,7 @@ window.voohrInitWorkspace = function() {
     if (factsEl) {
       var defs = cleanVal(ps.defensive_behaviour);
       var confLbl = ps && ps.confidence_label;
+      var sentLbl = cleanVal(psych.sentiment_label) || cleanVal(psych.sentiment);
       var facts = '';
       if (defs) {
         facts += '<span class="wsx-fact warn"><b>Watch for</b>' + esc(defs) + '</span>';
@@ -671,6 +670,9 @@ window.voohrInitWorkspace = function() {
       }
       if (confLbl) {
         facts += '<span class="wsx-fact"><b>Signal</b>' + confBadge(confLbl) + '</span>';
+      }
+      if (sentLbl) {
+        facts += '<span class="wsx-fact"><b>Tone</b>' + confBadge(sentLbl) + '</span>';
       }
       factsEl.style.display = facts ? '' : 'none';
       factsEl.innerHTML = facts;
@@ -805,20 +807,33 @@ window.voohrInitWorkspace = function() {
         add('In the conversation', c.immediate_response);
       });
     }
-    if (!acts.length) {
+    acts = acts.slice(0, 4);
+    var metric = cleanVal(bp.success_metric) || cleanVal(bp.expected_outcome);
+    if (!acts.length && !metric) {
       host.innerHTML = '<div class="wsx-empty">No follow-up actions were generated for this conversation yet.</div>';
       return;
     }
-    var html = acts.slice(0, 4).map(function(x) {
-      return (
-        '<div class="wsx-action">' +
-          '<div class="wsx-kick">' + esc(x.kick) + '</div>' +
-          '<p class="wsx-body">' + esc(x.text) + '</p>' +
-        '</div>'
-      );
-    }).join('');
-    var metric = cleanVal(bp.success_metric) || cleanVal(bp.expected_outcome);
-    if (metric) html += '<div class="wsx-metric"><span>Success looks like</span>' + esc(metric) + '</div>';
+
+    var html = '<div class="wsx-steps">';
+    acts.forEach(function(x, i) {
+      if (i > 0) html += '<div class="wsx-step-connector"></div>';
+      html +=
+        '<div class="wsx-step">' +
+          '<div class="wsx-step-dot">' + (i + 1) + '</div>' +
+          '<div class="wsx-step-kick">' + esc(x.kick) + '</div>' +
+          '<div class="wsx-step-body">' + esc(x.text) + '</div>' +
+        '</div>';
+    });
+    if (metric) {
+      if (acts.length) html += '<div class="wsx-step-connector wsx-step-connector-dest"></div>';
+      html +=
+        '<div class="wsx-step wsx-step-dest">' +
+          '<div class="wsx-step-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+          '<div class="wsx-step-kick">What to notice next time</div>' +
+          '<div class="wsx-step-body">' + esc(metric) + '</div>' +
+        '</div>';
+    }
+    html += '</div>';
     host.innerHTML = html;
   }
 
