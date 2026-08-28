@@ -194,9 +194,35 @@ function processAudio() {
 }
 
 function updateWordCount() {
-  var text = document.getElementById('transcriptArea').value.trim();
+  var area = document.getElementById('transcriptArea');
+  var text = area.value.trim();
   var count = text ? text.split(/\s+/).length : 0;
-  document.getElementById('wordCount').textContent = count + ' words';
+  var chars = area.value.length;
+  document.getElementById('wordCount').textContent = count + ' words · ' + chars + ' characters';
+}
+
+function copyTranscript() {
+  var area = document.getElementById('transcriptArea');
+  if (!area) return;
+  if (!area.value) { showToast('Nothing to copy yet'); return; }
+  var done = function() { showToast('Transcript copied to clipboard'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(area.value).then(done).catch(function() {
+      area.select(); document.execCommand('copy'); done();
+    });
+  } else {
+    area.select(); document.execCommand('copy'); done();
+  }
+  area.setSelectionRange(0, 0);
+}
+
+function clearTranscript() {
+  var area = document.getElementById('transcriptArea');
+  if (!area) return;
+  if (area.value.trim() && !confirm('Clear the transcript?')) return;
+  area.value = '';
+  updateWordCount();
+  document.getElementById('saveBtn').disabled = true;
 }
 
 function saveSession() {
@@ -538,6 +564,11 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('transcribeAudioBtn').addEventListener('click', transcribeUploadedAudio);
   document.getElementById('extractImageBtn').addEventListener('click', extractUploadedImage);
 
+  var copyBtn = document.getElementById('copyBtn');
+  if (copyBtn) copyBtn.addEventListener('click', copyTranscript);
+  var clearBtn = document.getElementById('clearBtn');
+  if (clearBtn) clearBtn.addEventListener('click', clearTranscript);
+
   updateTabCaption();
 
   document.addEventListener('keydown', function(e) {
@@ -605,16 +636,21 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="content-area">
       <div class="dictation-page">
         <div class="dictation-main">
-          <div class="dictation-header">
-            <div class="emp-avatar-lg" id="sessionAvatar">?</div>
-            <h1 id="sessionEmployeeName">Loading...</h1>
-            <div class="breadcrumb" id="sessionBreadcrumb"></div>
+
+          <!-- Heading -->
+          <div class="dictation-heading">
+            <div class="dictation-heading-text">
+              <h1 class="dictation-title">AI Dictation</h1>
+              <p class="dictation-subtitle">Record voice or import a file to build a transcript for this employee's AI Sync session.</p>
+            </div>
+            <div class="dictation-employee" id="sessionAvatar" title="Recording for employee">?</div>
           </div>
 
+          <!-- Mode selector -->
           <div class="input-tabs" id="inputTabs" role="tablist" aria-label="How to add a transcript">
             <button class="input-tab active" id="tabBtn-record" data-tab="record" role="tab" aria-selected="true" aria-controls="tab-record">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-              Record
+              Record Audio
             </button>
             <button class="input-tab" id="tabBtn-upload-audio" data-tab="upload-audio" role="tab" aria-selected="false" aria-controls="tab-upload-audio" tabindex="-1">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -631,89 +667,169 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
           <div class="input-tab-caption" id="inputTabCaption">Live microphone — recording saved as WebM</div>
 
-          <div class="tab-pane" id="tab-record" role="tabpanel" aria-labelledby="tabBtn-record">
-            <div class="recording-area">
-              <button class="mic-btn" id="micBtn" title="Tap to record">
-                <svg id="recordIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                <svg id="stopIcon" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none;"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-              </button>
-              <div class="timer" id="recordingTimer">00:00</div>
-              <div class="status-text" id="recordingStatus">Tap to start recording</div>
-              <div class="waveform" id="waveform">
-                <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
-                <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
-                <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
-                <div class="wf-bar"></div>
+          <!-- Two-column layout -->
+          <div class="dictation-grid">
+
+            <!-- LEFT: source / recording column -->
+            <div class="dictation-left">
+
+              <!-- Record mode -->
+              <div class="tab-pane" id="tab-record" role="tabpanel" aria-labelledby="tabBtn-record">
+                <div class="recording-area">
+                  <div class="rec-status">
+                    <span class="rec-status-dot"></span>
+                    <span id="recordingStatus">Tap to start recording</span>
+                  </div>
+                  <button class="mic-btn" id="micBtn" title="Tap to record">
+                    <svg id="recordIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                    <svg id="stopIcon" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none;"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                  </button>
+                  <div class="timer" id="recordingTimer">00:00</div>
+                  <div class="waveform" id="waveform">
+                    <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
+                    <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
+                    <div class="wf-bar"></div><div class="wf-bar"></div><div class="wf-bar"></div>
+                    <div class="wf-bar"></div>
+                  </div>
+                  <div class="rec-settings">
+                    <div class="rec-settings-card">
+                      <div class="rsc-label">Quality</div>
+                      <div class="rsc-value">High</div>
+                    </div>
+                    <div class="rec-settings-card">
+                      <div class="rsc-label">Language</div>
+                      <div class="rsc-value">English</div>
+                    </div>
+                    <div class="rec-settings-card">
+                      <div class="rsc-label">Auto Punctuation</div>
+                      <div class="rsc-value">On</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Upload Audio mode -->
+              <div class="tab-pane" id="tab-upload-audio" role="tabpanel" aria-labelledby="tabBtn-upload-audio" style="display:none;">
+                <div class="upload-card">
+                  <div class="dropzone" id="audioDropzone" role="button" tabindex="0" aria-label="Upload an audio file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    <div class="dz-title">Drop an audio file here or <span>click to browse</span></div>
+                    <div class="dz-subtitle">MP3, WAV, M4A, OGG, WEBM · up to 25MB</div>
+                    <input type="file" id="audioInput" accept=".mp3,.wav,.m4a,.ogg,.webm,audio/*" style="display:none;">
+                  </div>
+                  <div class="file-meta" id="audioFileMeta" style="display:none;">
+                    <span class="file-name" id="audioFileName"></span>
+                    <span class="file-size" id="audioFileSize"></span>
+                  </div>
+                  <div class="upload-actions">
+                    <button class="btn btn-primary btn-sm" id="transcribeAudioBtn" disabled>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      Transcribe
+                    </button>
+                    <div class="status-text" id="audioStatus">No file selected</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Upload Image mode -->
+              <div class="tab-pane" id="tab-upload-image" role="tabpanel" aria-labelledby="tabBtn-upload-image" style="display:none;">
+                <div class="upload-card">
+                  <div class="dropzone" id="imageDropzone" role="button" tabindex="0" aria-label="Upload an image to extract text from">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <div class="dz-title">Drop a photo or screenshot here or <span>click to browse</span></div>
+                    <div class="dz-subtitle">PNG, JPG, JPEG, WEBP · up to 10MB</div>
+                    <input type="file" id="imageInput" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" style="display:none;">
+                  </div>
+                  <div class="file-meta" id="imageFileMeta" style="display:none;">
+                    <span class="file-name" id="imageFileName"></span>
+                    <span class="file-size" id="imageFileSize"></span>
+                  </div>
+                  <div class="upload-actions">
+                    <button class="btn btn-primary btn-sm" id="extractImageBtn" disabled>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h3"/><path d="M20 7V4h-3"/><path d="M4 17v3h3"/><path d="M20 17v3h-3"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+                      Extract Text
+                    </button>
+                    <div class="status-text" id="imageStatus">No image selected</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Upload Text mode -->
+              <div class="tab-pane" id="tab-upload-text" role="tabpanel" aria-labelledby="tabBtn-upload-text" style="display:none;">
+                <div class="upload-card">
+                  <div class="dropzone" id="textDropzone" role="button" tabindex="0" aria-label="Upload a text transcript file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <div class="dz-title">Drop a transcript file here or <span>click to browse</span></div>
+                    <div class="dz-subtitle">Plain text (.TXT)</div>
+                    <input type="file" id="textInput" accept=".txt,text/plain" style="display:none;">
+                  </div>
+                  <div class="file-meta" id="textFileMeta" style="display:none;">
+                    <span class="file-name" id="textFileName"></span>
+                    <span class="file-size" id="textFileSize"></span>
+                  </div>
+                  <div class="upload-actions">
+                    <div class="status-text" id="textStatus">No file selected</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- RIGHT: transcript column -->
+            <div class="dictation-right">
+              <div class="transcript-card">
+                <div class="transcript-card-header">
+                  <div class="transcript-card-title">Transcript</div>
+                  <div class="transcript-card-actions">
+                    <button class="tc-icon-btn" id="copyBtn" title="Copy transcript">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                      <span>Copy</span>
+                    </button>
+                    <button class="tc-icon-btn" id="clearBtn" title="Clear transcript">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                      <span>Clear</span>
+                    </button>
+                  </div>
+                </div>
+                <textarea class="transcript-area" id="transcriptArea" placeholder="Transcript text appears here from any input. You can edit it before saving."></textarea>
+                <div class="transcript-card-footer">
+                  <div class="transcript-meta"><span id="wordCount">0 words · 0 characters</span></div>
+                  <select class="transcript-lang-select" id="transcriptLang" aria-label="Transcript language">
+                    <option value="en">English</option>
+                    <option value="hi">Hindi</option>
+                  </select>
+                  <div class="transcript-save-row">
+                    <button class="btn btn-outline btn-sm" id="discardBtn">Discard</button>
+                    <button class="btn btn-primary btn-sm" id="saveBtn" disabled>Save Transcript</button>
+                  </div>
+                </div>
               </div>
             </div>
+
           </div>
 
-          <div class="tab-pane" id="tab-upload-audio" role="tabpanel" aria-labelledby="tabBtn-upload-audio" style="display:none;">
-            <div class="dropzone" id="audioDropzone" role="button" tabindex="0" aria-label="Upload an audio file">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-              <div class="dz-title">Drop an audio file here or <span>click to browse</span></div>
-              <div class="dz-subtitle">MP3, WAV, M4A, OGG, WEBM · up to 25MB</div>
-              <input type="file" id="audioInput" accept=".mp3,.wav,.m4a,.ogg,.webm,audio/*" style="display:none;">
-            </div>
-            <div class="file-meta" id="audioFileMeta" style="display:none;">
-              <span class="file-name" id="audioFileName"></span>
-              <span class="file-size" id="audioFileSize"></span>
-            </div>
-            <div class="upload-actions">
-              <button class="btn btn-primary btn-sm" id="transcribeAudioBtn" disabled>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                Transcribe
-              </button>
-              <div class="status-text" id="audioStatus">No file selected</div>
-            </div>
+          <!-- Tip row -->
+          <div class="dictation-tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Tip: Speak clearly and pause between sentences. You can edit the transcript anytime before saving.
           </div>
 
-          <div class="tab-pane" id="tab-upload-image" role="tabpanel" aria-labelledby="tabBtn-upload-image" style="display:none;">
-            <div class="dropzone" id="imageDropzone" role="button" tabindex="0" aria-label="Upload an image to extract text from">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <div class="dz-title">Drop a photo or screenshot here or <span>click to browse</span></div>
-              <div class="dz-subtitle">PNG, JPG, JPEG, WEBP · up to 10MB</div>
-              <input type="file" id="imageInput" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" style="display:none;">
+          <!-- Feature strip -->
+          <div class="dictation-features">
+            <div class="dictation-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              High Accuracy
             </div>
-            <div class="file-meta" id="imageFileMeta" style="display:none;">
-              <span class="file-name" id="imageFileName"></span>
-              <span class="file-size" id="imageFileSize"></span>
+            <div class="dictation-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              Secure &amp; Private
             </div>
-            <div class="upload-actions">
-              <button class="btn btn-primary btn-sm" id="extractImageBtn" disabled>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h3"/><path d="M20 7V4h-3"/><path d="M4 17v3h3"/><path d="M20 17v3h-3"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
-                Extract Text
-              </button>
-              <div class="status-text" id="imageStatus">No image selected</div>
+            <div class="dictation-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+              Multi-language
             </div>
           </div>
 
-          <div class="tab-pane" id="tab-upload-text" role="tabpanel" aria-labelledby="tabBtn-upload-text" style="display:none;">
-            <div class="dropzone" id="textDropzone" role="button" tabindex="0" aria-label="Upload a text transcript file">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              <div class="dz-title">Drop a transcript file here or <span>click to browse</span></div>
-              <div class="dz-subtitle">Plain text (.TXT)</div>
-              <input type="file" id="textInput" accept=".txt,text/plain" style="display:none;">
-            </div>
-            <div class="file-meta" id="textFileMeta" style="display:none;">
-              <span class="file-name" id="textFileName"></span>
-              <span class="file-size" id="textFileSize"></span>
-            </div>
-            <div class="upload-actions">
-              <div class="status-text" id="textStatus">No file selected</div>
-            </div>
-          </div>
-
-          <div class="transcript-section">
-            <div class="transcript-label">Transcript — edit anything before saving</div>
-            <textarea class="transcript-area" id="transcriptArea" placeholder="Transcript text appears here from any input. You can edit it before saving."></textarea>
-            <div class="transcript-meta"><span id="wordCount">0 words</span></div>
-          </div>
-
-          <div class="dictation-actions">
-            <button class="btn btn-sm" id="discardBtn">Discard</button>
-            <button class="btn btn-primary btn-sm" id="saveBtn" disabled>Save Session</button>
-          </div>
         </div>
       </div>
     </div>
