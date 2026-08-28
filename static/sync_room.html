@@ -473,8 +473,8 @@
     <div class="top-bar">
       <div class="top-bar-left">
         <div>
-          <div class="page-title" id="syncTitle">Sync Room - Priya Sharma</div>
-          <div class="breadcrumb"><span>Dashboard</span> / <span>Sync</span> / <span id="syncBreadcrumb">Priya Sharma</span></div>
+          <div class="page-title" id="syncTitle">Sync Room</div>
+          <div class="breadcrumb"><span>Dashboard</span> / <span>Sync</span> / <span id="syncBreadcrumb">Loading...</span></div>
         </div>
       </div>
       <div class="top-bar-right">
@@ -1366,6 +1366,8 @@ sessionPromise.then(function(s) {
   if (emp && emp.name) {
     document.getElementById('syncTitle').textContent = 'Sync Room - ' + emp.name;
     document.getElementById('syncBreadcrumb').textContent = emp.name;
+  } else {
+    document.getElementById('syncBreadcrumb').textContent = 'Employee';
   }
 
   // ── Employee Context Card ──
