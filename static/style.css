@@ -1128,3 +1128,194 @@ html[data-theme="light"] .ws-coach .wsx-section-title{background:linear-gradient
 .ws-coach .wsx-quote{font-style:italic;border-left-color:rgba(51,160,143,0.5);background:var(--teal-soft);}
 .ws-coach .wsx-ev{color:var(--teal);}
 .ws-coach .wsx-conf{color:var(--ivory-dim);border-color:rgba(212,136,74,0.3);background:var(--amber-soft);}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DICTATION PAGE (static/dictation.html) — "New Session" recording,
+   upload + transcript page. Layout + spacing only; reuses the design
+   tokens defined in :root. No new colors or animation behavior.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dictation-page{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  background:var(--void);
+  padding:2rem 1rem 3rem;
+}
+.dictation-main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  width:100%;
+  max-width:720px;
+  margin:0 auto;
+}
+
+/* ── Header: avatar → name → breadcrumb, centered, breathing room ── */
+.dictation-header{
+  text-align:center;
+  margin-bottom:2.2rem;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.dictation-header .emp-avatar-lg{
+  width:96px;height:96px;border-radius:50%;
+  background:linear-gradient(135deg,var(--violet),var(--amber));
+  border:2px solid var(--border-lit);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-d);font-size:1.6rem;font-weight:700;color:var(--void);
+  margin-bottom:1rem;box-shadow:var(--shadow-md);
+}
+.dictation-header h1{
+  font-family:var(--font-d);font-size:1.15rem;font-weight:700;color:var(--ivory);
+  margin:0 0 0.5rem;
+}
+.dictation-header .breadcrumb{
+  font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--ivory-faint);
+}
+
+/* ── Tab bar: segmented pill control ── */
+.input-tabs{
+  display:flex;gap:0.5rem;
+  padding:0.4rem;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  margin-bottom:1rem;
+}
+.input-tab{
+  flex:1;
+  display:flex;align-items:center;justify-content:center;gap:0.5rem;
+  padding:0.7rem 0.6rem;
+  font-family:var(--font-m);font-size:0.62rem;font-weight:600;
+  letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--ivory-faint);
+  background:transparent;border:1px solid transparent;border-radius:7px;
+  cursor:pointer;transition:all 0.3s var(--ease-out);white-space:nowrap;
+}
+.input-tab svg{width:14px;height:14px;opacity:0.6;flex-shrink:0;transition:all 0.3s;}
+.input-tab:hover{color:var(--ivory);background:var(--ivory-ghost);}
+.input-tab.active{
+  color:var(--void);background:var(--amber);border-color:var(--amber);
+  box-shadow:0 0 14px var(--amber-glow);
+}
+.input-tab.active svg{color:var(--void);opacity:1;}
+.input-tab:focus-visible{outline:2px solid var(--amber);outline-offset:-2px;}
+
+.input-tab-caption{
+  font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--ivory-faint);text-align:center;margin:0 0 1.6rem;
+}
+
+.tab-pane{margin-bottom:1.8rem;}
+
+/* ── Recording area: card-like block ── */
+.recording-area{
+  text-align:center;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:2.4rem 1.5rem 2rem;
+  box-shadow:var(--shadow-sm);
+}
+.mic-btn{
+  width:88px;height:88px;border-radius:50%;
+  border:2px solid var(--border);
+  background:var(--ink);color:var(--ivory-faint);
+  display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all 0.3s var(--ease-out);position:relative;
+}
+.mic-btn:hover{border-color:var(--border-lit);color:var(--ivory);background:var(--ivory-ghost);}
+.mic-btn.recording{border-color:var(--red);color:var(--red);box-shadow:0 0 20px rgba(232,69,69,0.25);animation:micPulse 1.5s ease-in-out infinite;}
+.mic-btn svg{width:34px;height:34px;transition:transform 0.3s;}
+.mic-btn:hover svg{transform:scale(1.06);}
+@keyframes micPulse{
+  0%,100%{box-shadow:0 0 20px rgba(232,69,69,0.25);}
+  50%{box-shadow:0 0 36px rgba(232,69,69,0.45);}
+}
+.timer{
+  font-family:var(--font-m);font-size:2rem;font-weight:700;color:var(--ivory);
+  margin-top:1.4rem;letter-spacing:0.05em;
+}
+.status-text{
+  font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--ivory-faint);margin-top:0.6rem;
+}
+.waveform{
+  display:flex;align-items:flex-end;justify-content:center;gap:4px;
+  height:32px;margin-top:1.3rem;flex-wrap:nowrap;
+}
+.wf-bar{width:4px;background:var(--amber);border-radius:2px;transition:height 0.15s ease;height:4px;flex-shrink:0;}
+
+/* ── Dropzone: dashed upload card with amber hover glow ── */
+.dropzone{
+  width:100%;min-height:150px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.7rem;
+  padding:2.4rem 1.5rem;
+  border:2px dashed var(--border);border-radius:10px;
+  background:transparent;color:var(--ivory-faint);
+  cursor:pointer;transition:border-color 0.3s,background 0.3s,box-shadow 0.3s;
+  text-align:center;
+}
+.dropzone:hover{border-color:var(--amber);background:var(--amber-soft);box-shadow:0 0 16px var(--amber-glow);}
+.dropzone:hover .dz-title{color:var(--ivory);}
+.dropzone.drag-over{border-color:var(--violet);background:var(--violet-soft);box-shadow:0 0 18px var(--violet-glow);}
+.dropzone.drag-over .dz-title{color:var(--ivory);}
+.dropzone.success{border-color:var(--teal);background:var(--teal-soft);box-shadow:0 0 14px var(--teal-glow);}
+.dropzone.success .dz-title{color:var(--teal);}
+.dropzone.error{border-color:var(--red);background:var(--red-soft);box-shadow:0 0 14px var(--red-glow);}
+.dropzone.error .dz-title{color:var(--red);}
+.dropzone svg{width:32px;height:32px;opacity:0.7;transition:color 0.3s;}
+.dropzone:hover svg{color:var(--amber);}
+.dropzone .dz-title{font-family:var(--font-b);font-size:0.9rem;color:var(--ivory-dim);transition:color 0.2s;}
+.dropzone .dz-title span{color:var(--violet);}
+.dropzone:hover .dz-title span{color:var(--amber);}
+.dropzone .dz-subtitle{font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ivory-faint);}
+.dropzone:focus-visible{outline:2px solid var(--violet);outline-offset:2px;}
+
+.file-meta{
+  display:flex;align-items:center;justify-content:center;gap:0.6rem;
+  margin-top:0.9rem;font-family:var(--font-m);font-size:0.6rem;
+}
+.file-meta .file-name{color:var(--ivory);font-weight:600;}
+.file-meta .file-size{color:var(--ivory-faint);}
+
+.upload-actions{
+  display:flex;flex-direction:column;align-items:center;gap:0.7rem;
+  margin-top:1.2rem;
+}
+.upload-actions .btn:disabled{opacity:0.4;cursor:default;}
+.upload-actions .btn:disabled:hover{background:var(--amber);border-color:var(--amber);box-shadow:none;}
+.status-text.status-success{color:var(--teal);}
+.status-text.status-error{color:var(--red);}
+
+/* ── Transcript section ── */
+.transcript-section{width:100%;margin-bottom:1.6rem;}
+.transcript-label{
+  font-family:var(--font-lato);font-weight:700;font-size:0.8rem;text-transform:uppercase;
+  letter-spacing:0.06em;color:var(--ivory-dim);margin-bottom:0.6rem;
+}
+.transcript-area{
+  width:100%;min-height:240px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:1.15rem 1.2rem;
+  font-family:var(--font-b);font-size:0.88rem;line-height:1.7;color:var(--ivory);
+  resize:vertical;outline:none;transition:border-color 0.3s,box-shadow 0.3s,background 0.3s;
+}
+.transcript-area:hover{border-color:var(--border-lit);}
+.transcript-area:focus{border-color:var(--amber);background:var(--elevated);box-shadow:0 0 0 3px var(--amber-soft);}
+.transcript-area::placeholder{color:var(--ivory-faint);}
+.transcript-meta{
+  display:flex;justify-content:flex-end;margin-top:0.6rem;
+  font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--ivory-faint);
+}
+
+/* ── Action bar: right-aligned, separated from transcript ── */
+.dictation-actions{
+  display:flex;justify-content:flex-end;gap:0.8rem;
+  margin-top:1.4rem;padding-top:1.4rem;
+  border-top:1px solid var(--border);
+}
+.dictation-actions .btn{min-width:140px;justify-content:center;}
