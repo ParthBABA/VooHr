@@ -819,6 +819,465 @@
     }
   }
 </style>
+<style>
+  /* =========================================================
+     STEP 2 — BEHAVIOURAL INTELLIGENCE — conversation
+     intelligence workspace redesign.
+     Scoped strictly to #stepContent2 (the main content area).
+     Reuses the --step-* tokens. No existing content removed;
+     dynamic analysis surfaces are re-composed via CSS only.
+     ========================================================= */
+  #stepContent2{ padding: 3rem 3.25rem 2.75rem; }
+
+  /* ---------- Section labels ---------- */
+  #stepContent2 .step2-label{
+    display: flex; align-items: center; gap: 0.55rem;
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--step-text-muted);
+    margin-bottom: 0.95rem;
+  }
+  #stepContent2 .step2-label::before{
+    content: ''; width: 7px; height: 7px; border-radius: 2px;
+    background: linear-gradient(135deg, var(--step-primary), rgba(139,92,246,0.4));
+    box-shadow: 0 0 10px rgba(139,92,246,0.45);
+  }
+  #stepContent2 .step2-label--teal::before{
+    background: linear-gradient(135deg, var(--step-success), rgba(52,211,153,0.35));
+    box-shadow: 0 0 10px rgba(52,211,153,0.40);
+  }
+  #stepContent2 .step2-label--red::before{
+    background: linear-gradient(135deg, var(--step-danger), rgba(248,113,113,0.35));
+    box-shadow: 0 0 10px rgba(248,113,113,0.40);
+  }
+
+  /* ---------- 1. AI interpretation insight strip ---------- */
+  #stepContent2 .step2-insight{
+    display: grid;
+    grid-template-columns: auto minmax(0,1fr);
+    gap: 1.2rem;
+    align-items: start;
+    margin-top: 1.4rem;
+    padding: 1.4rem 1.6rem;
+    background:
+      radial-gradient(120% 150% at 0% 0%, rgba(139,92,246,0.14), transparent 55%),
+      linear-gradient(135deg, rgba(139,92,246,0.06), rgba(139,92,246,0.02)),
+      var(--step-surface-raised);
+    border: 1px solid rgba(139,92,246,0.25);
+    border-radius: 12px;
+    box-shadow:
+      0 0 0 1px rgba(139,92,246,0.05),
+      0 12px 34px rgba(0,0,0,0.16),
+      0 0 30px rgba(139,92,246,0.08);
+  }
+  #stepContent2 .step2-insight-icon{
+    width: 46px; height: 46px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--step-primary-soft);
+    background: radial-gradient(75% 75% at 50% 30%, rgba(139,92,246,0.32), rgba(139,92,246,0.06));
+    border: 1px solid rgba(139,92,246,0.28);
+    box-shadow: 0 0 18px rgba(139,92,246,0.18), inset 0 0 14px rgba(139,92,246,0.08);
+  }
+  #stepContent2 .step2-insight-icon svg{ width: 24px; height: 24px; }
+  #stepContent2 .step2-insight-body{ min-width: 0; }
+  #stepContent2 .step2-insight-eyebrow{
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+  }
+  #stepContent2 .step2-insight .script-block{
+    margin: 0.55rem 0 0;
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+  }
+  #stepContent2 .step2-insight .script-block::before{
+    content: 'SUGGESTED LANGUAGE';
+    color: var(--step-text-muted);
+    margin-bottom: 5px;
+  }
+  #stepContent2 .step2-insight .script-text{
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--step-text);
+  }
+  #stepContent2 .step2-insight-note{
+    margin-top: 0.55rem;
+    padding-top: 0.55rem;
+    border-top: 1px dashed rgba(139,92,246,0.18);
+    font-family: var(--step-body-font);
+    font-size: 12px; line-height: 1.6;
+    color: var(--step-text-muted);
+  }
+
+  /* ---------- 2. Current signal map ---------- */
+  #stepContent2 .step2-map{ margin-top: 2.5rem; }
+  #stepContent2 .step2-signals{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0.8rem;
+  }
+  #stepContent2 .step2-signal{
+    padding: 1.05rem 1.05rem 1.1rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-card-bg);
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+  #stepContent2 .step2-signal:hover{ transform: translateY(-1px); }
+  #stepContent2 .step2-signal--amber{
+    border-color: rgba(251,191,36,0.22);
+    background: linear-gradient(160deg, rgba(251,191,36,0.05), transparent 62%), var(--step-card-bg);
+  }
+  #stepContent2 .step2-signal--red{
+    border-color: rgba(248,113,113,0.20);
+    background: linear-gradient(160deg, rgba(248,113,113,0.05), transparent 62%), var(--step-card-bg);
+  }
+  #stepContent2 .step2-signal--teal{
+    border-color: rgba(52,211,153,0.20);
+    background: linear-gradient(160deg, rgba(52,211,153,0.05), transparent 62%), var(--step-card-bg);
+  }
+  #stepContent2 .step2-signal-top{ display: flex; align-items: center; gap: 0.7rem; }
+  #stepContent2 .step2-signal-icon{
+    width: 34px; height: 34px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  #stepContent2 .step2-signal-icon svg{ width: 17px; height: 17px; }
+  #stepContent2 .step2-signal--amber .step2-signal-icon{
+    color: var(--step-warning);
+    background: rgba(251,191,36,0.12);
+    box-shadow: 0 0 14px rgba(251,191,36,0.12);
+  }
+  #stepContent2 .step2-signal--red .step2-signal-icon{
+    color: var(--step-danger);
+    background: rgba(248,113,113,0.10);
+    box-shadow: 0 0 14px rgba(248,113,113,0.12);
+  }
+  #stepContent2 .step2-signal--teal .step2-signal-icon{
+    color: var(--step-success);
+    background: rgba(52,211,153,0.10);
+    box-shadow: 0 0 14px rgba(52,211,153,0.12);
+  }
+  #stepContent2 .step2-signal-name{
+    font-family: var(--step-body-font);
+    font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--step-text-muted);
+    white-space: nowrap;
+  }
+  #stepContent2 .step2-signal-value{
+    font-family: var(--step-heading-font);
+    font-size: 15px; font-weight: 700; letter-spacing: 0.02em;
+    margin-top: 2px;
+  }
+  #stepContent2 .step2-signal--amber .step2-signal-value{ color: var(--step-warning); }
+  #stepContent2 .step2-signal--red .step2-signal-value{ color: var(--step-danger); }
+  #stepContent2 .step2-signal--teal .step2-signal-value{ color: var(--step-success); }
+  #stepContent2 .step2-signal-meter{
+    display: flex; align-items: flex-end; gap: 3px; height: 12px;
+    margin: 0 auto 0 0;
+  }
+  #stepContent2 .step2-signal-meter i{
+    width: 5px; border-radius: 2px;
+    background: var(--step-row-bg-hover);
+  }
+  #stepContent2 .step2-signal-meter i:nth-child(1){ height: 4px; }
+  #stepContent2 .step2-signal-meter i:nth-child(2){ height: 6px; }
+  #stepContent2 .step2-signal-meter i:nth-child(3){ height: 8px; }
+  #stepContent2 .step2-signal-meter i:nth-child(4){ height: 10px; }
+  #stepContent2 .step2-signal-meter i:nth-child(5){ height: 12px; }
+  #stepContent2 .step2-signal--amber .step2-signal-meter i.on{
+    background: var(--step-warning);
+    box-shadow: 0 0 6px rgba(251,191,36,0.5);
+  }
+  #stepContent2 .step2-signal--red .step2-signal-meter i.on{
+    background: var(--step-danger);
+    box-shadow: 0 0 6px rgba(248,113,113,0.5);
+  }
+  #stepContent2 .step2-signal--teal .step2-signal-meter i.on{
+    background: var(--step-success);
+    box-shadow: 0 0 6px rgba(52,211,153,0.5);
+  }
+  #stepContent2 .step2-signal-desc{
+    font-family: var(--step-body-font);
+    font-size: 12.5px; line-height: 1.6;
+    color: var(--step-text-secondary);
+    margin: 0.45rem 0 0;
+  }
+
+  /* ---------- 3. Patterns | What this could mean ---------- */
+  #stepContent2 .step2-split{
+    display: grid;
+    grid-template-columns: minmax(0,1.15fr) minmax(0,1fr);
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+  }
+  #stepContent2 .step2-pane{
+    min-width: 0;
+    border: 1px solid var(--step-border);
+    border-radius: 14px;
+    padding: 1.6rem 1.7rem 1.4rem;
+    background: var(--step-surface);
+    box-shadow: var(--step-shadow);
+  }
+  #stepContent2 .step2-pane--meaning{
+    background:
+      radial-gradient(120% 130% at 100% 0%, rgba(139,92,246,0.08), transparent 55%),
+      var(--step-surface);
+  }
+  /* Evidence feed — dynamic #step2Cards re-composed as compact rows */
+  #stepContent2 #step2Cards{
+    display: flex; flex-direction: column;
+    margin: 0;
+  }
+  #stepContent2 .analysis-card{
+    display: grid;
+    grid-template-columns: 158px minmax(0,1fr);
+    gap: 0.55rem 1.2rem;
+    align-items: baseline;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--step-border);
+    border-radius: 0;
+    padding: 0.9rem 0;
+    box-shadow: none;
+  }
+  #stepContent2 .analysis-card:hover{ transform: none; border-color: var(--step-border); }
+  #stepContent2 .analysis-card:last-child{ border-bottom: none; }
+  #stepContent2 .analysis-card .analysis-card-label{
+    margin: 0;
+    color: var(--step-primary-soft);
+  }
+  #stepContent2 .analysis-card--amber .analysis-card-label{ color: var(--step-warning); }
+  #stepContent2 .analysis-card--teal .analysis-card-label{ color: var(--step-success); }
+  #stepContent2 .analysis-card--red .analysis-card-label{ color: var(--step-danger); }
+  #stepContent2 .analysis-card--faint .analysis-card-label,
+  #stepContent2 .analysis-card--muted .analysis-card-label{ color: var(--step-text-muted); }
+  #stepContent2 .analysis-card .analysis-card-value{
+    font-size: 13.5px; line-height: 1.65;
+    color: var(--step-text);
+  }
+  #stepContent2 .analysis-card--dim-value .analysis-card-value{ color: var(--step-text-secondary); }
+  #stepContent2 #step2Cards .analysis-quote{
+    font-size: 14.5px; font-weight: 500;
+    padding: 0.4rem 0 1rem 1rem;
+    margin-bottom: 0.15rem;
+  }
+  #stepContent2 #step2Cards .analysis-confidence{
+    justify-content: space-between;
+    margin-top: 1rem;
+    background: var(--step-row-bg);
+    border: 1px solid var(--step-border);
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+  }
+  #stepContent2 #step2Cards .analysis-takeaway{
+    margin-top: 1rem;
+    background: var(--step-accent-tint);
+    border: 1px solid var(--step-accent-line);
+    border-left: 2px solid var(--step-primary);
+    border-radius: 10px;
+    padding: 0.9rem 1.1rem;
+  }
+  #stepContent2 #step2Cards.step2-feed-expanded .analysis-card{
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+    padding: 1.05rem 0;
+  }
+  #stepContent2 #step2Cards.step2-feed-expanded .analysis-card .analysis-card-value{ font-size: 14px; }
+  /* Expandable footer action */
+  #stepContent2 .step2-timeline{
+    display: flex; align-items: center; gap: 0.45rem;
+    width: 100%;
+    margin-top: 1.1rem;
+    padding: 0.7rem 0 0;
+    border: none;
+    border-top: 1px dashed var(--step-border-strong);
+    background: none;
+    font-family: var(--step-body-font);
+    font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em;
+    color: var(--step-text-muted);
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+  #stepContent2 .step2-timeline:hover{ color: var(--step-primary-soft); }
+  #stepContent2 .step2-timeline svg{
+    width: 12px; height: 12px;
+    transition: transform 0.2s ease;
+  }
+  #stepContent2 #step2Cards.step2-feed-expanded ~ .step2-timeline svg{ transform: rotate(90deg); }
+  /* Driver strength map */
+  #stepContent2 .step2-pane-lead{
+    font-family: var(--step-body-font);
+    font-size: 13px; line-height: 1.7;
+    color: var(--step-text-muted);
+    margin: -0.2rem 0 1.2rem;
+  }
+  #stepContent2 .step2-drivers{ display: flex; flex-direction: column; gap: 1rem; }
+  #stepContent2 .step2-driver-meta{
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 0.3rem;
+  }
+  #stepContent2 .step2-driver-name{
+    font-family: var(--step-body-font);
+    font-size: 12.5px; font-weight: 500;
+    color: var(--step-text-secondary);
+  }
+  #stepContent2 .step2-driver-pct{
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  }
+  #stepContent2 .step2-driver--amber .step2-driver-pct{ color: var(--step-warning); }
+  #stepContent2 .step2-driver--teal .step2-driver-pct{ color: var(--step-success); }
+  #stepContent2 .step2-driver--violet .step2-driver-pct{ color: var(--step-primary-soft); }
+  #stepContent2 .step2-driver-bar{
+    height: 6px; border-radius: 4px;
+    background: var(--step-row-bg-hover);
+    overflow: hidden;
+  }
+  #stepContent2 .step2-driver-bar span{
+    display: block; height: 100%; border-radius: 4px;
+    background: linear-gradient(90deg, rgba(139,92,246,0.45), var(--step-primary));
+    box-shadow: 0 0 10px rgba(139,92,246,0.30);
+  }
+  #stepContent2 .step2-driver--amber .step2-driver-bar span{
+    background: linear-gradient(90deg, rgba(251,191,36,0.45), var(--step-warning));
+    box-shadow: 0 0 10px rgba(251,191,36,0.30);
+  }
+  #stepContent2 .step2-driver--teal .step2-driver-bar span{
+    background: linear-gradient(90deg, rgba(52,211,153,0.45), var(--step-success));
+    box-shadow: 0 0 10px rgba(52,211,153,0.28);
+  }
+
+  /* ---------- 4. Deeper probe suggestions ---------- */
+  #stepContent2 .step2-probes{ margin-top: 2.5rem; }
+  #stepContent2 .step2-probe-row{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+    gap: 0.8rem;
+  }
+  #stepContent2 .step2-probe{
+    display: flex; flex-direction: column; align-items: stretch; gap: 0.75rem;
+    text-align: left;
+    background: var(--step-card-bg);
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    padding: 0.95rem 1.05rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  #stepContent2 .step2-probe:hover{
+    transform: translateY(-1px);
+    border-color: rgba(139,92,246,0.5);
+    background: var(--step-row-bg-hover);
+  }
+  #stepContent2 .step2-probe-q{
+    flex: 1;
+    font-family: var(--step-body-font);
+    font-size: 13px; line-height: 1.6;
+    color: var(--step-text);
+  }
+  #stepContent2 .step2-probe-use{
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    align-self: flex-end;
+    font-family: var(--step-body-font);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+    color: var(--step-primary-soft);
+  }
+  #stepContent2 .step2-probe-use svg{ width: 12px; height: 12px; }
+  #stepContent2 .step2-probe.is-copied .step2-probe-use{ color: var(--step-success); }
+
+  /* ---------- 5. Recommended / Avoid actions ---------- */
+  #stepContent2 .step2-actions{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+  }
+  #stepContent2 .step2-actions .guidelines{
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  #stepContent2 .step2-actions .guideline{
+    flex: 1 1 42%;
+    padding: 0.55rem 0.75rem;
+    font-size: 12.5px; line-height: 1.55;
+  }
+  #stepContent2 .step2-actions .guideline .g-icon{ width: 18px; height: 18px; }
+  #stepContent2 .step2-actions .guideline span{ font-size: 12.5px; line-height: 1.55; }
+
+  /* ---------- 6. Manager notes / notes / bottom bar ---------- */
+  #stepContent2 .step2-manager-note{ margin-top: 2.5rem; padding: 1.05rem 1.25rem; }
+  #stepContent2 .step2-notes{ margin-top: 1.5rem; }
+  #stepContent2 .step2-notes .note-area{ min-height: 96px; }
+  #stepContent2 .step-nav{
+    display: grid;
+    grid-template-columns: auto minmax(0,1fr) auto;
+    align-items: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  #stepContent2 .step2-progress{
+    display: flex; align-items: center; justify-content: center;
+    gap: 0.7rem; min-width: 0;
+  }
+  #stepContent2 .step2-progress-label{
+    font-family: var(--step-body-font);
+    font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--step-text-muted);
+    white-space: nowrap;
+  }
+  #stepContent2 .step2-progress-track{
+    flex: 0 1 170px; height: 5px; border-radius: 4px;
+    background: var(--step-row-bg-hover);
+    overflow: hidden;
+  }
+  #stepContent2 .step2-progress-fill{
+    display: block; height: 100%; width: 40%; border-radius: 4px;
+    background: linear-gradient(90deg, var(--step-primary), var(--step-info));
+    box-shadow: 0 0 8px rgba(139,92,246,0.5);
+  }
+  #stepContent2 .step2-progress-note{
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-family: var(--step-body-font);
+    font-size: 10.5px;
+    color: var(--step-success);
+    white-space: nowrap;
+  }
+  #stepContent2 .step2-progress-note::before{
+    content: ''; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--step-success);
+    box-shadow: 0 0 6px var(--step-success);
+  }
+
+  /* ---------- Responsive (main content only) ---------- */
+  @media (max-width: 1180px){
+    #stepContent2{ padding: 2.6rem 2rem; }
+    #stepContent2 .step2-split{ grid-template-columns: 1fr; }
+  }
+  @media (max-width: 760px){
+    #stepContent2 .step2-actions{ grid-template-columns: 1fr; gap: 1.4rem; }
+    #stepContent2 .analysis-card{ grid-template-columns: 1fr; gap: 0.25rem; }
+    #stepContent2 .step-nav{ grid-template-columns: auto minmax(0,1fr) auto; gap: 0.8rem; }
+    #stepContent2 .step2-progress{ justify-content: flex-end; }
+    #stepContent2 .step2-progress-label,
+    #stepContent2 .step2-progress-note{ display: none; }
+    #stepContent2 .step2-progress-track{ flex: 1 1 auto; }
+  }
+  @media (max-width: 560px){
+    #stepContent2{ padding: 1.9rem 1.25rem; }
+    #stepContent2 .step2-insight{ grid-template-columns: 1fr; gap: 0.8rem; }
+    #stepContent2 .step2-progress-label{ display: none; }
+  }
+</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="/csrf.js"></script>
@@ -1092,41 +1551,174 @@
               <p class="step-desc">Understand what behavioural patterns are visible in the conversation. This is NOT diagnosis — it explains observable behaviour only.</p>
             </div>
 
-            <div class="script-block">
-              <div class="script-text" id="step2Script">Loading analysis...</div>
+            <!-- AI INTERPRETATION STRIP -->
+            <div class="step2-insight">
+              <div class="step2-insight-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2a2.5 2.5 0 0 0-2.5 2.5v.5a2.5 2.5 0 0 0-2.5 2.5A2.5 2.5 0 0 0 2 10v.5a2.5 2.5 0 0 0 2.5 2.5H5v5a2 2 0 0 0 2 2h2.5v-3"/><path d="M14.5 22a2.5 2.5 0 0 0 2.5-2.5V19a2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0 2.5-2.5v-.5A2.5 2.5 0 0 0 20 9h-.5V4a2 2 0 0 0-2-2h-4.5A2.5 2.5 0 0 0 10.5 4v1"/><path d="M2 11.5A2.5 2.5 0 0 0 4.5 14"/><path d="M22 9.5a2.5 2.5 0 0 0-2.5-2.5"/></svg>
+              </div>
+              <div class="step2-insight-body">
+                <div class="step2-insight-eyebrow">Behavioral Intelligence Insight</div>
+                <div class="script-block">
+                  <div class="script-text" id="step2Script">Loading analysis...</div>
+                </div>
+                <div class="step2-insight-note">This is NOT diagnosis — it explains observable behaviour only.</div>
+              </div>
             </div>
 
-            <div id="step2Cards"></div>
+            <!-- CURRENT SIGNAL MAP -->
+            <section class="step2-map">
+              <div class="step2-label">Current Signal Map</div>
+              <div class="step2-signals">
+                <article class="step2-signal step2-signal--amber">
+                  <div class="step2-signal-top">
+                    <div class="step2-signal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                    <div>
+                      <div class="step2-signal-name">Emotional Tone</div>
+                      <div class="step2-signal-value">Guarded</div>
+                    </div>
+                    <span class="step2-signal-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>
+                  </div>
+                  <p class="step2-signal-desc">Responding but holding back more.</p>
+                </article>
+                <article class="step2-signal step2-signal--amber">
+                  <div class="step2-signal-top">
+                    <div class="step2-signal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 8L9 4l-3 8H2"/></svg></div>
+                    <div>
+                      <div class="step2-signal-name">Engagement Level</div>
+                      <div class="step2-signal-value">Dipping</div>
+                    </div>
+                    <span class="step2-signal-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>
+                  </div>
+                  <p class="step2-signal-desc">Present on tasks, shorter on feelings.</p>
+                </article>
+                <article class="step2-signal step2-signal--red">
+                  <div class="step2-signal-top">
+                    <div class="step2-signal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a8 8 0 1 0-8-8"/><path d="M12 13l3.5-2"/><path d="M4 12H2"/><path d="M6 6.5L4.5 5"/></svg></div>
+                    <div>
+                      <div class="step2-signal-name">Stress Indicators</div>
+                      <div class="step2-signal-value">Elevated</div>
+                    </div>
+                    <span class="step2-signal-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>
+                  </div>
+                  <p class="step2-signal-desc">Tension surfaced in tone and pacing.</p>
+                </article>
+                <article class="step2-signal step2-signal--teal">
+                  <div class="step2-signal-top">
+                    <div class="step2-signal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 5-3 8-7 9-4-1-7-4-7-9V7l7-4z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                    <div>
+                      <div class="step2-signal-name">Openness</div>
+                      <div class="step2-signal-value">Reduced</div>
+                    </div>
+                    <span class="step2-signal-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>
+                  </div>
+                  <p class="step2-signal-desc">Sharing less detail than usual.</p>
+                </article>
+              </div>
+            </section>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0;">
-              <div>
-                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:0.6rem;">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                  <span> Recommended Actions</span>
+            <!-- PATTERNS + INTERPRETATION -->
+            <section class="step2-split">
+              <div class="step2-pane">
+                <div class="step2-label">Behavioral Patterns Detected</div>
+                <div id="step2Cards" class="step2-feed"></div>
+                <button type="button" class="step2-timeline" id="step2TimelineBtn">
+                  <span class="step2-timeline-label">View full behavioral timeline</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,18 15,12 9,6"/></svg>
+                </button>
+              </div>
+              <div class="step2-pane step2-pane--meaning">
+                <div class="step2-label">What This Could Mean</div>
+                <p class="step2-pane-lead">Likely underlying drivers worth exploring with the employee — treated as hypotheses, not conclusions.</p>
+                <div class="step2-drivers">
+                  <div class="step2-driver step2-driver--amber">
+                    <div class="step2-driver-meta">
+                      <span class="step2-driver-name">Workload Pressure</span><span class="step2-driver-pct">HIGH</span>
+                    </div>
+                    <div class="step2-driver-bar"><span style="width:84%"></span></div>
+                  </div>
+                  <div class="step2-driver step2-driver--amber">
+                    <div class="step2-driver-meta">
+                      <span class="step2-driver-name">Lack of Clarity</span><span class="step2-driver-pct">HIGH</span>
+                    </div>
+                    <div class="step2-driver-bar"><span style="width:74%"></span></div>
+                  </div>
+                  <div class="step2-driver step2-driver--violet">
+                    <div class="step2-driver-meta">
+                      <span class="step2-driver-name">Resource Constraints</span><span class="step2-driver-pct">MOD</span>
+                    </div>
+                    <div class="step2-driver-bar"><span style="width:62%"></span></div>
+                  </div>
+                  <div class="step2-driver step2-driver--teal">
+                    <div class="step2-driver-meta">
+                      <span class="step2-driver-name">Recognition Gap</span><span class="step2-driver-pct">LOW</span>
+                    </div>
+                    <div class="step2-driver-bar"><span style="width:48%"></span></div>
+                  </div>
+                  <div class="step2-driver step2-driver--violet">
+                    <div class="step2-driver-meta">
+                      <span class="step2-driver-name">Growth Stagnation</span><span class="step2-driver-pct">MOD</span>
+                    </div>
+                    <div class="step2-driver-bar"><span style="width:66%"></span></div>
+                  </div>
                 </div>
+              </div>
+            </section>
+
+            <!-- DEEPER PROBE SUGGESTIONS -->
+            <section class="step2-probes">
+              <div class="step2-label">Deeper Probe Suggestions</div>
+              <div class="step2-probe-row">
+                <button type="button" class="step2-probe" data-copy="What's been the most challenging part recently?">
+                  <span class="step2-probe-q">"What's been the most challenging part recently?"</span>
+                  <span class="step2-probe-use"><span class="step2-probe-use-text">Use this</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                </button>
+                <button type="button" class="step2-probe" data-copy="What's getting in the way of your focus?">
+                  <span class="step2-probe-q">"What's getting in the way of your focus?"</span>
+                  <span class="step2-probe-use"><span class="step2-probe-use-text">Use this</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                </button>
+                <button type="button" class="step2-probe" data-copy="How do you feel about the current priorities?">
+                  <span class="step2-probe-q">"How do you feel about the current priorities?"</span>
+                  <span class="step2-probe-use"><span class="step2-probe-use-text">Use this</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                </button>
+                <button type="button" class="step2-probe" data-copy="Is there anything you wish was different right now?">
+                  <span class="step2-probe-q">"Is there anything you wish was different right now?"</span>
+                  <span class="step2-probe-use"><span class="step2-probe-use-text">Use this</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                </button>
+              </div>
+            </section>
+
+            <!-- RECOMMENDED / AVOID -->
+            <section class="step2-actions">
+              <div>
+                <div class="step2-label step2-label--teal">Recommended Actions</div>
                 <div class="guidelines" id="step2Recommended"></div>
               </div>
               <div>
-                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                  <span> Avoid Actions</span>
-                </div>
+                <div class="step2-label step2-label--red">Avoid Actions</div>
                 <div class="guidelines" id="step2Avoid"></div>
               </div>
-            </div>
+            </section>
 
-            <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step2ManagerNotesContainer">
+            <!-- MANAGER NOTES -->
+            <div class="guideline tip step2-manager-note" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step2ManagerNotesContainer">
               <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
               <div id="step2ManagerNotes"></div>
             </div>
 
-            <div style="margin-top:2rem;">
+            <!-- NOTES -->
+            <div class="step2-notes">
               <label class="form-label">Manager Notes for This Step</label>
               <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_2"></textarea>
             </div>
 
+            <!-- BOTTOM ACTION AREA -->
             <div class="step-nav">
               <button class="btn btn-sm" onclick="goToStep(1)">Back</button>
+              <div class="step2-progress">
+                <span class="step2-progress-label">Conversation Progress</span>
+                <div class="step2-progress-track"><span class="step2-progress-fill"></span></div>
+                <span class="step2-progress-note">Progress autosaved</span>
+              </div>
               <div style="display:flex;gap:0.8rem;">
                 <button class="btn btn-primary btn-sm" onclick="goToStep(3)">Save &amp; Continue</button>
               </div>
@@ -2092,6 +2684,56 @@ sessionPromise.then(function(s) {
         done();
       } catch (e) {}
     }
+  });
+})();
+</script>
+<script>
+(function() {
+  var btn = document.getElementById('step2TimelineBtn');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var feed = document.getElementById('step2Cards');
+    if (!feed) return;
+    var expanded = feed.classList.toggle('step2-feed-expanded');
+    var label = btn.querySelector('.step2-timeline-label');
+    if (label) label.textContent = expanded ? 'Hide extra detail' : 'View full behavioral timeline';
+  });
+})();
+</script>
+<script>
+(function() {
+  var probes = document.querySelectorAll('#stepContent2 .step2-probe');
+  probes.forEach(function(p) {
+    p.addEventListener('click', function() {
+      var q = p.getAttribute('data-copy') || '';
+      var textEl = p.querySelector('.step2-probe-use-text');
+      if (textEl) textEl.textContent = 'Copied';
+      p.classList.add('is-copied');
+      function write() {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(q).catch(function() { fallback(); });
+        } else {
+          fallback();
+        }
+        function fallback() {
+          try {
+            var ta = document.createElement('textarea');
+            ta.value = q;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          } catch (e) {}
+        }
+      }
+      write();
+      setTimeout(function() {
+        p.classList.remove('is-copied');
+        if (textEl) textEl.textContent = 'Use this';
+      }, 1800);
+    });
   });
 })();
 </script>
