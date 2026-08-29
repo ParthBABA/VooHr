@@ -2608,6 +2608,11 @@
             </div>
           </div>
 
+          <button class="cheatsheet-expander strategy-trigger" id="openDrawerBtn">
+            Click to Expand Strategy Guide
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+          </button>
+
           <!-- STEP CONTENT: STEP 1 -->
           <div class="step-content scale-in gsap-hidden" id="stepContent">
             <div class="step-header">
@@ -3302,87 +3307,6 @@
           </div>
         </div>
 
-        <!-- RIGHT: SIDEBAR -->
-        <div class="journey-sidebar gsap-hidden">
-          <!-- EMPLOYEE CONTEXT CARD -->
-          <div class="card fade-in fade-in-d1" style="margin-bottom:1rem;">
-            <div class="card-header">
-              <div class="card-title" data-lang="en">Employee Context</div>
-              <div class="card-title" data-lang="hi">Employee Context</div>
-            </div>
-            <div id="employeeContext">
-              <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1.2rem;">
-                <div id="empAvatarBox" style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--amber));display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:0.8rem;font-weight:700;color:var(--void);flex-shrink:0;">--</div>
-                <div>
-                  <div id="empNameText" style="font-weight:600;">Loading...</div>
-                  <div id="empPositionText" style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);">--</div>
-                </div>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:8px;">
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-                  <span style="color:var(--ivory-dim);">Department</span><span id="empDeptText">--</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-                  <span style="color:var(--ivory-dim);">Tenure</span><span id="empTenureText">--</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-                  <span style="color:var(--ivory-dim);">Wellness Index</span>
-                  <span id="empWellnessText" style="font-weight:600;">--</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-                  <span style="color:var(--ivory-dim);">Performance</span>
-                  <span id="empPerfText" style="font-weight:600;">--</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-                  <span style="color:var(--ivory-dim);">Last Sync</span><span id="empLastSyncText">--</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-                  <span style="color:var(--ivory-dim);">Alert Reason</span>
-                  <span id="empAlertText" style="font-weight:600;">--</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- MANAGER CHEATSHEET -->
-          <div class="card cheatsheet-glow fade-in fade-in-d2">
-            <div class="card-header">
-              <div class="card-title shine-text" data-lang="en">Cheatsheet</div>
-              <div class="card-title shine-text" data-lang="hi">Cheatsheet</div>
-            </div>
-            <div class="cheatsheet" id="cheatsheet">
-              <div class="cheat-point">
-                <div class="cheat-point-head"><span class="c-dot" style="background:var(--teal);"></span> Active Listening</div>
-                <div class="cheat-point-body">
-                  <p><strong>Reflect:</strong> "What I'm hearing is..."</p>
-                  <p><strong>Clarify:</strong> "Can you tell me more about...?"</p>
-                  <p><strong>Validate:</strong> "That makes sense because..."</p>
-                  <p><strong>Pause:</strong> Allow 3-5 seconds of silence after they speak.</p>
-                </div>
-              </div>
-              <div class="cheat-point">
-                <div class="cheat-point-head"><span class="c-dot" style="background:var(--amber);"></span> Cognitive Reframing</div>
-                <div class="cheat-point-body">
-                  <p><strong>Shift:</strong> Move from blame to curiosity.</p>
-                  <p><strong>Reframe:</strong> "What obstacles made this difficult?" instead of "Why didn't you...?"</p>
-                  <p><strong>Focus:</strong> Behavior and outcomes, never character.</p>
-                </div>
-              </div>
-              <div class="cheat-point">
-                <div class="cheat-point-head"><span class="c-dot" style="background:var(--violet);"></span> Pygmalion Effect</div>
-                <div class="cheat-point-body">
-                  <p><strong>Belief:</strong> Express genuine confidence in their ability.</p>
-                  <p><strong>Expectation:</strong> Set high but achievable targets.</p>
-                  <p><strong>Feedback:</strong> Reinforce progress, not just completion.</p>
-                </div>
-              </div>
-            </div>
-            <button class="cheatsheet-expander" id="openDrawerBtn">
-              Click to Expand Strategy Guide
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   </main>
@@ -3850,8 +3774,8 @@ sessionPromise.then(function(s) {
     document.getElementById('syncBreadcrumb').textContent = 'Employee';
   }
 
-  // ── Employee Context Card ──
-  if (emp) {
+  // ── Employee Context Card (rail removed; safe guard) ──
+  if (emp && document.getElementById('employeeContext')) {
     var initials = (emp.name || '--').split(' ').map(function(w) { return w[0]; }).join('').substring(0,2).toUpperCase();
     var avatarBox = document.getElementById('empAvatarBox');
     if (emp.photo) {
