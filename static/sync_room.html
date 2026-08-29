@@ -1634,7 +1634,7 @@
   #stepContent4 .ab-grid{
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 1.4rem 1rem;
+    gap: 1.3rem 1rem;
     margin-top: 1.75rem;
   }
   #stepContent4 .ab-dynamic{ display: contents; }
@@ -1654,7 +1654,6 @@
   #stepContent4 .ab-eyebrow--po{ grid-row: 4; grid-column: 1 / 7; }
   #stepContent4 .ab-eyebrow--success{ grid-row: 10; grid-column: 1 / 7; }
 
-  /* ---------- 1. Focus of this plan ---------- */
   #stepContent4 .ab-signal{
     flex: 0 0 auto;
     display: inline-flex; align-items: center; gap: 0.35rem;
@@ -1697,52 +1696,132 @@
   }
   #stepContent4 .ab-stage-arrow{ color: var(--step-border-strong); opacity: 0.9; }
 
-  #stepContent4 .analysis-quote{
-    grid-row: 2; grid-column: 1 / 7;
+  /* ---------- 1. Focus band: ROOT CAUSE >> FOCUS >> CONFIDENCE ---------- */
+  #stepContent4 .ab-root{
+    grid-row: 2; grid-column: 1 / 2;
+    display: flex; flex-direction: column; justify-content: center; gap: 0.55rem;
     margin: 0;
-    padding: 1.35rem 1.6rem;
-    border: 1px solid rgba(139,92,246,0.25);
+    padding: 1.1rem 1.15rem;
+    border: 1px solid rgba(251,191,36,0.3);
+    border-left: 3px solid var(--step-warning);
+    border-radius: 12px;
+    background: linear-gradient(160deg, rgba(251,191,36,0.08), transparent 65%), var(--step-surface-raised);
+    min-width: 0;
+  }
+  #stepContent4 .ab-root-label{
+    font-family: var(--step-heading-font);
+    font-size: 8.5px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-warning);
+  }
+  #stepContent4 .ab-root-value{
+    font-family: var(--step-body-font);
+    font-size: 15px; font-weight: 600; line-height: 1.5;
+    color: var(--step-text);
+    min-width: 0;
+  }
+  #stepContent4 .ab-root-arrow{
+    grid-row: 2; grid-column: 2 / 3;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--step-warning);
+  }
+  #stepContent4 .ab-root-arrow svg{ width: 18px; height: 18px; }
+  #stepContent4 .analysis-quote{
+    grid-row: 2; grid-column: 3 / 6;
+    display: flex; flex-direction: column; justify-content: center; gap: 0.55rem;
+    margin: 0;
+    padding: 1.2rem 1.5rem;
+    border: 1px solid rgba(139,92,246,0.28);
     border-left: 3px solid var(--step-primary);
     border-radius: 12px;
     background:
-      linear-gradient(90deg, rgba(139,92,246,0.07), transparent 60%),
+      radial-gradient(120% 140% at 0% 0%, rgba(139,92,246,0.14), transparent 55%),
+      linear-gradient(135deg, rgba(139,92,246,0.06), rgba(139,92,246,0.01)),
       var(--step-surface-raised);
     font-family: var(--step-body-font);
-    font-size: 15px; font-style: italic; line-height: 1.7;
+    font-size: 18px; font-weight: 600; font-style: normal; line-height: 1.55;
     color: var(--step-text);
+    min-width: 0;
   }
-  #stepContent4 .ab-script{
-    grid-row: 3; grid-column: 1 / 7;
+  #stepContent4 .analysis-quote::before{
+    content: 'Focus of This Plan';
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+  }
+  #stepContent4 .ab-conf{
+    grid-row: 2; grid-column: 6 / 7;
+    display: flex; flex-direction: column; justify-content: center; gap: 0.55rem;
     margin: 0;
-    padding: 1.05rem 1.4rem;
-    border: 1px dashed var(--step-border-strong);
+    padding: 1.05rem 1.15rem;
+    border: 1px solid var(--step-border);
     border-radius: 12px;
     background: var(--step-card-bg);
+    min-width: 0;
+  }
+  #stepContent4 .ab-conf-row{
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    min-width: 0;
+  }
+  #stepContent4 .ab-conf-label{
+    font-family: var(--step-heading-font);
+    font-size: 8.5px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent4 .ab-conf-text{
+    font-family: var(--step-body-font);
+    font-size: 11px; font-weight: 600;
+    color: var(--step-text-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    min-width: 0;
+  }
+  #stepContent4 .ab-conf-meter{ display: flex; gap: 4px; }
+  #stepContent4 .ab-conf-seg{
+    flex: 1 1 0;
+    height: 7px; border-radius: 99px;
+    background: var(--step-border);
+  }
+  #stepContent4 .ab-grid.conf-strong .ab-conf-seg.on{ background: var(--step-success); box-shadow: 0 0 8px rgba(52,211,153,0.35); }
+  #stepContent4 .ab-grid.conf-moderate .ab-conf-seg.on{ background: var(--step-warning); box-shadow: 0 0 8px rgba(251,191,36,0.3); }
+  #stepContent4 .ab-grid.conf-light .ab-conf-seg.on{ background: var(--step-danger); box-shadow: 0 0 8px rgba(248,113,113,0.3); }
+  /* resilient combinations when root cause / confidence are absent */
+  #stepContent4 .ab-grid.no-root .ab-root,
+  #stepContent4 .ab-grid.no-root .ab-root-arrow{ display: none; }
+  #stepContent4 .ab-grid.no-root .analysis-quote{ grid-column: 1 / 5; }
+  #stepContent4 .ab-grid.no-root .ab-conf{ grid-column: 5 / 7; }
+  #stepContent4 .ab-grid.no-conf .ab-conf{ display: none; }
+  #stepContent4 .ab-grid.no-conf .analysis-quote{ grid-column: 3 / 7; }
+  #stepContent4 .ab-grid.no-root.no-conf .analysis-quote{ grid-column: 1 / 7; }
+
+  /* ---------- 2. Frame-the-follow-up script strip (compact) ---------- */
+  #stepContent4 .ab-script{
+    grid-row: 3; grid-column: 1 / 7;
+    display: flex; align-items: baseline; gap: 0.9rem;
+    margin: 0;
+    padding: 0.8rem 1.1rem;
+    border: 1px dashed var(--step-border-strong);
+    border-left: 3px solid var(--step-primary);
+    border-radius: 10px;
+    box-shadow: none;
+    min-width: 0;
   }
   #stepContent4 .ab-script::before{
     content: 'HOW TO FRAME IT —';
-    display: block;
+    flex: 0 0 auto;
     font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
+    font-size: 8.5px; font-weight: 600;
     letter-spacing: 0.2em; text-transform: uppercase;
     color: var(--step-primary-soft);
-    margin-bottom: 0.5rem;
   }
   #stepContent4 .ab-script .script-text{
-    font-size: 13px; line-height: 1.7;
+    font-size: 13px; line-height: 1.65;
     color: var(--step-text-secondary);
+    min-width: 0;
   }
 
-  /* ---------- 2. Priority & outcome ---------- */
-  #stepContent4 .ab-priority{
-    grid-row: 5; grid-column: 1 / 4;
-    display: flex; flex-direction: column; gap: 0.6rem;
-    padding: 1.15rem 1.2rem;
-    border: 1px solid rgba(251,191,36,0.28);
-    border-left: 3px solid var(--step-warning);
-    border-radius: 12px;
-    background: linear-gradient(160deg, rgba(251,191,36,0.07), transparent 65%), var(--step-card-bg);
-  }
+  /* ---------- 3. Priority & desired outcome ---------- */
   #stepContent4 .ab-panel-label{
     font-family: var(--step-heading-font);
     font-size: 9.5px; font-weight: 600;
@@ -1752,37 +1831,78 @@
   #stepContent4 .ab-panel-label--amber{ color: var(--step-warning); }
   #stepContent4 .ab-panel-label--violet{ color: var(--step-primary-soft); }
   #stepContent4 .ab-panel-label--red{ color: var(--step-danger); }
-  #stepContent4 .ab-priority .guidelines{ display: flex; flex-direction: column; gap: 0.55rem; }
+  #stepContent4 .ab-priority{
+    grid-row: 5; grid-column: 1 / 3;
+    display: flex; flex-direction: column; gap: 0.75rem;
+    margin: 0; padding: 1.1rem 1.15rem;
+    border: 1px solid rgba(251,191,36,0.28);
+    border-left: 3px solid var(--step-warning);
+    border-radius: 12px;
+    background: linear-gradient(160deg, rgba(251,191,36,0.07), transparent 65%), var(--step-surface-raised);
+    min-width: 0;
+  }
+  #stepContent4 .ab-prio-head{
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    min-width: 0;
+  }
+  #stepContent4 .ab-prio-dots{ display: flex; gap: 4px; }
+  #stepContent4 .ab-prio-dots i{
+    width: 9px; height: 9px; border-radius: 99px;
+    background: var(--step-border-strong);
+  }
+  #stepContent4 .ab-prio-dots i.on{
+    background: var(--step-warning);
+    box-shadow: 0 0 8px rgba(251,191,36,0.4);
+  }
+  #stepContent4 .ab-priority .guidelines{
+    display: flex; flex-direction: column; gap: 0.45rem;
+    margin: 0;
+  }
   #stepContent4 .ab-priority .guideline{
     margin: 0;
+    padding: 0.5rem 0.7rem;
     background: var(--step-surface-raised);
-    border-color: rgba(251,191,36,0.18);
+    border-color: rgba(251,191,36,0.16);
     color: var(--step-text-secondary);
+    font-size: 12px;
   }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(8){
+  #stepContent4 .ab-prio-arrow{
+    grid-row: 5; grid-column: 3 / 3;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--step-border-strong);
+  }
+  #stepContent4 .ab-prio-arrow svg{ width: 22px; height: 22px; }
+  #stepContent4 .ab-outcome-panel{
     grid-row: 5; grid-column: 4 / 7;
-    margin: 0;
-    border-radius: 12px;
+    display: flex; flex-direction: column; justify-content: center; gap: 0.45rem;
+    margin: 0; padding: 1.3rem 1.5rem;
+    border: 1px solid rgba(52,211,153,0.32);
     border-left: 3px solid var(--step-success);
-    background: linear-gradient(160deg, rgba(52,211,153,0.06), transparent 60%), var(--step-surface-raised);
+    border-radius: 12px;
+    background: linear-gradient(160deg, rgba(52,211,153,0.09), transparent 65%), var(--step-surface-raised);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.14);
+    min-width: 0;
   }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(8)::before{
-    content: 'DESIRED OUTCOME';
-    display: block;
+  #stepContent4 .ab-outcome-panel::before{
+    content: 'Desired Outcome';
     font-family: var(--step-heading-font);
     font-size: 9px; font-weight: 600;
     letter-spacing: 0.2em; text-transform: uppercase;
     color: var(--step-success);
-    margin-bottom: 0.5rem;
   }
-
-  /* ---------- 3. Action plan pipeline ---------- */
+  #stepContent4 .ab-outcome-panel .analysis-card-label{
+    display: none;
+  }
+  #stepContent4 .ab-outcome-panel .analysis-card-value{
+    font-size: 17px; font-weight: 600; line-height: 1.5;
+    color: var(--step-text);
+  }
   #stepContent4 .ab-flow{
     grid-row: 6; grid-column: 1 / 7;
-    display: flex; align-items: center; justify-content: center; gap: 1.1rem;
-    padding: 0.6rem 1rem;
-    border-top: 1px dashed var(--step-border-strong);
-    border-bottom: 1px dashed var(--step-border-strong);
+    display: flex; align-items: center; gap: 0.9rem;
+    margin: 0;
+    padding: 0.65rem 0 0.2rem;
+    min-width: 0;
   }
   #stepContent4 .ab-flow-step{
     display: inline-flex; align-items: center; gap: 0.45rem;
@@ -1805,90 +1925,176 @@
   }
   #stepContent4 .ab-flow-arrow svg{ width: 16px; height: 16px; }
 
-  /* module cards */
-  #stepContent4 #step4Cards > .analysis-card:nth-child(2),
-  #stepContent4 #step4Cards > .analysis-card:nth-child(3),
-  #stepContent4 #step4Cards > .analysis-card:nth-child(4){
-    display: flex; flex-direction: column; gap: 0.4rem;
+  /* ---------- 4. Action pipeline modules (WHAT → WHO → WHEN) ---------- */
+  #stepContent4 .ab-mod{
+    display: flex; flex-direction: column; gap: 0.45rem;
     margin: 0;
+    padding: 0.95rem 1.1rem;
     border-radius: 12px;
-    box-shadow: 0 10px 26px rgba(0,0,0,0.14);
+    box-shadow: none;
+    min-width: 0;
   }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(2){ grid-row: 7; grid-column: 1 / 3; }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(3){ grid-row: 7 / 10; grid-column: 5 / 7; }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(4){ grid-row: 7; grid-column: 3 / 5; }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(5){ grid-row: 8; grid-column: 3 / 5; }
+  #stepContent4 .ab-mod .analysis-card-label{
+    margin-bottom: 0;
+    font-size: 9.5px;
+    color: var(--step-text-muted);
+  }
+  #stepContent4 .ab-mod .analysis-card-value{
+    font-size: 13px; line-height: 1.6;
+    color: var(--step-text);
+    min-width: 0;
+  }
+  #stepContent4 #step4Cards > .analysis-card:hover{ transform: none; }
+  #stepContent4 .ab-mod--now{
+    grid-row: 7; grid-column: 1 / 3;
+    border-left: 3px solid var(--step-success);
+    background: linear-gradient(160deg, rgba(52,211,153,0.05), transparent 60%), var(--step-card-bg);
+  }
+  #stepContent4 .ab-mod--week{
+    grid-row: 8; grid-column: 1 / 3;
+    border-left: 3px solid var(--step-warning);
+    background: linear-gradient(160deg, rgba(251,191,36,0.05), transparent 60%), var(--step-card-bg);
+  }
+  #stepContent4 .ab-mod--manager{
+    grid-row: 7; grid-column: 3 / 5;
+    border-left: 3px solid var(--step-primary);
+    background: linear-gradient(160deg, rgba(139,92,246,0.06), transparent 60%), var(--step-card-bg);
+  }
+  #stepContent4 .ab-mod--employee{
+    grid-row: 8; grid-column: 3 / 5;
+    border-left: 3px solid var(--step-success);
+    background: linear-gradient(160deg, rgba(52,211,153,0.05), transparent 60%), var(--step-card-bg);
+  }
+  #stepContent4 .ab-mod-chip{
+    align-self: flex-start;
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.24rem 0.55rem;
+    border-radius: 99px;
+    font-family: var(--step-heading-font);
+    font-size: 8.5px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    white-space: nowrap;
+  }
+  #stepContent4 .ab-mod-chip-ic{ display: inline-flex; }
+  #stepContent4 .ab-mod-chip-ic svg{ width: 10px; height: 10px; }
+  #stepContent4 .ab-mod--now .ab-mod-chip{ color: var(--step-success); border: 1px solid rgba(52,211,153,0.35); background: rgba(52,211,153,0.07); }
+  #stepContent4 .ab-mod--week .ab-mod-chip{ color: var(--step-warning); border: 1px solid rgba(251,191,36,0.35); background: rgba(251,191,36,0.07); }
+  #stepContent4 .ab-mod--manager .ab-mod-chip{ color: var(--step-primary-soft); border: 1px solid rgba(139,92,246,0.35); background: rgba(139,92,246,0.08); }
+  #stepContent4 .ab-mod--employee .ab-mod-chip{ color: var(--step-success); border: 1px solid rgba(34,211,238,0.3); background: rgba(34,211,238,0.06); }
 
-  /* stage chips on the three pipeline modules */
-  #stepContent4 #step4Cards > .analysis-card:nth-child(2)::before{
-    content: '01 · WHAT';
-    font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.18em;
-    color: var(--step-warning);
+  /* WHEN — execution timeline (right column) */
+  #stepContent4 .ab-when{
+    grid-row: 7 / 9; grid-column: 5 / 7;
+    display: flex; flex-direction: column; gap: 0.6rem;
+    margin: 0;
+    padding: 1.05rem 1.1rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-surface-raised);
+    min-width: 0;
   }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(4)::before{
-    content: '02 · WHO';
+  #stepContent4 .ab-when-head{
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
     font-family: var(--step-heading-font);
     font-size: 9px; font-weight: 600;
-    letter-spacing: 0.18em;
-    color: var(--step-primary-soft);
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-text-muted);
   }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(3)::before{
-    content: '03 · WHEN';
+  #stepContent4 .ab-when-head b{ color: var(--step-success); font-size: 8.5px; font-weight: 600; }
+  #stepContent4 .ab-track{
+    position: relative;
+    display: flex; flex-direction: column; gap: 0;
+    margin-top: 0.35rem;
+  }
+  #stepContent4 .ab-track::before{
+    content: '';
+    position: absolute; left: 5px; top: 16px; bottom: 12px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--step-success), var(--step-warning));
+    opacity: 0.55;
+  }
+  #stepContent4 .ab-track-point{
+    position: relative;
+    display: flex; gap: 0.7rem;
+    padding: 0.45rem 0 0.75rem;
+    min-width: 0;
+  }
+  #stepContent4 .ab-track-point:last-child{ padding-bottom: 0.1rem; }
+  #stepContent4 .ab-track-dot{
+    flex: 0 0 auto;
+    width: 12px; height: 12px; border-radius: 99px;
+    background: var(--step-success);
+    box-shadow: 0 0 8px rgba(52,211,153,0.4);
+    z-index: 1;
+  }
+  #stepContent4 .ab-track-point:nth-child(2) .ab-track-dot{ background: var(--step-warning); box-shadow: 0 0 8px rgba(251,191,36,0.4); }
+  #stepContent4 .ab-track-body{ min-width: 0; }
+  #stepContent4 .ab-track-when{
     font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.18em;
+    font-size: 8.5px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
     color: var(--step-success);
   }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(2) .analysis-card-value,
-  #stepContent4 #step4Cards > .analysis-card:nth-child(3) .analysis-card-value,
-  #stepContent4 #step4Cards > .analysis-card:nth-child(4) .analysis-card-value,
-  #stepContent4 #step4Cards > .analysis-card:nth-child(5) .analysis-card-value{
-    font-size: 13px; line-height: 1.65;
-  }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(4){ border-left-color: var(--step-primary); }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(5){ border-left-color: var(--step-primary); }
-
-  /* what-detail cards (environment + why it works) */
-  #stepContent4 #step4Cards > .analysis-card:nth-child(6){
-    grid-row: 8; grid-column: 1 / 3;
-    margin: 0; border-radius: 12px;
-    border-left-color: var(--step-border-strong);
-  }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(9){
-    grid-row: 9; grid-column: 1 / 3;
-    margin: 0; border-radius: 12px;
-    border-left-color: var(--step-primary);
-    background: linear-gradient(160deg, rgba(139,92,246,0.05), transparent 60%), var(--step-card-bg);
-  }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(6) .analysis-card-label,
-  #stepContent4 #step4Cards > .analysis-card:nth-child(9) .analysis-card-label{ color: var(--step-text-muted); }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(6) .analysis-card-value,
-  #stepContent4 #step4Cards > .analysis-card:nth-child(9) .analysis-card-value{
-    font-size: 12.5px; line-height: 1.6; color: var(--step-text-secondary);
+  #stepContent4 .ab-track-point:nth-child(2) .ab-track-when{ color: var(--step-warning); }
+  #stepContent4 .ab-track-caption{
+    font-family: var(--step-body-font);
+    font-size: 11.5px; font-weight: 600; line-height: 1.45;
+    color: var(--step-text);
   }
 
-  /* ---------- 4. Success signal ---------- */
-  #stepContent4 #step4Cards > .analysis-card:nth-child(7){
+  /* ---------- 5. Supporting context (environment + why it works) ---------- */
+  #stepContent4 .ab-context-panel{ grid-row: 9; grid-column: 1 / 4; }
+  #stepContent4 .ab-why-panel{ grid-row: 9; grid-column: 4 / 7; }
+  #stepContent4 .ab-context-panel,
+  #stepContent4 .ab-why-panel{
+    margin: 0;
+    padding: 0.9rem 1.05rem;
+    border-radius: 12px;
+    background: linear-gradient(160deg, rgba(139,92,246,0.04), transparent 60%), var(--step-card-bg);
+    min-width: 0;
+  }
+  #stepContent4 .ab-context-panel .analysis-card-label,
+  #stepContent4 .ab-why-panel .analysis-card-label{
+    color: var(--step-text-muted);
+    font-size: 9px;
+  }
+  #stepContent4 .ab-context-panel .analysis-card-value,
+  #stepContent4 .ab-why-panel .analysis-why-it-works{
+    font-size: 12.5px; line-height: 1.6;
+    color: var(--step-text-secondary);
+    min-width: 0;
+  }
+
+  /* ---------- 6. Success signal & takeaway ---------- */
+  #stepContent4 .ab-success-panel{
     grid-row: 11; grid-column: 1 / 4;
-    margin: 0; border-radius: 12px;
+    margin: 0;
+    padding: 1.3rem 1.4rem;
+    border-radius: 12px;
     border-left: 3px solid var(--step-success);
-    background: linear-gradient(120deg, rgba(52,211,153,0.09), transparent 65%), var(--step-surface-raised);
+    background: linear-gradient(120deg, rgba(52,211,153,0.1), transparent 65%), var(--step-surface-raised);
     box-shadow: 0 10px 26px rgba(0,0,0,0.12);
+    min-width: 0;
   }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(7)::before{
+  #stepContent4 .ab-success-panel::before{
     content: '✓';
     display: inline-flex; align-items: center; justify-content: center;
-    width: 20px; height: 20px;
-    border: 1px solid rgba(52,211,153,0.4);
+    width: 22px; height: 22px;
+    border: 1px solid rgba(52,211,153,0.45);
     border-radius: 99px;
-    font-size: 11px; font-weight: 700;
+    font-size: 12px; font-weight: 700;
     color: var(--step-success);
-    margin-bottom: 0.4rem;
+    background:
+      radial-gradient(60% 60% at 50% 40%, rgba(52,211,153,0.22), transparent 70%);
+    margin-bottom: 0.55rem;
   }
-  #stepContent4 #step4Cards > .analysis-card:nth-child(7) .analysis-card-value{
-    font-size: 13.5px; line-height: 1.7; color: var(--step-text);
+  #stepContent4 .ab-success-panel .analysis-card-label{
+    color: var(--step-success);
+    font-size: 9.5px;
+  }
+  #stepContent4 .ab-success-panel .analysis-card-value{
+    font-size: 15px; line-height: 1.6;
+    color: var(--step-text);
   }
   #stepContent4 .analysis-takeaway{
     grid-row: 11; grid-column: 4 / 7;
@@ -1898,45 +2104,84 @@
     border-left: 3px solid var(--step-warning);
     border-radius: 12px;
     background: linear-gradient(160deg, rgba(251,191,36,0.05), transparent 60%), var(--step-card-bg);
+    min-width: 0;
   }
 
-  /* ---------- 5. Manager commitment strip ---------- */
+  /* ---------- 7. Manager commitment strip ---------- */
   #stepContent4 .ab-commit{
     grid-row: 12; grid-column: 1 / 7;
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+    grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
     gap: 1rem;
-    align-items: stretch;
-    padding: 1.1rem 1.2rem;
+    align-items: center;
+    margin: 0;
+    padding: 0.85rem 1.1rem;
     border: 1px solid var(--step-border);
     border-radius: 12px;
     background: var(--step-card-bg);
   }
-  #stepContent4 .ab-commit-left{ display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+  #stepContent4 .ab-commit-left{
+    display: flex; align-items: center; gap: 0.7rem;
+    min-width: 0;
+  }
+  #stepContent4 .ab-commit-badge{
+    flex: 0 0 auto;
+    width: 34px; height: 34px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(139,92,246,0.35);
+    background: rgba(139,92,246,0.08);
+    color: var(--step-primary-soft);
+  }
+  #stepContent4 .ab-commit-badge svg{ width: 16px; height: 16px; }
+  #stepContent4 .ab-commit-copy{
+    flex: 1 1 auto;
+    display: flex; flex-direction: column; gap: 0.35rem;
+    min-width: 0;
+  }
+  #stepContent4 .ab-commit .ab-panel-label{ margin-bottom: 0; }
+  #stepContent4 .ab-commit .g-icon{ display: none; }
   #stepContent4 .ab-commit #step4ManagerNotesContainer{
     margin: 0;
-    border-left-color: var(--step-primary);
-    background: rgba(139,92,246,0.05);
+    padding: 0.5rem 0.8rem;
+    font-size: 13px;
+    min-width: 0;
   }
-  #stepContent4 .ab-commit .form-label{ margin-bottom: 0.4rem; }
+  #stepContent4 .ab-commit-right{ min-width: 0; }
+  #stepContent4 .ab-commit .form-label{ margin-bottom: 0.25rem; }
   #stepContent4 .ab-commit .note-area{
     margin: 0;
-    min-height: 88px;
+    min-height: 42px;
+    padding: 0.5rem 0.7rem;
+    font-size: 12.5px;
     resize: vertical;
   }
 
-  /* ---------- Avoid guardrails ---------- */
+  /* ---------- 8. Avoid guardrails (compact chips) ---------- */
   #stepContent4 .ab-avoid{
     grid-row: 13; grid-column: 1 / 7;
-    display: flex; flex-direction: column; gap: 0.6rem;
-    padding: 1.05rem 1.2rem;
-    border: 1px solid rgba(248,113,113,0.18);
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    align-items: center; gap: 1rem;
+    margin: 0;
+    padding: 0.8rem 1.1rem;
+    border: 1px solid rgba(248,113,113,0.2);
     border-left: 3px solid var(--step-danger);
     border-radius: 12px;
     background: var(--step-card-bg);
   }
-  #stepContent4 .ab-avoid .guidelines{ display: flex; flex-direction: column; gap: 0.5rem; }
-  #stepContent4 .ab-avoid .guideline{ margin: 0; }
+  #stepContent4 .ab-avoid .guidelines{
+    display: flex; flex-direction: row; flex-wrap: wrap; gap: 0.5rem;
+    margin: 0;
+    min-width: 0;
+  }
+  #stepContent4 .ab-avoid .guideline{
+    margin: 0;
+    padding: 0.42rem 0.7rem;
+    font-size: 12px;
+    background: rgba(248,113,113,0.05);
+    border-color: rgba(248,113,113,0.15);
+  }
+  #stepContent4 .ab-avoid .guideline .g-icon{ display: none; }
 
   /* ---------- Bottom nav ---------- */
   #stepContent4 .step-nav{ grid-row: 14; grid-column: 1 / 7; margin: 0; }
@@ -1972,8 +2217,11 @@
     }
     #stepContent4 .ab-eyebrow-title{ white-space: normal; }
     #stepContent4 .ab-stages{ margin-left: 0; flex-wrap: wrap; }
+    #stepContent4 .ab-root-arrow{ transform: rotate(90deg); }
+    #stepContent4 .ab-prio-arrow{ transform: rotate(90deg); }
     #stepContent4 .ab-flow{ flex-wrap: wrap; }
-    #stepContent4 .ab-commit{ grid-template-columns: 1fr; }
+    #stepContent4 .ab-commit{ grid-template-columns: 1fr; align-items: start; }
+    #stepContent4 .ab-avoid{ grid-template-columns: 1fr; }
   }
 </style>
 <style>
@@ -3100,6 +3348,27 @@
                 </span>
               </div>
 
+              <div class="ab-root">
+                <span class="ab-root-label">Root Cause</span>
+                <span class="ab-root-value" id="abRootCause">Loading...</span>
+              </div>
+
+              <div class="ab-root-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+              </div>
+
+              <div class="ab-conf" id="abConf">
+                <div class="ab-conf-row">
+                  <span class="ab-conf-label">Confidence</span>
+                  <span class="ab-conf-text" id="abConfLabel">—</span>
+                </div>
+                <div class="ab-conf-meter">
+                  <span class="ab-conf-seg"></span>
+                  <span class="ab-conf-seg"></span>
+                  <span class="ab-conf-seg"></span>
+                </div>
+              </div>
+
               <div id="step4Cards" class="ab-dynamic"></div>
 
               <div class="script-block ab-script">
@@ -3112,8 +3381,17 @@
               </div>
 
               <div class="ab-priority">
-                <div class="ab-panel-label ab-panel-label--amber">Priority &middot; Do These First</div>
+                <div class="ab-prio-head">
+                  <div class="ab-panel-label ab-panel-label--amber">Priority &middot; Do These First</div>
+                  <div class="ab-prio-dots" title="Recommended actions in this plan">
+                    <i></i><i></i><i></i><i></i><i></i>
+                  </div>
+                </div>
                 <div class="guidelines" id="step4Recommended"></div>
+              </div>
+
+              <div class="ab-prio-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
               </div>
 
               <div class="ab-flow">
@@ -3124,6 +3402,29 @@
                 <span class="ab-flow-step ab-flow-step--teal"><b>3</b> When</span>
               </div>
 
+              <div class="ab-when">
+                <div class="ab-when-head">
+                  <span>Execution Window</span>
+                  <b>Time to Act</b>
+                </div>
+                <div class="ab-track">
+                  <div class="ab-track-point">
+                    <span class="ab-track-dot"></span>
+                    <div class="ab-track-body">
+                      <div class="ab-track-when">Now &middot; Immediate</div>
+                      <div class="ab-track-caption">Act on the Immediate Action in this session</div>
+                    </div>
+                  </div>
+                  <div class="ab-track-point">
+                    <span class="ab-track-dot"></span>
+                    <div class="ab-track-body">
+                      <div class="ab-track-when">Within 1 Week &middot; Follow Through</div>
+                      <div class="ab-track-caption">This Week actions keep momentum after session</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="ab-eyebrow ab-eyebrow--success">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                 <span class="ab-eyebrow-title">Success Signal &middot; How Will We Know It Worked?</span>
@@ -3131,10 +3432,15 @@
 
               <div class="ab-commit">
                 <div class="ab-commit-left">
-                  <div class="ab-panel-label ab-panel-label--violet">Manager Commitment</div>
-                  <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step4ManagerNotesContainer">
-                    <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-                    <div id="step4ManagerNotes"></div>
+                  <div class="ab-commit-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a2 2 0 100-4 2 2 0 000 4z"/><path d="M12 2l2.4 4.9 5.6-1.2-1.2 5.6L23 12l-4.2 2.7 1.2 5.6-5.6-1.2L12 23l-2.4-4.9-5.6 1.2 1.2-5.6L1 12l4.2-2.7L4 3.7l5.6 1.2z"/></svg>
+                  </div>
+                  <div class="ab-commit-copy">
+                    <div class="ab-panel-label ab-panel-label--violet">Manager Commitment</div>
+                    <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step4ManagerNotesContainer">
+                      <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+                      <div id="step4ManagerNotes"></div>
+                    </div>
                   </div>
                 </div>
                 <div class="ab-commit-right">
@@ -4170,6 +4476,104 @@ sessionPromise.then(function(s) {
     if (fill()) mo.disconnect();
   });
   mo.observe(target, { attributes: true, attributeFilter: ['style'], subtree: true });
+})();
+</script>
+<script>
+// ── STEP 4 — Action Blueprint visual handlers (read-only, from existing state) ──
+(function() {
+  var grid = null;
+  var mo = null;
+
+  function setGridClass(name, on) {
+    if (!grid) return;
+    if (on) grid.classList.add(name); else grid.classList.remove(name);
+  }
+
+  function tagCards() {
+    var cards = document.querySelectorAll('#step4Cards > .analysis-card');
+    if (!cards.length) return false;
+    var map = {
+      'Immediate Action': 'ab-mod ab-mod--now',
+      'This Week': 'ab-mod ab-mod--week',
+      'Manager Action': 'ab-mod ab-mod--manager',
+      'Employee Action': 'ab-mod ab-mod--employee',
+      'Environment': 'ab-context-panel',
+      'Why This Works': 'ab-why-panel',
+      'Expected Outcome': 'ab-outcome-panel',
+      'Success Metric': 'ab-success-panel'
+    };
+    Array.prototype.forEach.call(cards, function(card) {
+      if (card.classList.contains('ab-mod') ||
+          card.classList.contains('ab-context-panel') ||
+          card.classList.contains('ab-why-panel')) return;
+      var labelEl = card.querySelector('.analysis-card-label');
+      if (!labelEl) return;
+      var cls = map[String(labelEl.textContent).trim()];
+      if (cls) Array.prototype.forEach.call(cls.split(' '), function(c) { card.classList.add(c); });
+    });
+    return true;
+  }
+
+  function fillData() {
+    var d = window.analysisData;
+    if (!d) return false;
+    if (!grid) grid = document.querySelector('#stepContent4 .ab-grid');
+
+    var s3 = d.step3_root_cause_analysis || {};
+    var b = d.step4_action_blueprint || {};
+
+    var root = s3.primary_trigger || '';
+    var rootEl = document.getElementById('abRootCause');
+    if (rootEl) {
+      if (String(root).trim()) {
+        rootEl.textContent = root;
+        setGridClass('has-root', true);
+        setGridClass('no-root', false);
+      } else {
+        rootEl.textContent = 'See previous analysis';
+        setGridClass('has-root', false);
+        setGridClass('no-root', true);
+      }
+    }
+
+    var conf = b.confidence_label || s3.confidence_label || '';
+    var confEl = document.getElementById('abConfLabel');
+    if (confEl && String(conf).trim()) {
+      var low = String(conf).toLowerCase();
+      var segs = document.querySelectorAll('#stepContent4 .ab-conf-seg');
+      var count = 0;
+      if (low.indexOf('strong') > -1) count = 3;
+      else if (low.indexOf('moderate') > -1 || low.indexOf('medium') > -1) count = 2;
+      else if (low.indexOf('light') > -1 || low.indexOf('low') > -1) count = 1;
+      Array.prototype.forEach.call(segs, function(seg, i) { seg.classList.toggle('on', i < count); });
+      confEl.textContent = conf;
+      setGridClass('conf-strong', count === 3);
+      setGridClass('conf-moderate', count === 2);
+      setGridClass('conf-light', count === 1);
+      setGridClass('has-conf', true);
+      setGridClass('no-conf', false);
+    } else if (confEl) {
+      setGridClass('has-conf', false);
+      setGridClass('no-conf', true);
+    }
+
+    var acts = b.recommended_actions || [];
+    var dots = document.querySelectorAll('#stepContent4 .ab-prio-dots i');
+    var onCount = Math.min(acts.length, dots.length);
+    Array.prototype.forEach.call(dots, function(dot, i) { dot.classList.toggle('on', i < onCount); });
+
+    return true;
+  }
+
+  function apply() {
+    fillData();
+    tagCards();
+  }
+
+  fillData();
+  tagCards();
+  mo = new MutationObserver(apply);
+  mo.observe(document.getElementById('stepContent4'), { childList: true, attributes: true, attributeFilter: ['style'], subtree: true });
 })();
 </script>
 <script>
