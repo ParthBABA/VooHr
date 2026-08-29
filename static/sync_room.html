@@ -3830,7 +3830,8 @@ function buildGuidelineItems(list, containerId, isAvoid) {
   var container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = '';
-  if (!list || !list.length) {
+  list = asList(list);
+  if (!list.length) {
     container.innerHTML = '<div class="guideline"><span style="color:var(--ivory-dim);">Limited transcript evidence.</span></div>';
     return;
   }
@@ -3872,8 +3873,17 @@ function renderConfidence(score) {
     '<span class="analysis-confidence-value ' + level + '">' + score + '%</span></div>';
 }
 
+function asList(v) {
+  if (Array.isArray(v)) return v;
+  if (v == null) return [];
+  if (typeof v === 'object') return [];
+  var s = String(v).trim();
+  return s ? [s] : [];
+}
+
 function renderListCard(label, items, opts) {
-  if (!items || !items.length) return '';
+  items = asList(items);
+  if (!items.length) return '';
   var html = '<div class="' + analysisCardClass(opts, 'var(--teal)') + ' analysis-list-card">' +
     '<div class="analysis-card-label">' + escHtml(label) + '</div>' +
     '<div class="analysis-list-body">';
@@ -4526,11 +4536,11 @@ sessionPromise.then(function(s) {
     var rootEl = document.getElementById('abRootCause');
     if (rootEl) {
       if (String(root).trim()) {
-        rootEl.textContent = root;
+        if (rootEl.textContent !== root) rootEl.textContent = root;
         setGridClass('has-root', true);
         setGridClass('no-root', false);
       } else {
-        rootEl.textContent = 'See previous analysis';
+        if (rootEl.textContent !== 'See previous analysis') rootEl.textContent = 'See previous analysis';
         setGridClass('has-root', false);
         setGridClass('no-root', true);
       }
@@ -4546,7 +4556,7 @@ sessionPromise.then(function(s) {
       else if (low.indexOf('moderate') > -1 || low.indexOf('medium') > -1) count = 2;
       else if (low.indexOf('light') > -1 || low.indexOf('low') > -1) count = 1;
       Array.prototype.forEach.call(segs, function(seg, i) { seg.classList.toggle('on', i < count); });
-      confEl.textContent = conf;
+      if (confEl.textContent !== conf) confEl.textContent = conf;
       setGridClass('conf-strong', count === 3);
       setGridClass('conf-moderate', count === 2);
       setGridClass('conf-light', count === 1);
@@ -4598,7 +4608,7 @@ sessionPromise.then(function(s) {
     var s3 = d.step3_root_cause_analysis || {};
     if (s3.primary_trigger && String(s3.primary_trigger).trim()) set('fsStatRoot', s3.primary_trigger);
     var s4 = d.step4_action_blueprint || {};
-    var acts = (s4.recommended_actions || []).filter(function(x) { return x && String(x).trim(); }).length;
+    var acts = asList(s4.recommended_actions).filter(function(x) { return x && String(x).trim(); }).length;
     if (acts) set('fsStatActs', acts === 1 ? '1 action logged' : acts + ' actions logged');
     var label = (d.step5_conversation_strategy || {}).confidence_label || s3.confidence_label || '';
     if (label) {
