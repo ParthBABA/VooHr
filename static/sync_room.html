@@ -1278,6 +1278,1240 @@
     #stepContent2 .step2-progress-label{ display: none; }
   }
 </style>
+<style>
+  /* =========================================================
+     STEP 3 — ROOT CAUSE ANALYSIS — investigative workspace.
+     Scoped strictly to #stepContent3 (the main content area).
+     Reuses the --step-* tokens. No existing content removed;
+     the dynamic analysis cards are re-composed via CSS only,
+     redistributed with display:contents inside one grid.
+     ========================================================= */
+  #stepContent3{ padding: 3rem 3.25rem 2.75rem; }
+
+  /* ---------- Master grid ---------- */
+  #stepContent3 .rc-grid{
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1.4rem 1rem;
+    margin-top: 1.75rem;
+  }
+  #stepContent3 .rc-dynamic{ display: contents; }
+
+  /* ---------- Section eyebrows ---------- */
+  #stepContent3 .rc-eyebrow{
+    display: flex; align-items: center; gap: 0.55rem;
+    min-width: 0;
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent3 .rc-eyebrow svg{ color: var(--step-primary-soft); flex: 0 0 auto; }
+  #stepContent3 .rc-eyebrow-title{ white-space: nowrap; }
+  #stepContent3 .rc-eyebrow-sub{
+    font-family: var(--step-body-font);
+    font-size: 11px; font-weight: 400;
+    letter-spacing: 0.02em; text-transform: none;
+    color: var(--step-text-muted); opacity: 0.75;
+    margin-left: 0.4rem;
+  }
+  #stepContent3 .rc-eyebrow--snap{ grid-row: 1; grid-column: 1 / 7; }
+  #stepContent3 .rc-eyebrow--drivers{ grid-row: 3; grid-column: 1 / 7; }
+  #stepContent3 .rc-eyebrow--insight{ grid-row: 6; grid-column: 1 / 7; }
+  #stepContent3 .rc-eyebrow--fq{ grid-row: 10; grid-column: 1 / 3; }
+  #stepContent3 .rc-eyebrow--ev{ grid-row: 10; grid-column: 3 / 5; }
+  #stepContent3 .rc-eyebrow--rc{
+    grid-row: 10; grid-column: 5 / 7;
+    display: flex; justify-content: space-between; gap: 0.6rem;
+  }
+
+  /* ---------- 1. Evidence snapshot (statement | observation) ---------- */
+  #stepContent3 .analysis-quote{
+    grid-row: 2; grid-column: 1 / 4;
+    margin: 0;
+    padding: 1.5rem 1.6rem;
+    border: 1px solid rgba(139,92,246,0.28);
+    border-left: 3px solid var(--step-primary);
+    border-radius: 12px;
+    background:
+      radial-gradient(120% 140% at 0% 0%, rgba(139,92,246,0.16), transparent 58%),
+      linear-gradient(135deg, rgba(139,92,246,0.06), rgba(139,92,246,0.02)),
+      var(--step-surface-raised);
+    box-shadow:
+      0 0 0 1px rgba(139,92,246,0.05),
+      0 12px 30px rgba(0,0,0,0.14);
+    font-family: var(--step-body-font);
+    font-size: 13.5px; font-style: italic; line-height: 1.7;
+    color: var(--step-text);
+  }
+  #stepContent3 .analysis-quote::before{
+    content: 'EMPLOYEE STATEMENT';
+    display: block;
+    font-family: var(--step-heading-font);
+    font-size: 9.5px; font-weight: 600; font-style: normal;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+    margin-bottom: 0.8rem;
+  }
+  #stepContent3 .rc-observation{
+    grid-row: 2; grid-column: 4 / 7;
+    margin: 0;
+    padding: 1.5rem 1.6rem;
+    border: 1px solid var(--step-border);
+    border-left: 3px solid var(--step-success);
+    border-radius: 12px;
+    background: var(--step-card-bg);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  }
+  #stepContent3 .rc-observation::before{
+    content: 'SURFACE OBSERVATION';
+    display: block;
+    font-family: var(--step-heading-font);
+    font-size: 9.5px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--step-success);
+    margin-bottom: 0.8rem;
+  }
+  #stepContent3 .rc-observation .script-text{
+    font-size: 13.5px; line-height: 1.7;
+    color: var(--step-text);
+  }
+
+  /* ---------- 2. Potential drivers (flattened list card) ---------- */
+  #stepContent3 .analysis-card--amber.analysis-list-card{ display: contents; }
+  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-card-label{ display: none; }
+  #stepContent3 .analysis-list-body{ display: contents; }
+  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-item{
+    position: relative;
+    grid-column: span 2;
+    padding: 1.05rem 1.1rem 1.55rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: linear-gradient(160deg, rgba(251,191,36,0.06), transparent 62%), var(--step-card-bg);
+    font-family: var(--step-body-font);
+    font-size: 13px; line-height: 1.5;
+    color: var(--step-text);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.12);
+  }
+  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-item::after{
+    content: '';
+    position: absolute; left: 1.1rem; bottom: 0.55rem;
+    height: 4px; border-radius: 99px;
+    background: linear-gradient(90deg, var(--step-warning), rgba(251,191,36,0.5));
+    box-shadow: 0 0 10px rgba(251,191,36,0.25);
+    width: 62%;
+  }
+  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-body .analysis-list-item:nth-child(2){
+    border-color: rgba(251,191,36,0.32);
+    background: linear-gradient(160deg, rgba(251,191,36,0.10), transparent 62%), var(--step-surface-raised);
+    box-shadow: 0 0 0 1px rgba(251,191,36,0.08), 0 10px 26px rgba(0,0,0,0.18);
+  }
+  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-body .analysis-list-item:nth-child(2)::after{ width: 84%; }
+  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-body .analysis-list-item:nth-child(3)::after{ width: 72%; }
+  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-body .analysis-list-item:nth-child(4)::after{ width: 58%; }
+  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-body .analysis-list-item:nth-child(5)::after{ width: 64%; }
+
+  /* ---------- 3. AI insight strip (AI Reasoning card) ---------- */
+  #stepContent3 .analysis-card--amber:not(.analysis-list-card){
+    grid-row: 7; grid-column: 1 / 7;
+    display: flex; align-items: flex-start; gap: 1.1rem;
+    margin: 0;
+    padding: 1.3rem 1.5rem;
+    border: 1px solid rgba(251,191,36,0.22);
+    border-left: 3px solid var(--step-warning);
+    border-radius: 12px;
+    background:
+      radial-gradient(120% 150% at 0% 0%, rgba(251,191,36,0.10), transparent 55%),
+      linear-gradient(135deg, rgba(251,191,36,0.05), rgba(251,191,36,0.01)),
+      var(--step-surface-raised);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.14);
+  }
+  #stepContent3 .analysis-card--amber:not(.analysis-list-card) .analysis-card-label{ display: none; }
+  #stepContent3 .analysis-card--amber:not(.analysis-list-card)::before{
+    content: 'AI';
+    flex: 0 0 auto;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    font-family: var(--step-heading-font);
+    font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+    color: var(--step-warning);
+    background: radial-gradient(75% 75% at 50% 30%, rgba(251,191,36,0.22), rgba(251,191,36,0.05));
+    border: 1px solid rgba(251,191,36,0.3);
+    box-shadow: 0 0 16px rgba(251,191,36,0.18);
+  }
+  #stepContent3 .analysis-card--amber:not(.analysis-list-card) .analysis-card-value{
+    flex: 1; min-width: 0;
+    font-size: 13.5px; line-height: 1.7;
+    color: var(--step-text-secondary);
+  }
+
+  /* ---------- Flow strip (directional connectors) ---------- */
+  #stepContent3 .rc-flow{
+    grid-row: 8; grid-column: 1 / 7;
+    display: flex; align-items: center; justify-content: center; gap: 0.9rem;
+    padding: 0.7rem 1rem;
+    border-top: 1px dashed var(--step-border-strong);
+    border-bottom: 1px dashed var(--step-border-strong);
+  }
+  #stepContent3 .rc-flow-step{
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-text-secondary);
+    white-space: nowrap;
+  }
+  #stepContent3 .rc-flow-arrow{
+    display: inline-flex; align-items: center;
+    color: var(--step-primary-soft); opacity: 0.85;
+  }
+  #stepContent3 .rc-flow-arrow svg{ width: 14px; height: 14px; }
+
+  /* ---------- 4. Three-part workspace ---------- */
+  #stepContent3 .rc-questions{
+    grid-row: 11 / 13; grid-column: 1 / 3;
+    display: flex; flex-direction: column; gap: 0.7rem;
+    padding: 1.15rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-card-bg);
+  }
+  #stepContent3 .rc-questions-lead{
+    margin: 0 0 0.25rem;
+    font-family: var(--step-body-font);
+    font-size: 11.5px; line-height: 1.6;
+    color: var(--step-text-muted);
+  }
+  #stepContent3 .rc-fq{
+    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+    width: 100%;
+    padding: 0.72rem 0.85rem;
+    border: 1px solid var(--step-border);
+    border-radius: 9px;
+    background: linear-gradient(160deg, rgba(139,92,246,0.05), transparent 70%), var(--step-surface-raised);
+    color: var(--step-text-secondary);
+    font-family: var(--step-body-font);
+    font-size: 12px; line-height: 1.5; text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  #stepContent3 .rc-fq:hover{ border-color: rgba(139,92,246,0.4); transform: translateY(-1px); }
+  #stepContent3 .rc-fq-use{
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-family: var(--step-heading-font);
+    font-size: 9.5px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+  }
+  #stepContent3 .rc-fq.is-copied .rc-fq-use-text{ color: var(--step-success); }
+
+  /* evidence column (dynamic list cards) */
+  #stepContent3 .analysis-card--teal.analysis-list-card{
+    grid-row: 11; grid-column: 3 / 5;
+    margin: 0; border-radius: 12px;
+    background: linear-gradient(160deg, rgba(52,211,153,0.05), transparent 60%), var(--step-card-bg);
+  }
+  #stepContent3 .analysis-card--faint.analysis-list-card{
+    grid-row: 12; grid-column: 3 / 5;
+    margin: 0; border-radius: 12px;
+  }
+
+  /* likely root cause (Primary Trigger card) */
+  #stepContent3 .analysis-card--red:not(.analysis-list-card){
+    grid-row: 11 / 13; grid-column: 5 / 7;
+    margin: 0; border-radius: 12px;
+    border-left: 3px solid var(--step-danger);
+    background: linear-gradient(160deg, rgba(248,113,113,0.05), transparent 60%), var(--step-surface-raised);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.16);
+  }
+  #stepContent3 .analysis-card--red:not(.analysis-list-card) .analysis-card-value{
+    font-size: 13.5px; line-height: 1.7;
+    color: var(--step-text);
+  }
+
+  /* ---------- 5. Conclusions & confidence ---------- */
+  #stepContent3 .analysis-card:not(.analysis-card--amber):not(.analysis-card--teal):not(.analysis-card--red):not(.analysis-card--faint){
+    grid-row: 13; grid-column: 1 / 4;
+    margin: 0; border-radius: 12px;
+  }
+  #stepContent3 .analysis-takeaway{
+    grid-row: 13; grid-column: 4 / 7;
+    margin: 0;
+    padding: 1.1rem 1.3rem;
+    border: 1px solid rgba(139,92,246,0.25);
+    border-left: 3px solid var(--step-primary);
+    border-radius: 12px;
+    background: linear-gradient(160deg, rgba(139,92,246,0.07), transparent 60%), var(--step-card-bg);
+  }
+  #stepContent3 .analysis-confidence{
+    grid-row: 14; grid-column: 1 / 7;
+    justify-content: center; gap: 0.9rem;
+    margin: 0;
+    padding: 0.9rem 1.2rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-card-bg);
+  }
+  #stepContent3 .analysis-confidence .analysis-confidence-value{
+    font-size: 15px;
+  }
+
+  /* ---------- Confirm root cause action ---------- */
+  #stepContent3 .rc-confirm{
+    flex: 0 0 auto;
+    padding: 0.42rem 0.72rem;
+    border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 7px;
+    background: rgba(251,191,36,0.07);
+    color: var(--step-warning);
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    cursor: pointer; white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  #stepContent3 .rc-confirm:hover{ background: rgba(251,191,36,0.14); }
+  #stepContent3 .rc-eyebrow--rc.is-confirmed .rc-confirm{
+    background: rgba(52,211,153,0.12);
+    border-color: rgba(52,211,153,0.4);
+    color: var(--step-success);
+  }
+
+  /* ---------- Actions / manager / notes / nav ---------- */
+  #stepContent3 .rc-actions{ grid-row: 15; grid-column: 1 / 7; margin: 0; }
+  #stepContent3 #step3ManagerNotesContainer{ grid-row: 16; grid-column: 1 / 7; margin: 0; }
+  #stepContent3 .rc-notes{ grid-row: 17; grid-column: 1 / 7; margin-top: 0; }
+  #stepContent3 .step-nav{ grid-row: 18; grid-column: 1 / 7; margin: 0; }
+
+  #stepContent3 .rc-progress{
+    display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
+  }
+  #stepContent3 .rc-progress-label{
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent3 .rc-progress-track{
+    width: 180px; height: 6px; border-radius: 99px;
+    background: var(--step-border); overflow: hidden;
+  }
+  #stepContent3 .rc-progress-fill{
+    display: block; height: 100%; width: 60%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--step-success), var(--step-primary));
+    box-shadow: 0 0 10px rgba(139,92,246,0.3);
+  }
+  #stepContent3 .rc-progress-note{
+    font-family: var(--step-body-font);
+    font-size: 10px; color: var(--step-text-muted);
+  }
+
+  @media (max-width: 1040px){
+    #stepContent3 .rc-grid{ grid-template-columns: 1fr; }
+    #stepContent3 .rc-grid > *,
+    #stepContent3 .rc-grid > .rc-dynamic > *{
+      grid-row: auto !important;
+      grid-column: 1 / 2 !important;
+    }
+    #stepContent3 .rc-eyebrow-title{ white-space: normal; }
+    #stepContent3 .rc-actions{ display: grid; grid-template-columns: 1fr !important; gap: 1rem; }
+    #stepContent3 .rc-flow{ flex-wrap: wrap; }
+  }
+</style>
+<style>
+  /* =========================================================
+     STEP 4 — ACTION BLUEPRINT — execution / planning workspace.
+     Scoped strictly to #stepContent4 (the main content area).
+     Reuses the --step-* tokens. No existing content removed;
+     the dynamic analysis cards are re-composed via CSS only,
+     redistributed into a connected execution pipeline.
+     ========================================================= */
+  #stepContent4{ padding: 3rem 3.25rem 2.75rem; }
+
+  /* ---------- Master grid ---------- */
+  #stepContent4 .ab-grid{
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1.4rem 1rem;
+    margin-top: 1.75rem;
+  }
+  #stepContent4 .ab-dynamic{ display: contents; }
+
+  /* ---------- Section eyebrows ---------- */
+  #stepContent4 .ab-eyebrow{
+    display: flex; align-items: center; gap: 0.55rem;
+    min-width: 0;
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent4 .ab-eyebrow svg{ color: var(--step-primary-soft); flex: 0 0 auto; }
+  #stepContent4 .ab-eyebrow-title{ white-space: nowrap; }
+  #stepContent4 .ab-eyebrow--focus{ grid-row: 1; grid-column: 1 / 7; }
+  #stepContent4 .ab-eyebrow--po{ grid-row: 4; grid-column: 1 / 7; }
+  #stepContent4 .ab-eyebrow--success{ grid-row: 10; grid-column: 1 / 7; }
+
+  /* ---------- 1. Focus of this plan ---------- */
+  #stepContent4 .ab-signal{
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.28rem 0.62rem;
+    border: 1px solid var(--step-border-strong);
+    border-radius: 99px;
+    font-family: var(--step-body-font);
+    font-size: 9.5px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--step-text-secondary);
+    background: var(--step-card-bg);
+  }
+  #stepContent4 .ab-signal.is-strong{ color: var(--step-success); border-color: rgba(52,211,153,0.35); background: rgba(52,211,153,0.06); }
+  #stepContent4 .ab-signal.is-moderate{ color: var(--step-warning); border-color: rgba(251,191,36,0.35); background: rgba(251,191,36,0.06); }
+  #stepContent4 .ab-signal.is-light{ color: var(--step-danger); border-color: rgba(248,113,113,0.35); background: rgba(248,113,113,0.06); }
+  #stepContent4 .ab-stages{
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+  }
+  #stepContent4 .ab-stage{
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--step-text-muted);
+    opacity: 0.45;
+  }
+  #stepContent4 .ab-stage.is-done{ color: var(--step-success); opacity: 0.85; }
+  #stepContent4 .ab-stage.is-active{ color: var(--step-primary-soft); opacity: 1; }
+  #stepContent4 .ab-stage.is-done::before{
+    content: '';
+    width: 7px; height: 7px; border-radius: 99px;
+    background: var(--step-success);
+  }
+  #stepContent4 .ab-stage.is-active::before{
+    content: '';
+    width: 7px; height: 7px; border-radius: 99px;
+    background: var(--step-primary);
+    box-shadow: 0 0 10px rgba(139,92,246,0.5);
+  }
+  #stepContent4 .ab-stage-arrow{ color: var(--step-border-strong); opacity: 0.9; }
+
+  #stepContent4 .analysis-quote{
+    grid-row: 2; grid-column: 1 / 7;
+    margin: 0;
+    padding: 1.35rem 1.6rem;
+    border: 1px solid rgba(139,92,246,0.25);
+    border-left: 3px solid var(--step-primary);
+    border-radius: 12px;
+    background:
+      linear-gradient(90deg, rgba(139,92,246,0.07), transparent 60%),
+      var(--step-surface-raised);
+    font-family: var(--step-body-font);
+    font-size: 15px; font-style: italic; line-height: 1.7;
+    color: var(--step-text);
+  }
+  #stepContent4 .ab-script{
+    grid-row: 3; grid-column: 1 / 7;
+    margin: 0;
+    padding: 1.05rem 1.4rem;
+    border: 1px dashed var(--step-border-strong);
+    border-radius: 12px;
+    background: var(--step-card-bg);
+  }
+  #stepContent4 .ab-script::before{
+    content: 'HOW TO FRAME IT —';
+    display: block;
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+    margin-bottom: 0.5rem;
+  }
+  #stepContent4 .ab-script .script-text{
+    font-size: 13px; line-height: 1.7;
+    color: var(--step-text-secondary);
+  }
+
+  /* ---------- 2. Priority & outcome ---------- */
+  #stepContent4 .ab-priority{
+    grid-row: 5; grid-column: 1 / 4;
+    display: flex; flex-direction: column; gap: 0.6rem;
+    padding: 1.15rem 1.2rem;
+    border: 1px solid rgba(251,191,36,0.28);
+    border-left: 3px solid var(--step-warning);
+    border-radius: 12px;
+    background: linear-gradient(160deg, rgba(251,191,36,0.07), transparent 65%), var(--step-card-bg);
+  }
+  #stepContent4 .ab-panel-label{
+    font-family: var(--step-heading-font);
+    font-size: 9.5px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent4 .ab-panel-label--amber{ color: var(--step-warning); }
+  #stepContent4 .ab-panel-label--violet{ color: var(--step-primary-soft); }
+  #stepContent4 .ab-panel-label--red{ color: var(--step-danger); }
+  #stepContent4 .ab-priority .guidelines{ display: flex; flex-direction: column; gap: 0.55rem; }
+  #stepContent4 .ab-priority .guideline{
+    margin: 0;
+    background: var(--step-surface-raised);
+    border-color: rgba(251,191,36,0.18);
+    color: var(--step-text-secondary);
+  }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(8){
+    grid-row: 5; grid-column: 4 / 7;
+    margin: 0;
+    border-radius: 12px;
+    border-left: 3px solid var(--step-success);
+    background: linear-gradient(160deg, rgba(52,211,153,0.06), transparent 60%), var(--step-surface-raised);
+  }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(8)::before{
+    content: 'DESIRED OUTCOME';
+    display: block;
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-success);
+    margin-bottom: 0.5rem;
+  }
+
+  /* ---------- 3. Action plan pipeline ---------- */
+  #stepContent4 .ab-flow{
+    grid-row: 6; grid-column: 1 / 7;
+    display: flex; align-items: center; justify-content: center; gap: 1.1rem;
+    padding: 0.6rem 1rem;
+    border-top: 1px dashed var(--step-border-strong);
+    border-bottom: 1px dashed var(--step-border-strong);
+  }
+  #stepContent4 .ab-flow-step{
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-text-secondary);
+    white-space: nowrap;
+  }
+  #stepContent4 .ab-flow-step b{
+    font-size: 9px; font-weight: 700;
+    color: var(--step-primary-soft);
+  }
+  #stepContent4 .ab-flow-step--amber b{ color: var(--step-warning); }
+  #stepContent4 .ab-flow-step--violet b{ color: var(--step-primary-soft); }
+  #stepContent4 .ab-flow-step--teal b{ color: var(--step-success); }
+  #stepContent4 .ab-flow-arrow{
+    display: inline-flex; align-items: center;
+    color: var(--step-border-strong);
+  }
+  #stepContent4 .ab-flow-arrow svg{ width: 16px; height: 16px; }
+
+  /* module cards */
+  #stepContent4 #step4Cards > .analysis-card:nth-child(2),
+  #stepContent4 #step4Cards > .analysis-card:nth-child(3),
+  #stepContent4 #step4Cards > .analysis-card:nth-child(4){
+    display: flex; flex-direction: column; gap: 0.4rem;
+    margin: 0;
+    border-radius: 12px;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.14);
+  }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(2){ grid-row: 7; grid-column: 1 / 3; }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(3){ grid-row: 7 / 10; grid-column: 5 / 7; }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(4){ grid-row: 7; grid-column: 3 / 5; }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(5){ grid-row: 8; grid-column: 3 / 5; }
+
+  /* stage chips on the three pipeline modules */
+  #stepContent4 #step4Cards > .analysis-card:nth-child(2)::before{
+    content: '01 · WHAT';
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--step-warning);
+  }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(4)::before{
+    content: '02 · WHO';
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--step-primary-soft);
+  }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(3)::before{
+    content: '03 · WHEN';
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--step-success);
+  }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(2) .analysis-card-value,
+  #stepContent4 #step4Cards > .analysis-card:nth-child(3) .analysis-card-value,
+  #stepContent4 #step4Cards > .analysis-card:nth-child(4) .analysis-card-value,
+  #stepContent4 #step4Cards > .analysis-card:nth-child(5) .analysis-card-value{
+    font-size: 13px; line-height: 1.65;
+  }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(4){ border-left-color: var(--step-primary); }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(5){ border-left-color: var(--step-primary); }
+
+  /* what-detail cards (environment + why it works) */
+  #stepContent4 #step4Cards > .analysis-card:nth-child(6){
+    grid-row: 8; grid-column: 1 / 3;
+    margin: 0; border-radius: 12px;
+    border-left-color: var(--step-border-strong);
+  }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(9){
+    grid-row: 9; grid-column: 1 / 3;
+    margin: 0; border-radius: 12px;
+    border-left-color: var(--step-primary);
+    background: linear-gradient(160deg, rgba(139,92,246,0.05), transparent 60%), var(--step-card-bg);
+  }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(6) .analysis-card-label,
+  #stepContent4 #step4Cards > .analysis-card:nth-child(9) .analysis-card-label{ color: var(--step-text-muted); }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(6) .analysis-card-value,
+  #stepContent4 #step4Cards > .analysis-card:nth-child(9) .analysis-card-value{
+    font-size: 12.5px; line-height: 1.6; color: var(--step-text-secondary);
+  }
+
+  /* ---------- 4. Success signal ---------- */
+  #stepContent4 #step4Cards > .analysis-card:nth-child(7){
+    grid-row: 11; grid-column: 1 / 4;
+    margin: 0; border-radius: 12px;
+    border-left: 3px solid var(--step-success);
+    background: linear-gradient(120deg, rgba(52,211,153,0.09), transparent 65%), var(--step-surface-raised);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.12);
+  }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(7)::before{
+    content: '✓';
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px;
+    border: 1px solid rgba(52,211,153,0.4);
+    border-radius: 99px;
+    font-size: 11px; font-weight: 700;
+    color: var(--step-success);
+    margin-bottom: 0.4rem;
+  }
+  #stepContent4 #step4Cards > .analysis-card:nth-child(7) .analysis-card-value{
+    font-size: 13.5px; line-height: 1.7; color: var(--step-text);
+  }
+  #stepContent4 .analysis-takeaway{
+    grid-row: 11; grid-column: 4 / 7;
+    margin: 0;
+    padding: 1.15rem 1.3rem;
+    border: 1px solid rgba(251,191,36,0.25);
+    border-left: 3px solid var(--step-warning);
+    border-radius: 12px;
+    background: linear-gradient(160deg, rgba(251,191,36,0.05), transparent 60%), var(--step-card-bg);
+  }
+
+  /* ---------- 5. Manager commitment strip ---------- */
+  #stepContent4 .ab-commit{
+    grid-row: 12; grid-column: 1 / 7;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+    gap: 1rem;
+    align-items: stretch;
+    padding: 1.1rem 1.2rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-card-bg);
+  }
+  #stepContent4 .ab-commit-left{ display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+  #stepContent4 .ab-commit #step4ManagerNotesContainer{
+    margin: 0;
+    border-left-color: var(--step-primary);
+    background: rgba(139,92,246,0.05);
+  }
+  #stepContent4 .ab-commit .form-label{ margin-bottom: 0.4rem; }
+  #stepContent4 .ab-commit .note-area{
+    margin: 0;
+    min-height: 88px;
+    resize: vertical;
+  }
+
+  /* ---------- Avoid guardrails ---------- */
+  #stepContent4 .ab-avoid{
+    grid-row: 13; grid-column: 1 / 7;
+    display: flex; flex-direction: column; gap: 0.6rem;
+    padding: 1.05rem 1.2rem;
+    border: 1px solid rgba(248,113,113,0.18);
+    border-left: 3px solid var(--step-danger);
+    border-radius: 12px;
+    background: var(--step-card-bg);
+  }
+  #stepContent4 .ab-avoid .guidelines{ display: flex; flex-direction: column; gap: 0.5rem; }
+  #stepContent4 .ab-avoid .guideline{ margin: 0; }
+
+  /* ---------- Bottom nav ---------- */
+  #stepContent4 .step-nav{ grid-row: 14; grid-column: 1 / 7; margin: 0; }
+  #stepContent4 .ab-progress{
+    display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
+  }
+  #stepContent4 .ab-progress-label{
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent4 .ab-progress-track{
+    width: 180px; height: 6px; border-radius: 99px;
+    background: var(--step-border); overflow: hidden;
+  }
+  #stepContent4 .ab-progress-fill{
+    display: block; height: 100%; width: 80%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--step-success), var(--step-primary));
+    box-shadow: 0 0 10px rgba(139,92,246,0.3);
+  }
+  #stepContent4 .ab-progress-note{
+    font-family: var(--step-body-font);
+    font-size: 10px; color: var(--step-text-muted);
+  }
+
+  @media (max-width: 1040px){
+    #stepContent4 .ab-grid{ grid-template-columns: 1fr; }
+    #stepContent4 .ab-grid > *,
+    #stepContent4 .ab-grid > .ab-dynamic > *{
+      grid-row: auto !important;
+      grid-column: 1 / 2 !important;
+    }
+    #stepContent4 .ab-eyebrow-title{ white-space: normal; }
+    #stepContent4 .ab-stages{ margin-left: 0; flex-wrap: wrap; }
+    #stepContent4 .ab-flow{ flex-wrap: wrap; }
+    #stepContent4 .ab-commit{ grid-template-columns: 1fr; }
+  }
+</style>
+<style>
+  /* =========================================================
+     STEP 5 — NEXT STEPS & FOLLOW-UP — journey closure workspace.
+     Scoped strictly to #stepContent5 (the main content area).
+     Reuses the --step-* tokens. No existing content removed;
+     the dynamic analysis cards are re-composed via CSS only
+     into a follow-up planning layout (Summary → Schedule →
+     Focus → Progress → Learnings → Complete).
+     ========================================================= */
+  #stepContent5{ padding: 3rem 3.25rem 2.75rem; }
+
+  /* ---------- Master grid ---------- */
+  #stepContent5 .fs-grid{
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1.3rem 1rem;
+    margin-top: 1.75rem;
+  }
+  #stepContent5 .fs-dynamic{ display: contents; }
+
+  /* ---------- Section eyebrows ---------- */
+  #stepContent5 .fs-eyebrow{
+    display: flex; align-items: center; gap: 0.55rem;
+    min-width: 0;
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent5 .fs-eyebrow svg{ color: var(--step-primary-soft); flex: 0 0 auto; }
+  #stepContent5 .fs-eyebrow-title{ white-space: nowrap; }
+  #stepContent5 .fs-eyebrow--summary{ grid-row: 1; grid-column: 1 / 7; }
+  #stepContent5 .fs-eyebrow--follow{ grid-row: 3; grid-column: 1 / 7; }
+  #stepContent5 .fs-eyebrow--focus{ grid-row: 5; grid-column: 1 / 7; }
+  #stepContent5 .fs-eyebrow--learn{ grid-row: 12; grid-column: 1 / 7; }
+
+  /* journey stage chips (shared with eyebrow right side) */
+  #stepContent5 .fs-journ{
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+  }
+  #stepContent5 .fs-stage{
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--step-text-muted);
+    opacity: 0.45;
+  }
+  #stepContent5 .fs-stage.is-done{ color: var(--step-success); opacity: 0.85; }
+  #stepContent5 .fs-stage.is-active{ color: var(--step-primary-soft); opacity: 1; }
+  #stepContent5 .fs-stage.is-done::before{
+    content: '';
+    width: 7px; height: 7px; border-radius: 99px;
+    background: var(--step-success);
+  }
+  #stepContent5 .fs-stage.is-active::before{
+    content: '';
+    width: 7px; height: 7px; border-radius: 99px;
+    background: var(--step-primary);
+    box-shadow: 0 0 10px rgba(139,92,246,0.5);
+  }
+  #stepContent5 .fs-stage-arrow{ color: var(--step-border-strong); opacity: 0.9; }
+  #stepContent5 .fs-ready{
+    margin-left: 1rem;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid rgba(52,211,153,0.35);
+    border-radius: 99px;
+    font-family: var(--step-body-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--step-success);
+    background: rgba(52,211,153,0.07);
+    white-space: nowrap;
+  }
+
+  /* ---------- 1. Conversation summary banner ---------- */
+  #stepContent5 #step5Cards > .analysis-quote{
+    grid-row: 2; grid-column: 1 / 7;
+    margin: 0; padding: 0.4rem 1.4rem 0;
+    border: 0; border-left: 3px solid var(--step-primary);
+    border-radius: 0;
+    background: transparent;
+    font-size: 12.5px; font-style: italic; line-height: 1.6;
+    color: var(--step-text-muted);
+  }
+  #stepContent5 #step5Cards > .analysis-takeaway{
+    grid-row: 2; grid-column: 1 / 7;
+    margin: 0; padding: 0.9rem 1.4rem 0.55rem;
+    border: 0; border-left: 3px solid var(--step-primary);
+    border-radius: 0;
+    background: transparent;
+  }
+  #stepContent5 #step5Cards > .analysis-takeaway .analysis-takeaway-label{
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+    margin-bottom: 0.45rem;
+  }
+  #stepContent5 #step5Cards > .analysis-takeaway .analysis-takeaway-value{
+    font-family: var(--step-body-font);
+    font-size: 15px; font-weight: 500; line-height: 1.65;
+    color: var(--step-text);
+  }
+  #stepContent5 .fs-script{
+    grid-row: 2; grid-column: 1 / 7;
+    margin: 0;
+    padding: 0.9rem 1.4rem;
+    border: 1px dashed var(--step-border-strong);
+    border-radius: 0 12px 12px 0;
+    background: var(--step-card-bg);
+  }
+  #stepContent5 .fs-script::before{
+    content: 'HOW TO FRAME THE FOLLOW-UP —';
+    display: block;
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+    margin-bottom: 0.45rem;
+  }
+  #stepContent5 .fs-script .script-text{
+    font-size: 13px; line-height: 1.7;
+    color: var(--step-text-secondary);
+  }
+  #stepContent5 .fs-stats{
+    grid-row: 2; grid-column: 1 / 7;
+    margin: 0 1.4rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--step-border);
+    display: flex; align-items: stretch; gap: 0.8rem;
+  }
+  #stepContent5 .fs-stat{
+    flex: 1 1 0; min-width: 0;
+    display: flex; flex-direction: column; gap: 0.25rem;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--step-border);
+    border-radius: 10px;
+    background: var(--step-card-bg);
+  }
+  #stepContent5 .fs-stat-label{
+    font-family: var(--step-heading-font);
+    font-size: 8.5px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent5 .fs-stat-value{
+    font-family: var(--step-body-font);
+    font-size: 12.5px; font-weight: 500; line-height: 1.4;
+    color: var(--step-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #stepContent5 .fs-stat--signals .fs-stat-value{ color: var(--step-success); }
+  #stepContent5 .fs-stat--root .fs-stat-value{ color: var(--step-warning); }
+  #stepContent5 .fs-stat--acts .fs-stat-value{ color: var(--step-info); }
+  #stepContent5 .fs-stat--conf.is-strong .fs-stat-value{ color: var(--step-success); }
+  #stepContent5 .fs-stat--conf.is-moderate .fs-stat-value{ color: var(--step-warning); }
+  #stepContent5 .fs-stat--conf.is-light .fs-stat-value{ color: var(--step-danger); }
+
+  /* ---------- 2. Schedule follow-up workspace ---------- */
+  #stepContent5 .fs-schedule{
+    grid-row: 4; grid-column: 1 / 7;
+    display: flex; align-items: center; gap: 1.1rem;
+    padding: 1.25rem 1.4rem;
+    border: 1px solid var(--step-border);
+    border-radius: 14px;
+    background:
+      linear-gradient(90deg, rgba(139,92,246,0.07), rgba(34,211,238,0.05), transparent 75%),
+      var(--step-surface-raised);
+    box-shadow: var(--step-shadow);
+  }
+  #stepContent5 .fs-flow-id{
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+    white-space: nowrap;
+  }
+  #stepContent5 .fs-flow-sep{
+    display: inline-flex; align-items: center;
+    color: var(--step-border-strong);
+  }
+  #stepContent5 .fs-flow-sep svg{ width: 16px; height: 16px; }
+  #stepContent5 .fs-field{
+    display: flex; flex-direction: column; gap: 0.35rem;
+  }
+  #stepContent5 .fs-field-label{
+    font-family: var(--step-heading-font);
+    font-size: 8.5px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent5 .fs-field input{
+    font-family: var(--step-body-font);
+    font-size: 13px; font-weight: 500;
+    color: var(--step-text);
+    background: var(--step-bg);
+    border: 1px solid var(--step-border-strong);
+    border-radius: 10px;
+    padding: 0.55rem 0.8rem;
+    min-width: 150px;
+    outline: none;
+    color-scheme: dark;
+  }
+  #stepContent5 .fs-field input:focus{
+    border-color: var(--step-primary);
+    box-shadow: 0 0 0 3px rgba(139,92,246,0.15), var(--step-glow);
+  }
+  #stepContent5 .fs-reco{
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px dashed rgba(34,211,238,0.35);
+    border-radius: 99px;
+    font-family: var(--step-body-font);
+    font-size: 10px; font-weight: 500;
+    color: var(--step-text-secondary);
+    background: rgba(34,211,238,0.05);
+    white-space: nowrap;
+  }
+  #stepContent5 .fs-reco svg{ color: var(--step-info); }
+  #stepContent5 .fs-reminder{
+    margin-left: auto;
+    display: flex; align-items: center; gap: 0.7rem;
+  }
+  #stepContent5 .fs-reminder .btn{
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+  #stepContent5 .fs-reminder .btn.is-set{
+    border-color: rgba(52,211,153,0.5);
+    color: var(--step-success);
+    background: rgba(52,211,153,0.08);
+  }
+  #stepContent5 .fs-hint{
+    font-family: var(--step-body-font);
+    font-size: 11px; color: var(--step-text-muted);
+    white-space: nowrap;
+  }
+
+  /* ---------- 3a. Key focus rows (cards 2-5) ---------- */
+  #stepContent5 #step5Cards > .analysis-card:nth-child(2){ grid-row: 6; grid-column: 1 / 4; }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(3){ grid-row: 7; grid-column: 1 / 4; }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(4){ grid-row: 8; grid-column: 1 / 4; }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(5){ grid-row: 9; grid-column: 1 / 4; }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(2),
+  #stepContent5 #step5Cards > .analysis-card:nth-child(3),
+  #stepContent5 #step5Cards > .analysis-card:nth-child(4),
+  #stepContent5 #step5Cards > .analysis-card:nth-child(5){
+    display: flex; align-items: flex-start; gap: 0.9rem;
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--step-card-bg);
+    box-shadow: none;
+  }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(2):hover,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(3):hover,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(4):hover,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(5):hover{
+    border-color: var(--step-border-strong);
+    background: var(--step-row-bg-hover);
+  }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(2) .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(3) .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(4) .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(5) .analysis-card-label{
+    flex: 0 0 104px;
+    padding-top: 2px;
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-text-muted);
+    margin-bottom: 0;
+  }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(2) .analysis-card-label{ color: var(--step-primary-soft); }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(3) .analysis-card-label{ color: var(--step-warning); }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(4) .analysis-card-label{ color: var(--step-info); }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(5) .analysis-card-label{ color: var(--step-warning); }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(2) .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(3) .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(4) .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(5) .analysis-card-value{
+    flex: 1 1 auto;
+    font-size: 13px; line-height: 1.5;
+    color: var(--step-text-secondary);
+  }
+  #stepContent5 .fs-prio{
+    flex: 0 0 auto;
+    align-self: center;
+    padding: 0.28rem 0.6rem;
+    border: 1px solid var(--step-accent-line);
+    border-radius: 99px;
+    font-family: var(--step-heading-font);
+    font-size: 8.5px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+    background: var(--step-accent-tint);
+    white-space: nowrap;
+  }
+
+  /* ---------- 3b. Progress tracking (right column) ---------- */
+  #stepContent5 .fs-progress{
+    grid-row: 6 / 10; grid-column: 5 / 7;
+    display: flex; flex-direction: column; gap: 0.9rem;
+    padding: 1.1rem 1.15rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-surface-raised);
+  }
+  #stepContent5 .fs-progress-head{
+    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+  }
+  #stepContent5 .fs-progress-title{
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-text-secondary);
+  }
+  #stepContent5 .fs-progress-meta{
+    font-family: var(--step-body-font);
+    font-size: 10px; font-weight: 600;
+    color: var(--step-primary-soft);
+  }
+  #stepContent5 .fs-track{
+    display: flex; flex-direction: column; gap: 0;
+    position: relative;
+  }
+  #stepContent5 .fs-track-stage{
+    position: relative;
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.55rem 0;
+    font-family: var(--step-body-font);
+    font-size: 12px; font-weight: 500;
+    color: var(--step-text-muted);
+  }
+  #stepContent5 .fs-track-stage .fs-dot{
+    flex: 0 0 auto;
+    width: 12px; height: 12px; border-radius: 99px;
+    border: 2px solid var(--step-border-strong);
+    background: var(--step-surface);
+    z-index: 1;
+  }
+  #stepContent5 .fs-track-stage:not(:last-child)::before{
+    content: '';
+    position: absolute; left: 5px; top: 26px; bottom: -4px;
+    width: 2px;
+    background: var(--step-border-strong);
+  }
+  #stepContent5 .fs-track-stage.is-done .fs-dot{
+    border-color: var(--step-success);
+    background: var(--step-success);
+    box-shadow: 0 0 8px rgba(52,211,153,0.35);
+  }
+  #stepContent5 .fs-track-stage.is-active{ color: var(--step-text); }
+  #stepContent5 .fs-track-stage.is-active .fs-dot{
+    border-color: var(--step-primary);
+    background: var(--step-primary);
+    box-shadow: 0 0 10px rgba(139,92,246,0.55);
+  }
+  #stepContent5 .fs-track-stage .fs-stage-tag{
+    margin-left: auto;
+    font-family: var(--step-heading-font);
+    font-size: 8px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent5 .fs-track-stage.is-done .fs-stage-tag{ color: var(--step-success); }
+  #stepContent5 .fs-track-stage.is-active .fs-stage-tag{ color: var(--step-primary-soft); }
+  #stepContent5 .fs-progress-note{
+    margin-top: auto;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--step-border);
+    font-family: var(--step-body-font);
+    font-size: 10.5px; line-height: 1.5;
+    color: var(--step-text-muted);
+  }
+
+  /* ---------- Expected exchange (cards 6-8) ---------- */
+  #stepContent5 #step5Cards > .analysis-card:nth-child(6){ grid-row: 10; grid-column: 1 / 3; }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(7){ grid-row: 10; grid-column: 3 / 5; }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(8){ grid-row: 10; grid-column: 5 / 7; }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(6),
+  #stepContent5 #step5Cards > .analysis-card:nth-child(7),
+  #stepContent5 #step5Cards > .analysis-card:nth-child(8){
+    margin: 0;
+    padding: 1rem 1.05rem;
+    border-radius: 12px;
+    background: var(--step-card-bg);
+  }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(6) .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(7) .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(8) .analysis-card-label{
+    margin-bottom: 0.5rem;
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(6) .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(7) .analysis-list-item,
+  #stepContent5 #step5Cards > .analysis-card:nth-child(8) .analysis-card-value{
+    font-size: 12.5px; line-height: 1.55;
+    color: var(--step-text-secondary);
+  }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(7) .analysis-list-item{
+    padding: 0.25rem 0;
+    color: var(--step-text-secondary);
+  }
+
+  /* ---------- Success indicator (card 9) ---------- */
+  #stepContent5 #step5Cards > .analysis-card:nth-child(9){
+    grid-row: 11; grid-column: 3 / 5;
+    margin: 0; padding: 1.05rem 1.2rem;
+    border-radius: 12px;
+    border-left-color: var(--step-success);
+    background: linear-gradient(120deg, rgba(52,211,153,0.08), transparent 70%), var(--step-surface-raised);
+  }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(9) .analysis-card-label{
+    margin-bottom: 0.5rem;
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-success);
+  }
+  #stepContent5 #step5Cards > .analysis-card:nth-child(9) .analysis-card-value{
+    font-size: 13px; line-height: 1.6;
+    color: var(--step-text);
+  }
+
+  /* ---------- 4. Learnings & notes band ---------- */
+  #stepContent5 .fs-learn{
+    grid-row: 13; grid-column: 1 / 7;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+    gap: 1rem;
+    align-items: stretch;
+    padding: 1.15rem 1.25rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-card-bg);
+  }
+  #stepContent5 .fs-learn-left{ display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+  #stepContent5 .fs-learn-panel-label{
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+  }
+  #stepContent5 .fs-learn #step5ManagerNotesContainer{
+    margin: 0;
+    border-left-color: var(--step-primary);
+  }
+  #stepContent5 .fs-learn .form-label{ margin-bottom: 0.4rem; }
+  #stepContent5 .fs-learn .note-area{
+    margin: 0;
+    min-height: 96px;
+    resize: vertical;
+  }
+
+  /* ---------- Keep-in-mind guardrails (recommended + avoid) ---------- */
+  #stepContent5 .fs-guard{
+    grid-row: 14; grid-column: 1 / 7;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  #stepContent5 .fs-guard-panel{
+    display: flex; flex-direction: column; gap: 0.55rem;
+    padding: 1.05rem 1.2rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-card-bg);
+  }
+  #stepContent5 .fs-guard-panel .fs-panel-label--teal{ color: var(--step-success); }
+  #stepContent5 .fs-guard-panel .fs-panel-label--red{ color: var(--step-danger); }
+  #stepContent5 .fs-guard-panel .fs-panel-label{
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  #stepContent5 .fs-guard-panel .guidelines{ display: flex; flex-direction: column; gap: 0.5rem; }
+  #stepContent5 .fs-guard-panel .guideline{ margin: 0; }
+
+  /* ---------- 5. Final completion area ---------- */
+  #stepContent5 .step-nav{ grid-row: 15; grid-column: 1 / 7; margin: 0; }
+  #stepContent5 .fs-progress-meter{
+    display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
+  }
+  #stepContent5 .fs-meter-label{
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent5 .fs-meter-track{
+    width: 190px; height: 6px; border-radius: 99px;
+    background: var(--step-border); overflow: hidden;
+  }
+  #stepContent5 .fs-meter-fill{
+    display: block; height: 100%; width: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--step-success), var(--step-primary));
+    box-shadow: 0 0 10px rgba(52,211,153,0.35);
+  }
+  #stepContent5 .fs-meter-note{
+    font-family: var(--step-body-font);
+    font-size: 10px; color: var(--step-text-muted);
+  }
+  #stepContent5 #completeSyncBtn{
+    padding: 0.72rem 1.7rem;
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+
+  @media (max-width: 1040px){
+    #stepContent5 .fs-grid{ grid-template-columns: 1fr; }
+    #stepContent5 .fs-grid > *,
+    #stepContent5 .fs-grid > .fs-dynamic > *{
+      grid-row: auto !important;
+      grid-column: 1 / 2 !important;
+    }
+    #stepContent5 .fs-eyebrow-title{ white-space: normal; }
+    #stepContent5 .fs-journ{ margin-left: 0; flex-wrap: wrap; }
+    #stepContent5 .fs-stats{ flex-direction: column; }
+    #stepContent5 .fs-schedule{ flex-wrap: wrap; }
+    #stepContent5 .fs-reminder{ margin-left: 0; }
+    #stepContent5 .fs-progress{ grid-row: auto !important; }
+    #stepContent5 .fs-track{ flex-direction: row; flex-wrap: wrap; }
+    #stepContent5 .fs-guard{ grid-template-columns: 1fr; }
+    #stepContent5 .fs-learn{ grid-template-columns: 1fr; }
+  }
+</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="/csrf.js"></script>
@@ -1733,43 +2967,105 @@
               <p class="step-desc">Understand WHY the AI believes the behaviour is occurring. Never diagnoses. Never claims certainty. Always explains reasoning using transcript evidence.</p>
             </div>
 
-            <div class="script-block">
-              <div class="script-text" id="step3Script">Loading analysis...</div>
-            </div>
+            <div class="rc-grid">
 
-            <div id="step3Cards"></div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0;">
-              <div>
-                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:0.6rem;">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                  <span> Recommended Actions</span>
-                </div>
-                <div class="guidelines" id="step3Recommended"></div>
+              <div class="rc-eyebrow rc-eyebrow--snap">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>
+                <span class="rc-eyebrow-title">What We've Heard So Far</span>
+                <span class="rc-eyebrow-sub">Verified facts from the conversation transcript — the foundation for this analysis</span>
               </div>
-              <div>
-                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                  <span> Avoid Actions</span>
-                </div>
-                <div class="guidelines" id="step3Avoid"></div>
+
+              <div class="script-block rc-observation">
+                <div class="script-text" id="step3Script">Loading analysis...</div>
               </div>
-            </div>
 
-            <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step3ManagerNotesContainer">
-              <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-              <div id="step3ManagerNotes"></div>
-            </div>
+              <div id="step3Cards" class="rc-dynamic"></div>
 
-            <div style="margin-top:2rem;">
-              <label class="form-label">Manager Notes for This Step</label>
-              <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_3"></textarea>
-            </div>
+              <div class="rc-eyebrow rc-eyebrow--drivers">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg>
+                <span class="rc-eyebrow-title">Potential Drivers</span>
+                <span class="rc-eyebrow-sub">Candidate causes the AI is tracking — treated as hypotheses, not conclusions</span>
+              </div>
 
-            <div class="step-nav">
-              <button class="btn btn-sm" onclick="goToStep(2)">Back</button>
-              <div style="display:flex;gap:0.8rem;">
-                <button class="btn btn-primary btn-sm" onclick="goToStep(4)">Save &amp; Continue</button>
+              <div class="rc-eyebrow rc-eyebrow--insight">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 014 12.7c-.6.5-1 1.3-1 2.3h-6c0-1-.4-1.8-1-2.3A7 7 0 0112 2z"/></svg>
+                <span class="rc-eyebrow-title">AI Insight</span>
+              </div>
+
+              <div class="rc-flow">
+                <span class="rc-flow-step">Follow-up Questions</span>
+                <span class="rc-flow-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                <span class="rc-flow-step">Evidence from Conversation</span>
+                <span class="rc-flow-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                <span class="rc-flow-step">Likely Root Cause</span>
+              </div>
+
+              <div class="rc-eyebrow rc-eyebrow--fq">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                <span class="rc-eyebrow-title">Follow-up Questions</span>
+              </div>
+              <div class="rc-eyebrow rc-eyebrow--ev">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                <span class="rc-eyebrow-title">Evidence from Conversation</span>
+              </div>
+              <div class="rc-eyebrow rc-eyebrow--rc">
+                <span class="rc-eyebrow-title">Likely Root Cause</span>
+                <button type="button" class="rc-confirm" id="step3ConfirmBtn">Confirm as likely cause</button>
+              </div>
+
+              <div class="rc-questions">
+                <p class="rc-questions-lead">Probes to validate or rule out each potential driver before you confirm the root cause.</p>
+                <button type="button" class="rc-fq" data-copy="When did you first notice this becoming a problem?">
+                  <span class="rc-fq-q">&quot;When did you first notice this becoming a problem?&quot;</span>
+                  <span class="rc-fq-use"><span class="rc-fq-use-text">Use this</span><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                </button>
+                <button type="button" class="rc-fq" data-copy="If you had to name one thing driving this, what would it be?">
+                  <span class="rc-fq-q">&quot;If you had to name one thing driving this, what would it be?&quot;</span>
+                  <span class="rc-fq-use"><span class="rc-fq-use-text">Use this</span><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                </button>
+                <button type="button" class="rc-fq" data-copy="What would change most if we tackled this together?">
+                  <span class="rc-fq-q">&quot;What would change most if we tackled this together?&quot;</span>
+                  <span class="rc-fq-use"><span class="rc-fq-use-text">Use this</span><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                </button>
+              </div>
+
+              <div class="rc-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div>
+                  <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:0.6rem;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <span> Recommended Actions</span>
+                  </div>
+                  <div class="guidelines" id="step3Recommended"></div>
+                </div>
+                <div>
+                  <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    <span> Avoid Actions</span>
+                  </div>
+                  <div class="guidelines" id="step3Avoid"></div>
+                </div>
+              </div>
+
+              <div class="guideline tip rc-manager" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step3ManagerNotesContainer">
+                <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+                <div id="step3ManagerNotes"></div>
+              </div>
+
+              <div class="rc-notes">
+                <label class="form-label">Manager Notes for This Step</label>
+                <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_3"></textarea>
+              </div>
+
+              <div class="step-nav">
+                <button class="btn btn-sm" onclick="goToStep(2)">Back</button>
+                <div class="rc-progress">
+                  <span class="rc-progress-label">Conversation Progress</span>
+                  <div class="rc-progress-track"><span class="rc-progress-fill"></span></div>
+                  <span class="rc-progress-note">Progress autosaved</span>
+                </div>
+                <div style="display:flex;gap:0.8rem;">
+                  <button class="btn btn-primary btn-sm" onclick="goToStep(4)">Save &amp; Continue</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1782,43 +3078,79 @@
               <p class="step-desc">Generate realistic actions that can actually be implemented. Every recommendation includes WHY it works.</p>
             </div>
 
-            <div class="script-block">
-              <div class="script-text" id="step4Script">Loading analysis...</div>
-            </div>
+            <div class="ab-grid">
 
-            <div id="step4Cards"></div>
+              <div class="ab-eyebrow ab-eyebrow--focus">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/></svg>
+                <span class="ab-eyebrow-title">Focus of This Plan</span>
+                <span class="ab-signal" id="abFocusSignal" style="display:none;"></span>
+                <span class="ab-stages">
+                  <span class="ab-stage is-done">Insight</span>
+                  <span class="ab-stage-arrow">→</span>
+                  <span class="ab-stage is-done">Understanding</span>
+                  <span class="ab-stage-arrow">→</span>
+                  <span class="ab-stage is-active">Action</span>
+                </span>
+              </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0;">
-              <div>
-                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:0.6rem;">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                  <span> Recommended Actions</span>
-                </div>
+              <div id="step4Cards" class="ab-dynamic"></div>
+
+              <div class="script-block ab-script">
+                <div class="script-text" id="step4Script">Loading analysis...</div>
+              </div>
+
+              <div class="ab-eyebrow ab-eyebrow--po">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-8"/><path d="M12 8h.01"/><circle cx="12" cy="12" r="10"/></svg>
+                <span class="ab-eyebrow-title">Priority &amp; Outcome</span>
+              </div>
+
+              <div class="ab-priority">
+                <div class="ab-panel-label ab-panel-label--amber">Priority &middot; Do These First</div>
                 <div class="guidelines" id="step4Recommended"></div>
               </div>
-              <div>
-                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                  <span> Avoid Actions</span>
+
+              <div class="ab-flow">
+                <span class="ab-flow-step ab-flow-step--amber"><b>1</b> What</span>
+                <span class="ab-flow-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                <span class="ab-flow-step ab-flow-step--violet"><b>2</b> Who</span>
+                <span class="ab-flow-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                <span class="ab-flow-step ab-flow-step--teal"><b>3</b> When</span>
+              </div>
+
+              <div class="ab-eyebrow ab-eyebrow--success">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span class="ab-eyebrow-title">Success Signal &middot; How Will We Know It Worked?</span>
+              </div>
+
+              <div class="ab-commit">
+                <div class="ab-commit-left">
+                  <div class="ab-panel-label ab-panel-label--violet">Manager Commitment</div>
+                  <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step4ManagerNotesContainer">
+                    <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+                    <div id="step4ManagerNotes"></div>
+                  </div>
                 </div>
+                <div class="ab-commit-right">
+                  <label class="form-label">Add Note</label>
+                  <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_4"></textarea>
+                </div>
+              </div>
+
+              <div class="ab-avoid">
+                <div class="ab-panel-label ab-panel-label--red">Avoid &middot; Realistic Guardrails</div>
                 <div class="guidelines" id="step4Avoid"></div>
               </div>
-            </div>
 
-            <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step4ManagerNotesContainer">
-              <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-              <div id="step4ManagerNotes"></div>
-            </div>
-
-            <div style="margin-top:2rem;">
-              <label class="form-label">Manager Notes for This Step</label>
-              <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_4"></textarea>
-            </div>
-
-            <div class="step-nav">
-              <button class="btn btn-sm" onclick="goToStep(3)">Back</button>
-              <div style="display:flex;gap:0.8rem;">
-                <button class="btn btn-primary btn-sm" onclick="goToStep(5)">Save &amp; Continue</button>
+              <div class="step-nav">
+                <button class="btn btn-sm" onclick="goToStep(3)">Back</button>
+                <div class="ab-progress">
+                  <span class="ab-progress-label">Readiness</span>
+                  <div class="ab-progress-track"><span class="ab-progress-fill"></span></div>
+                  <span class="ab-progress-note">Progress autosaved</span>
+                </div>
+                <div style="display:flex;gap:0.8rem;">
+                  <button class="btn btn-primary btn-sm" onclick="goToStep(5)">Save &amp; Continue</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1831,43 +3163,140 @@
               <p class="step-desc">Prepare for the next discussion. This page is about future conversation planning with the employee.</p>
             </div>
 
-            <div class="script-block">
-              <div class="script-text" id="step5Script">Loading analysis...</div>
-            </div>
+            <div class="fs-grid">
 
-            <div id="step5Cards"></div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0;">
-              <div>
-                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:0.6rem;">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                  <span> Recommended Actions</span>
-                </div>
-                <div class="guidelines" id="step5Recommended"></div>
+              <div class="fs-eyebrow fs-eyebrow--summary">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <span class="fs-eyebrow-title">Conversation Summary</span>
+                <span class="fs-journ">
+                  <span class="fs-stage is-done">Insight</span>
+                  <span class="fs-stage-arrow">→</span>
+                  <span class="fs-stage is-done">Understanding</span>
+                  <span class="fs-stage-arrow">→</span>
+                  <span class="fs-stage is-done">Action</span>
+                  <span class="fs-stage-arrow">→</span>
+                  <span class="fs-stage is-active">Follow-up</span>
+                </span>
+                <span class="fs-ready">Journey Ready</span>
               </div>
-              <div>
-                <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                  <span> Avoid Actions</span>
-                </div>
-                <div class="guidelines" id="step5Avoid"></div>
+
+              <div id="step5Cards" class="fs-dynamic"></div>
+
+              <div class="script-block fs-script">
+                <div class="script-text" id="step5Script">Loading analysis...</div>
               </div>
-            </div>
 
-            <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step5ManagerNotesContainer">
-              <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-              <div id="step5ManagerNotes"></div>
-            </div>
+              <div class="fs-stats">
+                <div class="fs-stat fs-stat--signals" id="fsStatSignals" style="display:none;">
+                  <span class="fs-stat-label">Signals Analyzed</span>
+                  <span class="fs-stat-value">—</span>
+                </div>
+                <div class="fs-stat fs-stat--root" id="fsStatRoot" style="display:none;">
+                  <span class="fs-stat-label">Root Cause</span>
+                  <span class="fs-stat-value">—</span>
+                </div>
+                <div class="fs-stat fs-stat--acts" id="fsStatActs" style="display:none;">
+                  <span class="fs-stat-label">Actions Planned</span>
+                  <span class="fs-stat-value">—</span>
+                </div>
+                <div class="fs-stat fs-stat--conf" id="fsStatConf" style="display:none;">
+                  <span class="fs-stat-label">Confidence</span>
+                  <span class="fs-stat-value">—</span>
+                </div>
+              </div>
 
-            <div style="margin-top:2rem;">
-              <label class="form-label">Manager Notes for This Step</label>
-              <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_5"></textarea>
-            </div>
+              <div class="fs-eyebrow fs-eyebrow--follow">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span class="fs-eyebrow-title">Schedule Follow-up</span>
+              </div>
 
-            <div class="step-nav">
-              <button class="btn btn-sm" onclick="goToStep(4)">Back</button>
-              <div style="display:flex;gap:0.8rem;">
-                <button class="btn btn-primary btn-sm" id="completeSyncBtn">Complete Sync</button>
+              <div class="fs-schedule">
+                <span class="fs-flow-id">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-8.5 8.5 8.5 8.5 0 01-3.6-.81L3 21l1.81-5.9A8.5 8.5 0 1112.5 3a8.38 8.38 0 018.5 8.5z"/></svg>
+                  Follow-up
+                </span>
+                <span class="fs-flow-sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                <div class="fs-field">
+                  <span class="fs-field-label">Date</span>
+                  <input type="date" id="fsScheduleDate">
+                </div>
+                <span class="fs-flow-sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                <div class="fs-field">
+                  <span class="fs-field-label">Time</span>
+                  <input type="time" id="fsScheduleTime">
+                </div>
+                <span class="fs-reco">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  Recommended &middot; 7&ndash;10 days
+                </span>
+                <div class="fs-reminder">
+                  <button class="btn btn-sm" id="fsReminderBtn" type="button" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                    Set reminder
+                  </button>
+                  <span class="fs-hint" id="fsScheduleHint"></span>
+                </div>
+              </div>
+
+              <div class="fs-eyebrow fs-eyebrow--focus">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span class="fs-eyebrow-title">Key Focus Areas &amp; Progress</span>
+              </div>
+
+              <div class="fs-progress">
+                <div class="fs-progress-head">
+                  <span class="fs-progress-title">Progress Tracking</span>
+                  <span class="fs-progress-meta">Stage 1 of 4</span>
+                </div>
+                <div class="fs-track">
+                  <div class="fs-track-stage is-done"><span class="fs-dot"></span>Action Planned<span class="fs-stage-tag">Done</span></div>
+                  <div class="fs-track-stage is-active"><span class="fs-dot"></span>In Progress<span class="fs-stage-tag">Now</span></div>
+                  <div class="fs-track-stage"><span class="fs-dot"></span>Review Impact<span class="fs-stage-tag">Next</span></div>
+                  <div class="fs-track-stage"><span class="fs-dot"></span>Outcome Achieved<span class="fs-stage-tag">Target</span></div>
+                </div>
+                <div class="fs-progress-note">Review impact after the follow-up sync. The full journey is mapped &mdash; ready to close this conversation.</div>
+              </div>
+
+              <div class="fs-eyebrow fs-eyebrow--learn">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                <span class="fs-eyebrow-title">Learnings &amp; Notes</span>
+              </div>
+
+              <div class="fs-learn">
+                <div class="fs-learn-left">
+                  <div class="fs-learn-panel-label">What This Conversation Taught</div>
+                  <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step5ManagerNotesContainer">
+                    <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+                    <div id="step5ManagerNotes"></div>
+                  </div>
+                </div>
+                <div>
+                  <label class="form-label">Add Note</label>
+                  <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_5"></textarea>
+                </div>
+              </div>
+
+              <div class="fs-guard">
+                <div class="fs-guard-panel">
+                  <div class="fs-panel-label fs-panel-label--teal">Best Practices &middot; Keep in Mind</div>
+                  <div class="guidelines" id="step5Recommended"></div>
+                </div>
+                <div class="fs-guard-panel">
+                  <div class="fs-panel-label fs-panel-label--red">Avoid</div>
+                  <div class="guidelines" id="step5Avoid"></div>
+                </div>
+              </div>
+
+              <div class="step-nav">
+                <button class="btn btn-sm" onclick="goToStep(4)">Back</button>
+                <div class="fs-progress-meter">
+                  <span class="fs-meter-label">Conversation Ready &middot; 5 of 5</span>
+                  <div class="fs-meter-track"><span class="fs-meter-fill"></span></div>
+                  <span class="fs-meter-note">Progress autosaved</span>
+                </div>
+                <div style="display:flex;gap:0.8rem;">
+                  <button class="btn btn-primary btn-sm" id="completeSyncBtn">Complete &amp; Save</button>
+                </div>
               </div>
             </div>
           </div>
@@ -2735,6 +4164,190 @@ sessionPromise.then(function(s) {
       }, 1800);
     });
   });
+})();
+</script>
+<script>
+// ── STEP 3 — Confirm root cause toggle ──
+(function() {
+  var btn = document.getElementById('step3ConfirmBtn');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var header = document.getElementById('stepContent3').querySelector('.rc-eyebrow--rc');
+    if (!header) return;
+    var confirmed = header.classList.toggle('is-confirmed');
+    btn.textContent = confirmed ? 'Root Cause Confirmed' : 'Confirm as likely cause';
+  });
+})();
+</script>
+<script>
+// ── STEP 3 — Follow-up question copy ──
+(function() {
+  var questions = document.querySelectorAll('#stepContent3 .rc-fq[data-copy]');
+  questions.forEach(function(q) {
+    q.addEventListener('click', function() {
+      var text = q.getAttribute('data-copy') || '';
+      var label = q.querySelector('.rc-fq-use-text');
+      if (label) label.textContent = 'Copied';
+      q.classList.add('is-copied');
+      function write() {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(function() { fallback(); });
+        } else {
+          fallback();
+        }
+        function fallback() {
+          try {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          } catch (e) {}
+        }
+      }
+      write();
+      setTimeout(function() {
+        q.classList.remove('is-copied');
+        if (label) label.textContent = 'Use this';
+      }, 1800);
+    });
+  });
+})();
+</script>
+<script>
+// ── STEP 4 — Focus banner signal pill (read-only, from existing state) ──
+(function() {
+  var pill = document.getElementById('abFocusSignal');
+  if (!pill) return;
+  function fill() {
+    var d = window.analysisData;
+    if (!d) return false;
+    var b = d.step4_action_blueprint || {};
+    var label = b.confidence_label ||
+      ((d.step3_root_cause_analysis || {}).confidence_label || '');
+    if (!label) return true;
+    var l = String(label).toLowerCase();
+    if (l.indexOf('strong') > -1) pill.classList.add('is-strong');
+    else if (l.indexOf('light') > -1) pill.classList.add('is-light');
+    else pill.classList.add('is-moderate');
+    pill.textContent = 'Signal · ' + label;
+    pill.style.display = 'inline-flex';
+    return true;
+  }
+  if (fill()) return;
+  var target = document.getElementById('stepContent4');
+  if (!target) return;
+  var mo = new MutationObserver(function() {
+    if (fill()) mo.disconnect();
+  });
+  mo.observe(target, { attributes: true, attributeFilter: ['style'], subtree: true });
+})();
+</script>
+<script>
+// ── STEP 5 — Conversation summary stat chips (read-only, from existing state) ──
+(function() {
+  function chips() {
+    if (!window.analysisData) return false;
+    var d = window.analysisData;
+    function set(id, text, addClass) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (addClass) el.classList.add(addClass);
+      var v = el.querySelector('.fs-stat-value');
+      if (v) v.textContent = text;
+      el.style.display = 'flex';
+    }
+    var s2 = d.step2_behavioural_intelligence || {};
+    var sigCount = ['observed_behaviour', 'behaviour_pattern', 'supporting_evidence'].filter(function(k) {
+      return s2[k] && String(s2[k]).trim();
+    }).length;
+    if (sigCount) set('fsStatSignals', sigCount === 1 ? '1 signal' : sigCount + ' signals');
+    var s3 = d.step3_root_cause_analysis || {};
+    if (s3.primary_trigger && String(s3.primary_trigger).trim()) set('fsStatRoot', s3.primary_trigger);
+    var s4 = d.step4_action_blueprint || {};
+    var acts = (s4.recommended_actions || []).filter(function(x) { return x && String(x).trim(); }).length;
+    if (acts) set('fsStatActs', acts === 1 ? '1 action logged' : acts + ' actions logged');
+    var label = (d.step5_conversation_strategy || {}).confidence_label || s3.confidence_label || '';
+    if (label) {
+      var l = String(label).toLowerCase();
+      var cls = l.indexOf('strong') > -1 ? 'is-strong' : l.indexOf('light') > -1 ? 'is-light' : 'is-moderate';
+      set('fsStatConf', label.replace(/\s*Signal$/i, ''), cls);
+    }
+    return true;
+  }
+  if (chips()) return;
+  var t = document.getElementById('stepContent5');
+  if (!t) return;
+  var mo = new MutationObserver(function() {
+    if (chips()) mo.disconnect();
+  });
+  mo.observe(t, { attributes: true, attributeFilter: ['style'], subtree: true });
+})();
+</script>
+<script>
+// ── STEP 5 — Follow-up scheduling defaults + reminder toggle (visual only) ──
+(function() {
+  var dateInput = document.getElementById('fsScheduleDate');
+  var timeInput = document.getElementById('fsScheduleTime');
+  var hint = document.getElementById('fsScheduleHint');
+  var remBtn = document.getElementById('fsReminderBtn');
+  if (!dateInput || !timeInput) return;
+  var now = new Date();
+  var later = new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000);
+  var pad = function(n) { return String(n).padStart ? String(n).padStart(2, '0') : (n < 10 ? '0' + n : '' + n); };
+  dateInput.value = later.getFullYear() + '-' + pad(later.getMonth() + 1) + '-' + pad(later.getDate());
+  timeInput.value = '10:15';
+  if (hint) {
+    var dayName = later.toLocaleDateString('en-IN', { weekday: 'short' });
+    hint.textContent = 'In 9 days · ' + dayName + ' ' + later.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  }
+  if (remBtn) {
+    var on = function() { remBtn.classList.toggle('is-set'); remBtn.setAttribute('aria-pressed', remBtn.classList.contains('is-set') ? 'true' : 'false'); remBtn.lastChild.textContent = remBtn.classList.contains('is-set') ? ' Reminder set' : ' Set reminder'; };
+    var label = document.createTextNode(' Set reminder');
+    remBtn.appendChild(label);
+    remBtn.addEventListener('click', on);
+  }
+})();
+</script>
+<script>
+// ── STEP 5 — Priority chips on the four key-focus rows (presentational) ──
+(function() {
+  var FOCUS_LABELS = ['Conversation Goal', 'Conversation Focus', 'Opening Question', 'Follow-up Question'];
+  function tag() {
+    var cards = document.getElementById('step5Cards');
+    if (!cards) return false;
+    var rows = [];
+    for (var i = 0; i < cards.children.length; i++) {
+      var card = cards.children[i];
+      if (!card.classList || !card.classList.contains('analysis-card')) continue;
+      var labelEl = card.querySelector('.analysis-card-label');
+      var label = labelEl ? labelEl.textContent.trim() : '';
+      if (FOCUS_LABELS.indexOf(label) > -1 && !card.querySelector('.fs-prio')) rows.push(card);
+    }
+    if (!rows.length) return false;
+    rows.forEach(function(card, idx) {
+      var chip = document.createElement('span');
+      chip.className = 'fs-prio';
+      chip.textContent = 'Priority · ' + (idx + 1);
+      card.appendChild(chip);
+    });
+    return true;
+  }
+  if (tag()) return;
+  var t = document.getElementById('stepContent5');
+  if (!t) return;
+  var tries = 0;
+  var iv = setInterval(function() {
+    tries++;
+    if (tag() || tries > 40) clearInterval(iv);
+  }, 250);
+  var mo = new MutationObserver(function() {
+    if (tag()) mo.disconnect();
+  });
+  mo.observe(t, { childList: true, subtree: true });
 })();
 </script>
 </body>
