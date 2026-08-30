@@ -263,12 +263,13 @@ Authentication middleware (`_require_auth`) validates user_id + org_id from sess
 
 ### Critical (Phase 1)
 1. **Cascade employee deletion**: When an employee is deleted, related sessions and notifications should be cleaned up to prevent orphaned data.
+2. **Encrypt transcript and audio fields at rest**: `transcript.raw`, `transcript.edited`, and `audio` in the `sessions` collection are currently stored in plaintext, despite section 1.5 of this document identifying transcripts as "the most sensitive employee data." These should use the same field-level envelope encryption pattern already implemented for employee/user PII (see `field_encryption.py`).
 
 ### Important (Phase 2)
-2. **User account deletion**: Implement account deletion endpoint that cleans up user data, active sessions, and handles employee ownership transfer.
-3. **Session data retention**: Consider auto-expiring old session transcripts after a configurable retention period.
-4. **Active session cleanup**: Add TTL or periodic cleanup for stale active_sessions records.
+3. **User account deletion**: Implement account deletion endpoint that cleans up user data, active sessions, and handles employee ownership transfer.
+4. **Session data retention**: Consider auto-expiring old session transcripts after a configurable retention period.
+5. **Active session cleanup**: Add TTL or periodic cleanup for stale active_sessions records.
 
 ### Low Priority
-5. **Photo encryption**: Employee photos (base64 data-URLs) are stored unencrypted — acceptable for profile images but consider encryption if photos contain sensitive content.
-6. **TOTP secret rotation**: Consider periodic TOTP secret rotation for long-lived accounts.
+6. **Photo encryption**: Employee photos (base64 data-URLs) are stored unencrypted — acceptable for profile images but consider encryption if photos contain sensitive content.
+7. **TOTP secret rotation**: Consider periodic TOTP secret rotation for long-lived accounts.

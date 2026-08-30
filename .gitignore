@@ -12,3 +12,7 @@ debug_*.py
 app_stdout.txt
 app_stderr.txt
 *.log
+
+# Ad-hoc patch/diff files — should never be committed
+*.patch
+*.diff
