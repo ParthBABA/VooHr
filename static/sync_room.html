@@ -1358,6 +1358,19 @@
     box-shadow: 0 0 6px var(--step-success);
   }
 
+  /* Sparse-data note: shown above a card grid when only a couple of cards
+     could be populated from the transcript (Steps 2 and 5). */
+  #stepContent2 .sparse-note,
+  #stepContent5 .sparse-note{
+    margin: 0.35rem 0 1rem;
+    padding: 0.55rem 0.8rem;
+    font-family: var(--step-body-font);
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--step-text-muted);
+    border-top: 1px dashed var(--step-border-strong);
+  }
+
   /* ---------- Responsive (main content only) ---------- */
   @media (max-width: 1180px){
     #stepContent2{ padding: 2.6rem 2rem; }
@@ -3064,31 +3077,31 @@
         <div class="journey-main">
           <!-- STEP PROGRESS -->
           <div class="journey-progress fade-in gsap-hidden" id="journeyProgress">
-            <div class="step-node active" data-step="1">
+            <div class="step-node active" data-step="1" aria-current="step">
               <div class="step-dot">1</div>
               <div class="step-label" data-lang="en">Psychological Safety</div>
               <div class="step-label" data-lang="hi">Psychological Safety</div>
             </div>
             <div class="step-connector"></div>
-            <div class="step-node locked" data-step="2">
+            <div class="step-node locked" data-step="2" aria-disabled="true">
               <div class="step-dot">2</div>
               <div class="step-label" data-lang="en">Soft Opener</div>
               <div class="step-label" data-lang="hi">Soft Opener</div>
             </div>
             <div class="step-connector"></div>
-            <div class="step-node locked" data-step="3">
+            <div class="step-node locked" data-step="3" aria-disabled="true">
               <div class="step-dot">3</div>
               <div class="step-label" data-lang="en">State the Gap</div>
               <div class="step-label" data-lang="hi">State the Gap</div>
             </div>
             <div class="step-connector"></div>
-            <div class="step-node locked" data-step="4">
+            <div class="step-node locked" data-step="4" aria-disabled="true">
               <div class="step-dot">4</div>
               <div class="step-label" data-lang="en">Co-Create Solution</div>
               <div class="step-label" data-lang="hi">Co-Create Solution</div>
             </div>
             <div class="step-connector"></div>
-            <div class="step-node locked" data-step="5">
+            <div class="step-node locked" data-step="5" aria-disabled="true">
               <div class="step-dot">5</div>
               <div class="step-label" data-lang="en">Recency Wrap-up</div>
               <div class="step-label" data-lang="hi">Recency Wrap-up</div>
@@ -4182,15 +4195,19 @@ function goToStep(n) {
   }
   // Update progress dots
   var nodes = document.querySelectorAll('.step-node');
-  nodes.forEach(function(node, idx) {
-    var step = idx + 1;
+  nodes.forEach(function(node) {
+    var step = parseInt(node.getAttribute('data-step'), 10) || (Array.prototype.indexOf.call(node.parentNode.children, node) + 1);
     node.classList.remove('active', 'completed', 'locked');
+    node.removeAttribute('aria-current');
+    node.removeAttribute('aria-disabled');
     if (step === n) {
       node.classList.add('active');
+      node.setAttribute('aria-current', 'step');
     } else if (step < n) {
       node.classList.add('completed');
     } else {
       node.classList.add('locked');
+      node.setAttribute('aria-disabled', 'true');
     }
   });
   // Update connectors
@@ -4294,6 +4311,20 @@ function renderTakeaway(text) {
   return '<div class="analysis-takeaway"><div class="analysis-takeaway-label">Key Takeaway</div><div class="analysis-takeaway-value">' + escHtml(text) + '</div></div>';
 }
 
+/* Sparse-data note: `cardParts` is the array of rendered renderCard /
+   renderListCard strings (quote / confidence / takeaway excluded). When only a
+   couple of cards could be populated from the transcript, this returns a muted
+   in-grid note to set context instead of leaving a scattering of cards
+   unexplained. */
+function sparseNote(cardParts) {
+  var rendered = 0;
+  for (var i = 0; i < cardParts.length; i++) {
+    if (cardParts[i] && cardParts[i].trim().length) rendered++;
+  }
+  if (rendered > 2) return '';
+  return '<div class="sparse-note">Limited data for this step — shows only what could be reliably inferred from the transcript so far.</div>';
+}
+
 // ── Step 2 Population ──
 function populateStep2(d) {
   var el = document.getElementById('step2Script');
@@ -4301,17 +4332,20 @@ function populateStep2(d) {
 
   var cards = document.getElementById('step2Cards');
   if (cards) {
+    var cparts = [];
+    cparts.push(renderCard('Behaviour Summary', d.behaviour_summary, {borderColor:'var(--amber)'}));
+    cparts.push(renderCard('Observed Behaviour', d.observed_behaviour, {borderColor:'var(--amber)'}));
+    cparts.push(renderCard('Behaviour Pattern', d.behaviour_pattern));
+    cparts.push(renderCard('Supporting Evidence', d.supporting_evidence));
+    cparts.push(renderCard('AI Interpretation', d.ai_interpretation, {borderColor:'var(--teal)'}));
+    cparts.push(renderCard('Alternative Interpretation', d.alternative_interpretation, {borderColor:'var(--ivory-faint)', valueColor:'var(--ivory-dim)'}));
+    cparts.push(renderCard('Conversation Direction', d.conversation_direction, {borderColor:'var(--violet)'}));
     var html = renderQuote(d.title_question);
-    html += renderCard('Behaviour Summary', d.behaviour_summary, {borderColor:'var(--amber)'});
-    html += renderCard('Observed Behaviour', d.observed_behaviour, {borderColor:'var(--amber)'});
-    html += renderCard('Behaviour Pattern', d.behaviour_pattern);
-    html += renderCard('Supporting Evidence', d.supporting_evidence);
-    html += renderCard('AI Interpretation', d.ai_interpretation, {borderColor:'var(--teal)'});
-    html += renderCard('Alternative Interpretation', d.alternative_interpretation, {borderColor:'var(--ivory-faint)', valueColor:'var(--ivory-dim)'});
-    html += renderCard('Conversation Direction', d.conversation_direction, {borderColor:'var(--violet)'});
-    html += renderConfidence(d.confidence);
+    html += cparts.join('');
+    var confHtml = renderConfidence(d.confidence);
+    if (confHtml) html += confHtml;
     html += renderTakeaway(d.key_takeaway);
-    cards.innerHTML = html;
+    cards.innerHTML = sparseNote(cparts) + html;
   }
 
   buildGuidelineItems(d.recommended_actions, 'step2Recommended', false);
@@ -4937,17 +4971,19 @@ function populateStep5(d) {
 
   var cards = document.getElementById('step5Cards');
   if (cards) {
+    var cparts = [];
+    cparts.push(renderCard('Conversation Goal', d.conversation_goal, {borderColor:'var(--violet)', typeClass:'fs-card-goal'}));
+    cparts.push(renderCard('Conversation Focus', d.conversation_focus, {borderColor:'var(--amber)', typeClass:'fs-card-focus'}));
+    cparts.push(renderCard('Opening Question', d.opening_question, {borderColor:'var(--teal)', typeClass:'fs-card-opening'}));
+    cparts.push(renderCard('Follow-up Question', d.follow_up_question, {borderColor:'var(--amber)', typeClass:'fs-card-followup'}));
+    cparts.push(renderCard('Possible Response', d.possible_response, {borderColor:'var(--ivory-dim)', valueColor:'var(--ivory-dim)', typeClass:'fs-card-response'}));
+    cparts.push(renderCard('Suggested HR Reply', d.suggested_reply, {borderColor:'var(--teal)', typeClass:'fs-card-reply'}));
+    cparts.push(renderListCard('What to Listen For', d.what_to_listen_for, {borderColor:'var(--red)', typeClass:'fs-card-listen'}));
+    cparts.push(renderCard('Success Indicator', d.success_indicator, {borderColor:'var(--teal)', typeClass:'fs-card-success'}));
     var html = renderQuote(d.title_question);
-    html += renderCard('Conversation Goal', d.conversation_goal, {borderColor:'var(--violet)', typeClass:'fs-card-goal'});
-    html += renderCard('Conversation Focus', d.conversation_focus, {borderColor:'var(--amber)', typeClass:'fs-card-focus'});
-    html += renderCard('Opening Question', d.opening_question, {borderColor:'var(--teal)', typeClass:'fs-card-opening'});
-    html += renderCard('Follow-up Question', d.follow_up_question, {borderColor:'var(--amber)', typeClass:'fs-card-followup'});
-    html += renderCard('Possible Response', d.possible_response, {borderColor:'var(--ivory-dim)', valueColor:'var(--ivory-dim)', typeClass:'fs-card-response'});
-    html += renderCard('Suggested HR Reply', d.suggested_reply, {borderColor:'var(--teal)', typeClass:'fs-card-reply'});
-    html += renderListCard('What to Listen For', d.what_to_listen_for, {borderColor:'var(--red)', typeClass:'fs-card-listen'});
-    html += renderCard('Success Indicator', d.success_indicator, {borderColor:'var(--teal)', typeClass:'fs-card-success'});
+    html += cparts.join('');
     html += renderTakeaway(d.key_takeaway);
-    cards.innerHTML = html;
+    cards.innerHTML = sparseNote(cparts) + html;
   }
 
   buildGuidelineItems(d.recommended_actions, 'step5Recommended', false);
