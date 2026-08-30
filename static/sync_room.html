@@ -1111,47 +1111,100 @@
     transition: transform 0.2s ease;
   }
   #stepContent2 #step2Cards.step2-feed-expanded ~ .step2-timeline svg{ transform: rotate(90deg); }
-  /* Driver strength map */
+  /* Driver strength map — SVG radar */
   #stepContent2 .step2-pane-lead{
     font-family: var(--step-body-font);
     font-size: 13px; line-height: 1.7;
     color: var(--step-text-muted);
     margin: -0.2rem 0 1.2rem;
   }
-  #stepContent2 .step2-drivers{ display: flex; flex-direction: column; gap: 1rem; }
-  #stepContent2 .step2-driver-meta{
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 0.3rem;
+  #stepContent2 .step2-radar-wrap{
+    position: relative;
+    display: flex; justify-content: center;
+    padding: 0.25rem 0.25rem 0.9rem;
   }
-  #stepContent2 .step2-driver-name{
+  #stepContent2 .step2-radar{
+    width: 100%;
+    max-width: 380px;
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+  #stepContent2 .step2-radar svg{
+    display: block;
+    width: 100%; height: 100%;
+    overflow: visible;
+  }
+  /* radar primitives */
+  #stepContent2 .sr-grid-ring{
+    fill: none;
+    stroke: var(--step-border-strong);
+    stroke-width: 1;
+  }
+  #stepContent2 .sr-grid-ring--outer{
+    stroke: var(--step-border-strong);
+  }
+  #stepContent2 .sr-axis{
+    stroke: var(--step-border-strong);
+    stroke-width: 1;
+    stroke-dasharray: 3 4;
+  }
+  #stepContent2 .sr-label{
     font-family: var(--step-body-font);
-    font-size: 12.5px; font-weight: 500;
-    color: var(--step-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    fill: var(--step-text-secondary);
   }
-  #stepContent2 .step2-driver-pct{
+  #stepContent2 .sr-label.sr-label--strong{ fill: var(--step-text); }
+  #stepContent2 .sr-polygon{
+    fill: rgba(139,92,246,0.10);
+    stroke: var(--step-primary);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  #stepContent2 .sr-point{
+    fill: var(--step-primary-soft);
+    stroke: var(--step-surface);
+    stroke-width: 1.5;
+  }
+  #stepContent2 .sr-point:hover{ fill: var(--step-primary); }
+  #stepContent2 .sr-center-label{
     font-family: var(--step-heading-font);
-    font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    fill: var(--step-text-muted);
   }
-  #stepContent2 .step2-driver--amber .step2-driver-pct{ color: var(--step-warning); }
-  #stepContent2 .step2-driver--teal .step2-driver-pct{ color: var(--step-success); }
-  #stepContent2 .step2-driver--violet .step2-driver-pct{ color: var(--step-primary-soft); }
-  #stepContent2 .step2-driver-bar{
-    height: 6px; border-radius: 4px;
-    background: var(--step-row-bg-hover);
-    overflow: hidden;
+  /* tooltip */
+  #stepContent2 .sr-tooltip{
+    position: absolute;
+    z-index: 30;
+    pointer-events: none;
+    background: var(--step-surface);
+    border: 1px solid var(--step-border-strong);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+    border-radius: 8px;
+    padding: 0.5rem 0.7rem;
+    font-family: var(--step-heading-font);
+    font-size: 11px;
+    color: var(--step-text);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
   }
-  #stepContent2 .step2-driver-bar span{
-    display: block; height: 100%; border-radius: 4px;
-    background: linear-gradient(90deg, rgba(139,92,246,0.45), var(--step-primary));
-    box-shadow: 0 0 10px rgba(139,92,246,0.30);
-  }
-  #stepContent2 .step2-driver--amber .step2-driver-bar span{
-    background: linear-gradient(90deg, rgba(251,191,36,0.45), var(--step-warning));
-    box-shadow: 0 0 10px rgba(251,191,36,0.30);
-  }
-  #stepContent2 .step2-driver--teal .step2-driver-bar span{
-    background: linear-gradient(90deg, rgba(52,211,153,0.45), var(--step-success));
-    box-shadow: 0 0 10px rgba(52,211,153,0.28);
+  #stepContent2 .sr-tooltip.is-visible{ opacity: 1; transform: translateY(0); }
+  #stepContent2 .sr-tooltip b{ display: block; font-size: 11.5px; margin-bottom: 0.15rem; }
+  #stepContent2 .sr-tooltip .sr-tt-val{ color: var(--step-primary-soft); font-weight: 700; }
+  #stepContent2 .sr-tooltip .sr-tt-lvl{ color: var(--step-text-muted); font-weight: 500; }
+  #stepContent2 .sr-no-data{
+    font-family: var(--step-body-font);
+    font-size: 12px;
+    color: var(--step-text-muted);
+    text-align: center;
+    margin: 1rem 0 0.5rem;
+    font-style: italic;
   }
 
   /* ---------- 4. Deeper probe suggestions ---------- */
@@ -3118,37 +3171,8 @@
               <div class="step2-pane step2-pane--meaning">
                 <div class="step2-label">What This Could Mean</div>
                 <p class="step2-pane-lead">Likely underlying drivers worth exploring with the employee — treated as hypotheses, not conclusions.</p>
-                <div class="step2-drivers">
-                  <div class="step2-driver step2-driver--amber">
-                    <div class="step2-driver-meta">
-                      <span class="step2-driver-name">Workload Pressure</span><span class="step2-driver-pct">HIGH</span>
-                    </div>
-                    <div class="step2-driver-bar"><span style="width:84%"></span></div>
-                  </div>
-                  <div class="step2-driver step2-driver--amber">
-                    <div class="step2-driver-meta">
-                      <span class="step2-driver-name">Lack of Clarity</span><span class="step2-driver-pct">HIGH</span>
-                    </div>
-                    <div class="step2-driver-bar"><span style="width:74%"></span></div>
-                  </div>
-                  <div class="step2-driver step2-driver--violet">
-                    <div class="step2-driver-meta">
-                      <span class="step2-driver-name">Resource Constraints</span><span class="step2-driver-pct">MOD</span>
-                    </div>
-                    <div class="step2-driver-bar"><span style="width:62%"></span></div>
-                  </div>
-                  <div class="step2-driver step2-driver--teal">
-                    <div class="step2-driver-meta">
-                      <span class="step2-driver-name">Recognition Gap</span><span class="step2-driver-pct">LOW</span>
-                    </div>
-                    <div class="step2-driver-bar"><span style="width:48%"></span></div>
-                  </div>
-                  <div class="step2-driver step2-driver--violet">
-                    <div class="step2-driver-meta">
-                      <span class="step2-driver-name">Growth Stagnation</span><span class="step2-driver-pct">MOD</span>
-                    </div>
-                    <div class="step2-driver-bar"><span style="width:66%"></span></div>
-                  </div>
+                <div class="step2-radar-wrap" id="step2RadarWrap">
+                  <div class="step2-radar" id="step2Radar" role="img" aria-label="Underlying driver radar profile"></div>
                 </div>
               </div>
             </section>
@@ -3929,6 +3953,248 @@ function populateStep2(d) {
 
   var mn = document.getElementById('step2ManagerNotes');
   if (mn) mn.textContent = d.manager_notes || '';
+
+  renderStep2Radar(d);
+}
+
+/* ── Step 2 "What This Could Mean" — SVG radar (data-driven) ──
+   Reads underlying-driver scores from the Step 2 analysis when the API
+   provides them (underlying_drivers | drivers | likely_drivers). The five
+   axis labels are the known driver dimensions for this section; plotted
+   values always come from the API, never hard-coded. When no per-driver
+   value is present in the API, the axis renders at a neutral baseline and
+   the real overall confidence signal is shown in the centre, so nothing is
+   fabricated. */
+
+var STEP2_DRIVER_AXES = [
+  'Workload Pressure', 'Lack of Clarity', 'Resource Constraints',
+  'Recognition Gap', 'Growth Stagnation'
+];
+
+function normDriverScore(raw) {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === 'boolean') return null;
+  if (typeof raw === 'number') {
+    if (!isFinite(raw)) return null;
+    return Math.max(0, Math.min(100, raw));
+  }
+  var s = String(raw).trim().replace(/%/g, '');
+  if (!s) return null;
+  var n = parseFloat(s);
+  if (isNaN(n) || !isFinite(n)) return null;
+  return Math.max(0, Math.min(100, n));
+}
+
+function collectStep2Drivers(d) {
+  var arr = (d && (d.underlying_drivers || d.drivers || d.likely_drivers)) || [];
+  if (!Array.isArray(arr)) return null;
+  if (!arr.length) return null;
+  var out = [];
+  arr.forEach(function(item) {
+    if (!item || typeof item !== 'object') return;
+    var name = item.name || item.driver || item.label || null;
+    var raw = (item.confidence !== undefined && item.confidence !== null)
+      ? item.confidence
+      : (item.strength !== undefined && item.strength !== null)
+        ? item.strength
+        : (item.score !== undefined && item.score !== null)
+          ? item.score
+          : (item.value !== undefined && item.value !== null) ? item.value : null;
+    if (!name) return;
+    out.push({ name: String(name), value: normDriverScore(raw), level: item.level || null });
+  });
+  return out.length ? out : null;
+}
+
+function radarPolyPoints(cx, cy, r, items, valueKey) {
+  var n = items.length;
+  var pts = [];
+  for (var i = 0; i < n; i++) {
+    var v = valueKey === 'value' ? (items[i].value == null ? 0 : items[i].value) : 1;
+    var rad = r * (Math.max(0, Math.min(100, v)) / 100);
+    var ang = -Math.PI / 2 + (i / n) * Math.PI * 2;
+    pts.push([cx + rad * Math.cos(ang), cy + rad * Math.sin(ang)]);
+  }
+  return pts;
+}
+
+function fmtRadarPts(pts) {
+  return pts.map(function(p) { return p[0].toFixed(2) + ',' + p[1].toFixed(2); }).join(' ');
+}
+
+function driverLevelLabel(raw) {
+  var v = normDriverScore(raw);
+  if (v == null) return null;
+  if (v >= 66) return 'High';
+  if (v >= 34) return 'Moderate';
+  return 'Low';
+}
+
+function renderStep2Radar(d) {
+  var host = document.getElementById('step2Radar');
+  if (!host) return;
+  var wrap = document.getElementById('step2RadarWrap');
+  if (wrap) {
+    var oldTip = wrap.querySelector('.sr-tooltip');
+    if (oldTip) oldTip.parentNode.removeChild(oldTip);
+    var oldNote = wrap.querySelector('.sr-no-data');
+    if (oldNote) oldNote.parentNode.removeChild(oldNote);
+  }
+  host.innerHTML = '';
+
+  var labels = STEP2_DRIVER_AXES.slice();
+  var apiDrivers = collectStep2Drivers(d);
+  var items = labels.map(function(name) {
+    var match = null;
+    if (apiDrivers) {
+      for (var i = 0; i < apiDrivers.length; i++) {
+        if (String(apiDrivers[i].name).toLowerCase() === String(name).toLowerCase()) { match = apiDrivers[i]; break; }
+      }
+    }
+    if (match) return { name: name, value: match.value, level: match.level || driverLevelLabel(match.value) };
+    return { name: name, value: null, level: null };
+  });
+  var hasData = items.some(function(it) { return it.value != null; });
+
+  var n = items.length;
+  var W = 380, H = 380, cx = W / 2, cy = H / 2;
+  var R = 138, ringCount = 4, labelR = R + 24;
+  var ns = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.setAttribute('role', 'presentation');
+  svg.setAttribute('aria-hidden', 'true');
+
+  function ringPts(frac) {
+    return labels.map(function(_, i) {
+      var rad = R * frac;
+      var ang = -Math.PI / 2 + (i / n) * Math.PI * 2;
+      return [cx + rad * Math.cos(ang), cy + rad * Math.sin(ang)];
+    });
+  }
+
+  // concentric grid rings
+  for (var k = 1; k <= ringCount; k++) {
+    var frac = k / ringCount;
+    var ring = document.createElementNS(ns, 'polygon');
+    ring.setAttribute('points', fmtRadarPts(ringPts(frac)));
+    ring.setAttribute('class', 'sr-grid-ring' + (frac === 1 ? ' sr-grid-ring--outer' : ''));
+    svg.appendChild(ring);
+  }
+
+  // radial axes + vertex labels
+  for (var i = 0; i < n; i++) {
+    var ang = -Math.PI / 2 + (i / n) * Math.PI * 2;
+    var ax = document.createElementNS(ns, 'line');
+    ax.setAttribute('x1', cx); ax.setAttribute('y1', cy);
+    ax.setAttribute('x2', (cx + R * Math.cos(ang)).toFixed(2));
+    ax.setAttribute('y2', (cy + R * Math.sin(ang)).toFixed(2));
+    ax.setAttribute('class', 'sr-axis');
+    svg.appendChild(ax);
+
+    var lx = cx + labelR * Math.cos(ang);
+    var ly = cy + labelR * Math.sin(ang);
+    var lab = document.createElementNS(ns, 'text');
+    lab.setAttribute('x', lx.toFixed(2));
+    lab.setAttribute('y', ly.toFixed(2));
+    lab.setAttribute('text-anchor', 'middle');
+    lab.setAttribute('dominant-baseline', 'middle');
+    lab.setAttribute('class', 'sr-label' + (items[i].value != null ? ' sr-label--strong' : ''));
+    var parts = String(items[i].name).split(' ');
+    if (parts.length === 1) {
+      lab.textContent = parts[0];
+    } else {
+      var half = Math.ceil(parts.length / 2);
+      var tspan1 = document.createElementNS(ns, 'tspan');
+      tspan1.setAttribute('x', lx.toFixed(2));
+      tspan1.setAttribute('dy', '-0.45em');
+      tspan1.textContent = parts.slice(0, half).join(' ');
+      var tspan2 = document.createElementNS(ns, 'tspan');
+      tspan2.setAttribute('x', lx.toFixed(2));
+      tspan2.setAttribute('dy', '1.2em');
+      tspan2.textContent = parts.slice(half).join(' ');
+      lab.appendChild(tspan1);
+      lab.appendChild(tspan2);
+    }
+    svg.appendChild(lab);
+  }
+
+  // data polygon + points (when at least one real value exists)
+  if (hasData) {
+    var dataPts = radarPolyPoints(cx, cy, R, items, 'value');
+    var poly = document.createElementNS(ns, 'polygon');
+    poly.setAttribute('points', fmtRadarPts(dataPts));
+    poly.setAttribute('class', 'sr-polygon');
+    svg.appendChild(poly);
+
+    for (var i = 0; i < n; i++) {
+      if (items[i].value == null) continue;
+      var pt = document.createElementNS(ns, 'circle');
+      pt.setAttribute('cx', dataPts[i][0].toFixed(2));
+      pt.setAttribute('cy', dataPts[i][1].toFixed(2));
+      pt.setAttribute('r', '3.4');
+      pt.setAttribute('class', 'sr-point');
+      pt.setAttribute('data-idx', i);
+      svg.appendChild(pt);
+    }
+  }
+
+  host.appendChild(svg);
+
+  // centre confidence signal (real Step 2 overall signal, not per-driver)
+  var confLabel = (d && (d.confidence_label || '')) || '';
+  var centre = document.createElementNS(ns, 'text');
+  centre.setAttribute('x', cx);
+  centre.setAttribute('y', cy);
+  centre.setAttribute('text-anchor', 'middle');
+  centre.setAttribute('class', 'sr-center-label');
+  centre.textContent = confLabel ? confLabel.replace(/\s*Signal$/i, '') + ' signal' : 'No signal data';
+  svg.appendChild(centre);
+
+  // tooltip for real data points (host-level, positioned over px of svg)
+  if (hasData && wrap) {
+    var tip = document.createElement('div');
+    tip.className = 'sr-tooltip';
+    wrap.appendChild(tip);
+    var rect = svg.getBoundingClientRect ? wrap.getBoundingClientRect() : null;
+    var placed = {};
+    svg.querySelectorAll('.sr-point').forEach(function(ptc) {
+      ptc.addEventListener('mouseenter', onEnter);
+      ptc.addEventListener('mousemove', onMove);
+      ptc.addEventListener('mouseleave', onLeave);
+      ptc.addEventListener('focus', onEnter);
+      ptc.addEventListener('blur', onLeave);
+    });
+    function itemInfo(idx) {
+      var it = items[idx];
+      var val = it.value == null ? 'n/a' : Math.round(it.value) + '%';
+      var lvl = it.level || driverLevelLabel(it.value) || '—';
+      return { name: it.name, val: val, lvl: lvl };
+    }
+    function onEnter(e) {
+      var idx = parseInt(e.target.getAttribute('data-idx'), 10);
+      if (isNaN(idx) || !items[idx]) return;
+      placed.idx = idx;
+      var info = itemInfo(idx);
+      tip.innerHTML = '<b>' + escHtml(info.name) + '</b><span class="sr-tt-val">' + escHtml(info.val) + '</span> &nbsp; <span class="sr-tt-lvl">' + escHtml(info.lvl) + '</span>';
+      tip.classList.add('is-visible');
+    }
+    function onMove(e) {
+      var r = (rect || {}).width ? rect : wrap.getBoundingClientRect();
+      var x = e.clientX - r.left;
+      var y = e.clientY - r.top;
+      var tw = tip.offsetWidth || 120;
+      var lx = x + 14 + tw > r.width ? x - tw - 12 : x + 14;
+      tip.style.left = Math.max(4, lx) + 'px';
+      tip.style.top = Math.max(4, y - tip.offsetHeight - 10) + 'px';
+    }
+    function onLeave() { tip.classList.remove('is-visible'); }
+  } else if (!hasData && wrap) {
+    var note = document.createElement('p');
+    note.className = 'sr-no-data';
+    note.textContent = 'No per-driver strength returned by the analysis yet. Axes render the five drivers under review.';
+    wrap.appendChild(note);
+  }
 }
 
 // ── Step 3 Population ──
