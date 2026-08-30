@@ -1120,14 +1120,16 @@
   }
   #stepContent2 .step2-radar-wrap{
     position: relative;
-    display: flex; justify-content: center;
-    padding: 0.25rem 0.25rem 0.9rem;
+    display: flex; justify-content: center; align-items: center;
+    width: 100%;
+    padding: 0.2rem 0.4rem 0.9rem;
   }
   #stepContent2 .step2-radar{
     width: 100%;
-    max-width: 380px;
+    max-width: 460px;
     height: auto;
     aspect-ratio: 1 / 1;
+    margin: 0 auto;
   }
   #stepContent2 .step2-radar svg{
     display: block;
@@ -4111,8 +4113,8 @@ function renderStep2Radar(d) {
   var hasData = items.some(function(it) { return it.value != null; });
 
   var n = items.length;
-  var W = 380, H = 380, cx = W / 2, cy = H / 2;
-  var R = 138, ringCount = 5, labelR = R + 26;
+  var W = 460, H = 460, cx = W / 2, cy = H / 2;
+  var R = 138, ringCount = 5, labelR = R + 28;
   var ns = 'http://www.w3.org/2000/svg';
 
   // subtle centre glow behind the chart
