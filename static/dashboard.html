@@ -597,7 +597,8 @@ function loadDashboardStats() {
 }
 
 // Load employees from API and render table
-function loadEmployees() {
+function loadEmployees(opts) {
+  opts = opts || {};
   fetch('/api/employees')
     .then(function(r) {
       if (!r.ok) throw new Error('Failed to load');
@@ -638,7 +639,14 @@ function loadEmployees() {
       });
 
       if (window.dashApplyFilters) window.dashApplyFilters();
-      animateTableRows();
+      if (opts.noAnimate) {
+        document.querySelectorAll('.emp-table tbody tr').forEach(function(r) {
+          r.style.opacity = '';
+          r.style.transform = '';
+        });
+      } else {
+        animateTableRows();
+      }
     })
     .catch(function(err) {
       console.error('Failed to load employees:', err);
@@ -648,11 +656,23 @@ function loadEmployees() {
 function animateTableRows() {
   var rows = document.querySelectorAll('.emp-table tbody tr');
   if (!rows.length) return;
+  var skip = document.hidden || rows.length > 30 || typeof gsap === 'undefined';
+  if (skip) {
+    document.querySelectorAll('.emp-table tbody tr').forEach(function(r) {
+      r.style.opacity = '';
+      r.style.transform = '';
+    });
+    document.querySelectorAll('.index-bar .fill').forEach(function(f) {
+      f.style.width = f.getAttribute('data-w') || f.style.width;
+    });
+    return;
+  }
   gsap.set(rows, { opacity: 0, x: -12 });
   gsap.to(rows, { opacity: 1, x: 0, duration: 0.35, stagger: 0.04, ease: 'power2.out', delay: 0.3 });
   var fills = document.querySelectorAll('.index-bar .fill');
   fills.forEach(function(fill) {
     var targetWidth = fill.style.width;
+    fill.setAttribute('data-w', targetWidth);
     fill.style.width = '0%';
     gsap.to(fill, { width: targetWidth, duration: 1.0, ease: 'power2.out', delay: 0.5 });
   });
@@ -733,18 +753,28 @@ function escHtml(str) {
     if (preview) preview.style.display = 'none';
     if (placeholder) placeholder.style.display = 'flex';
     currentPhotoData = null;
-    gsap.set(overlay, { opacity: 0 });
-    gsap.set(panel, { x: '100%' });
-    gsap.to(overlay, { opacity: 1, duration: 0.3, ease: 'power2.out' });
-    gsap.to(panel, { x: '0%', duration: 0.45, ease: 'power3.out' });
+    overlay.style.opacity = 1;
+    panel.style.transform = 'translateX(0)';
+    if (typeof gsap !== 'undefined' && !document.hidden) {
+      gsap.set(overlay, { opacity: 0 });
+      gsap.set(panel, { x: '100%' });
+      gsap.to(overlay, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+      gsap.to(panel, { x: '0%', duration: 0.45, ease: 'power3.out' });
+    }
   }
 
   function closePanel() {
-    gsap.to(panel, { x: '100%', duration: 0.35, ease: 'power3.in' });
-    gsap.to(overlay, { opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: function() {
+    if (typeof gsap !== 'undefined' && !document.hidden) {
+      gsap.to(panel, { x: '100%', duration: 0.35, ease: 'power3.in' });
+      gsap.to(overlay, { opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: function() {
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+      }});
+    } else {
       overlay.style.display = 'none';
       document.body.style.overflow = '';
-    }});
+      panel.style.transform = '';
+    }
   }
 
   function nextStep() {
@@ -870,26 +900,29 @@ function escHtml(str) {
         if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'failed'); });
         return r.json();
       }).then(function(emp) {
-        submitBtn.textContent = 'Created!';
-        submitBtn.style.background = 'var(--teal)';
-        setTimeout(function() {
-          closePanel();
-          loadEmployees();
-          // Show success toast
-          var toast = document.createElement('div');
-          toast.className = 'toast-notification';
-          toast.textContent = emp.name + ' added successfully — ' + emp.employee_id;
-          document.body.appendChild(toast);
+        // Hide panel instantly (CSS), reload table without row animation,
+        // then bubble up the toast. Avoids running GSAP on panel + table + toast
+        // all in the same frame.
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+        panel.style.transform = '';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add Employee';
+        submitBtn.style.background = '';
+        loadEmployees({ noAnimate: true });
+        var toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.textContent = emp.name + ' added successfully — ' + emp.employee_id;
+        document.body.appendChild(toast);
+        if (typeof gsap !== 'undefined') {
           gsap.set(toast, { y: 60, opacity: 0 });
           gsap.to(toast, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
           setTimeout(function() {
             gsap.to(toast, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { toast.remove(); }});
           }, 4000);
-          // Reset
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Add Employee';
-          submitBtn.style.background = '';
-        }, 800);
+        } else {
+          setTimeout(function() { toast.remove(); }, 4000);
+        }
       }).catch(function(err) {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Add Employee';
