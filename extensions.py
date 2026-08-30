@@ -124,6 +124,30 @@ def _init_indexes(db):
         background=True,
     )
 
+    # ── meetings ───────────────────────────────────────────────────────
+    # Query: find({org_id}).sort("scheduled_at", 1) in list_meetings
+    db.meetings.create_index(
+        [("org_id", ASCENDING), ("scheduled_at", ASCENDING)],
+        background=True,
+    )
+    # Query: find({org_id, employee_id}) for per-employee meeting lists
+    db.meetings.create_index(
+        [("org_id", ASCENDING), ("employee_id", ASCENDING)],
+        background=True,
+    )
+
+    # ── conversation_memory ────────────────────────────────────────────
+    # Query: find({org_id, employee_id}).sort("created_at", 1)
+    db.conversation_memory.create_index(
+        [("org_id", ASCENDING), ("employee_id", ASCENDING), ("created_at", ASCENDING)],
+        background=True,
+    )
+    # Query: find({org_id, session_id}) for previous-session memory
+    db.conversation_memory.create_index(
+        [("org_id", ASCENDING), ("session_id", ASCENDING)],
+        background=True,
+    )
+
     # ── active_sessions ────────────────────────────────────────────────
     # Query: find_one({user_id, session_token}) in _session_is_active
     db.active_sessions.create_index(

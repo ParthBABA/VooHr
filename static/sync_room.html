@@ -3921,6 +3921,73 @@
                 </div>
               </div>
 
+              <!-- ── Capture conversation items (factual, user-confirmed) ── -->
+              <div class="cap-panel" id="capPanel">
+                <style>
+                  .cap-panel{margin-top:1.2rem;}
+                  .cap-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:0.6rem;}
+                  .cap-title{font-family:var(--font-m,.ui-monospace);font-size:0.68rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--mt-cyan,#60A5FA);}
+                  .cap-hint{font-family:var(--font-m,.ui-monospace);font-size:0.62rem;color:var(--ivory-faint,#9aa3b2);}
+                  .cap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0.8rem;}
+                  .cap-col{background:var(--ink,#13171F);border:1px solid var(--border,#2a3042);border-radius:10px;padding:0.9rem;min-width:0;}
+                  .cap-colhead{font-family:var(--font-m,.ui-monospace);font-size:0.6rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--ivory-dim,#aeb6c8);margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;}
+                  .cap-colhead .cap-count{color:var(--mt-violet,#8B5CF6);}
+                  .cap-opener{display:flex;align-items:flex-start;gap:0.6rem;}
+                  .cap-opener input{flex-shrink:0;margin-top:2px;}
+                  .cap-opener .cap-opener-txt{font-size:0.74rem;color:var(--ivory-dim,#aeb6c8);line-height:1.45;}
+                  .cap-list{display:flex;flex-direction:column;gap:0.45rem;margin-bottom:0.6rem;}
+                  .cap-item{display:flex;gap:0.5rem;align-items:center;background:var(--elevated,#222A3A);border:1px solid var(--border,#2a3042);border-radius:6px;padding:0.4rem 0.55rem;font-family:var(--font-m,.ui-monospace);font-size:0.72rem;color:var(--ivory,#E8ECF4);}
+                  .cap-item .cap-itxt{flex:1;min-width:0;word-break:break-word;}
+                  .cap-item .cap-idue{font-size:0.62rem;color:var(--mt-amber,#FBBF24);white-space:nowrap;}
+                  .cap-item .cap-x{flex-shrink:0;background:none;border:none;color:var(--ivory-faint,#9aa3b2);cursor:pointer;font-size:0.85rem;line-height:1;}
+                  .cap-item .cap-x:hover{color:var(--mt-red,#F87171);}
+                  .cap-add{display:flex;gap:0.4rem;flex-wrap:wrap;}
+                  .cap-add input[type=text]{flex:1;min-width:120px;background:var(--surface,#1A2030);border:1px solid var(--border,#2a3042);border-radius:6px;padding:0.45rem 0.6rem;color:var(--ivory,#E8ECF4);font-family:var(--font-m,.ui-monospace);font-size:0.72rem;}
+                  .cap-add input[type=date]{background:var(--surface,#1A2030);border:1px solid var(--border,#2a3042);border-radius:6px;padding:0.45rem 0.5rem;color:var(--ivory-dim,#aeb6c8);font-family:var(--font-m,.ui-monospace);font-size:0.68rem;color-scheme:dark;}
+                  .cap-add button{white-space:nowrap;}
+                  .cap-empty{font-family:var(--font-m,.ui-monospace);font-size:0.66rem;color:var(--ivory-faint,#9aa3b2);font-style:italic;}
+                </style>
+
+                <div class="cap-head">
+                  <div class="cap-title">Capture Factual Conversation Items</div>
+                  <div class="cap-hint">These are saved only when you confirm them — nothing is auto-generated.</div>
+                </div>
+                <div class="cap-grid">
+                  <!-- Opener -->
+                  <div class="cap-col">
+                    <label class="cap-colhead"><span>Opener USED</span></label>
+                    <div class="cap-opener">
+                      <input type="checkbox" id="capOpenerUsed">
+                      <div>
+                        <span class="cap-opener-txt">I actually used the suggested opener in this conversation. (Records exact opener as <strong>USED</strong>; leave unchecked if you saved but did not use it.)</span>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Commitments -->
+                  <div class="cap-col">
+                    <label class="cap-colhead"><span>Commitments</span><span class="cap-count" id="capCommitCount">0</span></label>
+                    <div class="cap-list" id="capCommitList"></div>
+                    <div class="cap-empty" id="capCommitEmpty">No commitments captured.</div>
+                    <div class="cap-add">
+                      <input type="text" id="capCommitTxt" placeholder="e.g. Review workload priorities">
+                      <input type="date" id="capCommitDue" title="Due date (optional)">
+                      <button class="btn btn-sm btn-outline" id="capCommitAdd">Add</button>
+                    </div>
+                  </div>
+                  <!-- Follow-ups -->
+                  <div class="cap-col">
+                    <label class="cap-colhead"><span>Follow-ups</span><span class="cap-count" id="capFollowCount">0</span></label>
+                    <div class="cap-list" id="capFollowList"></div>
+                    <div class="cap-empty" id="capFollowEmpty">No follow-ups captured.</div>
+                    <div class="cap-add">
+                      <input type="text" id="capFollowTxt" placeholder="e.g. Review workload priorities next meeting">
+                      <input type="date" id="capFollowDue" title="Due date (optional)">
+                      <button class="btn btn-sm btn-outline" id="capFollowAdd">Add</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="step-nav">
                 <button class="btn btn-sm" onclick="goToStep(4)">Back</button>
                 <div class="fs-progress-meter">
@@ -5160,20 +5227,125 @@ sessionPromise.then(function(s) {
     if (e.key === 'Escape') closeDrawer();
 });
   });
+  // ── Capture panel helpers (factual, user-confirmed) ──
+  var capCommitments = [];
+  var capFollowups = [];
+  function capDeco(c) { return { status: 'PENDING', due_at: c.due ? new Date(c.due + 'T23:59:59').toISOString() : null }; }
+  function capRenderList(listEl, emptyEl, countEl, arr) {
+    listEl.innerHTML = '';
+    (countEl || {}).textContent = arr.length;
+    arr.forEach(function(item, idx) {
+      var row = document.createElement('div');
+      row.className = 'cap-item';
+      var due = item.due ? '<span class="cap-idue">' + escHtml(item.due) + '</span>' : '';
+      row.innerHTML = '<span class="cap-itxt">' + escHtml(item.text) + '</span>' + due +
+        '<button class="cap-x" type="button" title="Remove" data-i="' + idx + '">&times;</button>';
+      row.querySelector('.cap-x').addEventListener('click', function() {
+        arr.splice(idx, 1);
+        capRenderList(listEl, emptyEl, countEl, arr);
+      });
+      listEl.appendChild(row);
+    });
+    if (emptyEl) emptyEl.style.display = arr.length ? 'none' : '';
+  }
+  function capBindAdd(txtEl, dueEl, addBtn, arr, listEl, emptyEl, countEl) {
+    function add() {
+      var t = txtEl.value.trim();
+      if (!t) return;
+      arr.push({ text: t, due: dueEl.value || '' });
+      txtEl.value = ''; dueEl.value = '';
+      capRenderList(listEl, emptyEl, countEl, arr);
+    }
+    addBtn.addEventListener('click', add);
+    txtEl.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+  }
+  if (document.getElementById('capCommitAdd')) {
+    capBindAdd(
+      document.getElementById('capCommitTxt'), document.getElementById('capCommitDue'),
+      document.getElementById('capCommitAdd'), capCommitments,
+      document.getElementById('capCommitList'), document.getElementById('capCommitEmpty'),
+      document.getElementById('capCommitCount')
+    );
+    capBindAdd(
+      document.getElementById('capFollowTxt'), document.getElementById('capFollowDue'),
+      document.getElementById('capFollowAdd'), capFollowups,
+      document.getElementById('capFollowList'), document.getElementById('capFollowEmpty'),
+      document.getElementById('capFollowCount')
+    );
+  }
+
   // ── Complete Sync Handler ──
   document.getElementById('completeSyncBtn').addEventListener('click', function() {
-    fetch('/api/sessions/' + sessionId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'completed' })
-    })
-    .then(r => r.json())
-    .then(data => {
-      window.location.href = '/dashboard?employee_id=' + employeeId + '&status=completed';
-    })
-    .catch(err => {
-      console.error('Complete sync failed:', err);
+    var btn = document.getElementById('completeSyncBtn');
+    var orig = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    function postMemory(type, status, text, dueAt) {
+      return fetch('/api/conversation-memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          employee_id: employeeId,
+          type: type,
+          status: status,
+          content: text,
+          due_at: dueAt || null
+        })
+      });
+    }
+
+    var jobs = [];
+    var canCapture = !!(sessionId && employeeId);
+    // Opener used? (only record if user explicitly confirms it was actually used)
+    var used = document.getElementById('capOpenerUsed');
+    if (canCapture && used && used.checked) {
+      var openerText = (function(){
+        var lang = document.documentElement.getAttribute('data-lang') || (window.localStorage && localStorage.getItem('voohr-lang')) || 'en';
+        var el = lang === 'hi'
+          ? document.getElementById('psychSafetyScriptHi')
+          : document.getElementById('psychSafetyScriptEn');
+        return (el && el.textContent.trim()) || 'Suggested psych-safety opener';
+      })();
+      // Backend always creates openers as SAVED; mark USED explicitly after.
+      jobs.push(postMemory('OPENER', 'SAVED', openerText, null).then(function(r) {
+        if (!r || !r.ok) return null;
+        return r.json().then(function(created) {
+          if (!created || !created.id) return null;
+          return fetch('/api/conversation-memory/' + created.id, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'USED' })
+          });
+        });
+      }));
+    }
+    // Explicit commitments (user-confirmed, from the meeting itself)
+    if (canCapture) capCommitments.forEach(function(c) {
+      jobs.push(postMemory('COMMITMENT', 'PENDING', c.text, capDeco(c).due_at));
     });
+    // Explicit follow-ups (user-confirmed)
+    if (canCapture) capFollowups.forEach(function(f) {
+      jobs.push(postMemory('FOLLOW_UP', 'PENDING', f.text, capDeco(f).due_at));
+    });
+
+    function finish() {
+      fetch('/api/sessions/' + sessionId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' })
+      }).then(function(r) { return r.json(); }).then(function() {
+        window.location.href = '/dashboard?employee_id=' + (employeeId||'') + '&status=completed';
+      }).catch(function() {
+        window.location.href = '/dashboard?employee_id=' + (employeeId||'') + '&status=completed';
+      });
+    }
+
+    if (!jobs.length) { finish(); return; }
+    Promise.all(jobs.map(function(j) { return j.catch(function(){ return null; }); }))
+      .then(finish)
+      .catch(function(){ btn.disabled = false; btn.textContent = orig; });
   });
 </script>
 <script>

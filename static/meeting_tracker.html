@@ -124,6 +124,53 @@
     .mt-card{transition:none;transform:none !important;}
     .mt-metric{transition:none;}
   }
+
+  /* ── Loading / error / notice states ── */
+  .mt-state{padding:3.5rem 1.5rem;text-align:center;border:1px solid var(--border);border-radius:10px;font-family:var(--font-m);font-size:0.78rem;color:var(--ivory-dim);margin-bottom:2rem;}
+  .mt-state svg{width:36px;height:36px;opacity:0.4;margin-bottom:0.8rem;}
+  .mt-state-title{font-family:var(--font-lato);font-weight:700;font-size:0.85rem;color:var(--ivory);margin-bottom:0.4rem;text-transform:none;letter-spacing:0;}
+  .mt-state-sub{font-size:0.7rem;color:var(--ivory-faint);margin-bottom:1rem;text-transform:none;letter-spacing:0;}
+  .mt-spinner{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--mt-violet);border-radius:50%;margin:0 auto 0.9rem;animation:mtSpin 0.8s linear infinite;}
+  @keyframes mtSpin{to{transform:rotate(360deg);}}
+  .mt-retry{cursor:pointer;}
+
+  /* ── Detail modal (native, additive) ── */
+  .mt-modal-overlay{position:fixed;inset:0;background:rgba(6,8,12,0.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:300;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+  .mt-modal-overlay.active{opacity:1;pointer-events:all;}
+  .mt-modal{background:var(--ink);border:1px solid var(--border);border-radius:12px;width:100%;max-width:640px;max-height:86vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);}
+  .mt-modal-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.2rem 1.4rem;border-bottom:1px solid var(--border);}
+  .mt-modal-title{font-family:var(--font-lato);font-weight:700;font-size:1.05rem;color:var(--ivory);}
+  .mt-modal-sub{font-family:var(--font-m);font-size:0.66rem;color:var(--ivory-faint);margin-top:0.25rem;text-transform:none;letter-spacing:0;}
+  .mt-modal-x{background:transparent;border:1px solid var(--border);color:var(--ivory-dim);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:1.05rem;line-height:1;}
+  .mt-modal-x:hover{color:var(--ivory);border-color:var(--border-lit);}
+  .mt-modal-body{padding:1.4rem;overflow-y:auto;display:flex;flex-direction:column;gap:1.2rem;}
+  .mt-d{display:flex;flex-direction:column;gap:0.9rem;}
+  .mt-dtitle{font-family:var(--font-m);font-size:0.6rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--mt-cyan);}
+  .mt-drow{font-size:0.82rem;color:var(--ivory-dim);line-height:1.6;}
+  .mt-drow b{color:var(--ivory);}
+  .mt-item{display:flex;gap:0.7rem;align-items:flex-start;padding:0.7rem 0.85rem;background:var(--elevated);border:1px solid var(--border);border-radius:8px;}
+  .mt-item .mt-itxt{flex:1;min-width:0;font-size:0.8rem;color:var(--ivory);line-height:1.5;word-break:break-word;}
+  .mt-item .mt-idue{font-family:var(--font-m);font-size:0.62rem;color:var(--ivory-faint);white-space:nowrap;margin-top:2px;}
+  .mt-badge{flex-shrink:0;font-family:var(--font-m);font-weight:700;font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;padding:0.22rem 0.55rem;border-radius:20px;white-space:nowrap;}
+  .mt-badge--saved{color:var(--mt-teal);background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.35);}
+  .mt-badge--used{color:var(--mt-cyan);background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.35);}
+  .mt-badge--pending{color:var(--mt-amber);background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.35);}
+  .mt-badge--completed{color:var(--mt-teal);background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.35);}
+  .mt-badge--overdue{color:var(--mt-red);background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);}
+  .mt-none{font-family:var(--font-m);font-size:0.72rem;color:var(--ivory-faint);font-style:italic;}
+  .mt-split{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;}
+  @media (max-width:560px){ .mt-split{grid-template-columns:1fr;} }
+
+  /* ── Schedule form ── */
+  .mt-form{display:flex;flex-direction:column;gap:1rem;}
+  .mt-form .form-label{margin-bottom:0.4rem;}
+  .mt-field{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--ivory);font-family:var(--font-lato);font-size:0.85rem;padding:0.6rem 0.75rem;outline:none;color-scheme:dark;}
+  .mt-field:focus{border-color:var(--border-lit);}
+  select.mt-field{appearance:auto;}
+  .mt-formerr{font-family:var(--font-m);font-size:0.7rem;color:var(--mt-red);}
+
+  /* ── Avatar accent palette (deterministic per person) ── */
+  .mt-accents{display:none;}
 </style>
 </head>
 <body>
@@ -205,6 +252,10 @@
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" id="mtSearch" placeholder="Search people or topics…">
         </div>
+        <button class="btn btn-gradient btn-sm" id="scheduleMeetingBtn" title="Schedule a 1:1 meeting">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Schedule Meeting
+        </button>
       </div>
 
       <!-- TODAY'S MEETINGS -->
@@ -223,13 +274,16 @@
       </div>
       <div class="mt-grid" id="mtUpcoming"></div>
 
-      <!-- FOLLOW-UPS & REMINDERS -->
+      <!-- FOLLOW-UPS -->
       <div class="mt-sectionhead" id="hdrFollow">
-        <span class="mt-eyebrow">Follow-ups &amp; Reminders</span>
+        <span class="mt-eyebrow">Follow-ups &amp; Promises</span>
         <span class="mt-rule"></span>
         <span class="mt-count-chip" id="chipFollow">0</span>
       </div>
       <div class="mt-grid" id="mtFollow"></div>
+
+      <!-- LOADING / ERROR STATE -->
+      <div id="mtStateBox"></div>
 
       <div class="mt-empty" id="mtEmpty" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
@@ -242,228 +296,253 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/csrf.js"></script>
+<div id="mtModalOverlay" class="mt-modal-overlay"></div>
 <script>
 /* ═══════════════════════════════════════════════════════════════
-   MEETING TRACKER — Phase 1 static foundation (demo data)
-   Phase 2 will swap the demo array for real backend data.
+   MEETING TRACKER — Phase 2: real backend data.
+   Consumes GET /api/meetings/dashboard (one call) for the board and
+   lazily loads conversation memory + meeting detail via dedicated
+   endpoints. Visual design (.mt-*) is preserved from Phase 1.
    ═══════════════════════════════════════════════════════════════ */
-var mtDemoData = [
-  {
-    id: 'm1', name: 'Harshit Rana', role: 'Product Designer',
-    date: 'Today · 11:30 AM', when: 'today', status: 'today',
-    avatar: 'HR', accent: ['#8B5CF6', '#60A5FA'],
-    topic: 'Weekly 1:1 — review last week\u2019s feedback loop and next sprint priorities.',
-    owner: 'Harshit Rana', manager: 'You', timeline: 'This week',
-    promises: ['Share updated component library by Fri'], reminders: ['Book design review with QA'],
-    followup: 'Fri · follow up on library handoff'
-  },
-  {
-    id: 'm2', name: 'Priya Mehra', role: 'Engineering Manager',
-    date: 'Today · 2:15 PM', when: 'today', status: 'today',
-    avatar: 'PM', accent: ['#FBBF24', '#F97316'],
-    topic: '1:1 — capacity planning and unblock the mobile team\u2019s delivery risk.',
-    owner: 'Priya Mehra', manager: 'You', timeline: 'This week',
-    promises: ['Confirm revised sprint scope by EOD'], reminders: ['Schedule pairing session Tue'],
-    followup: 'Tue · review sprint scope sign-off'
-  },
-  {
-    id: 'm3', name: 'Arjun Mehta', role: 'Sales Lead',
-    date: 'Thursday · 10:00 AM', when: 'thisweek', status: 'upcoming',
-    avatar: 'AM', accent: ['#34D399', '#22D3EE'],
-    topic: 'Pipeline review — accelerate the two stalled enterprise deals.',
-    owner: 'Arjun Mehta', manager: 'You', timeline: 'Next week',
-    promises: ['Send deal-by-deal notes Fri', 'Draft discount proposal'], reminders: [],
-    followup: 'Fri · follow up on proposals'
-  },
-  {
-    id: 'm4', name: 'Neha Kapoor', role: 'People Ops',
-    date: 'Next Tuesday · 3:00 PM', when: 'nextweek', status: 'upcoming',
-    avatar: 'NK', accent: ['#60A5FA', '#A78BFA'],
-    topic: 'Onboarding refresh — new-hire checklist and manager handoff flow.',
-    owner: 'Neha Kapoor', manager: 'You', timeline: 'Next week',
-    promises: ['Share revised onboarding checklist', 'Invite HR leads to review'], reminders: ['Update HR handbook'],
-    followup: ''
-  },
-  {
-    id: 'm5', name: 'Rohit Jain', role: 'Finance Controller',
-    date: 'Tue · 9:30 AM', when: 'followup', status: 'follow',
-    avatar: 'RJ', accent: ['#34D399', '#8B5CF6'],
-    topic: 'Budget reforecast sign-off — action item from last week\u2019s sync.',
-    owner: 'Rohit Jain', manager: 'You', timeline: 'This week',
-    promises: ['Submit reforecast file'], reminders: [],
-    followup: 'Wed · overdue follow-up on reforecast file'
-  },
-  {
-    id: 'm6', name: 'Sanya Verma', role: 'Marketing Lead',
-    date: 'Wed · 4:00 PM', when: 'overdue', status: 'overdue',
-    avatar: 'SV', accent: ['#F87171', '#FB7185'],
-    topic: 'Campaign asset delivery — promise from previous 1:1 still outstanding.',
-    owner: 'Sanya Verma', manager: 'You', timeline: 'Overdue',
-    promises: ['Deliver launch campaign assets'], reminders: ['Share media budget breakdown'],
-    followup: 'Overdue · escalate if not resolved by Friday'
-  },
-  {
-    id: 'm7', name: 'Karan Bhat', role: 'Support Manager',
-    date: 'Monday · 1:00 PM', when: 'thisweek', status: 'upcoming',
-    avatar: 'KB', accent: ['#F97316', '#FBBF24'],
-    topic: 'Support ticket triage — ownership of follow-up cadence with escalations.',
-    owner: 'Karan Bhat', manager: 'You', timeline: 'Next week',
-    promises: ['Map ticket ownership matrix'], reminders: ['Flag 3 recurring issues'],
-    followup: ''
-  }
-];
-
+var mtData = null;          // raw dashboard payload
+var mtPeople = [];          // rendered people (each = one card)
+var mtByEmp = {};           // employee_id -> person (for detail lookups)
+var mtEmployees = [];       // active employees (for scheduling)
 var mtFilter = 'all';
 var mtQuery = '';
 
+// ── Small DOM helpers ──
 function escHtml(str) {
   if (str === null || str === undefined) return '';
   var d = document.createElement('div');
   d.appendChild(document.createTextNode(String(str)));
   return d.innerHTML;
 }
-
-function mdAvatar(m) {
-  return '<div class="mt-avatar" style="--accent:' + (m.accent[0]||'#8B5CF6') + ';--accent2:' + (m.accent[1]||'#60A5FA') + ';">' + escHtml(m.avatar || m.name.charAt(0)) + '</div>';
+function $(id) { return document.getElementById(id); }
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function fmtTime(d) {
+  var h = d.getHours(), m = d.getMinutes(), am = h < 12 ? 'AM' : 'PM';
+  h = h % 12; if (h === 0) h = 12;
+  return h + ':' + pad(m) + ' ' + am;
+}
+function fmtDate(d) {
+  return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
+}
+function isSameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+function isThisWeek(d) {
+  var now = new Date();
+  var mon = new Date(now); mon.setHours(0,0,0,0); mon.setDate(now.getDate() - now.getDay() + 1);
+  var sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  return d >= mon && d <= sun;
+}
+function initials(name) {
+  return String(name || '?').trim().split(/\s+/).map(function(w){ return w.charAt(0); }).join('').slice(0,2).toUpperCase() || '?';
+}
+// Deterministic accent per employee id (stable across renders)
+var ACCENTS = [
+  ['#8B5CF6', '#60A5FA'], ['#FBBF24', '#F97316'], ['#34D399', '#22D3EE'],
+  ['#F87171', '#FB7185'], ['#60A5FA', '#A78BFA'], ['#F97316', '#FBBF24'],
+  ['#34D399', '#8B5CF6'], ['#A78BFA', '#F472B6'], ['#22D3EE', '#34D399'],
+  ['#FB7185', '#FBBF24']
+];
+function accentFor(id) {
+  var hash = 0;
+  var s = String(id || '');
+  for (var i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+  return ACCENTS[hash % ACCENTS.length];
 }
 
-function mdStatus(m) {
+// ── Section (status) resolution for a person ──
+function personSection(p) {
+  var nm = p.next_meeting;
+  if (nm && nm.scheduled_at && isSameDay(new Date(nm.scheduled_at), new Date())) return 'today';
+  if (p.counts.overdue_followups > 0) return 'overdue';
+  if (p.counts.pending_followups > 0) return 'follow';
+  if (nm && nm.scheduled_at) return isThisWeek(new Date(nm.scheduled_at)) ? 'thisweek' : 'nextweek';
+  return 'today';
+}
+
+// ── Card renderers ──
+function mdAvatar(p) {
+  var acc = accentFor(p.id);
+  return '<div class="mt-avatar" style="--accent:' + acc[0] + ';--accent2:' + acc[1] + ';">' + escHtml(initials(p.employee.name)) + '</div>';
+}
+
+function mdStatus(section) {
   var map = { today: 'Today', upcoming: 'Upcoming', follow: 'Follow-up', overdue: 'Overdue' };
   var cls = {
     today: 'mt-status--today', upcoming: 'mt-status--upcoming',
     follow: 'mt-status--follow', overdue: 'mt-status--overdue'
-  }[m.status] || 'mt-status--upcoming';
-  return '<span class="mt-status ' + cls + '"><span class="dot"></span>' + (map[m.status] || 'Upcoming') + '</span>';
+  }[section === 'thisweek' || section === 'nextweek' ? 'upcoming' : section] || 'mt-status--upcoming';
+  var label = map[section === 'thisweek' || section === 'nextweek' ? 'upcoming' : section] || 'Upcoming';
+  return '<span class="mt-status ' + cls + '"><span class="dot"></span>' + label + '</span>';
 }
 
 function mdCell(label, value, cls, isOwner, svgPath) {
   var outer = cls || '';
   var line = '<div class="mt-cellline' + (isOwner ? ' is-owner' : '') + '">' + escHtml(value || '—') + '</div>';
   if (label === 'Promise') outer += ' is-promise';
-  if (label === 'Reminder') outer += ' is-reminder';
   if (label === 'Follow-up') outer += ' is-follow';
   var svg = svgPath || '';
   return '<div class="mt-cell ' + outer + '"><div class="mt-celllabel">' + svg + escHtml(label) + '</div>' + line + '</div>';
 }
 
-function mdCard(m) {
-  var promises = '';
-  if (m.promises && m.promises.length) {
-    promises = m.promises.map(function(p){ return '<div class="mt-cellline is-owner">' + escHtml(p) + '</div>'; }).join('');
-  } else {
-    promises = '<div class="mt-cellline">—</div>';
+function employerCell(p, section) {
+  var name = p.employee.name;
+  var role = p.employee.position || '';
+  var when = p.next_meeting && p.next_meeting.scheduled_at ? new Date(p.next_meeting.scheduled_at) : null;
+  var timeline, dateStr;
+  if (section === 'today' && when) { timeline = 'Today'; dateStr = 'Today \u00b7 ' + fmtTime(when); }
+  else if (section === 'thisweek' && when) {
+    timeline = 'This Week';
+    var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    dateStr = days[when.getDay()] + ' \u00b7 ' + fmtTime(when);
   }
-  var reminders = '';
-  if (m.reminders && m.reminders.length) {
-    reminders = m.reminders.map(function(r){ return '<div class="mt-cellline">' + escHtml(r) + '</div>'; }).join('');
-  } else {
-    reminders = '<div class="mt-cellline">—</div>';
+  else if (section === 'nextweek' && when) {
+    timeline = 'Next Week';
+    dateStr = fmtDate(when) + ' \u00b7 ' + fmtTime(when);
   }
+  else if (section === 'overdue') { timeline = 'Overdue'; dateStr = p.counts.overdue_followups + ' overdue item(s)'; }
+  else { timeline = 'Follow-up'; dateStr = p.counts.pending_followups + ' follow-up(s)'; }
+  return { name: name, role: role, timeline: timeline, dateStr: dateStr, when: when };
+}
 
+function mdCard(p) {
+  var section = personSection(p);
+  var info = employerCell(p, section);
+  var isOwnerSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+  var mgrSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+  var calSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  var promiseSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
+  var followSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 6v6l4 2"/></svg>';
+
+  // Promises cell: factual open commitments
+  var commitments = (p.open_items || []).filter(function(o){ return o.type === 'COMMITMENT'; });
+  var promises = commitments.length
+    ? commitments.map(function(c){ return '<div class="mt-cellline is-owner">' + escHtml(c.content) + '</div>'; }).join('')
+    : '<div class="mt-cellline">—</div>';
+
+  // Follow row: next due open follow-up
+  var followups = (p.open_items || []).filter(function(o){ return o.type === 'FOLLOW_UP'; });
   var follow = '';
-  if (m.followup) {
+  if (followups.length) {
+    var first = followups[0];
+    var due = first.due_at ? 'Due ' + fmtDate(new Date(first.due_at)) : 'No due date';
+    if (first.status === 'OVERDUE') due = 'Overdue \u00b7 ' + (first.due_at ? fmtDate(new Date(first.due_at)) : '');
     follow =
       '<div class="mt-follow">' +
-        '<span class="mt-folllabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 6v6l4 2"/></svg>Follow-up</span>' +
-        '<span class="mt-fover">' + escHtml(m.followup) + '</span>' +
+        '<span class="mt-folllabel">' + followSvg + 'Follow-up</span>' +
+        '<span class="mt-fover">' + escHtml(first.content) + ' \u2014 ' + due + '</span>' +
+      '</div>';
+  } else if (section === 'follow' || section === 'overdue') {
+    follow =
+      '<div class="mt-follow">' +
+        '<span class="mt-folllabel">' + followSvg + 'Follow-up</span>' +
+        '<span class="mt-fover">' + escHtml(info.dateStr) + '</span>' +
       '</div>';
   }
 
+  var topic = (p.next_meeting && p.next_meeting.title)
+    ? p.next_meeting.title
+    : ((followups.length ? followups : commitments).length
+        ? ((followups[0] || commitments[0]).content)
+        : 'Action items \u2014 no upcoming meeting scheduled');
+
+  var prevLink = '';
+  if (p.previous_session && p.previous_session.session_id) {
+    prevLink = '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenPrevious(\'' + escHtml(p.id) + '\')" title="View previous session context"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.36 2.64L3 8"/><path d="M3 3v5h5"/></svg>Previous Context</a>';
+  }
+
   return (
-    '<div class="mt-card" data-seen="' + m.id + '">' +
+    '<div class="mt-card" data-seen="' + escHtml(p.id) + '">' +
       '<div class="mt-card-top">' +
-        mdAvatar(m) +
-        '<div class="mt-who"><div class="mt-name">' + escHtml(m.name) + '</div><div class="mt-role">' + escHtml(m.role) + '</div></div>' +
-        mdStatus(m) +
+        mdAvatar(p) +
+        '<div class="mt-who"><div class="mt-name">' + escHtml(info.name) + '</div><div class="mt-role">' + escHtml(info.role) + '</div></div>' +
+        mdStatus(section) +
       '</div>' +
       '<div class="mt-body">' +
         '<div class="mt-meta">' +
-          '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' + escHtml(m.date) + '</span>' +
-          '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' + escHtml(m.owner) + '</span>' +
+          '<span>' + calSvg + escHtml(info.dateStr) + '</span>' +
+          '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' + escHtml(info.name) + '</span>' +
         '</div>' +
-        '<div class="mt-topic">' + escHtml(m.topic) + '</div>' +
+        '<div class="mt-topic">' + escHtml(topic) + '</div>' +
         '<div class="mt-board">' +
-          '<div class="mt-cell is-owner"><div class="mt-celllabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Owner</div><div class="mt-cellline is-owner">' + escHtml(m.owner) + '</div></div>' +
-          '<div class="mt-cell"><div class="mt-celllabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Manager</div><div class="mt-cellline">' + escHtml(m.manager || 'You') + '</div></div>' +
-          '<div class="mt-cell"><div class="mt-celllabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Timeline</div><div class="mt-cellline is-date">' + escHtml(m.timeline) + '</div></div>' +
-          '<div class="mt-cell is-promise"><div class="mt-celllabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Promises</div>' + promises + '</div>' +
-          '<div class="mt-cell is-reminder"><div class="mt-celllabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Reminders</div>' + reminders + '</div>' +
+          '<div class="mt-cell is-owner"><div class="mt-celllabel">' + isOwnerSvg + 'Owner</div><div class="mt-cellline is-owner">' + escHtml(info.name) + '</div></div>' +
+          '<div class="mt-cell"><div class="mt-celllabel">' + mgrSvg + 'Manager</div><div class="mt-cellline">You</div></div>' +
+          '<div class="mt-cell"><div class="mt-celllabel">' + calSvg + 'Timeline</div><div class="mt-cellline is-date">' + escHtml(info.timeline) + '</div></div>' +
+          '<div class="mt-cell is-promise"><div class="mt-celllabel">' + promiseSvg + 'Promises</div>' + promises + '</div>' +
+          '<div class="mt-cell is-follow"><div class="mt-celllabel">' + followSvg + 'Open Follow-ups</div><div class="mt-cellline">' + escHtml(followups.length) + '</div></div>' +
         '</div>' +
         follow +
         '<div class="mt-footer">' +
-          '<a class="mt-link" href="/sync/room" title="Open meeting in Sync Room"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>View Meeting</a>' +
+          '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenDetail(\'' + escHtml(p.id) + '\')" title="View full meeting &amp; recorded context"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>View Meeting</a>' +
+          prevLink +
         '</div>' +
       '</div>' +
     '</div>'
   );
 }
 
-function matchesItem(m) {
-  if (mtFilter === 'today' && m.when !== 'today') return false;
-  if (mtFilter === 'thisweek' && (m.when !== 'today' && m.when !== 'thisweek')) return false;
-  if (mtFilter === 'followup' && (m.when !== 'followup' && m.when !== 'overdue')) return false;
-  if (mtFilter === 'overdue' && m.when !== 'overdue') return false;
+function matchesItem(p) {
+  var section = personSection(p);
+  if (mtFilter === 'today' && section !== 'today') return false;
+  if (mtFilter === 'thisweek' && section !== 'today' && section !== 'thisweek') return false;
+  if (mtFilter === 'followup' && section !== 'follow' && section !== 'overdue') return false;
+  if (mtFilter === 'overdue' && section !== 'overdue') return false;
   if (mtQuery) {
-    var hay = (m.name + ' ' + m.role + ' ' + m.topic + ' ' + (m.owner||'')).toLowerCase();
-    return hay.indexOf(mtQuery) !== -1;
+    var hay = (p.employee.name + ' ' + (p.employee.position || '') + ' ' + topicFor(p) + ' ' + (p.open_items || []).map(function(o){ return o.content; }).join(' ')).toLowerCase();
+    if (hay.indexOf(mtQuery) === -1) return false;
   }
   return true;
 }
 
+function topicFor(p) {
+  if (p.next_meeting && p.next_meeting.title) return p.next_meeting.title;
+  var it = (p.open_items || [])[0];
+  return it ? it.content : '';
+}
+
 function renderMetrics() {
-  var by = { today: 0, thisweek: 0, followup: 0, overdue: 0, promises: 0, reminders: 0 };
-  mtDemoData.forEach(function(m){
-    if (m.when === 'today') by.today++;
-    if (m.when === 'thisweek') by.thisweek++;
-    if (m.when === 'followup') by.followup++;
-    if (m.when === 'overdue') by.overdue++;
-    by.promises += (m.promises || []).length;
-    by.reminders += (m.reminders || []).length;
-  });
+  var c = mtData ? mtData.counters : { today: 0, this_week: 0, pending_followups: 0, pending_commitments: 0 };
+  var overdue = mtPeople.reduce(function(n, p){ return n + p.counts.overdue_followups; }, 0);
   var cells = [
-    { v: by.today, l: 'Today', a: 'm-accent0' },
-    { v: by.thisweek, l: 'This Week', a: 'm-accent1' },
-    { v: by.followup, l: 'Follow-ups', a: 'm-accent2' },
-    { v: by.overdue, l: 'Overdue', a: 'm-accent3' },
-    { v: by.promises, l: 'Promises', a: 'm-accent4' },
-    { v: by.reminders, l: 'Reminders', a: 'm-accent5' }
+    { v: c.today, l: 'Today', a: 'm-accent0' },
+    { v: c.this_week, l: 'This Week', a: 'm-accent1' },
+    { v: c.pending_followups, l: 'Follow-ups', a: 'm-accent2' },
+    { v: c.pending_commitments, l: 'Promises', a: 'm-accent4' },
+    { v: overdue, l: 'Overdue', a: 'm-accent3' }
   ];
-  document.getElementById('mtMetrics').innerHTML =
-    cells.map(function(c){
-      return '<div class="mt-metric ' + c.a + '"><div class="mt-mval">' + c.v + '</div><div class="mt-mlabel">' + c.l + '</div></div>';
-    }).join('');
+  $('mtMetrics').innerHTML = cells.map(function(ce){
+    return '<div class="mt-metric ' + ce.a + '"><div class="mt-mval">' + ce.v + '</div><div class="mt-mlabel">' + ce.l + '</div></div>';
+  }).join('');
 }
 
 function render() {
-  var filtered = mtDemoData.filter(matchesItem);
-  var today = filtered.filter(function(m){ return m.when === 'today'; });
-  var upcoming = filtered.filter(function(m){ return m.when === 'thisweek' || m.when === 'nextweek'; });
-  var follow = filtered.filter(function(m){ return m.when === 'followup' || m.when === 'overdue'; });
+  var filtered = mtPeople.filter(matchesItem);
+  var today = filtered.filter(function(p){ return personSection(p) === 'today'; });
+  var upcoming = filtered.filter(function(p){ var s = personSection(p); return s === 'thisweek' || s === 'nextweek'; });
+  var follow = filtered.filter(function(p){ var s = personSection(p); return s === 'follow' || s === 'overdue'; });
 
-  var todayHtml = today.map(mdCard).join('');
-  var upcomingHtml = upcoming.map(mdCard).join('');
-  var followHtml = follow.map(mdCard).join('');
-
-  document.getElementById('mtToday').innerHTML = todayHtml;
-  document.getElementById('mtUpcoming').innerHTML = upcomingHtml;
-  document.getElementById('mtFollow').innerHTML = followHtml;
-  document.getElementById('chipToday').textContent = today.length;
-  document.getElementById('chipUpcoming').textContent = upcoming.length;
-  document.getElementById('chipFollow').textContent = follow.length;
-  document.getElementById('mtShownCount').textContent = filtered.length;
-  document.getElementById('mtTotalCount').textContent = mtDemoData.length;
+  $('mtToday').innerHTML = today.map(mdCard).join('');
+  $('mtUpcoming').innerHTML = upcoming.map(mdCard).join('');
+  $('mtFollow').innerHTML = follow.map(mdCard).join('');
+  $('chipToday').textContent = today.length;
+  $('chipUpcoming').textContent = upcoming.length;
+  $('chipFollow').textContent = follow.length;
+  $('mtShownCount').textContent = filtered.length;
+  $('mtTotalCount').textContent = mtPeople.length;
 
   var isEmpty = today.length === 0 && upcoming.length === 0 && follow.length === 0;
-  document.getElementById('mtEmpty').style.display = isEmpty ? 'block' : 'none';
-  document.getElementById('hdrToday').style.display = today.length ? '' : 'none';
-  document.getElementById('hdrUpcoming').style.display = upcoming.length ? '' : 'none';
-  document.getElementById('hdrFollow').style.display = follow.length ? '' : 'none';
+  $('mtEmpty').style.display = isEmpty ? 'block' : 'none';
+  $('hdrToday').style.display = today.length ? '' : 'none';
+  $('hdrUpcoming').style.display = upcoming.length ? '' : 'none';
+  $('hdrFollow').style.display = follow.length ? '' : 'none';
 
   animateCards();
 }
 
 function animateCards() {
-  if (!document.getElementById('contentArea')) return;
+  if (!$('contentArea')) return;
   var re = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (re) return;
   var cards = document.querySelectorAll('.mt-card');
@@ -473,6 +552,258 @@ function animateCards() {
   }
 }
 
+// ── Data loading + states ──
+function showLoading() {
+  $('mtMetrics').innerHTML = '';
+  $('hdrToday').style.display = 'none';
+  $('hdrUpcoming').style.display = 'none';
+  $('hdrFollow').style.display = 'none';
+  $('mtEmpty').style.display = 'none';
+  var box = $('mtStateBox');
+  box.style.display = 'block';
+  box.innerHTML =
+    '<div class="mt-state"><div class="mt-spinner"></div><div class="mt-state-title">Loading your meeting board</div><div class="mt-state-sub">Fetching real employees, meetings &amp; conversation memory</div></div>';
+}
+function showError(msg) {
+  var box = $('mtStateBox');
+  box.style.display = 'block';
+  box.innerHTML =
+    '<div class="mt-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+    '<div class="mt-state-title">Couldn\u2019t load the meeting board</div>' +
+    '<div class="mt-state-sub">' + escHtml(msg || 'Please try again.') + '</div>' +
+    '<button class="btn btn-outline btn-sm mt-retry" type="button">Retry</button></div>';
+  box.querySelector('.mt-retry').addEventListener('click', loadData);
+}
+function hideState() {
+  $('mtStateBox').style.display = 'none';
+  $('mtStateBox').innerHTML = '';
+}
+
+function loadData() {
+  showLoading();
+  fetch('/api/meetings/dashboard')
+    .then(function(r){ if (!r.ok) throw new Error('Request failed (' + r.status + ')'); return r.json(); })
+    .then(function(data) {
+      mtData = data;
+      mtEmployees = data.employees || [];
+      mtPeople = data.people || [];
+      mtByEmp = {};
+      mtPeople.forEach(function(p){ mtByEmp[p.id] = p; });
+      hideState();
+      renderMetrics();
+      render();
+      if (!mtPeople.length) {
+        $('mtEmpty').style.display = 'block';
+        $('mtToday').innerHTML = ''; $('mtUpcoming').innerHTML = ''; $('mtFollow').innerHTML = '';
+      }
+    })
+    .catch(function(err) {
+      console.error('Meeting dashboard load failed:', err);
+      showError(err.message);
+    });
+}
+
+// ── Modal machinery ──
+function openModal(html) {
+  var ov = $('mtModalOverlay');
+  if (!ov) return;
+  ov.innerHTML = html;
+  ov.classList.add('active');
+  var x = ov.querySelector('.mt-modal-x');
+  if (x) x.addEventListener('click', closeModal);
+  ov.addEventListener('click', function(ev){ if (ev.target === ov) closeModal(); });
+  document.addEventListener('keydown', mtEsc);
+}
+function closeModal() {
+  var ov = $('mtModalOverlay');
+  if (!ov) return;
+  ov.classList.remove('active');
+  document.removeEventListener('keydown', mtEsc);
+}
+function mtEsc(ev) { if (ev.key === 'Escape') closeModal(); }
+
+function modalShell(title, sub) {
+  return (
+    '<div class="mt-modal">' +
+      '<div class="mt-modal-head"><div><div class="mt-modal-title">' + title + '</div>' + (sub ? '<div class="mt-modal-sub">' + sub + '</div>' : '') + '</div>' +
+      '<button class="mt-modal-x" type="button" title="Close">&times;</button></div>' +
+      '<div class="mt-modal-body">' + '<div class="mt-state" style="margin:0;"><div class="mt-spinner"></div></div>' + '</div>' +
+    '</div>'
+  );
+}
+function fillModalBody(html) {
+  var body = document.querySelector('#mtModalOverlay .mt-modal-body');
+  if (body) body.innerHTML = html;
+}
+
+function badgeCls(status, type) {
+  if (type === 'NOTE') return 'mt-badge--saved';
+  var s = (status || '').toUpperCase();
+  if (s === 'USED') return 'mt-badge--used';
+  if (s === 'COMPLETED') return 'mt-badge--completed';
+  if (s === 'OVERDUE') return 'mt-badge--overdue';
+  return 'mt-badge--pending';
+}
+function badgeLabel(status) {
+  var s = (status || '').toUpperCase();
+  return { SAVED: 'Saved', USED: 'Used', PENDING: 'Pending', COMPLETED: 'Completed', OVERDUE: 'Overdue' }[s] || s;
+}
+
+function memoryBlock(title, items, emptyText) {
+  if (!items || !items.length) return '<div class="mt-d"><div class="mt-dtitle">' + title + '</div><div class="mt-none">' + emptyText + '</div></div>';
+  var rows = items.map(function(it){
+    return '<div class="mt-item"><div class="mt-itxt">' + escHtml(it.content) + '</div>' +
+      '<div class="mt-idue">' + (it.due_at ? 'Due ' + fmtDate(new Date(it.due_at)) : '') + '</div>' +
+      '<span class="mt-badge ' + badgeCls(it.status, it.type) + '">' + badgeLabel(it.status) + '</span></div>';
+  }).join('');
+  return '<div class="mt-d"><div class="mt-dtitle">' + title + '</div>' + rows + '</div>';
+}
+
+// ── View Meeting (current) detail ──
+function mtOpenDetail(eid) {
+  var p = mtByEmp[eid];
+  if (!p) return;
+  var name = p.employee.name, role = p.employee.position || 'HR';
+  var sub = '';
+  if (p.next_meeting) {
+    sub = (p.next_meeting.title || 'Meeting') + ' \u00b7 ' + (p.next_meeting.scheduled_at ? fmtDate(new Date(p.next_meeting.scheduled_at)) + ' ' + fmtTime(new Date(p.next_meeting.scheduled_at)) : '');
+  } else {
+    sub = 'No upcoming meeting scheduled';
+  }
+  openModal(modalShell(escHtml(name) + '<span style="color:var(--ivory-faint);font-weight:400;"> &mdash; ' + escHtml(role) + '</span>', escHtml(sub)));
+
+  var bodyHtml =
+    '<div class="mt-split">' +
+      '<div class="mt-d"><div class="mt-dtitle">Overview</div><div class="mt-drow"><b>Person:</b> ' + escHtml(name) + '</div>' +
+      '<div class="mt-drow"><b>Role:</b> ' + escHtml(role) + '</div>' +
+      '<div class="mt-drow"><b>Next meeting:</b> ' + escHtml(sub) + '</div></div>' +
+      '<div class="mt-d"><div class="mt-dtitle">Recorded this sync track</div>' +
+      '<div class="mt-drow"><b>Open commitments:</b> ' + p.counts.pending_commitments + '</div>' +
+      '<div class="mt-drow"><b>Open follow-ups:</b> ' + p.counts.pending_followups + '</div>' +
+      '<div class="mt-drow"><b>Openers used:</b> ' + p.counts.openers_used + '</div></div>' +
+    '</div>' +
+    '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Loading recorded items\u2026</div></div>';
+  fillModalBody(bodyHtml);
+
+  fetch('/api/conversation-memory?employee_id=' + encodeURIComponent(eid))
+    .then(function(r){ if (!r.ok) throw new Error('Failed (' + r.status + ')'); return r.json(); })
+    .then(function(data) {
+      var items = data.items || [];
+      var used = items.filter(function(m){ return m.type === 'OPENER' || m.type === 'QUESTION'; });
+      var commits = items.filter(function(m){ return m.type === 'COMMITMENT'; });
+      var follows = items.filter(function(m){ return m.type === 'FOLLOW_UP'; });
+      var notes = items.filter(function(m){ return m.type === 'NOTE'; });
+      var html =
+        memoryBlock('Openers &amp; Questions', used, 'No openers or questions recorded for this person.') +
+        memoryBlock('Commitments', commits, 'No commitments recorded.') +
+        memoryBlock('Follow-ups', follows, 'No follow-ups recorded.') +
+        memoryBlock('Notes', notes, 'No notes recorded.');
+      fillModalBody(bodyHtmlWithOverview(name, role, sub, p, html));
+    })
+    .catch(function(err){
+      fillModalBody(bodyHtmlWithOverview(name, role, sub, p, '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Couldn\u2019t load items \u2014 ' + escHtml(err.message) + '</div></div>'));
+    });
+}
+function bodyHtmlWithOverview(name, role, sub, p, memoryHtml) {
+  return (
+    '<div class="mt-split">' +
+      '<div class="mt-d"><div class="mt-dtitle">Overview</div><div class="mt-drow"><b>Person:</b> ' + escHtml(name) + '</div>' +
+      '<div class="mt-drow"><b>Role:</b> ' + escHtml(role) + '</div>' +
+      '<div class="mt-drow"><b>Next meeting:</b> ' + escHtml(sub) + '</div></div>' +
+      '<div class="mt-d"><div class="mt-dtitle">Recorded this sync track</div>' +
+      '<div class="mt-drow"><b>Open commitments:</b> ' + p.counts.pending_commitments + '</div>' +
+      '<div class="mt-drow"><b>Open follow-ups:</b> ' + p.counts.pending_followups + '</div>' +
+      '<div class="mt-drow"><b>Openers used:</b> ' + p.counts.openers_used + '</div></div>' +
+    '</div>' + memoryHtml
+  );
+}
+
+// ── View Previous Context detail ──
+function mtOpenPrevious(eid) {
+  var p = mtByEmp[eid];
+  if (!p || !p.previous_session || !p.previous_session.session_id) return;
+  var sid = p.previous_session.session_id;
+  var name = p.employee.name;
+  var created = p.previous_session.created_at ? fmtDate(new Date(p.previous_session.created_at)) : '';
+  openModal(modalShell(escHtml(name) + ' \u2014 Previous Session', escHtml('Session recorded ' + created)));
+  var bodyHtml = '<div class="mt-d"><div class="mt-dtitle">Items recorded in the previous session</div><div class="mt-none">Loading\u2026</div></div>';
+  fillModalBody(bodyHtml);
+
+  fetch('/api/conversation-memory?session_id=' + encodeURIComponent(sid))
+    .then(function(r){ if (!r.ok) throw new Error('Failed (' + r.status + ')'); return r.json(); })
+    .then(function(data) {
+      var items = data.items || [];
+      var used = items.filter(function(m){ return m.type === 'OPENER' || m.type === 'QUESTION'; });
+      var commits = items.filter(function(m){ return m.type === 'COMMITMENT'; });
+      var follows = items.filter(function(m){ return m.type === 'FOLLOW_UP'; });
+      var notes = items.filter(function(m){ return m.type === 'NOTE'; });
+      var html =
+        memoryBlock('Openers &amp; Questions', used, 'None recorded in that session.') +
+        memoryBlock('Commitments (from that session)', commits, 'None recorded.') +
+        memoryBlock('Follow-ups (from that session)', follows, 'None recorded.') +
+        memoryBlock('Notes', notes, 'None recorded.');
+      fillModalBody(html);
+    })
+    .catch(function(err){
+      fillModalBody('<div class="mt-d"><div class="mt-dtitle">Items recorded in the previous session</div><div class="mt-none">Couldn\u2019t load \u2014 ' + escHtml(err.message) + '</div></div>');
+    });
+}
+
+// ── Schedule Meeting ──
+function openSchedule() {
+  var opts = mtEmployees.map(function(e){
+    return '<option value="' + escHtml(e.id) + '">' + escHtml(e.name) + (e.position ? ' \u2014 ' + escHtml(e.position) : '') + '</option>';
+  }).join('');
+  var shell =
+    '<div class="mt-modal">' +
+      '<div class="mt-modal-head"><div><div class="mt-modal-title">Schedule a 1:1</div>' +
+      '<div class="mt-modal-sub">Pick a real employee and a time \u2014 saved as a meeting</div></div>' +
+      '<button class="mt-modal-x" type="button" title="Close">&times;</button></div>' +
+      '<div class="mt-modal-body">' +
+        '<form class="mt-form" id="mtScheduleForm">' +
+          '<div><label class="form-label">Employee</label><select class="mt-field" id="mtSchedEmp" required><option value="">Select employee\u2026</option>' + opts + '</select></div>' +
+          '<div><label class="form-label">Title</label><input class="mt-field" id="mtSchedTitle" type="text" placeholder="e.g. Weekly 1:1" required></div>' +
+          '<div><label class="form-label">Date &amp; time</label><input class="mt-field" id="mtSchedWhen" type="datetime-local" required></div>' +
+          '<div class="mt-formerr" id="mtSchedErr"></div>' +
+          '<div style="display:flex;justify-content:flex-end;gap:0.6rem;">' +
+            '<button class="btn btn-outline btn-sm" type="button" id="mtSchedCancel">Cancel</button>' +
+            '<button class="btn btn-primary btn-sm" type="submit" id="mtSchedSave">Schedule</button>' +
+          '</div>' +
+        '</form>' +
+      '</div>' +
+    '</div>';
+  openModal(shell);
+  $('mtSchedCancel').addEventListener('click', closeModal);
+  $('mtScheduleForm').addEventListener('submit', submitSchedule);
+}
+function submitSchedule(ev) {
+  ev.preventDefault();
+  var errEl = $('mtSchedErr');
+  errEl.textContent = '';
+  var empId = $('mtSchedEmp').value;
+  var title = $('mtSchedTitle').value.trim();
+  var when = $('mtSchedWhen').value;
+  if (!empId || !title || !when) { errEl.textContent = 'Please fill in employee, title, and date &amp; time.'; return; }
+  var btn = $('mtSchedSave');
+  btn.disabled = true; btn.textContent = 'Saving\u2026';
+  fetch('/api/meetings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ employee_id: empId, title: title, scheduled_at: when })
+  })
+    .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, d: d }; }); })
+    .then(function(res) {
+      if (!res.ok) throw new Error((res.d && res.d.error) || 'Request failed');
+      closeModal();
+      loadData();
+    })
+    .catch(function(err) {
+      btn.disabled = false; btn.textContent = 'Schedule';
+      errEl.textContent = 'Couldn\u2019t schedule: ' + err.message;
+    });
+}
+
+// ── Init ──
 (function init() {
   var pills = document.querySelectorAll('.mt-pill');
   pills.forEach(function(p){
@@ -483,13 +814,13 @@ function animateCards() {
       render();
     });
   });
-  document.getElementById('mtSearch').addEventListener('input', function(){
+  $('mtSearch').addEventListener('input', function(){
     mtQuery = this.value.trim().toLowerCase();
     render();
   });
-  document.getElementById('syncRoomBtn').addEventListener('click', function(){
-    window.location.href = '/sync/room';
-  });
+  $('syncRoomBtn').addEventListener('click', function(){ window.location.href = '/sync/room'; });
+  $('scheduleMeetingBtn').addEventListener('click', openSchedule);
+  loadData();
 })();
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -503,8 +834,6 @@ document.addEventListener('DOMContentLoaded', function() {
       sidebar.style.opacity = '1';
     }
   }
-  renderMetrics();
-  render();
 });
 </script>
 

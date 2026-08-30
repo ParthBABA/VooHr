@@ -12,10 +12,12 @@ from api import api_bp
 from auth import auth_bp, register_google_oauth
 from auth_email import auth_email_bp
 from config import Config
+from conversation_memory import conversation_memory_bp
 from employees import employees_bp
 from employees import _session_is_active
 from employees import TOTPRequired
 from extensions import get_db, init_db, check_rate_limit, record_rate_limit_event, client_ip
+from meetings import meetings_bp
 from notifications import notifications_bp
 from sessions import sessions_bp
 from totp_routes import totp_bp
@@ -117,6 +119,8 @@ def create_app():
     app.register_blueprint(employees_bp, url_prefix="/api")
     app.register_blueprint(sessions_bp, url_prefix="/api")
     app.register_blueprint(notifications_bp, url_prefix="/api")
+    app.register_blueprint(meetings_bp, url_prefix="/api")
+    app.register_blueprint(conversation_memory_bp, url_prefix="/api")
 
     @app.errorhandler(TOTPRequired)
     def _handle_totp_required(exc):
