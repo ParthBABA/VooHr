@@ -4576,8 +4576,9 @@ sessionPromise.then(function(s) {
   }
 
   function apply() {
-    fillData();
-    tagCards();
+    var a = fillData();
+    var b = tagCards();
+    if (mo && a && b) mo.disconnect();
   }
 
   fillData();
