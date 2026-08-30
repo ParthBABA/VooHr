@@ -1122,14 +1122,16 @@
     position: relative;
     display: flex; justify-content: center; align-items: center;
     width: 100%;
-    padding: 0.2rem 0.4rem 0.9rem;
+    padding: 0.35rem 0.5rem 1rem;
   }
   #stepContent2 .step2-radar{
-    width: 100%;
-    max-width: 460px;
+    width: 66%;
+    min-width: 470px;
+    max-width: 680px;
     height: auto;
     aspect-ratio: 1 / 1;
     margin: 0 auto;
+    flex: 0 0 auto;
   }
   #stepContent2 .step2-radar svg{
     display: block;
@@ -1384,18 +1386,24 @@
      the dynamic analysis cards are re-composed via CSS only,
      redistributed with display:contents inside one grid.
      ========================================================= */
-  #stepContent3{ padding: 3rem 3.25rem 2.75rem; }
+﻿  #stepContent3{ padding: 3rem 3.25rem 2.75rem; }
 
-  /* ---------- Master grid ---------- */
+  /* =========================================================
+     STEP 3 — ROOT CAUSE ANALYSIS — investigation / reasoning
+     workspace. Distinct IA from Behavioral Intelligence: this
+     is WHY, not WHAT. Scoped strictly to #stepContent3.
+     ========================================================= */
+
+  /* ---------- Aligned master grid ---------- */
   #stepContent3 .rc-grid{
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 1.4rem 1rem;
+    gap: 1.15rem 1rem;
     margin-top: 1.75rem;
   }
-  #stepContent3 .rc-dynamic{ display: contents; }
+  #stepContent3 .rc-grid > *{ min-width: 0; }
 
-  /* ---------- Section eyebrows ---------- */
+  /* ---------- Section eyebrows (shared) ---------- */
   #stepContent3 .rc-eyebrow{
     display: flex; align-items: center; gap: 0.55rem;
     min-width: 0;
@@ -1411,24 +1419,34 @@
     font-size: 11px; font-weight: 400;
     letter-spacing: 0.02em; text-transform: none;
     color: var(--step-text-muted); opacity: 0.75;
-    margin-left: 0.4rem;
+    white-space: nowrap;
   }
-  #stepContent3 .rc-eyebrow--snap{ grid-row: 1; grid-column: 1 / 7; }
-  #stepContent3 .rc-eyebrow--drivers{ grid-row: 3; grid-column: 1 / 7; }
-  #stepContent3 .rc-eyebrow--insight{ grid-row: 6; grid-column: 1 / 7; }
-  #stepContent3 .rc-eyebrow--fq{ grid-row: 10; grid-column: 1 / 3; }
-  #stepContent3 .rc-eyebrow--ev{ grid-row: 10; grid-column: 3 / 5; }
-  #stepContent3 .rc-eyebrow--rc{
-    grid-row: 10; grid-column: 5 / 7;
-    display: flex; justify-content: space-between; gap: 0.6rem;
+  #stepContent3 .rc-eyebrow--evsnap{ grid-row: 1; grid-column: 1 / 7; }
+  #stepContent3 .rc-eyebrow--hyp{ grid-row: 3; grid-column: 1 / 7; }
+  #stepContent3 .rc-eyebrow--reason{ grid-row: 5; grid-column: 1 / 7; }
+  #stepContent3 .rc-eyebrow--reasonsub{
+    grid-row: 7; grid-column: 3 / 7;
+    font-size: 12px; letter-spacing: 0.12em; text-transform: none;
+    color: var(--step-text-secondary); opacity: 0.8;
+    border: 0; padding: 0; margin-top: -0.35rem;
+    justify-content: flex-end;
   }
+  #stepContent3 .rc-eyebrow--pipeline{ grid-row: 8; grid-column: 1 / 7; }
+  #stepContent3 .rc-eyebrow--conf{ grid-row: 10; grid-column: 1 / 7; }
 
-  /* ---------- 1. Evidence snapshot (statement | observation) ---------- */
-  #stepContent3 .analysis-quote{
-    grid-row: 2; grid-column: 1 / 4;
-    margin: 0;
-    padding: 1.5rem 1.6rem;
-    border: 1px solid rgba(139,92,246,0.28);
+  /* ---------- 1. Evidence snapshot (employee words | observation) ---------- */
+  #stepContent3 .rc-snapshot{
+    grid-row: 2; grid-column: 1 / 7;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  #stepContent3 .rc-quote{
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 0.85rem;
+    padding: 1.6rem 1.7rem;
+    border: 1px solid rgba(139,92,246,0.30);
     border-left: 3px solid var(--step-primary);
     border-radius: 12px;
     background:
@@ -1438,22 +1456,21 @@
     box-shadow:
       0 0 0 1px rgba(139,92,246,0.05),
       0 12px 30px rgba(0,0,0,0.14);
-    font-family: var(--step-body-font);
-    font-size: 13.5px; font-style: italic; line-height: 1.7;
-    color: var(--step-text);
   }
-  #stepContent3 .analysis-quote::before{
-    content: 'EMPLOYEE STATEMENT';
-    display: block;
+  #stepContent3 .rc-quote-label{
     font-family: var(--step-heading-font);
-    font-size: 9.5px; font-weight: 600; font-style: normal;
+    font-size: 9.5px; font-weight: 600;
     letter-spacing: 0.22em; text-transform: uppercase;
     color: var(--step-primary-soft);
-    margin-bottom: 0.8rem;
   }
-  #stepContent3 .rc-observation{
-    grid-row: 2; grid-column: 4 / 7;
-    margin: 0;
+  #stepContent3 .rc-quote-text{
+    font-family: var(--step-body-font);
+    font-size: 17px; font-weight: 600; font-style: italic; line-height: 1.6;
+    color: var(--step-text);
+  }
+  #stepContent3 .rc-observation--snap{
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 0.7rem;
     padding: 1.5rem 1.6rem;
     border: 1px solid var(--step-border);
     border-left: 3px solid var(--step-success);
@@ -1461,132 +1478,224 @@
     background: var(--step-card-bg);
     box-shadow: 0 8px 24px rgba(0,0,0,0.12);
   }
-  #stepContent3 .rc-observation::before{
-    content: 'SURFACE OBSERVATION';
-    display: block;
+  #stepContent3 .rc-obs-label{
     font-family: var(--step-heading-font);
     font-size: 9.5px; font-weight: 600;
     letter-spacing: 0.22em; text-transform: uppercase;
     color: var(--step-success);
-    margin-bottom: 0.8rem;
   }
-  #stepContent3 .rc-observation .script-text{
-    font-size: 13.5px; line-height: 1.7;
-    color: var(--step-text);
-  }
-
-  /* ---------- 2. Potential drivers (flattened list card) ---------- */
-  #stepContent3 .analysis-card--amber.analysis-list-card{ display: contents; }
-  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-card-label{ display: none; }
-  #stepContent3 .analysis-list-body{ display: contents; }
-  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-item{
-    position: relative;
-    grid-column: span 2;
-    padding: 1.05rem 1.1rem 1.55rem;
-    border: 1px solid var(--step-border);
-    border-radius: 12px;
-    background: linear-gradient(160deg, rgba(251,191,36,0.06), transparent 62%), var(--step-card-bg);
+  #stepContent3 .rc-obs-text{
     font-family: var(--step-body-font);
-    font-size: 13px; line-height: 1.5;
-    color: var(--step-text);
-    box-shadow: 0 8px 22px rgba(0,0,0,0.12);
-  }
-  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-item::after{
-    content: '';
-    position: absolute; left: 1.1rem; bottom: 0.55rem;
-    height: 4px; border-radius: 99px;
-    background: linear-gradient(90deg, var(--step-warning), rgba(251,191,36,0.5));
-    box-shadow: 0 0 10px rgba(251,191,36,0.25);
-    width: 62%;
-  }
-  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-body .analysis-list-item:nth-child(2){
-    border-color: rgba(251,191,36,0.32);
-    background: linear-gradient(160deg, rgba(251,191,36,0.10), transparent 62%), var(--step-surface-raised);
-    box-shadow: 0 0 0 1px rgba(251,191,36,0.08), 0 10px 26px rgba(0,0,0,0.18);
-  }
-  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-body .analysis-list-item:nth-child(2)::after{ width: 84%; }
-  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-body .analysis-list-item:nth-child(3)::after{ width: 72%; }
-  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-body .analysis-list-item:nth-child(4)::after{ width: 58%; }
-  #stepContent3 .analysis-card--amber.analysis-list-card .analysis-list-body .analysis-list-item:nth-child(5)::after{ width: 64%; }
-
-  /* ---------- 3. AI insight strip (AI Reasoning card) ---------- */
-  #stepContent3 .analysis-card--amber:not(.analysis-list-card){
-    grid-row: 7; grid-column: 1 / 7;
-    display: flex; align-items: flex-start; gap: 1.1rem;
-    margin: 0;
-    padding: 1.3rem 1.5rem;
-    border: 1px solid rgba(251,191,36,0.22);
-    border-left: 3px solid var(--step-warning);
-    border-radius: 12px;
-    background:
-      radial-gradient(120% 150% at 0% 0%, rgba(251,191,36,0.10), transparent 55%),
-      linear-gradient(135deg, rgba(251,191,36,0.05), rgba(251,191,36,0.01)),
-      var(--step-surface-raised);
-    box-shadow: 0 10px 28px rgba(0,0,0,0.14);
-  }
-  #stepContent3 .analysis-card--amber:not(.analysis-list-card) .analysis-card-label{ display: none; }
-  #stepContent3 .analysis-card--amber:not(.analysis-list-card)::before{
-    content: 'AI';
-    flex: 0 0 auto;
-    width: 40px; height: 40px;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 10px;
-    font-family: var(--step-heading-font);
-    font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
-    color: var(--step-warning);
-    background: radial-gradient(75% 75% at 50% 30%, rgba(251,191,36,0.22), rgba(251,191,36,0.05));
-    border: 1px solid rgba(251,191,36,0.3);
-    box-shadow: 0 0 16px rgba(251,191,36,0.18);
-  }
-  #stepContent3 .analysis-card--amber:not(.analysis-list-card) .analysis-card-value{
-    flex: 1; min-width: 0;
     font-size: 13.5px; line-height: 1.7;
     color: var(--step-text-secondary);
   }
 
-  /* ---------- Flow strip (directional connectors) ---------- */
-  #stepContent3 .rc-flow{
-    grid-row: 8; grid-column: 1 / 7;
-    display: flex; align-items: center; justify-content: center; gap: 0.9rem;
-    padding: 0.7rem 1rem;
-    border-top: 1px dashed var(--step-border-strong);
-    border-bottom: 1px dashed var(--step-border-strong);
+  /* ---------- 2. Hypothesis board (ranked drivers) ---------- */
+  #stepContent3 .rc-drivers{
+    grid-row: 4; grid-column: 1 / 7;
+    display: flex; flex-direction: column; gap: 0.65rem;
   }
-  #stepContent3 .rc-flow-step{
+  #stepContent3 .rci-driver{
+    display: grid;
+    grid-template-columns: 3rem 1fr auto auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.95rem 1.15rem;
+    border: 1px solid var(--step-border);
+    border-radius: 11px;
+    background: var(--step-surface-raised);
+  }
+  #stepContent3 .rci-driver--lead{
+    border-color: rgba(139,92,246,0.35);
+    background:
+      radial-gradient(120% 150% at 0% 0%, rgba(139,92,246,0.10), transparent 58%),
+      linear-gradient(135deg, rgba(139,92,246,0.05), rgba(139,92,246,0.01)),
+      var(--step-surface-raised);
+    box-shadow: 0 0 0 1px rgba(139,92,246,0.06), 0 12px 28px rgba(0,0,0,0.16);
+  }
+  #stepContent3 .rci-driver-rank{
+    display: flex; align-items: center; justify-content: center;
+    width: 2.1rem; height: 2.1rem;
+    border-radius: 9px;
     font-family: var(--step-heading-font);
-    font-size: 10px; font-weight: 600;
+    font-size: 12px; font-weight: 700;
+    color: var(--step-text-muted);
+    background: var(--step-card-bg);
+    border: 1px solid var(--step-border-strong);
+  }
+  #stepContent3 .rci-driver--lead .rci-driver-rank{
+    color: var(--step-primary-soft);
+    border-color: rgba(139,92,246,0.4);
+    background: rgba(139,92,246,0.10);
+  }
+  #stepContent3 .rci-driver-name{
+    font-family: var(--step-body-font);
+    font-size: 14px; font-weight: 600; line-height: 1.5;
+    color: var(--step-text);
+  }
+  #stepContent3 .rci-driver-name small{
+    display: block;
+    font-size: 11px; font-weight: 400;
+    color: var(--step-text-muted);
+    margin-top: 0.1rem;
+  }
+  #stepContent3 .rci-driver-strength{
+    text-align: right;
+  }
+  #stepContent3 .rci-driver-strength .rci-ds-label{
+    font-family: var(--step-heading-font);
+    font-size: 8.5px; font-weight: 600;
     letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-text-muted);
+    white-space: nowrap;
+  }
+  #stepContent3 .rci-driver-strength .rci-ds-value{
+    font-family: var(--step-heading-font);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
     color: var(--step-text-secondary);
     white-space: nowrap;
   }
-  #stepContent3 .rc-flow-arrow{
-    display: inline-flex; align-items: center;
-    color: var(--step-primary-soft); opacity: 0.85;
+  #stepContent3 .rci-driver--lead .rci-ds-value{ color: var(--step-primary-soft); }
+  #stepContent3 .rci-driver-meter{
+    display: flex; gap: 4px;
   }
-  #stepContent3 .rc-flow-arrow svg{ width: 14px; height: 14px; }
+  #stepContent3 .rci-driver-meter i{
+    width: 22px; height: 6px; border-radius: 99px;
+    background: var(--step-border-strong);
+  }
+  #stepContent3 .rci-driver-meter i.on{ background: var(--step-warning); }
+  #stepContent3 .rci-driver--lead .rci-driver-meter i.on{ background: var(--step-primary); box-shadow: 0 0 8px rgba(139,92,246,0.4); }
+  #stepContent3 .rci-driver--pending .rci-driver-meter i{ background: var(--step-border); }
+  #stepContent3 .rci-driver--pending .rci-ds-value{ color: var(--step-text-muted); }
 
-  /* ---------- 4. Three-part workspace ---------- */
-  #stepContent3 .rc-questions{
-    grid-row: 11 / 13; grid-column: 1 / 3;
-    display: flex; flex-direction: column; gap: 0.7rem;
-    padding: 1.15rem;
+  /* ---------- 3. AI reasoning chain ---------- */
+  #stepContent3 .rc-reasoning{
+    grid-row: 6; grid-column: 1 / 7;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    align-items: stretch;
+    gap: 0.9rem;
+    padding: 0.4rem 0;
+  }
+  #stepContent3 .rc-reason-node{
+    display: flex; flex-direction: column; gap: 0.55rem;
+    padding: 1.1rem 1.25rem;
     border: 1px solid var(--step-border);
-    border-radius: 12px;
+    border-radius: 11px;
     background: var(--step-card-bg);
   }
+  #stepContent3 .rc-reason-node-label{
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent3 .rc-reason-node--observed .rc-reason-node-label{ color: var(--step-info); }
+  #stepContent3 .rc-reason-node--interp .rc-reason-node-label{ color: var(--step-warning); }
+  #stepContent3 .rc-reason-node--lead{
+    border-color: rgba(139,92,246,0.32);
+    background:
+      radial-gradient(120% 150% at 0% 0%, rgba(139,92,246,0.10), transparent 60%),
+      var(--step-surface-raised);
+  }
+  #stepContent3 .rc-reason-node--lead .rc-reason-node-label{ color: var(--step-primary-soft); }
+  #stepContent3 .rc-reason-node-body{
+    font-family: var(--step-body-font);
+    font-size: 13px; line-height: 1.65;
+    color: var(--step-text-secondary);
+  }
+  #stepContent3 .rc-reason-node--lead .rc-reason-node-body{ color: var(--step-text); font-weight: 500; }
+  #stepContent3 .rc-reason-node-body .rci-sig-chip{
+    display: inline-block;
+    margin: 0.15rem 0.25rem 0 0;
+    padding: 0.15rem 0.5rem;
+    border-radius: 99px;
+    border: 1px solid var(--step-border-strong);
+    background: var(--step-card-bg);
+    font-size: 11px; line-height: 1.5; color: var(--step-text-secondary);
+  }
+  #stepContent3 .rc-reason-link{
+    display: flex; align-items: center; justify-content: center;
+    color: var(--step-primary-soft); opacity: 0.85;
+  }
+  #stepContent3 .rc-reason-link svg{ width: 20px; height: 20px; }
+
+  /* ---------- 4. Investigation pipeline ---------- */
+  #stepContent3 .rc-pipeline{
+    grid-row: 9; grid-column: 1 / 7;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    align-items: stretch;
+    gap: 0.85rem;
+    padding: 1.25rem 1.25rem 1.35rem;
+    border: 1px dashed var(--step-border-strong);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(139,92,246,0.035), transparent 40%), var(--step-card-bg);
+  }
+  #stepContent3 .rc-stage{
+    display: flex; flex-direction: column; gap: 0.7rem;
+    min-width: 0;
+    padding: 1.15rem 1.2rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-surface-raised);
+  }
+  #stepContent3 .rc-stage--ev{
+    border-left: 3px solid var(--step-info);
+  }
+  #stepContent3 .rc-stage--rc{
+    border-left: 3px solid var(--step-primary);
+    background:
+      radial-gradient(120% 150% at 0% 0%, rgba(139,92,246,0.10), transparent 60%),
+      var(--step-surface-raised);
+    box-shadow: 0 0 0 1px rgba(139,92,246,0.05), 0 12px 28px rgba(0,0,0,0.16);
+  }
+  #stepContent3 .rc-stage-head{
+    display: flex; align-items: center; gap: 0.55rem;
+  }
+  #stepContent3 .rc-stage-no{
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 1.55rem; height: 1.55rem;
+    border-radius: 7px;
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 700;
+    color: var(--step-text-secondary);
+    background: var(--step-card-bg);
+    border: 1px solid var(--step-border-strong);
+  }
+  #stepContent3 .rc-stage--rc .rc-stage-no{ color: var(--step-primary-soft); border-color: rgba(139,92,246,0.35); }
+  #stepContent3 .rc-stage-title{
+    font-family: var(--step-heading-font);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-text-secondary);
+    white-space: nowrap;
+  }
+  #stepContent3 .rc-connector{
+    display: flex; align-items: center; justify-content: center;
+    color: var(--step-border-strong);
+  }
+  #stepContent3 .rc-connector--top svg{ width: 22px; height: 22px; color: var(--step-primary-soft); opacity: 0.7; }
+
+  /* follow-up questions checklist */
+  #stepContent3 .rc-fqlist{
+    display: flex; flex-direction: column; gap: 0.6rem;
+  }
   #stepContent3 .rc-questions-lead{
-    margin: 0 0 0.25rem;
+    margin: 0;
     font-family: var(--step-body-font);
     font-size: 11.5px; line-height: 1.6;
     color: var(--step-text-muted);
   }
   #stepContent3 .rc-fq{
-    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center; gap: 0.6rem;
     width: 100%;
-    padding: 0.72rem 0.85rem;
+    padding: 0.66rem 0.75rem;
     border: 1px solid var(--step-border);
     border-radius: 9px;
-    background: linear-gradient(160deg, rgba(139,92,246,0.05), transparent 70%), var(--step-surface-raised);
+    background: var(--step-card-bg);
     color: var(--step-text-secondary);
     font-family: var(--step-body-font);
     font-size: 12px; line-height: 1.5; text-align: left;
@@ -1594,6 +1703,22 @@
     transition: border-color 0.15s ease, transform 0.15s ease;
   }
   #stepContent3 .rc-fq:hover{ border-color: rgba(139,92,246,0.4); transform: translateY(-1px); }
+  #stepContent3 .rc-fq.is-copied{ border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.05); }
+  #stepContent3 .rc-fq-no{
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.45rem; height: 1.45rem; border-radius: 99px;
+    flex: 0 0 auto;
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 700;
+    color: var(--step-text-muted);
+    background: var(--step-surface-raised);
+    border: 1px solid var(--step-border-strong);
+  }
+  #stepContent3 .rc-fq.is-copied .rc-fq-no{
+    color: var(--step-success);
+    border-color: rgba(52,211,153,0.4);
+  }
+  #stepContent3 .rc-fq-q{ min-width: 0; }
   #stepContent3 .rc-fq-use{
     flex: 0 0 auto;
     display: inline-flex; align-items: center; gap: 0.3rem;
@@ -1604,83 +1729,140 @@
   }
   #stepContent3 .rc-fq.is-copied .rc-fq-use-text{ color: var(--step-success); }
 
-  /* evidence column (dynamic list cards) */
-  #stepContent3 .analysis-card--teal.analysis-list-card{
-    grid-row: 11; grid-column: 3 / 5;
-    margin: 0; border-radius: 12px;
-    background: linear-gradient(160deg, rgba(52,211,153,0.05), transparent 60%), var(--step-card-bg);
+  /* evidence items */
+  #stepContent3 .rc-evidence{
+    display: flex; flex-direction: column; gap: 0.6rem;
   }
-  #stepContent3 .analysis-card--faint.analysis-list-card{
-    grid-row: 12; grid-column: 3 / 5;
-    margin: 0; border-radius: 12px;
-  }
-
-  /* likely root cause (Primary Trigger card) */
-  #stepContent3 .analysis-card--red:not(.analysis-list-card){
-    grid-row: 11 / 13; grid-column: 5 / 7;
-    margin: 0; border-radius: 12px;
-    border-left: 3px solid var(--step-danger);
-    background: linear-gradient(160deg, rgba(248,113,113,0.05), transparent 60%), var(--step-surface-raised);
-    box-shadow: 0 10px 26px rgba(0,0,0,0.16);
-  }
-  #stepContent3 .analysis-card--red:not(.analysis-list-card) .analysis-card-value{
-    font-size: 13.5px; line-height: 1.7;
-    color: var(--step-text);
-  }
-
-  /* ---------- 5. Conclusions & confidence ---------- */
-  #stepContent3 .analysis-card:not(.analysis-card--amber):not(.analysis-card--teal):not(.analysis-card--red):not(.analysis-card--faint){
-    grid-row: 13; grid-column: 1 / 4;
-    margin: 0; border-radius: 12px;
-  }
-  #stepContent3 .analysis-takeaway{
-    grid-row: 13; grid-column: 4 / 7;
-    margin: 0;
-    padding: 1.1rem 1.3rem;
-    border: 1px solid rgba(139,92,246,0.25);
-    border-left: 3px solid var(--step-primary);
-    border-radius: 12px;
-    background: linear-gradient(160deg, rgba(139,92,246,0.07), transparent 60%), var(--step-card-bg);
-  }
-  #stepContent3 .analysis-confidence{
-    grid-row: 14; grid-column: 1 / 7;
-    justify-content: center; gap: 0.9rem;
-    margin: 0;
-    padding: 0.9rem 1.2rem;
+  #stepContent3 .rci-ev-item{
+    position: relative;
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    padding: 0.72rem 0.8rem;
     border: 1px solid var(--step-border);
-    border-radius: 12px;
+    border-radius: 9px;
     background: var(--step-card-bg);
+    font-family: var(--step-body-font);
+    font-size: 12.5px; line-height: 1.55;
+    color: var(--step-text-secondary);
   }
-  #stepContent3 .analysis-confidence .analysis-confidence-value{
-    font-size: 15px;
+  #stepContent3 .rci-ev-item::before{
+    content: '';
+    flex: 0 0 auto;
+    width: 8px; height: 8px; margin-top: 0.28rem;
+    border-radius: 99px;
+    background: var(--step-info);
+    box-shadow: 0 0 8px rgba(96,165,250,0.4);
+  }
+  #stepContent3 .rci-ev-count{
+    font-family: var(--step-heading-font);
+    font-size: 8.5px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-text-muted);
+    margin-bottom: 0.25rem;
   }
 
-  /* ---------- Confirm root cause action ---------- */
-  #stepContent3 .rc-confirm{
-    flex: 0 0 auto;
-    padding: 0.42rem 0.72rem;
-    border: 1px solid rgba(251,191,36,0.3);
-    border-radius: 7px;
-    background: rgba(251,191,36,0.07);
-    color: var(--step-warning);
+  /* root cause conclusion */
+  #stepContent3 .rc-root-label{
     font-family: var(--step-heading-font);
     font-size: 9px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+    margin-top: auto;
+  }
+  #stepContent3 .rc-root-value{
+    font-family: var(--step-body-font);
+    font-size: 17px; font-weight: 600; line-height: 1.5;
+    color: var(--step-text);
+  }
+  #stepContent3 .rc-root-conf{
+    font-family: var(--step-heading-font);
+    font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--step-primary-soft);
+  }
+  #stepContent3 .rc-root-meter{ display: flex; gap: 5px; }
+  #stepContent3 .rc-root-meter i{
+    width: 34px; height: 8px; border-radius: 99px;
+    background: var(--step-border);
+  }
+  #stepContent3 .rc-root-meter.i-strong i.on{ background: var(--step-primary); box-shadow: 0 0 10px rgba(139,92,246,0.45); }
+  #stepContent3 .rc-root-meter.i-moderate i.on{ background: var(--step-warning); box-shadow: 0 0 8px rgba(251,191,36,0.35); }
+  #stepContent3 .rc-root-meter.i-light i.on{ background: var(--step-danger); box-shadow: 0 0 8px rgba(248,113,113,0.35); }
+  #stepContent3 .rc-root-meter.i-none i{ background: var(--step-border); }
+
+  /* confirm action (hook preserved) */
+  #stepContent3 .rc-eyebrow--rc{
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    margin-top: 0.2rem;
+  }
+  #stepContent3 .rc-confirm{
+    flex: 0 0 auto;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid rgba(139,92,246,0.4);
+    border-radius: 8px;
+    background: rgba(139,92,246,0.12);
+    color: var(--step-primary-soft);
+    font-family: var(--step-heading-font);
+    font-size: 9.5px; font-weight: 600;
     letter-spacing: 0.12em; text-transform: uppercase;
     cursor: pointer; white-space: nowrap;
     transition: all 0.15s ease;
   }
-  #stepContent3 .rc-confirm:hover{ background: rgba(251,191,36,0.14); }
+  #stepContent3 .rc-confirm:hover{ background: rgba(139,92,246,0.2); }
   #stepContent3 .rc-eyebrow--rc.is-confirmed .rc-confirm{
     background: rgba(52,211,153,0.12);
-    border-color: rgba(52,211,153,0.4);
+    border-color: rgba(52,211,153,0.45);
     color: var(--step-success);
   }
 
+  /* ---------- 5. Analysis confidence meter ---------- */
+  #stepContent3 .rc-confidence{
+    grid-row: 11; grid-column: 1 / 7;
+    display: flex; align-items: center; gap: 1.4rem;
+    padding: 1rem 1.35rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-card-bg);
+  }
+  #stepContent3 .rci-conf-label{
+    font-family: var(--step-heading-font);
+    font-size: 9.5px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent3 .rci-conf-wide{ display: flex; flex: 1; align-items: center; gap: 1rem; min-width: 0; }
+  #stepContent3 .rci-conf-meter{ display: flex; gap: 5px; flex: 1; }
+  #stepContent3 .rci-conf-meter i{
+    flex: 1 1 0; height: 9px; border-radius: 99px;
+    background: var(--step-border);
+  }
+  #stepContent3 .rc-confidence.i-strong .rci-conf-meter i.on{ background: var(--step-primary); box-shadow: 0 0 10px rgba(139,92,246,0.4); }
+  #stepContent3 .rc-confidence.i-moderate .rci-conf-meter i.on{ background: var(--step-warning); box-shadow: 0 0 8px rgba(251,191,36,0.3); }
+  #stepContent3 .rc-confidence.i-light .rci-conf-meter i.on{ background: var(--step-danger); box-shadow: 0 0 8px rgba(248,113,113,0.3); }
+  #stepContent3 .rci-conf-note{
+    font-family: var(--step-body-font);
+    font-size: 11px; color: var(--step-text-muted);
+    white-space: nowrap;
+  }
+
   /* ---------- Actions / manager / notes / nav ---------- */
-  #stepContent3 .rc-actions{ grid-row: 15; grid-column: 1 / 7; margin: 0; }
-  #stepContent3 #step3ManagerNotesContainer{ grid-row: 16; grid-column: 1 / 7; margin: 0; }
-  #stepContent3 .rc-notes{ grid-row: 17; grid-column: 1 / 7; margin-top: 0; }
-  #stepContent3 .step-nav{ grid-row: 18; grid-column: 1 / 7; margin: 0; }
+  #stepContent3 .rc-actions{
+    grid-row: 12; grid-column: 1 / 7;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+  }
+  #stepContent3 .rc-actions-col{
+    display: flex; flex-direction: column; gap: 0.6rem; min-width: 0;
+  }
+  #stepContent3 .rc-actions-label{
+    display: flex; align-items: center; gap: 0.4rem;
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  #stepContent3 .rc-actions-label svg{ flex: 0 0 auto; }
+  #stepContent3 .rc-actions-label--teal{ color: var(--step-success); }
+  #stepContent3 .rc-actions-label--red{ color: var(--step-danger); }
+  #stepContent3 #step3ManagerNotesContainer{ grid-row: 13; grid-column: 1 / 7; margin: 0; }
+  #stepContent3 .rc-notes{ grid-row: 14; grid-column: 1 / 7; margin-top: 0; }
+  #stepContent3 .step-nav{ grid-row: 15; grid-column: 1 / 7; margin: 0; }
 
   #stepContent3 .rc-progress{
     display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
@@ -1707,15 +1889,17 @@
 
   @media (max-width: 1040px){
     #stepContent3 .rc-grid{ grid-template-columns: 1fr; }
-    #stepContent3 .rc-grid > *,
-    #stepContent3 .rc-grid > .rc-dynamic > *{
-      grid-row: auto !important;
-      grid-column: 1 / 2 !important;
-    }
-    #stepContent3 .rc-eyebrow-title{ white-space: normal; }
-    #stepContent3 .rc-actions{ display: grid; grid-template-columns: 1fr !important; gap: 1rem; }
-    #stepContent3 .rc-flow{ flex-wrap: wrap; }
+    #stepContent3 .rc-grid > *{ grid-row: auto !important; grid-column: 1 / 2 !important; }
+    #stepContent3 .rc-eyebrow-sub{ white-space: normal; }
+    #stepContent3 .rc-eyebrow--reasonsub{ justify-content: flex-start; }
+    #stepContent3 .rc-snapshot,
+    #stepContent3 .rc-reasoning,
+    #stepContent3 .rc-pipeline{ grid-template-columns: 1fr; }
+    #stepContent3 .rc-reason-link,
+    #stepContent3 .rc-connector{ transform: rotate(90deg); }
+    #stepContent3 .rc-actions{ grid-template-columns: 1fr; }
   }
+
 </style>
 <style>
   /* =========================================================
@@ -3292,77 +3476,136 @@
 
             <div class="rc-grid">
 
-              <div class="rc-eyebrow rc-eyebrow--snap">
+              <div class="rc-eyebrow rc-eyebrow--evsnap">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>
                 <span class="rc-eyebrow-title">What We've Heard So Far</span>
-                <span class="rc-eyebrow-sub">Verified facts from the conversation transcript — the foundation for this analysis</span>
+                <span class="rc-eyebrow-sub">Verified transcript evidence — the foundation of this investigation</span>
               </div>
 
-              <div class="script-block rc-observation">
-                <div class="script-text" id="step3Script">Loading analysis...</div>
+              <div class="rc-snapshot">
+                <div class="rc-quote" id="step3Quote">
+                  <span class="rc-quote-label">Employee Words</span>
+                  <div class="rc-quote-text">Loading analysis...</div>
+                </div>
+                <div class="rc-observation rc-observation--snap">
+                  <span class="rc-obs-label">Surface Observation</span>
+                  <div class="rc-obs-text" id="step3Script">Loading analysis...</div>
+                </div>
               </div>
 
-              <div id="step3Cards" class="rc-dynamic"></div>
-
-              <div class="rc-eyebrow rc-eyebrow--drivers">
+              <div class="rc-eyebrow rc-eyebrow--hyp">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg>
                 <span class="rc-eyebrow-title">Potential Drivers</span>
-                <span class="rc-eyebrow-sub">Candidate causes the AI is tracking — treated as hypotheses, not conclusions</span>
+                <span class="rc-eyebrow-sub">Candidate causes — hypotheses to validate, not conclusions</span>
               </div>
 
-              <div class="rc-eyebrow rc-eyebrow--insight">
+              <div class="rc-drivers" id="step3Drivers"></div>
+
+              <div class="rc-eyebrow rc-eyebrow--reason">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 014 12.7c-.6.5-1 1.3-1 2.3h-6c0-1-.4-1.8-1-2.3A7 7 0 0112 2z"/></svg>
-                <span class="rc-eyebrow-title">AI Insight</span>
+                <span class="rc-eyebrow-title">AI Reasoning</span>
               </div>
 
-              <div class="rc-flow">
-                <span class="rc-flow-step">Follow-up Questions</span>
-                <span class="rc-flow-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                <span class="rc-flow-step">Evidence from Conversation</span>
-                <span class="rc-flow-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                <span class="rc-flow-step">Likely Root Cause</span>
+              <div class="rc-reasoning" id="step3Reasoning">
+                <div class="rc-reason-node rc-reason-node--observed">
+                  <span class="rc-reason-node-label">Observed Signals</span>
+                  <div class="rc-reason-node-body" id="step3ReasonObserved">Loading analysis...</div>
+                </div>
+                <div class="rc-reason-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg></div>
+                <div class="rc-reason-node rc-reason-node--interp">
+                  <span class="rc-reason-node-label">AI Interpretation</span>
+                  <div class="rc-reason-node-body" id="step3ReasonInterp">Loading analysis...</div>
+                </div>
+                <div class="rc-reason-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg></div>
+                <div class="rc-reason-node rc-reason-node--lead">
+                  <span class="rc-reason-node-label">Most Likely Driver</span>
+                  <div class="rc-reason-node-body" id="step3ReasonLead">Loading analysis...</div>
+                </div>
               </div>
 
-              <div class="rc-eyebrow rc-eyebrow--fq">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                <span class="rc-eyebrow-title">Follow-up Questions</span>
-              </div>
-              <div class="rc-eyebrow rc-eyebrow--ev">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                <span class="rc-eyebrow-title">Evidence from Conversation</span>
-              </div>
-              <div class="rc-eyebrow rc-eyebrow--rc">
-                <span class="rc-eyebrow-title">Likely Root Cause</span>
-                <button type="button" class="rc-confirm" id="step3ConfirmBtn">Confirm as likely cause</button>
+              <div class="rc-eyebrow rc-eyebrow--reasonsub">
+                <span class="rc-eyebrow-title">Observed signals → interpretation → most likely driver</span>
               </div>
 
-              <div class="rc-questions">
-                <p class="rc-questions-lead">Probes to validate or rule out each potential driver before you confirm the root cause.</p>
-                <button type="button" class="rc-fq" data-copy="When did you first notice this becoming a problem?">
-                  <span class="rc-fq-q">&quot;When did you first notice this becoming a problem?&quot;</span>
-                  <span class="rc-fq-use"><span class="rc-fq-use-text">Use this</span><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                </button>
-                <button type="button" class="rc-fq" data-copy="If you had to name one thing driving this, what would it be?">
-                  <span class="rc-fq-q">&quot;If you had to name one thing driving this, what would it be?&quot;</span>
-                  <span class="rc-fq-use"><span class="rc-fq-use-text">Use this</span><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                </button>
-                <button type="button" class="rc-fq" data-copy="What would change most if we tackled this together?">
-                  <span class="rc-fq-q">&quot;What would change most if we tackled this together?&quot;</span>
-                  <span class="rc-fq-use"><span class="rc-fq-use-text">Use this</span><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                </button>
+              <div class="rc-eyebrow rc-eyebrow--pipeline">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>
+                <span class="rc-eyebrow-title">Investigation Workspace</span>
+                <span class="rc-eyebrow-sub">Probe → Evidence → Root Cause</span>
               </div>
 
-              <div class="rc-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-                <div>
-                  <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:0.6rem;">
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <div class="rc-pipeline">
+
+                <div class="rc-stage rc-stage--fq">
+                  <div class="rc-stage-head">
+                    <span class="rc-stage-no">01</span>
+                    <span class="rc-stage-title">Follow-Up Questions</span>
+                  </div>
+                  <p class="rc-questions-lead">Probes to validate or rule out each potential driver before you confirm the root cause.</p>
+                  <div class="rc-fqlist">
+                    <button type="button" class="rc-fq" data-copy="When did you first notice this becoming a problem?">
+                      <span class="rc-fq-no">Q1</span>
+                      <span class="rc-fq-q">&quot;When did you first notice this becoming a problem?&quot;</span>
+                      <span class="rc-fq-use"><span class="rc-fq-use-text">Use this</span><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                    </button>
+                    <button type="button" class="rc-fq" data-copy="If you had to name one thing driving this, what would it be?">
+                      <span class="rc-fq-no">Q2</span>
+                      <span class="rc-fq-q">&quot;If you had to name one thing driving this, what would it be?&quot;</span>
+                      <span class="rc-fq-use"><span class="rc-fq-use-text">Use this</span><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                    </button>
+                    <button type="button" class="rc-fq" data-copy="What would change most if we tackled this together?">
+                      <span class="rc-fq-no">Q3</span>
+                      <span class="rc-fq-q">&quot;What would change most if we tackled this together?&quot;</span>
+                      <span class="rc-fq-use"><span class="rc-fq-use-text">Use this</span><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="rc-connector rc-connector--top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></div>
+
+                <div class="rc-stage rc-stage--ev">
+                  <div class="rc-stage-head">
+                    <span class="rc-stage-no">02</span>
+                    <span class="rc-stage-title">Evidence</span>
+                  </div>
+                  <div class="rc-evidence" id="step3Evidence"></div>
+                </div>
+
+                <div class="rc-connector rc-connector--top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></div>
+
+                <div class="rc-stage rc-stage--rc">
+                  <div class="rc-stage-head">
+                    <span class="rc-stage-no">03</span>
+                    <span class="rc-stage-title">Root Cause</span>
+                  </div>
+                  <div class="rc-root-value" id="step3RootName">Loading analysis...</div>
+                  <div class="rc-root-conf" id="step3RootConf">Confidence: unavailable</div>
+                  <div class="rc-root-meter" id="step3RootMeter"></div>
+                  <div class="rc-root-label">Likely Root Cause</div>
+                  <div class="rc-eyebrow rc-eyebrow--rc">
+                    <button type="button" class="rc-confirm" id="step3ConfirmBtn">Confirm as likely cause</button>
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="rc-eyebrow rc-eyebrow--conf">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                <span class="rc-eyebrow-title">Analysis Confidence</span>
+              </div>
+
+              <div class="rc-confidence" id="step3Confidence"></div>
+
+              <div class="rc-actions">
+                <div class="rc-actions-col">
+                  <div class="rc-actions-label rc-actions-label--teal">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     <span> Recommended Actions</span>
                   </div>
                   <div class="guidelines" id="step3Recommended"></div>
                 </div>
-                <div>
-                  <div style="font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;">
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                <div class="rc-actions-col">
+                  <div class="rc-actions-label rc-actions-label--red">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                     <span> Avoid Actions</span>
                   </div>
                   <div class="guidelines" id="step3Avoid"></div>
@@ -4320,22 +4563,140 @@ function renderStep2Radar(d) {
 }
 
 // ── Step 3 Population ──
-function populateStep3(d) {
-  var el = document.getElementById('step3Script');
-  if (el) el.textContent = d.suggested_script || 'Limited transcript evidence.';
+// ── Step 3 signal → meter (qualitative only; never invents numbers) ──
+function rcSignal(label) {
+  var low = String(label || '').toLowerCase();
+  if (low.indexOf('strong') > -1) return { count: 3, cls: 'i-strong' };
+  if (low.indexOf('moderate') > -1 || low.indexOf('medium') > -1) return { count: 2, cls: 'i-moderate' };
+  if (low.indexOf('light') > -1 || low.indexOf('low') > -1) return { count: 1, cls: 'i-light' };
+  return { count: 0, cls: 'i-none' };
+}
 
-  var cards = document.getElementById('step3Cards');
-  if (cards) {
-    var html = renderQuote(d.title_question);
-    html += renderCard('Primary Trigger', d.primary_trigger, {borderColor:'var(--red)'});
-    html += renderListCard('Secondary Contributors', d.secondary_contributors, {borderColor:'var(--amber)'});
-    html += renderListCard('Supporting Evidence', d.supporting_evidence, {borderColor:'var(--teal)'});
-    html += renderCard('Evidence Strength', d.evidence_strength, {borderColor:'var(--violet)'});
-    html += renderListCard('Missing Information', d.missing_information, {borderColor:'var(--ivory-faint)'});
-    html += renderCard('AI Reasoning', d.ai_reasoning, {borderColor:'var(--amber)'});
-    html += renderConfidence(d.confidence);
-    html += renderTakeaway(d.key_takeaway);
-    cards.innerHTML = html;
+// ── Step 3 Population — Root Cause Analysis (investigation workspace) ──
+function populateStep3(d) {
+  d = d || {};
+
+  var obs = document.getElementById('step3Script');
+  if (obs) obs.textContent = d.suggested_script || 'Limited transcript evidence.';
+
+  var quote = document.getElementById('step3Quote');
+  if (quote) {
+    var qt = quote.querySelector('.rc-quote-text');
+    if (qt) qt.textContent = d.title_question || 'No employee statement recorded.';
+  }
+
+  // 1) Hypothesis board — ranked candidate causes
+  var drivers = document.getElementById('step3Drivers');
+  if (drivers) {
+    var html = '';
+    var trigger = String(d.primary_trigger || '').trim();
+    var contribs = asList(d.secondary_contributors);
+    var shown = 0;
+    var sig = rcSignal(d.confidence_label);
+    var evStrenght = String(d.evidence_strength || '').trim();
+
+    if (trigger) {
+      shown++;
+      html += '<div class="rci-driver rci-driver--lead">' +
+        '<div class="rci-driver-rank">0' + shown + '</div>' +
+        '<div class="rci-driver-name">' + escHtml(trigger) +
+        (evStrenght ? '<small>Leading hypothesis &middot; Evidence: ' + escHtml(evStrenght) + '</small>' : '<small>Leading hypothesis</small>') +
+        '</div>' +
+        '<div class="rci-driver-strength"><div class="rci-ds-label">Signal</div>' +
+        '<div class="rci-ds-value">' + (d.confidence_label ? escHtml(d.confidence_label) : 'Not available') + '</div></div>' +
+        '<div class="rci-driver-meter">';
+      for (var si = 0; si < 3; si++) html += '<i' + (si < sig.count ? ' class="on"' : '') + '></i>';
+      html += '</div></div>';
+    }
+
+    contribs.forEach(function(c) {
+      c = String(c || '').trim();
+      if (!c) return;
+      shown++;
+      var idx = shown;
+      var pad = idx < 10 ? '0' + idx : '' + idx;
+      html += '<div class="rci-driver rci-driver--pending">' +
+        '<div class="rci-driver-rank">' + pad + '</div>' +
+        '<div class="rci-driver-name">' + escHtml(c) + '<small>Hypothesis &middot; to validate</small></div>' +
+        '<div class="rci-driver-strength"><div class="rci-ds-label">Status</div><div class="rci-ds-value">Pending</div></div>' +
+        '<div class="rci-driver-meter"><i></i><i></i><i></i></div></div>';
+    });
+
+    if (!shown) {
+      html = '<div class="rci-driver" style="grid-template-columns:1fr;"><div class="rci-driver-name" style="font-weight:400;">No potential drivers recorded yet.</div></div>';
+    }
+    drivers.innerHTML = html;
+  }
+
+  // 2) AI reasoning chain
+  var seen = asList(d.supporting_evidence);
+  var interp = document.getElementById('step3ReasonInterp');
+  if (interp) interp.textContent = d.ai_reasoning || 'Limited transcript evidence.';
+  var lead = document.getElementById('step3ReasonLead');
+  if (lead) lead.textContent = d.primary_trigger || 'Not yet determined.';
+  var observed = document.getElementById('step3ReasonObserved');
+  if (observed) {
+    var chipHtml = '';
+    if (seen.length) {
+      seen.slice(0, 6).forEach(function(ev) {
+        ev = String(ev || '').trim();
+        if (ev) chipHtml += '<span class="rci-sig-chip">' + escHtml(ev) + '</span>';
+      });
+    }
+    observed.innerHTML = chipHtml || 'No observed signals recorded.';
+  }
+
+  // 3) Evidence from conversation (investigation pipeline centre)
+  var evidence = document.getElementById('step3Evidence');
+  if (evidence) {
+    var evHtml = '';
+    if (seen.length) {
+      evHtml += '<div class="rci-ev-count">' + seen.length + ' evidence point' + (seen.length > 1 ? 's' : '') + '</div>';
+      seen.forEach(function(ev) {
+        ev = String(ev || '').trim();
+        if (ev) evHtml += '<div class="rci-ev-item">' + escHtml(ev) + '</div>';
+      });
+    } else {
+      evHtml = '<div class="rci-ev-item">No specific evidence points recorded.</div>';
+    }
+    evidence.innerHTML = evHtml;
+  }
+
+  // 4) Root cause conclusion
+  var rt = document.getElementById('step3RootName');
+  if (rt) rt.textContent = d.primary_trigger || 'Not yet determined';
+  var rconf = document.getElementById('step3RootConf');
+  if (rconf) {
+    if (d.confidence_label) rconf.textContent = d.confidence_label;
+    else if (d.evidence_strength) rconf.textContent = 'Evidence: ' + d.evidence_strength;
+    else rconf.textContent = 'Confidence unavailable';
+  }
+  var rmeter = document.getElementById('step3RootMeter');
+  if (rmeter) {
+    var meterHtml = '';
+    for (var ri = 0; ri < 3; ri++) meterHtml += '<i' + (ri < sig.count ? ' class="on"' : '') + '></i>';
+    rmeter.className = 'rc-root-meter ' + sig.cls;
+    rmeter.innerHTML = meterHtml;
+  }
+
+  // 5) Analysis confidence
+  var conf = document.getElementById('step3Confidence');
+  if (conf) {
+    var cHtml = '<div class="rci-conf-label">Analysis Confidence</div>';
+    if (d.confidence_label) {
+      cHtml += '<div class="rci-conf-wide">' +
+        '<div class="rci-conf-meter">';
+      for (var ci = 0; ci < 3; ci++) cHtml += '<i' + (ci < sig.count ? ' class="on"' : '') + '></i>';
+      cHtml += '</div>' +
+        '<div class="rci-conf-note">' + escHtml(d.confidence_label) + '</div>' +
+        (evStrenght ? '<div class="rci-conf-note">Evidence: ' + escHtml(evStrenght) + '</div>' : '') +
+        '</div>';
+      conf.className = 'rc-confidence ' + sig.cls;
+    } else {
+      cHtml += '<div class="rci-conf-note">Confidence not available from analysis.</div>';
+      conf.className = 'rc-confidence';
+    }
+    conf.innerHTML = cHtml;
   }
 
   buildGuidelineItems(d.recommended_actions, 'step3Recommended', false);
