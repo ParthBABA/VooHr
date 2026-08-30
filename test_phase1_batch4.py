@@ -387,16 +387,24 @@ class TestLLMPromptPrivacy:
     def test_analyze_sends_only_transcript_to_api(self):
         """OpenAI/DeepSeek analyze must send only transcript as user message."""
         source = self._read_llm_source()
-        # Both providers should construct messages with transcript only
-        # Find the messages construction in analyze methods
-        openai_analyze = source[source.find("class OpenAILLM"):source.find("class DeepSeekLLM")]
-        deepseek_analyze = source[source.find("class DeepSeekLLM"):]
-
-        # Both should have the same pattern: system prompt + transcript
-        for analyze_src in [openai_analyze, deepseek_analyze]:
-            assert '"role": "system"' in analyze_src
-            assert '"role": "user"' in analyze_src
-            assert '"content": transcript' in analyze_src or '"content": system_prompt' in analyze_src
+        # Both providers delegate to the shared _call_and_parse helper, which
+        # constructs exactly two messages: system (the prompt) and user (the
+        # transcript). There is a single source of truth, so the privacy
+        # property holds for both providers at once.
+        helper_start = source.find("def _call_and_parse")
+        helper = source[helper_start:source.find("class BaseLLM")]
+        # Messages: only the system prompt + the single user message.
+        assert helper.count('{"role": "system"') == 1
+        assert helper.count('{"role": "user"') == 1
+        assert '"content": user_content' in helper
+        # No PII field is ever injected as an extra message.
+        assert "employee" not in helper.lower()
+        # Both provider classes delegate their analyze call to the helper with
+        # the transcript as the user content argument.
+        assert "supports_json_mode=True" in source[
+            source.find("class OpenAILLM"):source.find("class DeepSeekLLM")
+        ]
+        assert "supports_json_mode=False" in source[source.find("class DeepSeekLLM"):]
 
 
 class TestLLMLoggingPrivacy:
@@ -419,12 +427,16 @@ class TestLLMLoggingPrivacy:
         """JSON parse failures must use logger.warning, not logger.exception,
         to prevent traceback from leaking raw content."""
         source = self._read_llm_source()
-        # DeepSeek analyze/parse failures should use warning
-        assert 'logger.warning("DeepSeek analyze: JSON parse failed")' in source
-        assert 'logger.warning("DeepSeek explain_drift: JSON parse failed")' in source
-        # Must NOT use logger.exception for these
-        assert 'logger.exception("DeepSeek analyze: JSON parse failed")' not in source
-        assert 'logger.exception("DeepSeek explain_drift: JSON parse failed")' not in source
+        # The shared helper must log parse failures with logger.warning (never
+        # logger.exception) and compose the exact message from a per-provider
+        # log_label so DeepSeek still emits the well-known strings.
+        assert 'logger.warning(f"{log_label}: JSON parse failed")' in source
+        assert 'logger.exception' not in source
+        # DeepSeek call sites must pass the exact label for the message to read
+        # "DeepSeek <method>: JSON parse failed" at runtime.
+        assert 'log_label="DeepSeek analyze"' in source
+        assert 'log_label="DeepSeek explain_drift"' in source
+        assert 'log_label="DeepSeek analyze_phrasing"' in source
 
     def test_normalize_logs_only_field_names(self):
         """Field normalization logs must only contain field names, not content."""

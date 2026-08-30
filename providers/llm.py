@@ -1064,6 +1064,61 @@ def validate_phrasing_analysis(result: dict) -> dict:
     return out
 
 
+def _call_and_parse(
+    client,
+    model: str,
+    system_prompt: str,
+    user_content: str,
+    validator,
+    fallback: dict,
+    temperature: float = 0.3,
+    supports_json_mode: bool = True,
+    log_label: str = "",
+) -> dict:
+    """Shared call/parse/fallback logic for both OpenAI-compatible providers.
+
+    OpenAILLM and DeepSeekLLM each repeat the same sequence — build a client,
+    call chat.completions.create, parse the response, validate, and fall back
+    to a default dict on parse failure. This helper extracts that boilerplate
+    so behavior can't silently diverge between the two providers.
+
+    supports_json_mode=True uses response_format={"type": "json_object"}
+    (OpenAI). supports_json_mode=False (DeepSeek) instead strips markdown code
+    fences defensively from the raw response before parsing, since DeepSeek
+    doesn't reliably support response_format=json_object.
+    """
+    kwargs = dict(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ],
+        temperature=temperature,
+    )
+    if supports_json_mode:
+        kwargs["response_format"] = {"type": "json_object"}
+    else:
+        kwargs["stream"] = False
+
+    resp = client.chat.completions.create(**kwargs)
+    raw_content = resp.choices[0].message.content or ""
+
+    if not supports_json_mode:
+        raw_content = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_content.strip())
+
+    try:
+        result = json.loads(raw_content)
+    except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
+        if log_label:
+            logger.warning(f"{log_label}: JSON parse failed")
+        return dict(fallback)
+
+    # Always run validation, not just in V2 mode — the model can return a field
+    # with the wrong type regardless of which prompt was used, and downstream
+    # code assumes these fields are dicts/lists as documented.
+    return validator(result)
+
+
 class BaseLLM(ABC):
     @abstractmethod
     def analyze(self, transcript: str) -> dict:
@@ -1106,26 +1161,11 @@ class OpenAILLM(BaseLLM):
 
         system_prompt = _build_v2_prompt() if use_v2 else _build_v1_prompt()
 
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": transcript},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3,
+        return _call_and_parse(
+            client, self.model, system_prompt, transcript,
+            validator=validate_analysis, fallback=FALLBACK_ANALYSIS,
+            temperature=0.3, supports_json_mode=True,
         )
-
-        try:
-            result = json.loads(resp.choices[0].message.content)
-            # Always run validation, not just in V2 mode — the model can return
-            # a field with the wrong type (e.g. "risks" as a list instead of a
-            # dict) regardless of which prompt was used, and downstream code
-            # assumes these fields are dicts/lists as documented.
-            result = validate_analysis(result)
-            return result
-        except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
-            return dict(FALLBACK_ANALYSIS)
 
     def explain_drift(self, sessions: list) -> dict:
         """
@@ -1138,43 +1178,22 @@ class OpenAILLM(BaseLLM):
 
         client = OpenAI(api_key=self.api_key)
 
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": _build_drift_system_prompt()},
-                {"role": "user", "content": _build_drift_prompt(sessions)},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3,
+        return _call_and_parse(
+            client, self.model, _build_drift_system_prompt(), _build_drift_prompt(sessions),
+            validator=validate_drift_explanation, fallback=FALLBACK_DRIFT_EXPLANATION,
+            temperature=0.3, supports_json_mode=True,
         )
-
-        try:
-            result = json.loads(resp.choices[0].message.content)
-            result = validate_drift_explanation(result)
-            return result
-        except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
-            return dict(FALLBACK_DRIFT_EXPLANATION)
 
     def analyze_phrasing(self, transcript: str) -> dict:
         from openai import OpenAI
 
         client = OpenAI(api_key=self.api_key)
 
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": _build_phrasing_prompt()},
-                {"role": "user", "content": transcript},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.2,
+        return _call_and_parse(
+            client, self.model, _build_phrasing_prompt(), transcript,
+            validator=validate_phrasing_analysis, fallback=FALLBACK_PHRASING_ANALYSIS,
+            temperature=0.2, supports_json_mode=True,
         )
-
-        try:
-            result = json.loads(resp.choices[0].message.content)
-            return validate_phrasing_analysis(result)
-        except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
-            return dict(FALLBACK_PHRASING_ANALYSIS)
 
 
 class DeepSeekLLM(BaseLLM):
@@ -1203,30 +1222,11 @@ class DeepSeekLLM(BaseLLM):
 
         system_prompt = _build_v2_prompt() if use_v2 else _build_v1_prompt()
 
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": transcript},
-            ],
-            temperature=0.3,
-            stream=False,
+        return _call_and_parse(
+            client, self.model, system_prompt, transcript,
+            validator=validate_analysis, fallback=FALLBACK_ANALYSIS,
+            temperature=0.3, supports_json_mode=False, log_label="DeepSeek analyze",
         )
-
-        raw_content = resp.choices[0].message.content or ""
-
-        # DeepSeek doesn't support response_format=json_object on all models,
-        # so strip markdown code fences defensively before parsing.
-        content = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_content.strip())
-
-        try:
-            result = json.loads(content)
-        except json.JSONDecodeError:
-            logger.warning("DeepSeek analyze: JSON parse failed")
-            return dict(FALLBACK_ANALYSIS)
-
-        result = validate_analysis(result)
-        return result
 
     def explain_drift(self, sessions: list) -> dict:
         """
@@ -1239,54 +1239,19 @@ class DeepSeekLLM(BaseLLM):
 
         client = OpenAI(api_key=self.api_key, base_url=self.base_url)
 
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": _build_drift_system_prompt()},
-                {"role": "user", "content": _build_drift_prompt(sessions)},
-            ],
-            temperature=0.3,
-            stream=False,
+        return _call_and_parse(
+            client, self.model, _build_drift_system_prompt(), _build_drift_prompt(sessions),
+            validator=validate_drift_explanation, fallback=FALLBACK_DRIFT_EXPLANATION,
+            temperature=0.3, supports_json_mode=False, log_label="DeepSeek explain_drift",
         )
-
-        # DeepSeek doesn't reliably support response_format=json_object, so
-        # strip markdown code fences defensively before parsing.
-        raw_content = resp.choices[0].message.content or ""
-        content = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_content.strip())
-
-        try:
-            result = json.loads(content)
-        except json.JSONDecodeError:
-            logger.warning("DeepSeek explain_drift: JSON parse failed")
-            return dict(FALLBACK_DRIFT_EXPLANATION)
-
-        result = validate_drift_explanation(result)
-        return result
 
     def analyze_phrasing(self, transcript: str) -> dict:
         from openai import OpenAI
 
         client = OpenAI(api_key=self.api_key, base_url=self.base_url)
 
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": _build_phrasing_prompt()},
-                {"role": "user", "content": transcript},
-            ],
-            temperature=0.2,
-            stream=False,
+        return _call_and_parse(
+            client, self.model, _build_phrasing_prompt(), transcript,
+            validator=validate_phrasing_analysis, fallback=FALLBACK_PHRASING_ANALYSIS,
+            temperature=0.2, supports_json_mode=False, log_label="DeepSeek analyze_phrasing",
         )
-
-        raw_content = resp.choices[0].message.content or ""
-        # DeepSeek doesn't reliably support response_format=json_object, so
-        # strip markdown code fences defensively before parsing.
-        content = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_content.strip())
-
-        try:
-            result = json.loads(content)
-        except json.JSONDecodeError:
-            logger.warning("DeepSeek analyze_phrasing: JSON parse failed")
-            return dict(FALLBACK_PHRASING_ANALYSIS)
-
-        return validate_phrasing_analysis(result)
