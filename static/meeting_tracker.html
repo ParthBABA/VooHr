@@ -108,6 +108,23 @@
   .mt-link:hover{color:var(--void);background:var(--mt-cyan);border-color:var(--mt-cyan);}
   .mt-link svg{width:13px;height:13px;}
 
+  /* ── Before you start (surfaced memory on the card) ── */
+  .mt-beforestart{display:flex;flex-direction:column;gap:0.45rem;margin-top:0.9rem;padding:0.75rem 0.85rem;background:var(--elevated);border:1px solid var(--border);border-radius:8px;}
+  .mt-bys-head{font-family:var(--font-m);font-size:0.58rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--mt-violet);display:flex;align-items:center;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;}
+  .mt-bys-row{display:flex;align-items:flex-start;gap:0.5rem;font-size:0.76rem;line-height:1.45;color:var(--ivory);min-width:0;}
+  .mt-bys-sym{flex-shrink:0;width:11px;height:11px;border-radius:50%;margin-top:3px;}
+  .mt-bys-sym.is-commit{background:var(--mt-amber);}
+  .mt-bys-sym.is-follow{background:#38bdf8;}
+  .mt-bys-sym.is-opener{background:var(--mt-violet);}
+  .mt-bys-sym.is-other{background:var(--ivory-faint);}
+  .mt-bys-label{flex-shrink:0;font-family:var(--font-m);font-size:0.58rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ivory-dim);padding-top:2px;}
+  .mt-bys-text{min-width:0;word-break:break-word;}
+
+  /* ── Detail: meeting info strip + usage history ── */
+  .mt-meetinfo{display:flex;flex-wrap:wrap;gap:1.2rem;font-size:0.78rem;color:var(--ivory-dim);line-height:1.6;}
+  .mt-meetinfo b{color:var(--ivory);font-family:var(--font-lato);}
+  .mt-usage{font-family:var(--font-m);font-size:0.62rem;color:var(--mt-cyan);margin-top:2px;}
+  
   .mt-empty{text-align:center;padding:3.5rem 1rem;border:1px dashed var(--border);border-radius:10px;color:var(--ivory-faint);font-family:var(--font-m);font-size:0.78rem;margin-bottom:2.6rem;}
   .mt-empty svg{width:38px;height:38px;opacity:0.4;margin-bottom:0.8rem;}
 
@@ -474,9 +491,11 @@ function mdCard(p) {
           '<div class="mt-cell is-follow"><div class="mt-celllabel">' + followSvg + 'Open Follow-ups</div><div class="mt-cellline">' + escHtml(followups.length) + '</div></div>' +
         '</div>' +
         follow +
+        mtBeforeStart(p) +
         '<div class="mt-footer">' +
           '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenDetail(\'' + escHtml(p.id) + '\')" title="View full meeting &amp; recorded context"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>View Meeting</a>' +
           prevLink +
+          '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenAllMemory(\'' + escHtml(p.id) + '\')" title="View all recorded memory for this person"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>All Memory</a>' +
         '</div>' +
       '</div>' +
     '</div>'
@@ -652,36 +671,98 @@ function badgeLabel(status) {
 function memoryBlock(title, items, emptyText) {
   if (!items || !items.length) return '<div class="mt-d"><div class="mt-dtitle">' + title + '</div><div class="mt-none">' + emptyText + '</div></div>';
   var rows = items.map(function(it){
-    return '<div class="mt-item"><div class="mt-itxt">' + escHtml(it.content) + '</div>' +
+    return '<div class="mt-item"><span style="color:var(--ivory-faint);width:14px;flex-shrink:0;">' + mtStatusSym(it.status, it.type) + '</span>' +
+      '<div class="mt-itxt">' + escHtml(it.content) + '<div class="mt-usage">' + mtUsageText(it) + '</div></div>' +
       '<div class="mt-idue">' + (it.due_at ? 'Due ' + fmtDate(new Date(it.due_at)) : '') + '</div>' +
       '<span class="mt-badge ' + badgeCls(it.status, it.type) + '">' + badgeLabel(it.status) + '</span></div>';
   }).join('');
   return '<div class="mt-d"><div class="mt-dtitle">' + title + '</div>' + rows + '</div>';
 }
 
+// ── Deterministic surfacing helpers (BEFORE YOU START) ──
+function mtSurfaceLabel(it) {
+  if (it.type === 'COMMITMENT') return it.status === 'OVERDUE' ? 'Overdue commitment' : 'Promise';
+  if (it.type === 'FOLLOW_UP') return it.status === 'OVERDUE' ? 'Overdue follow-up' : 'Follow-up';
+  if (it.type === 'OPENER') return 'Opener';
+  if (it.type === 'QUESTION') return 'Question';
+  return 'Saved';
+}
+function mtSurfaceSym(it) {
+  if (it.type === 'COMMITMENT') return 'mt-bys-sym is-commit';
+  if (it.type === 'FOLLOW_UP') return 'mt-bys-sym is-follow';
+  if (it.type === 'OPENER') return 'mt-bys-sym is-opener';
+  return 'mt-bys-sym is-other';
+}
+// Status symbols shown next to a memory item: ✓ used/completed, ● pending, ○ not used
+function mtStatusSym(status, type) {
+  var s = (status || '').toUpperCase();
+  if (type === 'OPENER' || type === 'QUESTION') return s === 'USED' ? '\u2713' : '\u25CB';
+  if (type === 'COMMITMENT' || type === 'FOLLOW_UP') return s === 'COMPLETED' ? '\u2713' : (s === 'PENDING' ? '\u25CF' : (s === 'OVERDUE' ? '\u25C9' : '\u25CB'));
+  return s === 'SAVED' ? '\u25CB' : '\u2713';
+}
+function mtUsageText(it) {
+  if (!it || (it.type !== 'OPENER' && it.type !== 'QUESTION')) return '';
+  var n = it.usage_count || 0;
+  if (!n) return '';
+  var last = (it.usage && it.usage.length) ? it.usage[it.usage.length - 1].used_at : null;
+  var s = 'Used ' + n + (n === 1 ? ' time' : ' times');
+  if (last) s += ' \u00b7 Last used ' + fmtDate(new Date(last)) + ' ' + fmtTime(new Date(last));
+  return s;
+}
+function mtBeforeStart(p) {
+  var items = p.surfaced || [];
+  if (!items.length) return '';
+  var rows = items.slice(0, 4).map(function(it){
+    return '<div class="mt-bys-row"><span class="' + mtSurfaceSym(it) + '"></span>' +
+      '<span class="mt-bys-label">' + mtSurfaceLabel(it) + '</span>' +
+      '<span class="mt-bys-text">' + escHtml(it.content) + '</span></div>';
+  }).join('');
+  return '<div class="mt-beforestart"><span class="mt-bys-head">Before you start</span>' + rows + '</div>';
+}
+
 // ── View Meeting (current) detail ──
+function fmtFullDate(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  return fmtDate(d) + ' \u00b7 ' + fmtTime(d);
+}
+function mtBeforeMeeting(p) {
+  var items = p.surfaced || [];
+  if (!items.length) return '';
+  var rows = items.map(function(it){
+    return '<div class="mt-item"><span style="color:var(--ivory-faint);width:14px;flex-shrink:0;">' + mtStatusSym(it.status, it.type) + '</span>' +
+      '<div class="mt-itxt">' + escHtml(it.content) + '</div>' +
+      '<div class="mt-idue">' + mtSurfaceLabel(it) + (it.due_at ? ' \u00b7 Due ' + fmtDate(new Date(it.due_at)) : '') + '</div>' +
+      '<span class="mt-badge ' + badgeCls(it.status, it.type) + '">' + badgeLabel(it.status) + '</span></div>';
+  }).join('');
+  return '<div class="mt-d"><div class="mt-dtitle">Before this meeting</div>' + rows + '</div>';
+}
 function mtOpenDetail(eid) {
   var p = mtByEmp[eid];
   if (!p) return;
   var name = p.employee.name, role = p.employee.position || 'HR';
-  var sub = '';
+  var meetTxt = 'No upcoming meeting scheduled', meetingInfo = '';
   if (p.next_meeting) {
-    sub = (p.next_meeting.title || 'Meeting') + ' \u00b7 ' + (p.next_meeting.scheduled_at ? fmtDate(new Date(p.next_meeting.scheduled_at)) + ' ' + fmtTime(new Date(p.next_meeting.scheduled_at)) : '');
-  } else {
-    sub = 'No upcoming meeting scheduled';
+    meetingInfo =
+      '<div class="mt-d"><div class="mt-dtitle">Meeting</div>' +
+      '<div class="mt-meetinfo"><span><b>Date:</b> ' + (p.next_meeting.scheduled_at ? fmtFullDate(p.next_meeting.scheduled_at) : '\u2014') + '</span>' +
+      '<span><b>Title:</b> ' + escHtml(p.next_meeting.title || '\u2014') + '</span></div></div>';
+    meetTxt = (p.next_meeting.title || 'Meeting') + ' \u00b7 ' + (p.next_meeting.scheduled_at ? fmtFullDate(p.next_meeting.scheduled_at) : '');
   }
+  var prevInfo = '';
+  if (p.previous_session && p.previous_session.session_id) {
+    var pc = p.previous_session.created_at ? fmtFullDate(p.previous_session.created_at) : 'recorded earlier';
+    prevInfo =
+      '<div class="mt-d"><div class="mt-dtitle">Previous session</div>' +
+      '<div class="mt-meetinfo"><span><b>Date:</b> ' + pc + '</span></div></div>';
+  }
+  var sub = meetTxt;
   openModal(modalShell(escHtml(name) + '<span style="color:var(--ivory-faint);font-weight:400;"> &mdash; ' + escHtml(role) + '</span>', escHtml(sub)));
 
   var bodyHtml =
-    '<div class="mt-split">' +
-      '<div class="mt-d"><div class="mt-dtitle">Overview</div><div class="mt-drow"><b>Person:</b> ' + escHtml(name) + '</div>' +
-      '<div class="mt-drow"><b>Role:</b> ' + escHtml(role) + '</div>' +
-      '<div class="mt-drow"><b>Next meeting:</b> ' + escHtml(sub) + '</div></div>' +
-      '<div class="mt-d"><div class="mt-dtitle">Recorded this sync track</div>' +
-      '<div class="mt-drow"><b>Open commitments:</b> ' + p.counts.pending_commitments + '</div>' +
-      '<div class="mt-drow"><b>Open follow-ups:</b> ' + p.counts.pending_followups + '</div>' +
-      '<div class="mt-drow"><b>Openers used:</b> ' + p.counts.openers_used + '</div></div>' +
-    '</div>' +
+    meetingInfo +
+    mtBeforeMeeting(p) +
+    prevInfo +
     '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Loading recorded items\u2026</div></div>';
   fillModalBody(bodyHtml);
 
@@ -693,29 +774,69 @@ function mtOpenDetail(eid) {
       var commits = items.filter(function(m){ return m.type === 'COMMITMENT'; });
       var follows = items.filter(function(m){ return m.type === 'FOLLOW_UP'; });
       var notes = items.filter(function(m){ return m.type === 'NOTE'; });
+      var usedOpeners = used.filter(function(m){ return m.status === 'USED'; }).length;
       var html =
         memoryBlock('Openers &amp; Questions', used, 'No openers or questions recorded for this person.') +
         memoryBlock('Commitments', commits, 'No commitments recorded.') +
         memoryBlock('Follow-ups', follows, 'No follow-ups recorded.') +
         memoryBlock('Notes', notes, 'No notes recorded.');
-      fillModalBody(bodyHtmlWithOverview(name, role, sub, p, html));
+      fillModalBody(bodyHtmlWithOverview(meetingInfo, prevInfo, p, usedOpeners, html));
     })
     .catch(function(err){
-      fillModalBody(bodyHtmlWithOverview(name, role, sub, p, '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Couldn\u2019t load items \u2014 ' + escHtml(err.message) + '</div></div>'));
+      fillModalBody(meetingInfo + '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Couldn\u2019t load items \u2014 ' + escHtml(err.message) + '</div></div>');
     });
 }
-function bodyHtmlWithOverview(name, role, sub, p, memoryHtml) {
+function memoryRow(it) {
+  return '<div class="mt-item"><span style="color:var(--ivory-faint);width:14px;flex-shrink:0;">' + mtStatusSym(it.status, it.type) + '</span>' +
+    '<div class="mt-itxt">' + escHtml(it.content) + '<div class="mt-usage">' + mtUsageText(it) + '</div></div>' +
+    '<div class="mt-idue">' + (it.due_at ? 'Due ' + fmtDate(new Date(it.due_at)) : '') + '</div>' +
+    '<span class="mt-badge ' + badgeCls(it.status, it.type) + '">' + badgeLabel(it.status) + '</span></div>';
+}
+function bodyHtmlWithOverview(meetingInfo, prevInfo, p, usedOpeners, memoryHtml) {
   return (
-    '<div class="mt-split">' +
-      '<div class="mt-d"><div class="mt-dtitle">Overview</div><div class="mt-drow"><b>Person:</b> ' + escHtml(name) + '</div>' +
-      '<div class="mt-drow"><b>Role:</b> ' + escHtml(role) + '</div>' +
-      '<div class="mt-drow"><b>Next meeting:</b> ' + escHtml(sub) + '</div></div>' +
-      '<div class="mt-d"><div class="mt-dtitle">Recorded this sync track</div>' +
-      '<div class="mt-drow"><b>Open commitments:</b> ' + p.counts.pending_commitments + '</div>' +
-      '<div class="mt-drow"><b>Open follow-ups:</b> ' + p.counts.pending_followups + '</div>' +
-      '<div class="mt-drow"><b>Openers used:</b> ' + p.counts.openers_used + '</div></div>' +
-    '</div>' + memoryHtml
+    meetingInfo +
+    mtBeforeMeeting(p) +
+    '<div class="mt-d"><div class="mt-dtitle">Recorded this sync track</div>' +
+    '<div class="mt-meetinfo"><span><b>Open commitments:</b> ' + p.counts.pending_commitments + '</span>' +
+    '<span><b>Open follow-ups:</b> ' + p.counts.pending_followups + '</span>' +
+    '<span><b>Openers used:</b> ' + usedOpeners + '</span></div></div>' +
+    prevInfo + memoryHtml
   );
+}
+
+// ── View All Memory (full history, grouped by session) ──
+function mtOpenAllMemory(eid) {
+  var p = mtByEmp[eid];
+  if (!p) return;
+  var name = p.employee.name, role = p.employee.position || 'HR';
+  openModal(modalShell(escHtml(name) + ' \u2014 All Memory', escHtml(role)));
+  var bodyHtml = '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Loading\u2026</div></div>';
+  fillModalBody(bodyHtml);
+
+  fetch('/api/conversation-memory?employee_id=' + encodeURIComponent(eid))
+    .then(function(r){ if (!r.ok) throw new Error('Failed (' + r.status + ')'); return r.json(); })
+    .then(function(data) {
+      var items = data.items || [];
+      if (!items.length) {
+        fillModalBody('<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">No recorded items for this person.</div></div>');
+        return;
+      }
+      // Group by session id (full history trail, dates preserved).
+      var groups = {};
+      items.forEach(function(m){
+        var key = m.session_id || ('none_' + m.id);
+        (groups[key] = groups[key] || { sid: m.session_id, items: [] }).items.push(m);
+      });
+      var html = Object.keys(groups).map(function(key){
+        var g = groups[key];
+        var head = g.sid ? 'Session' : 'Unsaved';
+        return '<div class="mt-d"><div class="mt-dtitle">' + head + '</div>' + g.items.map(memoryRow).join('') + '</div>';
+      }).join('');
+      fillModalBody(html);
+    })
+    .catch(function(err){
+      fillModalBody('<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Couldn\u2019t load \u2014 ' + escHtml(err.message) + '</div></div>');
+    });
 }
 
 // ── View Previous Context detail ──

@@ -123,6 +123,19 @@ def _init_indexes(db):
         [("org_id", ASCENDING), ("read", ASCENDING)],
         background=True,
     )
+    # Reminder dedup: unique per (org, meeting, memory, stage). Partial so the
+    # index only covers reminder documents (meeting_reminder type).
+    db.notifications.create_index(
+        [
+            ("org_id", ASCENDING),
+            ("meeting_id", ASCENDING),
+            ("memory_id", ASCENDING),
+            ("stage", ASCENDING),
+        ],
+        unique=True,
+        partialFilterExpression={"type": "meeting_reminder"},
+        background=True,
+    )
 
     # ── meetings ───────────────────────────────────────────────────────
     # Query: find({org_id}).sort("scheduled_at", 1) in list_meetings

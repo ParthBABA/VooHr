@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -5313,10 +5313,10 @@ sessionPromise.then(function(s) {
         if (!r || !r.ok) return null;
         return r.json().then(function(created) {
           if (!created || !created.id) return null;
-          return fetch('/api/conversation-memory/' + created.id, {
-            method: 'PATCH',
+          return fetch('/api/conversation-memory/' + created.id + '/usage', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'USED' })
+            body: JSON.stringify({ session_id: sessionId })
           });
         });
       }));

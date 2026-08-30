@@ -28,6 +28,10 @@ def _notification_to_json(n, employee_name="") -> dict:
         "employee_id": str(n["employee_id"]) if n.get("employee_id") else None,
         "employee_name": employee_name or "",
         "source_session_id": str(n["source_session_id"]) if n.get("source_session_id") else None,
+        "meeting_id": str(n["meeting_id"]) if n.get("meeting_id") else None,
+        "memory_id": str(n["memory_id"]) if n.get("memory_id") else None,
+        "stage": n.get("stage"),
+        "dismissed": n.get("dismissed", False),
         "read": n.get("read", False),
         "created_at": n["created_at"].isoformat() if n.get("created_at") else None,
     }
@@ -155,3 +159,38 @@ def mark_all_read():
     logger.debug("mark_all_read: modified=%d", result.modified_count)
 
     return jsonify({"ok": True, "modified": result.modified_count})
+
+
+@notifications_bp.route("/notifications/<notification_id>/dismiss", methods=["PUT"])
+def dismiss_notification(notification_id: str):
+    """Dismiss a reminder notification WITHOUT touching the underlying item.
+
+    Dismissal is purely a notification-side read/dismissal state.  It never
+    marks a commitment complete or an opener used — those are explicit,
+    separate actions on the conversation_memory record.
+    """
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        nid = ObjectId(notification_id)
+    except InvalidId:
+        return jsonify({"error": "invalid_id"}), 400
+
+    result = db.notifications.update_one(
+        {"_id": nid, "org_id": ObjectId(org_id)},
+        {"$set": {
+            "dismissed": True,
+            "read": True,
+            "read_at": datetime.now(timezone.utc),
+        }},
+    )
+    if result.matched_count == 0:
+        return jsonify({"error": "not_found"}), 404
+
+    # Confirm the underlying memory record was not altered.
+    n = db.notifications.find_one({"_id": nid, "org_id": ObjectId(org_id)})
+    memory_id = str(n["memory_id"]) if n.get("memory_id") else None
+    return jsonify({"ok": True, "dismissed": True, "memory_id": memory_id})

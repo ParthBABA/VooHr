@@ -9,6 +9,7 @@ from flask import Blueprint, jsonify, request, session
 from employees import _require_auth
 from employees import _employee_to_json
 from extensions import get_db
+from reminders import surface_items, ensure_reminder_notifications
 
 logger = logging.getLogger(__name__)
 
@@ -172,7 +173,13 @@ def meetings_dashboard():
             if eid not in latest_completed:
                 latest_completed[eid] = s
 
-    memory = list(db.conversation_memory.find({"org_id": org_oid}))
+    # For surfacing/reminders we only need the actionable subset: PENDING
+    # (commitments/follow-ups; OVERDUE is derived at read time) and SAVED
+    # (not-yet-used openers/questions/notes). Full histories are loaded on
+    # demand by the detail views.
+    memory = list(db.conversation_memory.find(
+        {"org_id": org_oid, "status": {"$in": ["PENDING", "SAVED"]}}
+    ))
     by_emp: dict = {}
     for m in memory:
         eid = str(m.get("employee_id"))
@@ -245,6 +252,8 @@ def meetings_dashboard():
             } if prev else None,
             "open_items": agg["open_items"],
             "counts": counts,
+            # Populated after the loop once surfaced items are computed.
+            "surfaced": [],
         }
         people.append(person)
 
@@ -259,6 +268,20 @@ def meetings_dashboard():
 
     people = [p for p in people if p["next_meeting"] or has_followup(p)]
     people.sort(key=lambda p: (p["employee"]["name"] or "").lower())
+
+    # Deterministic memory surfacing: for each employee with an upcoming
+    # meeting, attach their prioritized actionable surfaced items
+    # (PENDING/OVERDUE commitments & follow-ups, saved openers, etc.).
+    # The full prioritized list feeds the "BEFORE YOU START" area on cards;
+    # nothing here invents facts — only stored conversation_memory records.
+    employees_with_upcoming = {
+        p["id"]
+        for p in people
+        if p["next_meeting"] and p["next_meeting"].get("scheduled_at")
+    }
+    surfaces = surface_items(memory, employees_with_upcoming, now)
+    for p in people:
+        p["surfaced"] = surfaces.get(p["id"], [])
 
     counters = {
         "today": sum(
@@ -280,6 +303,13 @@ def meetings_dashboard():
 
     followup_employee_ids = [p["id"] for p in people if p["counts"]["pending_followups"] > 0]
     overdue_employee_ids = [p["id"] for p in people if p["counts"]["overdue_followups"] > 0]
+
+    # Idempotent: surfaces reachable upcoming-meeting reminders into the org's
+    # notification bell without ever duplicating a (meeting, memory, stage) key.
+    try:
+        ensure_reminder_notifications(db, org_id, now)
+    except Exception:  # never break the board because notification writes fail
+        logger.exception("ensure_reminder_notifications failed during dashboard")
 
     return jsonify({
         "employees": [_employee_to_json(e) for e in employees],

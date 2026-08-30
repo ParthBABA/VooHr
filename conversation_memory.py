@@ -46,6 +46,13 @@ def _memory_to_json(m):
     due_at = m.get("due_at")
     if due_at is not None and due_at.tzinfo is None:
         due_at = due_at.replace(tzinfo=timezone.utc)
+    usage = []
+    for u in m.get("usage") or []:
+        usage.append({
+            "used_at": u["used_at"].isoformat() if u.get("used_at") else None,
+            "meeting_id": str(u["meeting_id"]) if u.get("meeting_id") else None,
+            "session_id": str(u["session_id"]) if u.get("session_id") else None,
+        })
     return {
         "id": str(m["_id"]),
         "employee_id": str(m["employee_id"]),
@@ -56,6 +63,8 @@ def _memory_to_json(m):
         "due_at": due_at.isoformat() if due_at else None,
         "used_at": m.get("used_at").isoformat() if m.get("used_at") else None,
         "completed_at": m.get("completed_at").isoformat() if m.get("completed_at") else None,
+        "usage_count": m.get("usage_count", len(usage)),
+        "usage": usage,
         "created_at": m["created_at"].isoformat() if m.get("created_at") else None,
         "updated_at": m["updated_at"].isoformat() if m.get("updated_at") else None,
     }
@@ -133,6 +142,8 @@ def create_memory():
         "due_at": due_at,
         "used_at": None,
         "completed_at": None,
+        "usage_count": 0,
+        "usage": [],
         "created_at": now,
         "updated_at": now,
     }
@@ -244,6 +255,79 @@ def update_memory(memory_id: str):
     set_fields["updated_at"] = datetime.now(timezone.utc)
     db.conversation_memory.update_one({"_id": ObjectId(memory_id)}, {"$set": set_fields})
     m = db.conversation_memory.find_one({"_id": ObjectId(memory_id)})
+    return jsonify(_memory_to_json(m))
+
+
+@conversation_memory_bp.route("/conversation-memory/<memory_id>/usage", methods=["POST"])
+def record_usage(memory_id: str):
+    """Explicitly record that an opener/question was actually used.
+
+    This is the confirmation point for surfacing — nothing marks an opener as
+    "used" on its own. Only OPENER/QUESTION items can be recorded as used.
+
+    Appends to a per-item usage history {used_at, meeting_id, session_id},
+    increments usage_count, sets last used_at, and marks the item USED.
+    The underlying memory status change (SAVED -> USED) is explicit-only and
+    never auto-completes anything.
+    """
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        oid = ObjectId(memory_id)
+    except InvalidId:
+        return jsonify({"error": "invalid_id"}), 400
+
+    m = db.conversation_memory.find_one({"_id": oid, "org_id": ObjectId(org_id)})
+    if not m:
+        return jsonify({"error": "not_found"}), 404
+    if m.get("type") not in ("OPENER", "QUESTION"):
+        return jsonify({"error": "not_usable"}), 400
+
+    data = request.get_json(silent=True) or {}
+    meeting_oid = None
+    meeting_id_raw = data.get("meeting_id")
+    if meeting_id_raw:
+        try:
+            meeting_oid = ObjectId(meeting_id_raw)
+        except InvalidId:
+            return jsonify({"error": "invalid_meeting_id"}), 400
+        meeting = db.meetings.find_one(
+            {"_id": meeting_oid, "org_id": ObjectId(org_id), "employee_id": m["employee_id"]}
+        )
+        if not meeting:
+            return jsonify({"error": "meeting_not_found"}), 404
+
+    session_oid = None
+    session_id_raw = data.get("session_id")
+    if session_id_raw:
+        try:
+            session_oid = ObjectId(session_id_raw)
+        except InvalidId:
+            session_oid = None
+
+    now = datetime.now(timezone.utc)
+    usage_entry = {
+        "used_at": now,
+        "meeting_id": meeting_oid,
+        "session_id": session_oid,
+    }
+    current_usage = list(m.get("usage") or [])
+    current_usage.append(usage_entry)
+
+    db.conversation_memory.update_one(
+        {"_id": oid},
+        {"$set": {
+            "status": "USED",
+            "used_at": now,
+            "usage_count": len(current_usage),
+            "usage": current_usage,
+            "updated_at": now,
+        }},
+    )
+    m = db.conversation_memory.find_one({"_id": oid})
     return jsonify(_memory_to_json(m))
 
 

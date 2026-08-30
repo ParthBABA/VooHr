@@ -105,6 +105,7 @@ class FakeDB:
         self.conversation_memory = FakeCollection()
         self.employees = FakeCollection()
         self.sessions = FakeCollection()
+        self.notifications = FakeCollection()
 
 
 @pytest.fixture

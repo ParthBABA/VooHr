@@ -19,6 +19,7 @@ from employees import TOTPRequired
 from extensions import get_db, init_db, check_rate_limit, record_rate_limit_event, client_ip
 from meetings import meetings_bp
 from notifications import notifications_bp
+from reminders import reminders_bp
 from sessions import sessions_bp
 from totp_routes import totp_bp
 
@@ -119,6 +120,7 @@ def create_app():
     app.register_blueprint(employees_bp, url_prefix="/api")
     app.register_blueprint(sessions_bp, url_prefix="/api")
     app.register_blueprint(notifications_bp, url_prefix="/api")
+    app.register_blueprint(reminders_bp, url_prefix="/api")
     app.register_blueprint(meetings_bp, url_prefix="/api")
     app.register_blueprint(conversation_memory_bp, url_prefix="/api")
 
