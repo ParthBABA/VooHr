@@ -1135,58 +1135,100 @@
     overflow: visible;
   }
   /* radar primitives */
+  #stepContent2 .sr-halo{
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 62%; aspect-ratio: 1 / 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(139,92,246,0.16) 0%, rgba(139,92,246,0.05) 45%, transparent 72%);
+  }
   #stepContent2 .sr-grid-ring{
     fill: none;
     stroke: var(--step-border-strong);
     stroke-width: 1;
   }
+  #stepContent2 .sr-grid-ring--inner{
+    stroke: rgba(139,92,246,0.08);
+  }
   #stepContent2 .sr-grid-ring--outer{
-    stroke: var(--step-border-strong);
+    stroke: rgba(139,92,246,0.20);
+    stroke-width: 1.2;
   }
   #stepContent2 .sr-axis{
-    stroke: var(--step-border-strong);
+    stroke: rgba(139,92,246,0.16);
     stroke-width: 1;
-    stroke-dasharray: 3 4;
+  }
+  #stepContent2 .sr-axis-line{
+    stroke: rgba(255,255,255,0.10);
+    stroke-width: 1;
+    stroke-dasharray: 2 5;
   }
   #stepContent2 .sr-label{
     font-family: var(--step-body-font);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    fill: var(--step-text-secondary);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
-  #stepContent2 .sr-label.sr-label--strong{ fill: var(--step-text); }
+  #stepContent2 .sr-label.sr-label--accent{ opacity: 1; }
+  #stepContent2 .sr-label.sr-label--dim{ opacity: 0.55; }
+  #stepContent2 .sr-polygon-glow{
+    fill: none;
+    stroke: rgba(139,92,246,0.55);
+    stroke-width: 6;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    filter: url(#srBlur);
+    opacity: 0.7;
+    pointer-events: none;
+  }
   #stepContent2 .sr-polygon{
-    fill: rgba(139,92,246,0.10);
-    stroke: var(--step-primary);
-    stroke-width: 1.6;
+    fill: rgba(139,92,246,0.22);
+    stroke: var(--step-primary-soft);
+    stroke-width: 2;
     stroke-linejoin: round;
     stroke-linecap: round;
   }
+  #stepContent2 .sr-point-halo{
+    fill: none;
+    stroke: rgba(167,139,250,0.35);
+    stroke-width: 3.5;
+    opacity: 0.7;
+    pointer-events: none;
+  }
   #stepContent2 .sr-point{
     fill: var(--step-primary-soft);
-    stroke: var(--step-surface);
+    stroke: #1B1526;
     stroke-width: 1.5;
+    transition: fill 0.15s ease;
   }
   #stepContent2 .sr-point:hover{ fill: var(--step-primary); }
+  #stepContent2 .sr-point.sr-point--lead{
+    fill: #C4B5FD;
+    stroke: var(--step-primary);
+    stroke-width: 2;
+  }
   #stepContent2 .sr-center-label{
     font-family: var(--step-heading-font);
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    fill: var(--step-text-muted);
+    fill: var(--step-text-secondary);
   }
+  #stepContent2 .sr-center-label .sr-center-val{ fill: var(--step-primary-soft); }
   /* tooltip */
   #stepContent2 .sr-tooltip{
     position: absolute;
     z-index: 30;
     pointer-events: none;
-    background: var(--step-surface);
-    border: 1px solid var(--step-border-strong);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.18);
-    border-radius: 8px;
-    padding: 0.5rem 0.7rem;
+    background: linear-gradient(180deg, #1B1526, #121019);
+    border: 1px solid rgba(139,92,246,0.35);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 18px rgba(139,92,246,0.18);
+    border-radius: 9px;
+    padding: 0.55rem 0.75rem;
     font-family: var(--step-heading-font);
     font-size: 11px;
     color: var(--step-text);
@@ -1195,9 +1237,9 @@
     transition: opacity 0.15s ease, transform 0.15s ease;
   }
   #stepContent2 .sr-tooltip.is-visible{ opacity: 1; transform: translateY(0); }
-  #stepContent2 .sr-tooltip b{ display: block; font-size: 11.5px; margin-bottom: 0.15rem; }
-  #stepContent2 .sr-tooltip .sr-tt-val{ color: var(--step-primary-soft); font-weight: 700; }
-  #stepContent2 .sr-tooltip .sr-tt-lvl{ color: var(--step-text-muted); font-weight: 500; }
+  #stepContent2 .sr-tooltip b{ display: block; font-size: 11px; letter-spacing: 0.04em; margin-bottom: 0.2rem; color: var(--step-text); }
+  #stepContent2 .sr-tooltip .sr-tt-val{ color: var(--step-primary-soft); font-weight: 700; font-size: 12px; }
+  #stepContent2 .sr-tooltip .sr-tt-lvl{ color: var(--step-text-secondary); font-weight: 500; font-size: 10.5px; }
   #stepContent2 .sr-no-data{
     font-family: var(--step-body-font);
     font-size: 12px;
@@ -3971,6 +4013,15 @@ var STEP2_DRIVER_AXES = [
   'Recognition Gap', 'Growth Stagnation'
 ];
 
+/* Accent colour per driver axis — kept within the existing VooHr palette. */
+var STEP2_DRIVER_ACCENTS = {
+  'Workload Pressure': '#A78BFA',
+  'Lack of Clarity': '#C9BDF8',
+  'Resource Constraints': '#60A5FA',
+  'Recognition Gap': '#34D399',
+  'Growth Stagnation': '#FBBF24'
+};
+
 function normDriverScore(raw) {
   if (raw === null || raw === undefined) return null;
   if (typeof raw === 'boolean') return null;
@@ -4039,6 +4090,8 @@ function renderStep2Radar(d) {
     if (oldTip) oldTip.parentNode.removeChild(oldTip);
     var oldNote = wrap.querySelector('.sr-no-data');
     if (oldNote) oldNote.parentNode.removeChild(oldNote);
+    var oldHalo = wrap.querySelector('.sr-halo');
+    if (oldHalo) oldHalo.parentNode.removeChild(oldHalo);
   }
   host.innerHTML = '';
 
@@ -4051,19 +4104,39 @@ function renderStep2Radar(d) {
         if (String(apiDrivers[i].name).toLowerCase() === String(name).toLowerCase()) { match = apiDrivers[i]; break; }
       }
     }
-    if (match) return { name: name, value: match.value, level: match.level || driverLevelLabel(match.value) };
-    return { name: name, value: null, level: null };
+    var accent = STEP2_DRIVER_ACCENTS[name] || '#A78BFA';
+    if (match) return { name: name, value: match.value, level: match.level || driverLevelLabel(match.value), accent: accent };
+    return { name: name, value: null, level: null, accent: accent };
   });
   var hasData = items.some(function(it) { return it.value != null; });
 
   var n = items.length;
   var W = 380, H = 380, cx = W / 2, cy = H / 2;
-  var R = 138, ringCount = 4, labelR = R + 24;
+  var R = 138, ringCount = 5, labelR = R + 26;
   var ns = 'http://www.w3.org/2000/svg';
+
+  // subtle centre glow behind the chart
+  if (wrap && !wrap.querySelector('.sr-halo')) {
+    var halo = document.createElement('div');
+    halo.className = 'sr-halo';
+    wrap.appendChild(halo);
+  }
+
   var svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   svg.setAttribute('role', 'presentation');
   svg.setAttribute('aria-hidden', 'true');
+
+  var defs = document.createElementNS(ns, 'defs');
+  var blur = document.createElementNS(ns, 'filter');
+  blur.setAttribute('id', 'srBlur');
+  blur.setAttribute('x', '-40%'); blur.setAttribute('y', '-40%');
+  blur.setAttribute('width', '180%'); blur.setAttribute('height', '180%');
+  var feG = document.createElementNS(ns, 'feGaussianBlur');
+  feG.setAttribute('stdDeviation', '3.5');
+  blur.appendChild(feG);
+  defs.appendChild(blur);
+  svg.appendChild(defs);
 
   function ringPts(frac) {
     return labels.map(function(_, i) {
@@ -4073,16 +4146,19 @@ function renderStep2Radar(d) {
     });
   }
 
-  // concentric grid rings
+  // concentric grid rings (outer brightest, inner progressively subtler)
   for (var k = 1; k <= ringCount; k++) {
     var frac = k / ringCount;
     var ring = document.createElementNS(ns, 'polygon');
     ring.setAttribute('points', fmtRadarPts(ringPts(frac)));
-    ring.setAttribute('class', 'sr-grid-ring' + (frac === 1 ? ' sr-grid-ring--outer' : ''));
+    var cls = 'sr-grid-ring';
+    if (frac === 1) cls += ' sr-grid-ring--outer';
+    else if (frac <= 0.4) cls += ' sr-grid-ring--inner';
+    ring.setAttribute('class', cls);
     svg.appendChild(ring);
   }
 
-  // radial axes + vertex labels
+  // radial axes
   for (var i = 0; i < n; i++) {
     var ang = -Math.PI / 2 + (i / n) * Math.PI * 2;
     var ax = document.createElementNS(ns, 'line');
@@ -4091,7 +4167,31 @@ function renderStep2Radar(d) {
     ax.setAttribute('y2', (cy + R * Math.sin(ang)).toFixed(2));
     ax.setAttribute('class', 'sr-axis');
     svg.appendChild(ax);
+  }
 
+  // data polygon + glow (when at least one real value exists)
+  var dataPts = hasData ? radarPolyPoints(cx, cy, R, items, 'value') : null;
+  if (hasData) {
+    var glow = document.createElementNS(ns, 'polygon');
+    glow.setAttribute('points', fmtRadarPts(dataPts));
+    glow.setAttribute('class', 'sr-polygon-glow');
+    svg.appendChild(glow);
+
+    var poly = document.createElementNS(ns, 'polygon');
+    poly.setAttribute('points', fmtRadarPts(dataPts));
+    poly.setAttribute('class', 'sr-polygon');
+    svg.appendChild(poly);
+  }
+
+  // leading driver (highest real value) for emphasis
+  var leadIdx = -1, leadVal = -1;
+  items.forEach(function(it, idx) {
+    if (it.value != null && it.value > leadVal) { leadVal = it.value; leadIdx = idx; }
+  });
+
+  // vertex labels + points (labels drawn after polygon so they sit on top)
+  for (var i = 0; i < n; i++) {
+    var ang = -Math.PI / 2 + (i / n) * Math.PI * 2;
     var lx = cx + labelR * Math.cos(ang);
     var ly = cy + labelR * Math.sin(ang);
     var lab = document.createElementNS(ns, 'text');
@@ -4099,7 +4199,8 @@ function renderStep2Radar(d) {
     lab.setAttribute('y', ly.toFixed(2));
     lab.setAttribute('text-anchor', 'middle');
     lab.setAttribute('dominant-baseline', 'middle');
-    lab.setAttribute('class', 'sr-label' + (items[i].value != null ? ' sr-label--strong' : ''));
+    lab.setAttribute('class', 'sr-label ' + (items[i].value != null ? 'sr-label--accent' : 'sr-label--dim'));
+    lab.setAttribute('fill', items[i].accent);
     var parts = String(items[i].name).split(' ');
     if (parts.length === 1) {
       lab.textContent = parts[0];
@@ -4117,23 +4218,25 @@ function renderStep2Radar(d) {
       lab.appendChild(tspan2);
     }
     svg.appendChild(lab);
-  }
 
-  // data polygon + points (when at least one real value exists)
-  if (hasData) {
-    var dataPts = radarPolyPoints(cx, cy, R, items, 'value');
-    var poly = document.createElementNS(ns, 'polygon');
-    poly.setAttribute('points', fmtRadarPts(dataPts));
-    poly.setAttribute('class', 'sr-polygon');
-    svg.appendChild(poly);
+    if (hasData && items[i].value != null) {
+      var ptX = dataPts[i][0], ptY = dataPts[i][1];
+      var isLead = (i === leadIdx);
+      var halo = document.createElementNS(ns, 'circle');
+      halo.setAttribute('cx', ptX.toFixed(2));
+      halo.setAttribute('cy', ptY.toFixed(2));
+      halo.setAttribute('r', isLead ? '7' : '5.5');
+      halo.setAttribute('class', 'sr-point-halo');
+      halo.setAttribute('style', 'stroke:' + items[i].accent + ';');
+      svg.appendChild(halo);
 
-    for (var i = 0; i < n; i++) {
-      if (items[i].value == null) continue;
       var pt = document.createElementNS(ns, 'circle');
-      pt.setAttribute('cx', dataPts[i][0].toFixed(2));
-      pt.setAttribute('cy', dataPts[i][1].toFixed(2));
-      pt.setAttribute('r', '3.4');
-      pt.setAttribute('class', 'sr-point');
+      pt.setAttribute('cx', ptX.toFixed(2));
+      pt.setAttribute('cy', ptY.toFixed(2));
+      pt.setAttribute('r', isLead ? '4.4' : '3.4');
+      pt.setAttribute('class', 'sr-point' + (isLead ? ' sr-point--lead' : ''));
+      pt.setAttribute('fill', items[i].accent);
+      pt.setAttribute('tabindex', '0');
       pt.setAttribute('data-idx', i);
       svg.appendChild(pt);
     }
@@ -4147,8 +4250,25 @@ function renderStep2Radar(d) {
   centre.setAttribute('x', cx);
   centre.setAttribute('y', cy);
   centre.setAttribute('text-anchor', 'middle');
+  centre.setAttribute('dominant-baseline', 'middle');
   centre.setAttribute('class', 'sr-center-label');
-  centre.textContent = confLabel ? confLabel.replace(/\s*Signal$/i, '') + ' signal' : 'No signal data';
+  var centreParts = confLabel ? String(confLabel).replace(/\s*Signal$/i, '') + ' signal' : 'No signal data';
+  var words = centreParts.split(' ');
+  // two-line centre label
+  if (words.length >= 2) {
+    var mid = Math.ceil(words.length / 2);
+    var t1 = document.createElementNS(ns, 'tspan');
+    t1.setAttribute('x', cx); t1.setAttribute('dy', '-0.5em');
+    t1.textContent = words.slice(0, mid).join(' ');
+    var t2 = document.createElementNS(ns, 'tspan');
+    t2.setAttribute('x', cx); t2.setAttribute('dy', '1.2em');
+    t2.setAttribute('class', 'sr-center-val');
+    t2.textContent = words.slice(mid).join(' ');
+    centre.appendChild(t1);
+    centre.appendChild(t2);
+  } else {
+    centre.textContent = centreParts;
+  }
   svg.appendChild(centre);
 
   // tooltip for real data points (host-level, positioned over px of svg)
@@ -4176,7 +4296,7 @@ function renderStep2Radar(d) {
       if (isNaN(idx) || !items[idx]) return;
       placed.idx = idx;
       var info = itemInfo(idx);
-      tip.innerHTML = '<b>' + escHtml(info.name) + '</b><span class="sr-tt-val">' + escHtml(info.val) + '</span> &nbsp; <span class="sr-tt-lvl">' + escHtml(info.lvl) + '</span>';
+      tip.innerHTML = '<b>' + escHtml(info.name) + '</b><span class="sr-tt-val">' + escHtml(info.val) + '</span> &nbsp; <span class="sr-tt-lvl">' + escHtml(info.lvl) + ' confidence</span>';
       tip.classList.add('is-visible');
     }
     function onMove(e) {
