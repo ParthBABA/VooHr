@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Copilot - Meeting Tracker</title>
+<script>
+(function(){
+  try {
+    var saved = localStorage.getItem('voohr-theme');
+    if (saved === 'light' || saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+  } catch (e) {}
+})();
+</script>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .gsap-hidden { opacity: 0 !important; }
+
+  /* ── Page-scoped design tokens (native VooHr palette) ── */
+  .mt-root {
+    --mt-violet: #8B5CF6;
+    --mt-teal: #34D399;
+    --mt-amber: #FBBF24;
+    --mt-red: #F87171;
+    --mt-cyan: #60A5FA;
+  }
+
+  /* ── Toolbar / filters ── */
+  .mt-toolbar{display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;margin-bottom:1.6rem;}
+  .mt-count{font-family:var(--font-m);font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--ivory-faint);margin-right:auto;}
+  .mt-count b{color:var(--ivory);font-weight:700;}
+  .mt-pill{padding:0.5rem 0.95rem;background:var(--surface);border:1px solid var(--border);color:var(--ivory-dim);font-family:var(--font-m);font-size:0.72rem;letter-spacing:0.04em;cursor:pointer;border-radius:6px;transition:all 0.2s;white-space:nowrap;}
+  .mt-pill:hover{border-color:var(--border-lit);color:var(--ivory);}
+  .mt-pill.active{background:linear-gradient(135deg,var(--mt-violet),var(--mt-amber));border-color:transparent;color:#fff;}
+  .mt-pill .mt-pill-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:0.4rem;vertical-align:middle;}
+  .mt-search{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.8rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;min-width:200px;max-width:280px;transition:border-color 0.2s;}
+  .mt-search:focus-within{border-color:var(--border-lit);}
+  .mt-search svg{opacity:0.45;flex-shrink:0;}
+  .mt-search input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--ivory);font-family:var(--font-m);font-size:0.75rem;}
+  .mt-search input::placeholder{color:var(--ivory-faint);}
+
+  /* ── Summary metrics ── */
+  .mt-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:0.9rem;margin-bottom:2rem;}
+  .mt-metric{background:var(--ink);border:1px solid var(--border);padding:1.1rem 1.2rem;position:relative;overflow:hidden;transition:all 0.4s;border-radius:8px;}
+  .mt-metric::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));transform:scaleX(0);transform-origin:left;transition:transform 0.4s;}
+  .mt-metric:hover{border-color:var(--border-lit);}
+  .mt-metric:hover::before{transform:scaleX(1);}
+  .mt-metric .mt-mval{font-family:var(--font-lato);font-weight:900;font-size:clamp(1.4rem,2.2vw,1.9rem);letter-spacing:-0.02em;line-height:1;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  .mt-metric .mt-mlabel{font-family:var(--font-lato);font-weight:700;font-size:0.62rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--ivory-dim);margin-top:0.55rem;}
+  .mt-metric.m-accent0{--accent:var(--mt-violet);--accent2:var(--mt-cyan);}
+  .mt-metric.m-accent1{--accent:var(--mt-amber);--accent2:#F97316;}
+  .mt-metric.m-accent2{--accent:var(--mt-teal);--accent2:#22D3EE;}
+  .mt-metric.m-accent3{--accent:var(--mt-red);--accent2:#FB7185;}
+  .mt-metric.m-accent4{--accent:var(--mt-cyan);--accent2:#A78BFA;}
+  .mt-metric.m-accent5{--accent:#F97316;--accent2:#FBBF24;}
+
+  /* ── Section headers ── */
+  .mt-sectionhead{display:flex;align-items:center;gap:0.8rem;margin:0 0 1rem;}
+  .mt-sectionhead .mt-eyebrow{font-family:var(--font-m);font-size:0.62rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--ivory-dim);}
+  .mt-sectionhead .mt-rule{flex:1;height:1px;background:var(--border);}
+  .mt-sectionhead .mt-count-chip{font-family:var(--font-m);font-size:0.66rem;color:var(--ivory-faint);padding:0.2rem 0.6rem;border:1px solid var(--border);border-radius:20px;}
+
+  /* ── Meeting cards ── */
+  .mt-grid{display:grid;grid-template-columns:1fr;gap:0.9rem;margin:0 0 2.6rem;}
+  .mt-card{background:var(--ink);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.2rem;display:flex;flex-direction:column;gap:0.85rem;position:relative;overflow:hidden;transition:all 0.3s;}
+  .mt-card:hover{border-color:var(--border-lit);transform:translateY(-2px);}
+  .mt-card-top{display:flex;align-items:center;gap:0.85rem;}
+  .mt-avatar{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-lato);font-weight:800;font-size:0.9rem;color:var(--void);background:linear-gradient(135deg,var(--accent),var(--accent2));}
+  .mt-who{flex:1;min-width:0;}
+  .mt-who .mt-name{font-family:var(--font-lato);font-weight:700;font-size:0.98rem;color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mt-who .mt-role{font-family:var(--font-m);font-size:0.68rem;color:var(--ivory-faint);letter-spacing:0.04em;margin-top:0.15rem;}
+  .mt-status{flex-shrink:0;font-family:var(--font-m);font-weight:700;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;padding:0.28rem 0.7rem;border-radius:20px;display:inline-flex;align-items:center;gap:0.35rem;}
+  .mt-status .dot{width:6px;height:6px;border-radius:50%;}
+  .mt-status--today{color:var(--mt-amber);background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.35);}
+  .mt-status--today .dot{background:var(--mt-amber);}
+  .mt-status--overdue{color:var(--mt-red);background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);}
+  .mt-status--overdue .dot{background:var(--mt-red);}
+  .mt-status--upcoming{color:var(--mt-teal);background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.35);}
+  .mt-status--upcoming .dot{background:var(--mt-teal);}
+  .mt-status--follow{color:var(--mt-violet);background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.35);}
+  .mt-status--follow .dot{background:var(--mt-violet);}
+  .mt-body{display:flex;flex-direction:column;gap:0.65rem;}
+  .mt-meta{display:flex;flex-wrap:wrap;gap:0.5rem 1.2rem;font-family:var(--font-m);font-size:0.72rem;color:var(--ivory-dim);}
+  .mt-meta span{display:inline-flex;align-items:center;gap:0.4rem;}
+  .mt-meta svg{width:13px;height:13px;opacity:0.55;}
+  .mt-topic{font-size:0.8rem;color:var(--ivory);line-height:1.5;}
+  .mt-topic b{color:var(--ivory);}
+  .mt-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.6rem;}
+  .mt-cell{background:var(--elevated);border:1px solid var(--border);border-radius:8px;padding:0.7rem 0.85rem;min-width:0;}
+  .mt-cell .mt-celllabel{font-family:var(--font-m);font-size:0.58rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--mt-cyan);margin-bottom:0.4rem;display:flex;align-items:center;gap:0.35rem;}
+  .mt-cell .mt-celllabel svg{width:12px;height:12px;opacity:0.7;}
+  .mt-cell .mt-cellline{font-family:var(--font-lato);font-weight:600;font-size:0.8rem;color:var(--ivory);line-height:1.4;}
+  .mt-cell .mt-cellline.is-owner{color:var(--mt-amber);}
+  .mt-cell .mt-cellline.is-date{color:var(--mt-teal);}
+  .mt-cell.is-promise{border-left:2px solid var(--mt-amber);}
+  .mt-cell.is-reminder{border-left:2px solid var(--mt-red);}
+  .mt-cell.is-follow{border-left:2px solid var(--mt-violet);}
+  .mt-follow{display:flex;align-items:center;justify-content:space-between;gap:0.8rem;flex-wrap:wrap;}
+  .mt-folllabel{font-family:var(--font-m);font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--mt-violet);display:inline-flex;align-items:center;gap:0.4rem;}
+  .mt-folllabel svg{width:12px;height:12px;}
+  .mt-fover{font-family:var(--font-m);font-size:0.66rem;color:var(--mt-red);}
+  .mt-footer{display:flex;align-items:center;justify-content:flex-end;gap:0.6rem;padding-top:0.75rem;border-top:1px solid var(--border);}
+  .mt-link{font-family:var(--font-m);font-size:0.64rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--mt-cyan);text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.8rem;border:1px solid var(--border);border-radius:6px;transition:all 0.2s;}
+  .mt-link:hover{color:var(--void);background:var(--mt-cyan);border-color:var(--mt-cyan);}
+  .mt-link svg{width:13px;height:13px;}
+
+  .mt-empty{text-align:center;padding:3.5rem 1rem;border:1px dashed var(--border);border-radius:10px;color:var(--ivory-faint);font-family:var(--font-m);font-size:0.78rem;margin-bottom:2.6rem;}
+  .mt-empty svg{width:38px;height:38px;opacity:0.4;margin-bottom:0.8rem;}
+
+  /* ── Responsive ── */
+  @media (max-width: 1200px){ .mt-metrics{grid-template-columns:repeat(3,1fr);} }
+  @media (max-width: 640px){
+    .mt-metrics{grid-template-columns:repeat(2,1fr);}
+    .mt-toolbar{gap:0.5rem;}
+    .mt-search{min-width:100%;max-width:100%;order:99;}
+  }
+
+  /* ── prefer reduced motion ── */
+  @media (prefers-reduced-motion: reduce){
+    .mt-card{transition:none;transform:none !important;}
+    .mt-metric{transition:none;}
+  }
+</style>
+</head>
+<body>
+<div style="display:flex;min-height:100vh;">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar icon-only gsap-hidden">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <span class="logo-mark">HR</span>
+        <span>HR Copilot</span>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Command Center</div>
+      <a href="/dashboard" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="/sync" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14"/></svg>
+        <span>Sync</span>
+      </a>
+      <a href="/sync/room" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+        <span>Sync Room</span>
+      </a>
+      <a href="/meeting-tracker" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="16" cy="18" r="1"/><circle cx="8" cy="18" r="1"/></svg>
+        <span>Meeting Tracker</span>
+      </a>
+      <a href="/settings" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span>Settings</span>
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar" id="userAvatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">User</div>
+        <div class="user-role" id="userRole">Admin</div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div>
+          <div class="page-title" id="pageTitle">Meeting Tracker</div>
+          <div class="breadcrumb" id="breadcrumbRow"><span>Dashboard</span> / <span>Meeting Tracker</span></div>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <button class="btn btn-gradient btn-sm" id="syncRoomBtn" title="Open Sync Room">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+          Sync Room
+        </button>
+        <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle light/dark theme">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="content-area mt-root" id="contentArea">
+
+      <!-- SUMMARY METRICS -->
+      <div class="mt-metrics" id="mtMetrics"></div>
+
+      <!-- TOOLBAR -->
+      <div class="mt-toolbar">
+        <div class="mt-count">Showing <b id="mtShownCount">0</b> of <b id="mtTotalCount">0</b> conversations</div>
+        <button class="mt-pill active" data-filter="all">All</button>
+        <button class="mt-pill" data-filter="today"><span class="mt-pill-dot" style="background:var(--mt-amber)"></span>Today</button>
+        <button class="mt-pill" data-filter="thisweek"><span class="mt-pill-dot" style="background:var(--mt-teal)"></span>This Week</button>
+        <button class="mt-pill" data-filter="followup"><span class="mt-pill-dot" style="background:var(--mt-violet)"></span>Follow-ups</button>
+        <button class="mt-pill" data-filter="overdue"><span class="mt-pill-dot" style="background:var(--mt-red)"></span>Overdue</button>
+        <div class="mt-search">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="mtSearch" placeholder="Search people or topics…">
+        </div>
+      </div>
+
+      <!-- TODAY'S MEETINGS -->
+      <div class="mt-sectionhead" id="hdrToday">
+        <span class="mt-eyebrow">Today's Meetings</span>
+        <span class="mt-rule"></span>
+        <span class="mt-count-chip" id="chipToday">0</span>
+      </div>
+      <div class="mt-grid" id="mtToday"></div>
+
+      <!-- UPCOMING -->
+      <div class="mt-sectionhead" id="hdrUpcoming">
+        <span class="mt-eyebrow">Upcoming Conversations</span>
+        <span class="mt-rule"></span>
+        <span class="mt-count-chip" id="chipUpcoming">0</span>
+      </div>
+      <div class="mt-grid" id="mtUpcoming"></div>
+
+      <!-- FOLLOW-UPS & REMINDERS -->
+      <div class="mt-sectionhead" id="hdrFollow">
+        <span class="mt-eyebrow">Follow-ups &amp; Reminders</span>
+        <span class="mt-rule"></span>
+        <span class="mt-count-chip" id="chipFollow">0</span>
+      </div>
+      <div class="mt-grid" id="mtFollow"></div>
+
+      <div class="mt-empty" id="mtEmpty" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <div>No conversations match your filter.</div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/csrf.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   MEETING TRACKER — Phase 1 static foundation (demo data)
+   Phase 2 will swap the demo array for real backend data.
+   ═══════════════════════════════════════════════════════════════ */
+var mtDemoData = [
+  {
+    id: 'm1', name: 'Harshit Rana', role: 'Product Designer',
+    date: 'Today · 11:30 AM', when: 'today', status: 'today',
+    avatar: 'HR', accent: ['#8B5CF6', '#60A5FA'],
+    topic: 'Weekly 1:1 — review last week\u2019s feedback loop and next sprint priorities.',
+    owner: 'Harshit Rana', manager: 'You', timeline: 'This week',
+    promises: ['Share updated component library by Fri'], reminders: ['Book design review with QA'],
+    followup: 'Fri · follow up on library handoff'
+  },
+  {
+    id: 'm2', name: 'Priya Mehra', role: 'Engineering Manager',
+    date: 'Today · 2:15 PM', when: 'today', status: 'today',
+    avatar: 'PM', accent: ['#FBBF24', '#F97316'],
+    topic: '1:1 — capacity planning and unblock the mobile team\u2019s delivery risk.',
+    owner: 'Priya Mehra', manager: 'You', timeline: 'This week',
+    promises: ['Confirm revised sprint scope by EOD'], reminders: ['Schedule pairing session Tue'],
+    followup: 'Tue · review sprint scope sign-off'
+  },
+  {
+    id: 'm3', name: 'Arjun Mehta', role: 'Sales Lead',
+    date: 'Thursday · 10:00 AM', when: 'thisweek', status: 'upcoming',
+    avatar: 'AM', accent: ['#34D399', '#22D3EE'],
+    topic: 'Pipeline review — accelerate the two stalled enterprise deals.',
+    owner: 'Arjun Mehta', manager: 'You', timeline: 'Next week',
+    promises: ['Send deal-by-deal notes Fri', 'Draft discount proposal'], reminders: [],
+    followup: 'Fri · follow up on proposals'
+  },
+  {
+    id: 'm4', name: 'Neha Kapoor', role: 'People Ops',
+    date: 'Next Tuesday · 3:00 PM', when: 'nextweek', status: 'upcoming',
+    avatar: 'NK', accent: ['#60A5FA', '#A78BFA'],
+    topic: 'Onboarding refresh — new-hire checklist and manager handoff flow.',
+    owner: 'Neha Kapoor', manager: 'You', timeline: 'Next week',
+    promises: ['Share revised onboarding checklist', 'Invite HR leads to review'], reminders: ['Update HR handbook'],
+    followup: ''
+  },
+  {
+    id: 'm5', name: 'Rohit Jain', role: 'Finance Controller',
+    date: 'Tue · 9:30 AM', when: 'followup', status: 'follow',
+    avatar: 'RJ', accent: ['#34D399', '#8B5CF6'],
+    topic: 'Budget reforecast sign-off — action item from last week\u2019s sync.',
+    owner: 'Rohit Jain', manager: 'You', timeline: 'This week',
+    promises: ['Submit reforecast file'], reminders: [],
+    followup: 'Wed · overdue follow-up on reforecast file'
+  },
+  {
+    id: 'm6', name: 'Sanya Verma', role: 'Marketing Lead',
+    date: 'Wed · 4:00 PM', when: 'overdue', status: 'overdue',
+    avatar: 'SV', accent: ['#F87171', '#FB7185'],
+    topic: 'Campaign asset delivery — promise from previous 1:1 still outstanding.',
+    owner: 'Sanya Verma', manager: 'You', timeline: 'Overdue',
+    promises: ['Deliver launch campaign assets'], reminders: ['Share media budget breakdown'],
+    followup: 'Overdue · escalate if not resolved by Friday'
+  },
+  {
+    id: 'm7', name: 'Karan Bhat', role: 'Support Manager',
+    date: 'Monday · 1:00 PM', when: 'thisweek', status: 'upcoming',
+    avatar: 'KB', accent: ['#F97316', '#FBBF24'],
+    topic: 'Support ticket triage — ownership of follow-up cadence with escalations.',
+    owner: 'Karan Bhat', manager: 'You', timeline: 'Next week',
+    promises: ['Map ticket ownership matrix'], reminders: ['Flag 3 recurring issues'],
+    followup: ''
+  }
+];
+
+var mtFilter = 'all';
+var mtQuery = '';
+
+function escHtml(str) {
+  if (str === null || str === undefined) return '';
+  var d = document.createElement('div');
+  d.appendChild(document.createTextNode(String(str)));
+  return d.innerHTML;
+}
+
+function mdAvatar(m) {
+  return '<div class="mt-avatar" style="--accent:' + (m.accent[0]||'#8B5CF6') + ';--accent2:' + (m.accent[1]||'#60A5FA') + ';">' + escHtml(m.avatar || m.name.charAt(0)) + '</div>';
+}
+
+function mdStatus(m) {
+  var map = { today: 'Today', upcoming: 'Upcoming', follow: 'Follow-up', overdue: 'Overdue' };
+  var cls = {
+    today: 'mt-status--today', upcoming: 'mt-status--upcoming',
+    follow: 'mt-status--follow', overdue: 'mt-status--overdue'
+  }[m.status] || 'mt-status--upcoming';
+  return '<span class="mt-status ' + cls + '"><span class="dot"></span>' + (map[m.status] || 'Upcoming') + '</span>';
+}
+
+function mdCell(label, value, cls, isOwner, svgPath) {
+  var outer = cls || '';
+  var line = '<div class="mt-cellline' + (isOwner ? ' is-owner' : '') + '">' + escHtml(value || '—') + '</div>';
+  if (label === 'Promise') outer += ' is-promise';
+  if (label === 'Reminder') outer += ' is-reminder';
+  if (label === 'Follow-up') outer += ' is-follow';
+  var svg = svgPath || '';
+  return '<div class="mt-cell ' + outer + '"><div class="mt-celllabel">' + svg + escHtml(label) + '</div>' + line + '</div>';
+}
+
+function mdCard(m) {
+  var promises = '';
+  if (m.promises && m.promises.length) {
+    promises = m.promises.map(function(p){ return '<div class="mt-cellline is-owner">' + escHtml(p) + '</div>'; }).join('');
+  } else {
+    promises = '<div class="mt-cellline">—</div>';
+  }
+  var reminders = '';
+  if (m.reminders && m.reminders.length) {
+    reminders = m.reminders.map(function(r){ return '<div class="mt-cellline">' + escHtml(r) + '</div>'; }).join('');
+  } else {
+    reminders = '<div class="mt-cellline">—</div>';
+  }
+
+  var follow = '';
+  if (m.followup) {
+    follow =
+      '<div class="mt-follow">' +
+        '<span class="mt-folllabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 6v6l4 2"/></svg>Follow-up</span>' +
+        '<span class="mt-fover">' + escHtml(m.followup) + '</span>' +
+      '</div>';
+  }
+
+  return (
+    '<div class="mt-card" data-seen="' + m.id + '">' +
+      '<div class="mt-card-top">' +
+        mdAvatar(m) +
+        '<div class="mt-who"><div class="mt-name">' + escHtml(m.name) + '</div><div class="mt-role">' + escHtml(m.role) + '</div></div>' +
+        mdStatus(m) +
+      '</div>' +
+      '<div class="mt-body">' +
+        '<div class="mt-meta">' +
+          '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' + escHtml(m.date) + '</span>' +
+          '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' + escHtml(m.owner) + '</span>' +
+        '</div>' +
+        '<div class="mt-topic">' + escHtml(m.topic) + '</div>' +
+        '<div class="mt-board">' +
+          '<div class="mt-cell is-owner"><div class="mt-celllabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Owner</div><div class="mt-cellline is-owner">' + escHtml(m.owner) + '</div></div>' +
+          '<div class="mt-cell"><div class="mt-celllabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Manager</div><div class="mt-cellline">' + escHtml(m.manager || 'You') + '</div></div>' +
+          '<div class="mt-cell"><div class="mt-celllabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Timeline</div><div class="mt-cellline is-date">' + escHtml(m.timeline) + '</div></div>' +
+          '<div class="mt-cell is-promise"><div class="mt-celllabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Promises</div>' + promises + '</div>' +
+          '<div class="mt-cell is-reminder"><div class="mt-celllabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Reminders</div>' + reminders + '</div>' +
+        '</div>' +
+        follow +
+        '<div class="mt-footer">' +
+          '<a class="mt-link" href="/sync/room" title="Open meeting in Sync Room"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>View Meeting</a>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function matchesItem(m) {
+  if (mtFilter === 'today' && m.when !== 'today') return false;
+  if (mtFilter === 'thisweek' && (m.when !== 'today' && m.when !== 'thisweek')) return false;
+  if (mtFilter === 'followup' && (m.when !== 'followup' && m.when !== 'overdue')) return false;
+  if (mtFilter === 'overdue' && m.when !== 'overdue') return false;
+  if (mtQuery) {
+    var hay = (m.name + ' ' + m.role + ' ' + m.topic + ' ' + (m.owner||'')).toLowerCase();
+    return hay.indexOf(mtQuery) !== -1;
+  }
+  return true;
+}
+
+function renderMetrics() {
+  var by = { today: 0, thisweek: 0, followup: 0, overdue: 0, promises: 0, reminders: 0 };
+  mtDemoData.forEach(function(m){
+    if (m.when === 'today') by.today++;
+    if (m.when === 'thisweek') by.thisweek++;
+    if (m.when === 'followup') by.followup++;
+    if (m.when === 'overdue') by.overdue++;
+    by.promises += (m.promises || []).length;
+    by.reminders += (m.reminders || []).length;
+  });
+  var cells = [
+    { v: by.today, l: 'Today', a: 'm-accent0' },
+    { v: by.thisweek, l: 'This Week', a: 'm-accent1' },
+    { v: by.followup, l: 'Follow-ups', a: 'm-accent2' },
+    { v: by.overdue, l: 'Overdue', a: 'm-accent3' },
+    { v: by.promises, l: 'Promises', a: 'm-accent4' },
+    { v: by.reminders, l: 'Reminders', a: 'm-accent5' }
+  ];
+  document.getElementById('mtMetrics').innerHTML =
+    cells.map(function(c){
+      return '<div class="mt-metric ' + c.a + '"><div class="mt-mval">' + c.v + '</div><div class="mt-mlabel">' + c.l + '</div></div>';
+    }).join('');
+}
+
+function render() {
+  var filtered = mtDemoData.filter(matchesItem);
+  var today = filtered.filter(function(m){ return m.when === 'today'; });
+  var upcoming = filtered.filter(function(m){ return m.when === 'thisweek' || m.when === 'nextweek'; });
+  var follow = filtered.filter(function(m){ return m.when === 'followup' || m.when === 'overdue'; });
+
+  var todayHtml = today.map(mdCard).join('');
+  var upcomingHtml = upcoming.map(mdCard).join('');
+  var followHtml = follow.map(mdCard).join('');
+
+  document.getElementById('mtToday').innerHTML = todayHtml;
+  document.getElementById('mtUpcoming').innerHTML = upcomingHtml;
+  document.getElementById('mtFollow').innerHTML = followHtml;
+  document.getElementById('chipToday').textContent = today.length;
+  document.getElementById('chipUpcoming').textContent = upcoming.length;
+  document.getElementById('chipFollow').textContent = follow.length;
+  document.getElementById('mtShownCount').textContent = filtered.length;
+  document.getElementById('mtTotalCount').textContent = mtDemoData.length;
+
+  var isEmpty = today.length === 0 && upcoming.length === 0 && follow.length === 0;
+  document.getElementById('mtEmpty').style.display = isEmpty ? 'block' : 'none';
+  document.getElementById('hdrToday').style.display = today.length ? '' : 'none';
+  document.getElementById('hdrUpcoming').style.display = upcoming.length ? '' : 'none';
+  document.getElementById('hdrFollow').style.display = follow.length ? '' : 'none';
+
+  animateCards();
+}
+
+function animateCards() {
+  if (!document.getElementById('contentArea')) return;
+  var re = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (re) return;
+  var cards = document.querySelectorAll('.mt-card');
+  if (window.gsap && cards.length) {
+    gsap.set(cards, { opacity: 0, y: 12 });
+    gsap.to(cards, { opacity: 1, y: 0, duration: 0.35, stagger: 0.04, ease: 'power3.out' });
+  }
+}
+
+(function init() {
+  var pills = document.querySelectorAll('.mt-pill');
+  pills.forEach(function(p){
+    p.addEventListener('click', function(){
+      pills.forEach(function(x){ x.classList.remove('active'); });
+      p.classList.add('active');
+      mtFilter = p.getAttribute('data-filter');
+      render();
+    });
+  });
+  document.getElementById('mtSearch').addEventListener('input', function(){
+    mtQuery = this.value.trim().toLowerCase();
+    render();
+  });
+  document.getElementById('syncRoomBtn').addEventListener('click', function(){
+    window.location.href = '/sync/room';
+  });
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+  var sidebar = document.querySelector('.sidebar');
+  if (sidebar) {
+    sidebar.classList.remove('gsap-hidden');
+    if (window.gsap) {
+      gsap.set(sidebar, { x: -72, opacity: 0 });
+      gsap.to(sidebar, { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
+    } else {
+      sidebar.style.opacity = '1';
+    }
+  }
+  renderMetrics();
+  render();
+});
+</script>
+
+<!-- Theme toggle -->
+<script>
+(function() {
+  var btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    var next = current === 'light' ? 'dark' : 'light';
+    if (next === 'dark') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+    try { localStorage.setItem('voohr-theme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

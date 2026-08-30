@@ -306,6 +306,12 @@ def create_app():
         if guard: return guard
         return send_from_directory(app.static_folder, "sync_room.html")
 
+    @app.route("/meeting-tracker")
+    def meeting_tracker():
+        guard = _require_page_login()
+        if guard: return guard
+        return send_from_directory(app.static_folder, "meeting_tracker.html")
+
     @app.route("/privacy")
     def privacy():
         return send_from_directory(app.static_folder, "privacy-policy.html")
