@@ -186,6 +186,25 @@
   select.mt-field{appearance:auto;}
   .mt-formerr{font-family:var(--font-m);font-size:0.7rem;color:var(--mt-red);}
 
+  /* ── Schedule form · employee search (real-time, org-scoped) ── */
+  .mt-empsearch{position:relative;}
+  .mt-empsearch .mt-field{padding-right:2.3rem;}
+  .mt-empclear{position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);width:22px;height:22px;border:1px solid var(--border);border-radius:50%;background:var(--elevated);color:var(--ivory-dim);font-size:0.95rem;line-height:1;padding:0;cursor:pointer;display:none;align-items:center;justify-content:center;transition:all 0.2s;z-index:1;}
+  .mt-empclear:hover{color:var(--ivory);border-color:var(--border-lit);background:var(--ivory-ghost);}
+  .mt-empsearch.has-val .mt-empclear{display:flex;}
+  .mt-empdrop{position:absolute;top:calc(100% + 5px);left:0;right:0;background:var(--ink);border:1px solid var(--border-lit);border-radius:8px;box-shadow:var(--shadow-lg);z-index:320;max-height:230px;overflow-y:auto;padding:0.25rem;display:none;}
+  .mt-empdrop.show{display:block;}
+  .mt-empopt{display:flex;align-items:center;gap:0.65rem;padding:0.5rem 0.65rem;border-radius:6px;cursor:pointer;border-left:2px solid transparent;transition:background 0.15s;color:var(--ivory);}
+  .mt-empopt:hover,.mt-empopt.active{background:var(--ivory-ghost);border-left-color:#8B5CF6;}
+  .mt-empavatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-lato);font-weight:800;font-size:0.68rem;color:var(--void);}
+  .mt-epinfo{flex:1;min-width:0;}
+  .mt-epname{font-family:var(--font-lato);font-weight:700;font-size:0.82rem;color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mt-epmeta{font-family:var(--font-m);font-size:0.62rem;color:var(--ivory-faint);letter-spacing:0.04em;margin-top:0.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mt-epid{flex-shrink:0;font-family:var(--font-m);font-size:0.58rem;color:#8B5CF6;letter-spacing:0.06em;white-space:nowrap;}
+  .mt-empempty{padding:0.7rem 0.65rem;font-family:var(--font-m);font-size:0.68rem;color:var(--ivory-faint);text-align:center;}
+  .mt-empnote{font-family:var(--font-m);font-size:0.64rem;color:#34D399;margin-top:0.4rem;display:none;letter-spacing:0.02em;}
+  .mt-empnote.show{display:block;}
+
   /* ── Avatar accent palette (deterministic per person) ── */
   .mt-accents{display:none;}
 </style>
@@ -871,10 +890,14 @@ function mtOpenPrevious(eid) {
 }
 
 // ── Schedule Meeting ──
+var mtSelEmpId = null;   // real org-scoped employee id chosen for the meeting
+var mtSelEmpName = '';   // name shown in the field for the current selection
+var mtSchedActive = -1;  // highlighted dropdown row index
+
 function openSchedule() {
-  var opts = mtEmployees.map(function(e){
-    return '<option value="' + escHtml(e.id) + '">' + escHtml(e.name) + (e.position ? ' \u2014 ' + escHtml(e.position) : '') + '</option>';
-  }).join('');
+  mtSelEmpId = null;
+  mtSelEmpName = '';
+  mtSchedActive = -1;
   var shell =
     '<div class="mt-modal">' +
       '<div class="mt-modal-head"><div><div class="mt-modal-title">Schedule a 1:1</div>' +
@@ -882,7 +905,15 @@ function openSchedule() {
       '<button class="mt-modal-x" type="button" title="Close">&times;</button></div>' +
       '<div class="mt-modal-body">' +
         '<form class="mt-form" id="mtScheduleForm">' +
-          '<div><label class="form-label">Employee</label><select class="mt-field" id="mtSchedEmp" required><option value="">Select employee\u2026</option>' + opts + '</select></div>' +
+          '<div>' +
+            '<label class="form-label">Employee</label>' +
+            '<div class="mt-empsearch" id="mtSchedEmpWrap">' +
+              '<input class="mt-field" id="mtSchedEmp" type="text" placeholder="Search by name, role or department\u2026" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required>' +
+              '<button class="mt-empclear" type="button" id="mtSchedEmpClear" title="Clear selection" aria-label="Clear selection">&times;</button>' +
+              '<div class="mt-empdrop" id="mtSchedEmpDrop"></div>' +
+            '</div>' +
+            '<div class="mt-empnote" id="mtSchedEmpNote"></div>' +
+          '</div>' +
           '<div><label class="form-label">Title</label><input class="mt-field" id="mtSchedTitle" type="text" placeholder="e.g. Weekly 1:1" required></div>' +
           '<div><label class="form-label">Date &amp; time</label><input class="mt-field" id="mtSchedWhen" type="datetime-local" required></div>' +
           '<div class="mt-formerr" id="mtSchedErr"></div>' +
@@ -896,15 +927,164 @@ function openSchedule() {
   openModal(shell);
   $('mtSchedCancel').addEventListener('click', closeModal);
   $('mtScheduleForm').addEventListener('submit', submitSchedule);
+  var empInput = $('mtSchedEmp');
+  var empDrop = $('mtSchedEmpDrop');
+  empInput.addEventListener('input', mtSchedOnInput);
+  empInput.addEventListener('keydown', mtSchedOnKey);
+  empInput.addEventListener('focus', function(){ if (this.value) mtSchedOnInput(); });
+  empInput.addEventListener('blur', function(){ setTimeout(mtSchedCloseDrop, 120); });
+  empDrop.addEventListener('mousedown', function(ev){ ev.preventDefault(); });
+  $('mtSchedEmpClear').addEventListener('click', mtSchedClearEmp);
+}
+
+// Real-time, in-memory filter over the employee list already loaded for the board.
+function mtSchedFilter(rawQ) {
+  var terms = String(rawQ || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return [];
+  return mtEmployees.filter(function(e){
+    var hay = [e.name, e.position, e.department, e.employee_id, e.email]
+      .filter(Boolean).join(' ').toLowerCase();
+    return terms.every(function(t){ return hay.indexOf(t) !== -1; });
+  });
+}
+
+function mtSchedOnInput() {
+  var inp = $('mtSchedEmp');
+  if (!inp) return;
+  var raw = inp.value.trim();
+  $('mtSchedEmpWrap').classList.toggle('has-val', !!raw);
+  if (!raw) {
+    mtSelEmpId = null; mtSelEmpName = '';
+    mtSchedNote('');
+    mtSchedCloseDrop();
+    return;
+  }
+  if (mtSelEmpId && raw === mtSelEmpName) { mtSchedCloseDrop(); return; }
+  if (mtSelEmpId) { mtSelEmpId = null; mtSelEmpName = ''; mtSchedNote(''); }
+  mtSchedRenderDrop(mtSchedFilter(raw), 0);
+}
+
+function mtSchedRenderDrop(results, activeIdx) {
+  var drop = $('mtSchedEmpDrop');
+  var wrap = $('mtSchedEmpWrap');
+  if (!drop || !wrap) return;
+  if (!mtEmployees.length) {
+    drop.innerHTML = '<div class="mt-empempty">Searching employees\u2026</div>';
+    drop.classList.add('show'); wrap.classList.add('open');
+    return;
+  }
+  if (!results.length) {
+    drop.innerHTML = '<div class="mt-empempty">No employees found</div>';
+    drop.classList.add('show'); wrap.classList.add('open');
+    return;
+  }
+  mtSchedActive = activeIdx;
+  drop.innerHTML = results.map(function(e, i){
+    var acc = accentFor(e.id);
+    var meta = [e.position, e.department].filter(Boolean).join(' \u00b7 ');
+    return '<div class="mt-empopt' + (i === activeIdx ? ' active' : '') + '" data-idx="' + i + '" role="option" aria-selected="' + (i === activeIdx) + '">' +
+      '<div class="mt-empavatar" style="background:linear-gradient(135deg,' + acc[0] + ',' + acc[1] + ');">' + escHtml(initials(e.name)) + '</div>' +
+      '<div class="mt-epinfo"><div class="mt-epname">' + escHtml(e.name) + '</div>' +
+      '<div class="mt-epmeta">' + escHtml(meta || 'Employee') + '</div></div>' +
+      '<span class="mt-epid">' + (e.employee_id ? '#' + escHtml(e.employee_id) : '') + '</span>' +
+      '</div>';
+  }).join('');
+  drop.classList.add('show'); wrap.classList.add('open');
+  var rows = drop.querySelectorAll('.mt-empopt');
+  for (var i = 0; i < rows.length; i++) {
+    (function(row){
+      row.addEventListener('click', function(){
+        var idx = +row.getAttribute('data-idx');
+        if (results[idx]) mtSchedSelect(results[idx]);
+      });
+    })(rows[i]);
+  }
+}
+
+function mtSchedSelect(e) {
+  if (!e) return;
+  mtSelEmpId = e.id;
+  mtSelEmpName = e.name || '';
+  $('mtSchedEmp').value = mtSelEmpName;
+  $('mtSchedEmpWrap').classList.add('has-val');
+  var bits = [e.name];
+  if (e.position) bits.push(e.position);
+  if (e.department) bits.push(e.department);
+  if (e.employee_id) bits.push('ID #' + e.employee_id);
+  mtSchedNote(bits.map(function(b){ return escHtml(b); }).join(' \u00b7 '));
+  mtSchedCloseDrop();
+}
+
+function mtSchedNote(html) {
+  var n = $('mtSchedEmpNote');
+  if (!n) return;
+  n.innerHTML = html || '';
+  n.classList.toggle('show', !!html);
+}
+
+function mtSchedClearEmp() {
+  mtSelEmpId = null; mtSelEmpName = '';
+  var inp = $('mtSchedEmp');
+  if (inp) inp.value = '';
+  $('mtSchedEmpWrap').classList.remove('has-val');
+  mtSchedNote('');
+  mtSchedCloseDrop();
+  if (inp) inp.focus();
+}
+
+function mtSchedCloseDrop() {
+  var wrap = $('mtSchedEmpWrap');
+  var drop = $('mtSchedEmpDrop');
+  if (wrap) wrap.classList.remove('open');
+  if (drop) { drop.classList.remove('show'); drop.innerHTML = ''; }
+  mtSchedActive = -1;
+}
+
+function mtSchedOnKey(ev) {
+  var inp = $('mtSchedEmp');
+  if (!inp) return;
+  var raw = inp.value.trim();
+  if (ev.key === 'Escape') {
+    var drop = $('mtSchedEmpDrop');
+    if (drop && drop.classList.contains('show')) {
+      ev.stopPropagation();
+      mtSchedCloseDrop();
+    }
+    return;
+  }
+  if (!raw || (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp' && ev.key !== 'Enter')) return;
+  var results = mtSchedFilter(raw);
+  if (!results.length) return;
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault();
+    var dir = ev.key === 'ArrowDown' ? 1 : -1;
+    mtSchedActive = (mtSchedActive + dir + results.length) % results.length;
+    mtSchedRenderDrop(results, mtSchedActive);
+    var el = $('mtSchedEmpDrop').querySelector('.mt-empopt.active');
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  } else if (ev.key === 'Enter') {
+    if (mtSchedActive >= 0 && mtSchedActive < results.length) {
+      ev.preventDefault();
+      mtSchedSelect(results[mtSchedActive]);
+    } else {
+      ev.preventDefault();
+    }
+  }
 }
 function submitSchedule(ev) {
   ev.preventDefault();
   var errEl = $('mtSchedErr');
   errEl.textContent = '';
-  var empId = $('mtSchedEmp').value;
+  var empId = mtSelEmpId;
   var title = $('mtSchedTitle').value.trim();
   var when = $('mtSchedWhen').value;
-  if (!empId || !title || !when) { errEl.textContent = 'Please fill in employee, title, and date &amp; time.'; return; }
+  if (!empId) {
+    errEl.textContent = 'Please select a real employee from the list before scheduling.';
+    var inp = $('mtSchedEmp');
+    if (inp) inp.focus();
+    return;
+  }
+  if (!title || !when) { errEl.textContent = 'Please fill in the title and date &amp; time.'; return; }
   var btn = $('mtSchedSave');
   btn.disabled = true; btn.textContent = 'Saving\u2026';
   fetch('/api/meetings', {
