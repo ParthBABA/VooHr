@@ -1905,36 +1905,51 @@
   /* =========================================================
      STEP 4 — ACTION BLUEPRINT — execution / planning workspace.
      Scoped strictly to #stepContent4 (the main content area).
-     Reuses the --step-* tokens. No existing content removed;
-     the dynamic analysis cards are re-composed via CSS only,
-     redistributed into a connected execution pipeline.
+     Restructured IA: ROOT CAUSE → PRIORITY → OUTCOME → ACTION →
+     OWNER → TIMELINE → MEASUREMENT → FOLLOW-UP → CONFIDENCE.
+     Uses the --step-* tokens and the VooHr accent language.
+     Every measurement is qualitative (never fabricates numbers).
      ========================================================= */
   #stepContent4{ padding: 3rem 3.25rem 2.75rem; }
 
-  /* ---------- Master grid ---------- */
+  /* ---------- Master grid ----------
+     One column so every section shares the same left/right edge.
+     Inner flex/grid handles proportional widths. */
   #stepContent4 .ab-grid{
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 1.3rem 1rem;
+    grid-template-columns: 1fr;
+    gap: 1.15rem;
     margin-top: 1.75rem;
   }
-  #stepContent4 .ab-dynamic{ display: contents; }
+  #stepContent4 .abx-dynamic{ display: none; }
+  #stepContent4 .ab-grid > *{ min-width: 0; }
+  #stepContent4 .ab-empty{ color: var(--step-text-secondary); font-size: 13px; }
 
   /* ---------- Section eyebrows ---------- */
-  #stepContent4 .ab-eyebrow{
+  #stepContent4 .abx-eyebrow{
     display: flex; align-items: center; gap: 0.55rem;
+    padding: 0 0.1rem;
     min-width: 0;
     font-family: var(--step-heading-font);
     font-size: 10px; font-weight: 600;
     letter-spacing: 0.22em; text-transform: uppercase;
     color: var(--step-text-muted);
   }
-  #stepContent4 .ab-eyebrow svg{ color: var(--step-primary-soft); flex: 0 0 auto; }
-  #stepContent4 .ab-eyebrow-title{ white-space: nowrap; }
-  #stepContent4 .ab-eyebrow--focus{ grid-row: 1; grid-column: 1 / 7; }
-  #stepContent4 .ab-eyebrow--po{ grid-row: 4; grid-column: 1 / 7; }
-  #stepContent4 .ab-eyebrow--success{ grid-row: 10; grid-column: 1 / 7; }
-
+  #stepContent4 .abx-eyebrow svg{ color: var(--step-primary-soft); flex: 0 0 auto; }
+  #stepContent4 .abx-eyebrow-title{ white-space: nowrap; }
+  #stepContent4 .abx-stages{ margin-left: auto; display: inline-flex; align-items: center; gap: 0.5rem; }
+  #stepContent4 .abx-stage{
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--step-text-muted); opacity: 0.45;
+  }
+  #stepContent4 .abx-stage.is-done{ color: var(--step-success); opacity: 0.85; }
+  #stepContent4 .abx-stage.is-done::before{ content:''; width:7px; height:7px; border-radius:99px; background: var(--step-success); }
+  #stepContent4 .abx-stage.is-active{ color: var(--step-primary-soft); opacity: 1; }
+  #stepContent4 .abx-stage.is-active::before{ content:''; width:7px; height:7px; border-radius:99px; background: var(--step-primary); box-shadow: 0 0 10px rgba(139,92,246,0.5); }
+  #stepContent4 .abx-stage-arrow{ color: var(--step-border-strong); opacity: 0.9; }
   #stepContent4 .ab-signal{
     flex: 0 0 auto;
     display: inline-flex; align-items: center; gap: 0.35rem;
@@ -1950,522 +1965,457 @@
   #stepContent4 .ab-signal.is-strong{ color: var(--step-success); border-color: rgba(52,211,153,0.35); background: rgba(52,211,153,0.06); }
   #stepContent4 .ab-signal.is-moderate{ color: var(--step-warning); border-color: rgba(251,191,36,0.35); background: rgba(251,191,36,0.06); }
   #stepContent4 .ab-signal.is-light{ color: var(--step-danger); border-color: rgba(248,113,113,0.35); background: rgba(248,113,113,0.06); }
-  #stepContent4 .ab-stages{
-    margin-left: auto;
-    display: inline-flex; align-items: center; gap: 0.5rem;
-  }
-  #stepContent4 .ab-stage{
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--step-text-muted);
-    opacity: 0.45;
-  }
-  #stepContent4 .ab-stage.is-done{ color: var(--step-success); opacity: 0.85; }
-  #stepContent4 .ab-stage.is-active{ color: var(--step-primary-soft); opacity: 1; }
-  #stepContent4 .ab-stage.is-done::before{
-    content: '';
-    width: 7px; height: 7px; border-radius: 99px;
-    background: var(--step-success);
-  }
-  #stepContent4 .ab-stage.is-active::before{
-    content: '';
-    width: 7px; height: 7px; border-radius: 99px;
-    background: var(--step-primary);
-    box-shadow: 0 0 10px rgba(139,92,246,0.5);
-  }
-  #stepContent4 .ab-stage-arrow{ color: var(--step-border-strong); opacity: 0.9; }
 
-  /* ---------- 1. Focus band: ROOT CAUSE >> FOCUS >> CONFIDENCE ---------- */
-  #stepContent4 .ab-root{
-    grid-row: 2; grid-column: 1 / 2;
-    display: flex; flex-direction: column; justify-content: center; gap: 0.55rem;
-    margin: 0;
-    padding: 1.1rem 1.15rem;
-    border: 1px solid rgba(251,191,36,0.3);
-    border-left: 3px solid var(--step-warning);
-    border-radius: 12px;
-    background: linear-gradient(160deg, rgba(251,191,36,0.08), transparent 65%), var(--step-surface-raised);
-    min-width: 0;
-  }
-  #stepContent4 .ab-root-label{
-    font-family: var(--step-heading-font);
-    font-size: 8.5px; font-weight: 600;
-    letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--step-warning);
-  }
-  #stepContent4 .ab-root-value{
-    font-family: var(--step-body-font);
-    font-size: 15px; font-weight: 600; line-height: 1.5;
-    color: var(--step-text);
-    min-width: 0;
-  }
-  #stepContent4 .ab-root-arrow{
-    grid-row: 2; grid-column: 2 / 3;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--step-warning);
-  }
-  #stepContent4 .ab-root-arrow svg{ width: 18px; height: 18px; }
-  #stepContent4 .analysis-quote{
-    grid-row: 2; grid-column: 3 / 6;
-    display: flex; flex-direction: column; justify-content: center; gap: 0.55rem;
-    margin: 0;
-    padding: 1.2rem 1.5rem;
-    border: 1px solid rgba(139,92,246,0.28);
-    border-left: 3px solid var(--step-primary);
-    border-radius: 12px;
+  /* ---------- 1. Overview band: ROOT → PRIORITY → OUTCOME ---------- */
+  #stepContent4 .abx-overview{
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto minmax(0,0.8fr) auto minmax(0,1.35fr);
+    gap: 0.4rem;
+    align-items: stretch;
+    padding: 1.15rem 1.25rem;
+    border: 1px solid var(--step-border);
+    border-radius: 14px;
     background:
-      radial-gradient(120% 140% at 0% 0%, rgba(139,92,246,0.14), transparent 55%),
-      linear-gradient(135deg, rgba(139,92,246,0.06), rgba(139,92,246,0.01)),
+      radial-gradient(120% 160% at 0% 0%, rgba(139,92,246,0.08), transparent 60%),
       var(--step-surface-raised);
-    font-family: var(--step-body-font);
-    font-size: 18px; font-weight: 600; font-style: normal; line-height: 1.55;
-    color: var(--step-text);
+  }
+  #stepContent4 .abx-ov{
+    display: flex; flex-direction: column; justify-content: center; gap: 0.5rem;
+    padding: 0.5rem 0.9rem;
     min-width: 0;
   }
-  #stepContent4 .analysis-quote::before{
-    content: 'Focus of This Plan';
+  #stepContent4 .abx-ov-label{
     font-family: var(--step-heading-font);
     font-size: 9px; font-weight: 600;
-    letter-spacing: 0.22em; text-transform: uppercase;
-    color: var(--step-primary-soft);
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-text-muted);
   }
-  #stepContent4 .ab-conf{
-    grid-row: 2; grid-column: 6 / 7;
-    display: flex; flex-direction: column; justify-content: center; gap: 0.55rem;
-    margin: 0;
-    padding: 1.05rem 1.15rem;
-    border: 1px solid var(--step-border);
-    border-radius: 12px;
-    background: var(--step-card-bg);
+  #stepContent4 .abx-ov--root{ border-left: 3px solid var(--step-warning); background: linear-gradient(160deg, rgba(251,191,36,0.06), transparent 70%); border-radius: 8px; }
+  #stepContent4 .abx-ov--prio{ border-left: 3px solid var(--step-primary); background: linear-gradient(160deg, rgba(139,92,246,0.07), transparent 70%); border-radius: 8px; }
+  #stepContent4 .abx-ov--goal{ border-left: 3px solid var(--step-success); background: linear-gradient(160deg, rgba(52,211,153,0.06), transparent 70%); border-radius: 8px; }
+  #stepContent4 .abx-ov-value{
+    font-family: var(--step-body-font);
+    font-size: 15.5px; font-weight: 600; line-height: 1.45;
+    color: var(--step-text);
+  }
+  #stepContent4 .abx-ov-goal{
+    font-family: var(--step-body-font);
+    font-size: 16.5px; font-weight: 600; line-height: 1.45;
+    color: var(--step-text);
     min-width: 0;
   }
-  #stepContent4 .ab-conf-row{
+  #stepContent4 .abx-ov-sub{
+    font-family: var(--step-body-font);
+    font-size: 11px; line-height: 1.5;
+    color: var(--step-text-muted);
+    min-width: 0;
+  }
+  #stepContent4 .abx-ov-priohead{
     display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
     min-width: 0;
   }
-  #stepContent4 .ab-conf-label{
+  #stepContent4 .abx-prio-value{
     font-family: var(--step-heading-font);
-    font-size: 8.5px; font-weight: 600;
-    letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--step-text-muted);
+    font-size: 22px; font-weight: 700;
+    color: var(--step-warning);
   }
-  #stepContent4 .ab-conf-text{
-    font-family: var(--step-body-font);
-    font-size: 11px; font-weight: 600;
-    color: var(--step-text-secondary);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    min-width: 0;
+  #stepContent4 .abx-prio-dots{ display: flex; gap: 4px; align-items: center; }
+  #stepContent4 .abx-prio-dots i{
+    width: 10px; height: 10px; border-radius: 99px;
+    background: var(--step-border-strong);
   }
-  #stepContent4 .ab-conf-meter{ display: flex; gap: 4px; }
-  #stepContent4 .ab-conf-seg{
-    flex: 1 1 0;
-    height: 7px; border-radius: 99px;
-    background: var(--step-border);
+  #stepContent4 .abx-prio-dots i.on{
+    background: var(--step-warning);
+    box-shadow: 0 0 9px rgba(251,191,36,0.45);
   }
-  #stepContent4 .ab-grid.conf-strong .ab-conf-seg.on{ background: var(--step-success); box-shadow: 0 0 8px rgba(52,211,153,0.35); }
-  #stepContent4 .ab-grid.conf-moderate .ab-conf-seg.on{ background: var(--step-warning); box-shadow: 0 0 8px rgba(251,191,36,0.3); }
-  #stepContent4 .ab-grid.conf-light .ab-conf-seg.on{ background: var(--step-danger); box-shadow: 0 0 8px rgba(248,113,113,0.3); }
-  /* resilient combinations when root cause / confidence are absent */
-  #stepContent4 .ab-grid.no-root .ab-root,
-  #stepContent4 .ab-grid.no-root .ab-root-arrow{ display: none; }
-  #stepContent4 .ab-grid.no-root .analysis-quote{ grid-column: 1 / 5; }
-  #stepContent4 .ab-grid.no-root .ab-conf{ grid-column: 5 / 7; }
-  #stepContent4 .ab-grid.no-conf .ab-conf{ display: none; }
-  #stepContent4 .ab-grid.no-conf .analysis-quote{ grid-column: 3 / 7; }
-  #stepContent4 .ab-grid.no-root.no-conf .analysis-quote{ grid-column: 1 / 7; }
+  #stepContent4 .abx-ov-arrow{
+    display: flex; align-items: center; justify-content: center;
+    color: var(--step-primary-soft);
+  }
+  #stepContent4 .abx-ov-arrow svg{ width: 20px; height: 20px; }
 
   /* ---------- 2. Frame-the-follow-up script strip (compact) ---------- */
-  #stepContent4 .ab-script{
-    grid-row: 3; grid-column: 1 / 7;
+  #stepContent4 .abx-script{
     display: flex; align-items: baseline; gap: 0.9rem;
     margin: 0;
-    padding: 0.8rem 1.1rem;
+    padding: 0.85rem 1.2rem;
     border: 1px dashed var(--step-border-strong);
     border-left: 3px solid var(--step-primary);
     border-radius: 10px;
-    box-shadow: none;
+    background: var(--step-accent-tint);
     min-width: 0;
   }
-  #stepContent4 .ab-script::before{
-    content: 'HOW TO FRAME IT —';
+  #stepContent4 .abx-script-tag{
     flex: 0 0 auto;
     font-family: var(--step-heading-font);
     font-size: 8.5px; font-weight: 600;
-    letter-spacing: 0.2em; text-transform: uppercase;
+    letter-spacing: 0.18em; text-transform: uppercase;
     color: var(--step-primary-soft);
   }
-  #stepContent4 .ab-script .script-text{
-    font-size: 13px; line-height: 1.65;
-    color: var(--step-text-secondary);
-    min-width: 0;
+  #stepContent4 .abx-script .script-text{
+    font-size: 13px; line-height: 1.65; color: var(--step-text-secondary); min-width: 0; margin: 0;
   }
 
-  /* ---------- 3. Priority & desired outcome ---------- */
-  #stepContent4 .ab-panel-label{
+  /* ---------- 3. ACTION → OWNER → TIMELINE workflow ---------- */
+  #stepContent4 .abx-workflow{
+    display: grid;
+    grid-template-columns: minmax(0,1.3fr) auto minmax(0,0.85fr) auto minmax(0,1.15fr);
+    gap: 0.6rem;
+    align-items: stretch;
+  }
+  #stepContent4 .abx-wf{
+    display: flex; flex-direction: column; gap: 0.7rem;
+    margin: 0;
+    padding: 1.15rem 1.25rem;
+    border: 1px solid var(--step-border);
+    border-radius: 14px;
+    background: var(--step-surface-raised);
+    min-width: 0;
+  }
+  #stepContent4 .abx-wf-head{
+    display: flex; align-items: center; gap: 0.5rem;
     font-family: var(--step-heading-font);
     font-size: 9.5px; font-weight: 600;
-    letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--step-text-muted);
-  }
-  #stepContent4 .ab-panel-label--amber{ color: var(--step-warning); }
-  #stepContent4 .ab-panel-label--violet{ color: var(--step-primary-soft); }
-  #stepContent4 .ab-panel-label--red{ color: var(--step-danger); }
-  #stepContent4 .ab-priority{
-    grid-row: 5; grid-column: 1 / 3;
-    display: flex; flex-direction: column; gap: 0.75rem;
-    margin: 0; padding: 1.1rem 1.15rem;
-    border: 1px solid rgba(251,191,36,0.28);
-    border-left: 3px solid var(--step-warning);
-    border-radius: 12px;
-    background: linear-gradient(160deg, rgba(251,191,36,0.07), transparent 65%), var(--step-surface-raised);
-    min-width: 0;
-  }
-  #stepContent4 .ab-prio-head{
-    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
-    min-width: 0;
-  }
-  #stepContent4 .ab-prio-dots{ display: flex; gap: 4px; }
-  #stepContent4 .ab-prio-dots i{
-    width: 9px; height: 9px; border-radius: 99px;
-    background: var(--step-border-strong);
-  }
-  #stepContent4 .ab-prio-dots i.on{
-    background: var(--step-warning);
-    box-shadow: 0 0 8px rgba(251,191,36,0.4);
-  }
-  #stepContent4 .ab-priority .guidelines{
-    display: flex; flex-direction: column; gap: 0.45rem;
-    margin: 0;
-  }
-  #stepContent4 .ab-priority .guideline{
-    margin: 0;
-    padding: 0.5rem 0.7rem;
-    background: var(--step-surface-raised);
-    border-color: rgba(251,191,36,0.16);
-    color: var(--step-text-secondary);
-    font-size: 12px;
-  }
-  #stepContent4 .ab-prio-arrow{
-    grid-row: 5; grid-column: 3 / 3;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--step-border-strong);
-  }
-  #stepContent4 .ab-prio-arrow svg{ width: 22px; height: 22px; }
-  #stepContent4 .ab-outcome-panel{
-    grid-row: 5; grid-column: 4 / 7;
-    display: flex; flex-direction: column; justify-content: center; gap: 0.45rem;
-    margin: 0; padding: 1.3rem 1.5rem;
-    border: 1px solid rgba(52,211,153,0.32);
-    border-left: 3px solid var(--step-success);
-    border-radius: 12px;
-    background: linear-gradient(160deg, rgba(52,211,153,0.09), transparent 65%), var(--step-surface-raised);
-    box-shadow: 0 10px 26px rgba(0,0,0,0.14);
-    min-width: 0;
-  }
-  #stepContent4 .ab-outcome-panel::before{
-    content: 'Desired Outcome';
-    font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
     letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--step-success);
-  }
-  #stepContent4 .ab-outcome-panel .analysis-card-label{
-    display: none;
-  }
-  #stepContent4 .ab-outcome-panel .analysis-card-value{
-    font-size: 17px; font-weight: 600; line-height: 1.5;
-    color: var(--step-text);
-  }
-  #stepContent4 .ab-flow{
-    grid-row: 6; grid-column: 1 / 7;
-    display: flex; align-items: center; gap: 0.9rem;
-    margin: 0;
-    padding: 0.65rem 0 0.2rem;
+    color: var(--step-text-secondary);
     min-width: 0;
   }
-  #stepContent4 .ab-flow-step{
-    display: inline-flex; align-items: center; gap: 0.45rem;
-    font-family: var(--step-heading-font);
-    font-size: 10px; font-weight: 600;
-    letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--step-text-secondary);
-    white-space: nowrap;
-  }
-  #stepContent4 .ab-flow-step b{
-    font-size: 9px; font-weight: 700;
+  #stepContent4 .abx-wf-ic{
+    flex: 0 0 auto;
+    width: 24px; height: 24px; border-radius: 7px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(139,92,246,0.12);
     color: var(--step-primary-soft);
   }
-  #stepContent4 .ab-flow-step--amber b{ color: var(--step-warning); }
-  #stepContent4 .ab-flow-step--violet b{ color: var(--step-primary-soft); }
-  #stepContent4 .ab-flow-step--teal b{ color: var(--step-success); }
-  #stepContent4 .ab-flow-arrow{
-    display: inline-flex; align-items: center;
-    color: var(--step-border-strong);
-  }
-  #stepContent4 .ab-flow-arrow svg{ width: 16px; height: 16px; }
+  #stepContent4 .abx-wf--do .abx-wf-ic{ background: rgba(139,92,246,0.12); color: var(--step-primary-soft); }
+  #stepContent4 .abx-wf--owner .abx-wf-ic{ background: rgba(52,211,153,0.12); color: var(--step-success); }
+  #stepContent4 .abx-wf--when .abx-wf-ic{ background: rgba(251,191,36,0.12); color: var(--step-warning); }
 
-  /* ---------- 4. Action pipeline modules (WHAT → WHO → WHEN) ---------- */
-  #stepContent4 .ab-mod{
-    display: flex; flex-direction: column; gap: 0.45rem;
-    margin: 0;
-    padding: 0.95rem 1.1rem;
-    border-radius: 12px;
-    box-shadow: none;
-    min-width: 0;
-  }
-  #stepContent4 .ab-mod .analysis-card-label{
-    margin-bottom: 0;
-    font-size: 9.5px;
-    color: var(--step-text-muted);
-  }
-  #stepContent4 .ab-mod .analysis-card-value{
-    font-size: 13px; line-height: 1.6;
+  /* What We'll Do */
+  #stepContent4 .abx-primary{
+    font-family: var(--step-heading-font);
+    font-size: 17px; font-weight: 600; line-height: 1.4;
     color: var(--step-text);
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--step-border);
     min-width: 0;
   }
-  #stepContent4 #step4Cards > .analysis-card:hover{ transform: none; }
-  #stepContent4 .ab-mod--now{
-    grid-row: 7; grid-column: 1 / 3;
-    border-left: 3px solid var(--step-success);
-    background: linear-gradient(160deg, rgba(52,211,153,0.05), transparent 60%), var(--step-card-bg);
-  }
-  #stepContent4 .ab-mod--week{
-    grid-row: 8; grid-column: 1 / 3;
-    border-left: 3px solid var(--step-warning);
-    background: linear-gradient(160deg, rgba(251,191,36,0.05), transparent 60%), var(--step-card-bg);
-  }
-  #stepContent4 .ab-mod--manager{
-    grid-row: 7; grid-column: 3 / 5;
-    border-left: 3px solid var(--step-primary);
-    background: linear-gradient(160deg, rgba(139,92,246,0.06), transparent 60%), var(--step-card-bg);
-  }
-  #stepContent4 .ab-mod--employee{
-    grid-row: 8; grid-column: 3 / 5;
-    border-left: 3px solid var(--step-success);
-    background: linear-gradient(160deg, rgba(52,211,153,0.05), transparent 60%), var(--step-card-bg);
-  }
-  #stepContent4 .ab-mod-chip{
+  #stepContent4 .abx-type{
     align-self: flex-start;
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    padding: 0.24rem 0.55rem;
+    display: inline-flex; align-items: center;
+    padding: 0.28rem 0.6rem;
     border-radius: 99px;
     font-family: var(--step-heading-font);
     font-size: 8.5px; font-weight: 700;
     letter-spacing: 0.14em; text-transform: uppercase;
-    white-space: nowrap;
+    color: var(--step-warning);
+    border: 1px solid rgba(251,191,36,0.35);
+    background: rgba(251,191,36,0.07);
   }
-  #stepContent4 .ab-mod-chip-ic{ display: inline-flex; }
-  #stepContent4 .ab-mod-chip-ic svg{ width: 10px; height: 10px; }
-  #stepContent4 .ab-mod--now .ab-mod-chip{ color: var(--step-success); border: 1px solid rgba(52,211,153,0.35); background: rgba(52,211,153,0.07); }
-  #stepContent4 .ab-mod--week .ab-mod-chip{ color: var(--step-warning); border: 1px solid rgba(251,191,36,0.35); background: rgba(251,191,36,0.07); }
-  #stepContent4 .ab-mod--manager .ab-mod-chip{ color: var(--step-primary-soft); border: 1px solid rgba(139,92,246,0.35); background: rgba(139,92,246,0.08); }
-  #stepContent4 .ab-mod--employee .ab-mod-chip{ color: var(--step-success); border: 1px solid rgba(34,211,238,0.3); background: rgba(34,211,238,0.06); }
-
-  /* WHEN — execution timeline (right column) */
-  #stepContent4 .ab-when{
-    grid-row: 7 / 9; grid-column: 5 / 7;
-    display: flex; flex-direction: column; gap: 0.6rem;
-    margin: 0;
-    padding: 1.05rem 1.1rem;
-    border: 1px solid var(--step-border);
-    border-radius: 12px;
-    background: var(--step-surface-raised);
+  #stepContent4 .abx-check{ display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+  #stepContent4 .abx-checkrow{
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    font-family: var(--step-body-font);
+    font-size: 12.5px; line-height: 1.5;
+    color: var(--step-text-secondary);
     min-width: 0;
   }
-  #stepContent4 .ab-when-head{
-    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  #stepContent4 .abx-check-ic{
+    flex: 0 0 auto;
+    width: 17px; height: 17px; border-radius: 6px;
+    margin-top: 1px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(52,211,153,0.14);
+    color: var(--step-success);
+  }
+  #stepContent4 .abx-check-ic::after{ content:'✓'; font-size: 10px; font-weight: 700; }
+
+  /* Who Owns It */
+  #stepContent4 .abx-owner,
+  #stepContent4 .abx-manager{
+    display: flex; align-items: flex-start; gap: 0.65rem;
+    min-width: 0;
+  }
+  #stepContent4 .abx-avatar{
+    flex: 0 0 auto;
+    width: 36px; height: 36px; border-radius: 99px;
+    display: inline-flex; align-items: center; justify-content: center;
     font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--step-text-muted);
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.05em;
   }
-  #stepContent4 .ab-when-head b{ color: var(--step-success); font-size: 8.5px; font-weight: 600; }
-  #stepContent4 .ab-track{
+  #stepContent4 .abx-avatar--emp{ background: rgba(52,211,153,0.14); color: var(--step-success); border: 1px solid rgba(52,211,153,0.35); }
+  #stepContent4 .abx-avatar--mgr{ background: rgba(139,92,246,0.14); color: var(--step-primary-soft); border: 1px solid rgba(139,92,246,0.35); }
+  #stepContent4 .abx-owner-body{ display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+  #stepContent4 .abx-owner-name{
+    font-family: var(--step-heading-font);
+    font-size: 13px; font-weight: 600;
+    color: var(--step-text);
+    display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;
+  }
+  #stepContent4 .abx-owner-role{
+    font-family: var(--step-heading-font);
+    font-size: 8.5px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--step-success);
+    border: 1px solid rgba(52,211,153,0.3);
+    background: rgba(52,211,153,0.07);
+    border-radius: 99px; padding: 0.15rem 0.5rem;
+  }
+  #stepContent4 .abx-owner-role--mgr{ color: var(--step-primary-soft); border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.08); }
+  #stepContent4 .abx-owner-tx{
+    font-family: var(--step-body-font);
+    font-size: 12px; line-height: 1.5;
+    color: var(--step-text-secondary);
+    min-width: 0;
+  }
+
+  /* When & Milestones — connected vertical timeline */
+  #stepContent4 .abx-timeline{
     position: relative;
-    display: flex; flex-direction: column; gap: 0;
-    margin-top: 0.35rem;
+    display: flex; flex-direction: column;
+    min-width: 0;
   }
-  #stepContent4 .ab-track::before{
+  #stepContent4 .abx-timeline::before{
     content: '';
-    position: absolute; left: 5px; top: 16px; bottom: 12px;
+    position: absolute; left: 6px; top: 10px; bottom: 10px;
     width: 2px;
-    background: linear-gradient(180deg, var(--step-success), var(--step-warning));
+    background: linear-gradient(180deg, var(--step-success), var(--step-warning), var(--step-primary));
     opacity: 0.55;
   }
-  #stepContent4 .ab-track-point{
+  #stepContent4 .abx-mile{
     position: relative;
     display: flex; gap: 0.7rem;
-    padding: 0.45rem 0 0.75rem;
+    padding: 0.55rem 0;
     min-width: 0;
   }
-  #stepContent4 .ab-track-point:last-child{ padding-bottom: 0.1rem; }
-  #stepContent4 .ab-track-dot{
+  #stepContent4 .abx-mile-dot{
     flex: 0 0 auto;
-    width: 12px; height: 12px; border-radius: 99px;
+    width: 13px; height: 13px; border-radius: 99px;
+    margin-top: 2px;
     background: var(--step-success);
-    box-shadow: 0 0 8px rgba(52,211,153,0.4);
+    box-shadow: 0 0 9px rgba(52,211,153,0.45);
     z-index: 1;
   }
-  #stepContent4 .ab-track-point:nth-child(2) .ab-track-dot{ background: var(--step-warning); box-shadow: 0 0 8px rgba(251,191,36,0.4); }
-  #stepContent4 .ab-track-body{ min-width: 0; }
-  #stepContent4 .ab-track-when{
+  #stepContent4 .abx-mile:nth-child(2) .abx-mile-dot{ background: var(--step-warning); box-shadow: 0 0 9px rgba(251,191,36,0.45); }
+  #stepContent4 .abx-mile:nth-child(3) .abx-mile-dot{ background: var(--step-primary); box-shadow: 0 0 9px rgba(139,92,246,0.5); }
+  #stepContent4 .abx-mile-body{ display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+  #stepContent4 .abx-mile-when{
     font-family: var(--step-heading-font);
     font-size: 8.5px; font-weight: 700;
     letter-spacing: 0.18em; text-transform: uppercase;
     color: var(--step-success);
   }
-  #stepContent4 .ab-track-point:nth-child(2) .ab-track-when{ color: var(--step-warning); }
-  #stepContent4 .ab-track-caption{
+  #stepContent4 .abx-mile:nth-child(2) .abx-mile-when{ color: var(--step-warning); }
+  #stepContent4 .abx-mile:nth-child(3) .abx-mile-when{ color: var(--step-primary-soft); }
+  #stepContent4 .abx-mile-tx{
     font-family: var(--step-body-font);
-    font-size: 11.5px; font-weight: 600; line-height: 1.45;
+    font-size: 12px; line-height: 1.5;
     color: var(--step-text);
-  }
-
-  /* ---------- 5. Supporting context (environment + why it works) ---------- */
-  #stepContent4 .ab-context-panel{ grid-row: 9; grid-column: 1 / 4; }
-  #stepContent4 .ab-why-panel{ grid-row: 9; grid-column: 4 / 7; }
-  #stepContent4 .ab-context-panel,
-  #stepContent4 .ab-why-panel{
-    margin: 0;
-    padding: 0.9rem 1.05rem;
-    border-radius: 12px;
-    background: linear-gradient(160deg, rgba(139,92,246,0.04), transparent 60%), var(--step-card-bg);
     min-width: 0;
   }
-  #stepContent4 .ab-context-panel .analysis-card-label,
-  #stepContent4 .ab-why-panel .analysis-card-label{
-    color: var(--step-text-muted);
-    font-size: 9px;
+  #stepContent4 .abx-wf-connector{
+    display: flex; align-items: center; justify-content: center;
+    color: var(--step-primary-soft);
   }
-  #stepContent4 .ab-context-panel .analysis-card-value,
-  #stepContent4 .ab-why-panel .analysis-why-it-works{
-    font-size: 12.5px; line-height: 1.6;
+  #stepContent4 .abx-wf-connector svg{ width: 22px; height: 22px; }
+
+  /* ---------- 4. Supporting execution: RISK / SUPPORT / MEASURE ---------- */
+  #stepContent4 .abx-support{
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 1rem;
+  }
+  #stepContent4 .abx-col{
+    display: flex; flex-direction: column; gap: 0.7rem;
+    margin: 0;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-card-bg);
+    min-width: 0;
+  }
+  #stepContent4 .abx-col-head{
+    display: flex; align-items: center; gap: 0.5rem;
+    font-family: var(--step-heading-font);
+    font-size: 9.5px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
     color: var(--step-text-secondary);
     min-width: 0;
   }
+  #stepContent4 .abx-col-dot{ flex: 0 0 auto; width: 8px; height: 8px; border-radius: 99px; }
+  #stepContent4 .abx-col--risk{ border-left: 3px solid var(--step-danger); }
+  #stepContent4 .abx-col--risk .abx-col-dot{ background: var(--step-danger); box-shadow: 0 0 8px rgba(248,113,113,0.4); }
+  #stepContent4 .abx-col--cy{ border-left: 3px solid var(--step-info); }
+  #stepContent4 .abx-col--cy .abx-col-dot{ background: var(--step-info); box-shadow: 0 0 8px rgba(96,165,250,0.4); }
+  #stepContent4 .abx-col--vi{ border-left: 3px solid var(--step-primary); }
+  #stepContent4 .abx-col--vi .abx-col-dot{ background: var(--step-primary); box-shadow: 0 0 8px rgba(139,92,246,0.4); }
 
-  /* ---------- 6. Success signal & takeaway ---------- */
-  #stepContent4 .ab-success-panel{
-    grid-row: 11; grid-column: 1 / 4;
+  /* risk list (built by buildGuidelineItems) */
+  #stepContent4 .abx-risk-list{ display: flex; flex-direction: column; gap: 0.5rem; margin: 0; }
+  #stepContent4 .abx-risk-list .guideline{
     margin: 0;
-    padding: 1.3rem 1.4rem;
-    border-radius: 12px;
-    border-left: 3px solid var(--step-success);
-    background: linear-gradient(120deg, rgba(52,211,153,0.1), transparent 65%), var(--step-surface-raised);
-    box-shadow: 0 10px 26px rgba(0,0,0,0.12);
+    padding: 0.5rem 0.7rem;
+    font-size: 12.5px;
+    background: rgba(248,113,113,0.05);
+    border-color: rgba(248,113,113,0.14);
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  #stepContent4 .abx-risk-list .guideline .g-icon{ width: 18px; height: 18px; flex: 0 0 auto; }
+
+  /* support rows */
+  #stepContent4 .abx-rowlist{ display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+  #stepContent4 .abx-row{
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    font-family: var(--step-body-font);
+    font-size: 12.5px; line-height: 1.5;
+    color: var(--step-text-secondary);
     min-width: 0;
   }
-  #stepContent4 .ab-success-panel::before{
-    content: '✓';
+  #stepContent4 .abx-row-ic{
+    flex: 0 0 auto;
+    width: 17px; height: 17px; border-radius: 6px;
+    margin-top: 1px;
     display: inline-flex; align-items: center; justify-content: center;
-    width: 22px; height: 22px;
-    border: 1px solid rgba(52,211,153,0.45);
-    border-radius: 99px;
-    font-size: 12px; font-weight: 700;
-    color: var(--step-success);
-    background:
-      radial-gradient(60% 60% at 50% 40%, rgba(52,211,153,0.22), transparent 70%);
-    margin-bottom: 0.55rem;
+    background: rgba(96,165,250,0.14);
+    color: var(--step-info);
   }
-  #stepContent4 .ab-success-panel .analysis-card-label{
-    color: var(--step-success);
-    font-size: 9.5px;
-  }
-  #stepContent4 .ab-success-panel .analysis-card-value{
-    font-size: 15px; line-height: 1.6;
-    color: var(--step-text);
-  }
-  #stepContent4 .analysis-takeaway{
-    grid-row: 11; grid-column: 4 / 7;
-    margin: 0;
-    padding: 1.15rem 1.3rem;
-    border: 1px solid rgba(251,191,36,0.25);
-    border-left: 3px solid var(--step-warning);
-    border-radius: 12px;
-    background: linear-gradient(160deg, rgba(251,191,36,0.05), transparent 60%), var(--step-card-bg);
+  #stepContent4 .abx-row-ic::after{ content:'+'; font-size: 11px; font-weight: 700; }
+  #stepContent4 .abx-empty{ font-family: var(--step-body-font); font-size: 12.5px; color: var(--step-text-muted); }
+
+  /* measurement rows */
+  #stepContent4 .abx-measurerow{
+    display: flex; align-items: center; gap: 0.55rem;
+    font-family: var(--step-body-font);
+    font-size: 12.5px; line-height: 1.4;
+    color: var(--step-text-secondary);
     min-width: 0;
   }
+  #stepContent4 .abx-measure-dot{
+    flex: 0 0 auto;
+    width: 10px; height: 10px; border-radius: 99px;
+    background: var(--step-primary);
+    box-shadow: 0 0 7px rgba(139,92,246,0.4);
+  }
+  #stepContent4 .abx-measure-ic{
+    flex: 0 0 auto;
+    width: 15px; height: 15px; border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(139,92,246,0.14);
+    color: var(--step-primary-soft);
+  }
+  #stepContent4 .abx-measure-ic::after{ content:'↗'; font-size: 9px; font-weight: 700; }
+  #stepContent4 .abx-measure-tx{ flex: 1 1 auto; min-width: 0; }
+  #stepContent4 .abx-measure-status{
+    flex: 0 0 auto;
+    font-family: var(--step-heading-font);
+    font-size: 8px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+    border: 1px solid rgba(139,92,246,0.3);
+    background: rgba(139,92,246,0.07);
+    border-radius: 99px; padding: 0.18rem 0.5rem;
+  }
 
-  /* ---------- 7. Manager commitment strip ---------- */
-  #stepContent4 .ab-commit{
-    grid-row: 12; grid-column: 1 / 7;
+  /* ---------- 5. Commitment & follow-up ---------- */
+  #stepContent4 .abx-commit{
     display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
+    grid-template-columns: minmax(0,1.2fr) minmax(220px,0.8fr);
     gap: 1rem;
     align-items: center;
     margin: 0;
-    padding: 0.85rem 1.1rem;
+    padding: 1rem 1.2rem;
     border: 1px solid var(--step-border);
     border-radius: 12px;
     background: var(--step-card-bg);
   }
-  #stepContent4 .ab-commit-left{
-    display: flex; align-items: center; gap: 0.7rem;
-    min-width: 0;
-  }
-  #stepContent4 .ab-commit-badge{
+  #stepContent4 .abx-commit-main{ display: flex; align-items: center; gap: 0.7rem; min-width: 0; }
+  #stepContent4 .abx-commit-ic{
     flex: 0 0 auto;
-    width: 34px; height: 34px; border-radius: 10px;
+    width: 36px; height: 36px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
     border: 1px solid rgba(139,92,246,0.35);
     background: rgba(139,92,246,0.08);
     color: var(--step-primary-soft);
   }
-  #stepContent4 .ab-commit-badge svg{ width: 16px; height: 16px; }
-  #stepContent4 .ab-commit-copy{
-    flex: 1 1 auto;
-    display: flex; flex-direction: column; gap: 0.35rem;
+  #stepContent4 .abx-commit-body{ flex: 1 1 auto; display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+  #stepContent4 .abx-commit-label{
+    font-family: var(--step-heading-font);
+    font-size: 9.5px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+  }
+  #stepContent4 .abx-commit-note{
+    margin: 0; padding: 0.5rem 0.8rem;
+    font-size: 13px; line-height: 1.6;
+    color: var(--step-text-secondary);
+    border-left: 3px solid var(--step-primary);
+    background: rgba(139,92,246,0.05);
+    border-radius: 6px;
     min-width: 0;
   }
-  #stepContent4 .ab-commit .ab-panel-label{ margin-bottom: 0; }
-  #stepContent4 .ab-commit .g-icon{ display: none; }
-  #stepContent4 .ab-commit #step4ManagerNotesContainer{
-    margin: 0;
-    padding: 0.5rem 0.8rem;
-    font-size: 13px;
-    min-width: 0;
-  }
-  #stepContent4 .ab-commit-right{ min-width: 0; }
-  #stepContent4 .ab-commit .form-label{ margin-bottom: 0.25rem; }
-  #stepContent4 .ab-commit .note-area{
-    margin: 0;
-    min-height: 42px;
-    padding: 0.5rem 0.7rem;
-    font-size: 12.5px;
-    resize: vertical;
+  #stepContent4 .abx-commit-notearea{ min-width: 0; }
+  #stepContent4 .abx-commit .form-label{ margin-bottom: 0.25rem; }
+  #stepContent4 .abx-commit .note-area{
+    margin: 0; min-height: 44px; padding: 0.5rem 0.7rem; font-size: 12.5px; resize: vertical;
   }
 
-  /* ---------- 8. Avoid guardrails (compact chips) ---------- */
-  #stepContent4 .ab-avoid{
-    grid-row: 13; grid-column: 1 / 7;
+  /* ---------- 6. Footer: confidence / takeaway / plan health ---------- */
+  #stepContent4 .abx-footer{
     display: grid;
-    grid-template-columns: 210px minmax(0, 1fr);
-    align-items: center; gap: 1rem;
-    margin: 0;
-    padding: 0.8rem 1.1rem;
-    border: 1px solid rgba(248,113,113,0.2);
-    border-left: 3px solid var(--step-danger);
-    border-radius: 12px;
-    background: var(--step-card-bg);
+    grid-template-columns: minmax(0,0.7fr) minmax(0,1.6fr) minmax(0,1fr);
+    gap: 1rem;
   }
-  #stepContent4 .ab-avoid .guidelines{
-    display: flex; flex-direction: row; flex-wrap: wrap; gap: 0.5rem;
+  #stepContent4 .abx-foot{
+    display: flex; flex-direction: column; gap: 0.6rem;
     margin: 0;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-surface-raised);
     min-width: 0;
   }
-  #stepContent4 .ab-avoid .guideline{
-    margin: 0;
-    padding: 0.42rem 0.7rem;
-    font-size: 12px;
-    background: rgba(248,113,113,0.05);
-    border-color: rgba(248,113,113,0.15);
+  #stepContent4 .abx-foot-label{
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--step-text-muted);
   }
-  #stepContent4 .ab-avoid .guideline .g-icon{ display: none; }
+  #stepContent4 .abx-conf-meter{ display: flex; gap: 5px; }
+  #stepContent4 .abx-conf-meter .ab-conf-seg{
+    flex: 1 1 0; height: 9px; border-radius: 99px; background: var(--step-border);
+  }
+  #stepContent4 .abx-conf-text{
+    font-family: var(--step-heading-font);
+    font-size: 14px; font-weight: 600;
+    color: var(--step-text);
+  }
+  #stepContent4 .ab-grid.conf-strong .abx-conf-meter .ab-conf-seg.on{ background: var(--step-success); box-shadow: 0 0 9px rgba(52,211,153,0.4); }
+  #stepContent4 .ab-grid.conf-moderate .abx-conf-meter .ab-conf-seg.on{ background: var(--step-warning); box-shadow: 0 0 9px rgba(251,191,36,0.4); }
+  #stepContent4 .ab-grid.conf-light .abx-conf-meter .ab-conf-seg.on{ background: var(--step-danger); box-shadow: 0 0 9px rgba(248,113,113,0.4); }
+  #stepContent4 .abx-take{
+    font-family: var(--step-body-font);
+    font-size: 13.5px; line-height: 1.6;
+    color: var(--step-text);
+    min-width: 0;
+  }
+  #stepContent4 .abx-rank{ display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+  #stepContent4 .abx-rank-row{
+    display: flex; align-items: center; gap: 0.5rem;
+    font-family: var(--step-body-font);
+    font-size: 12.5px;
+    color: var(--step-text-secondary);
+    min-width: 0;
+  }
+  #stepContent4 .abx-rank-row b{ margin-left: auto; font-weight: 600; color: var(--step-success); font-family: var(--step-heading-font); }
+  #stepContent4 .abx-rank-pip{
+    flex: 0 0 auto; width: 7px; height: 7px; border-radius: 99px;
+    background: var(--step-success);
+  }
 
   /* ---------- Bottom nav ---------- */
-  #stepContent4 .step-nav{ grid-row: 14; grid-column: 1 / 7; margin: 0; }
+  #stepContent4 .step-nav{ margin: 0.5rem 0 0; }
   #stepContent4 .ab-progress{
     display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
   }
@@ -2489,20 +2439,21 @@
     font-size: 10px; color: var(--step-text-muted);
   }
 
+  /* ---------- Responsive ---------- */
+  @media (max-width: 1180px){
+    #stepContent4 .abx-overview{ grid-template-columns: 1fr auto 1fr; }
+    #stepContent4 .abx-ov--goal{ grid-column: 1 / -1; }
+  }
   @media (max-width: 1040px){
-    #stepContent4 .ab-grid{ grid-template-columns: 1fr; }
-    #stepContent4 .ab-grid > *,
-    #stepContent4 .ab-grid > .ab-dynamic > *{
-      grid-row: auto !important;
-      grid-column: 1 / 2 !important;
-    }
-    #stepContent4 .ab-eyebrow-title{ white-space: normal; }
-    #stepContent4 .ab-stages{ margin-left: 0; flex-wrap: wrap; }
-    #stepContent4 .ab-root-arrow{ transform: rotate(90deg); }
-    #stepContent4 .ab-prio-arrow{ transform: rotate(90deg); }
-    #stepContent4 .ab-flow{ flex-wrap: wrap; }
-    #stepContent4 .ab-commit{ grid-template-columns: 1fr; align-items: start; }
-    #stepContent4 .ab-avoid{ grid-template-columns: 1fr; }
+    #stepContent4 .abx-overview{ grid-template-columns: 1fr; }
+    #stepContent4 .abx-ov-arrow{ transform: rotate(90deg); min-height: 10px; }
+    #stepContent4 .abx-workflow{ grid-template-columns: 1fr; }
+    #stepContent4 .abx-wf-connector{ transform: rotate(90deg); min-height: 16px; }
+    #stepContent4 .abx-support{ grid-template-columns: 1fr; }
+    #stepContent4 .abx-footer{ grid-template-columns: 1fr; }
+    #stepContent4 .abx-commit{ grid-template-columns: 1fr; align-items: start; }
+    #stepContent4 .abx-eyebrow-title{ white-space: normal; }
+    #stepContent4 .abx-stages{ margin-left: 0; flex-wrap: wrap; }
   }
 </style>
 <style>
@@ -3646,123 +3597,178 @@
 
             <div class="ab-grid">
 
-              <div class="ab-eyebrow ab-eyebrow--focus">
+              <div class="abx-eyebrow">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/></svg>
-                <span class="ab-eyebrow-title">Focus of This Plan</span>
+                <span class="abx-eyebrow-title">Execution Plan</span>
                 <span class="ab-signal" id="abFocusSignal" style="display:none;"></span>
-                <span class="ab-stages">
-                  <span class="ab-stage is-done">Insight</span>
-                  <span class="ab-stage-arrow">→</span>
-                  <span class="ab-stage is-done">Understanding</span>
-                  <span class="ab-stage-arrow">→</span>
-                  <span class="ab-stage is-active">Action</span>
+                <span class="abx-stages">
+                  <span class="abx-stage is-done">Insight</span>
+                  <span class="abx-stage-arrow">→</span>
+                  <span class="abx-stage is-done">Understanding</span>
+                  <span class="abx-stage-arrow">→</span>
+                  <span class="abx-stage is-active">Action</span>
                 </span>
               </div>
 
-              <div class="ab-root">
-                <span class="ab-root-label">Root Cause</span>
-                <span class="ab-root-value" id="abRootCause">Loading...</span>
-              </div>
+              <div class="abx-overview">
 
-              <div class="ab-root-arrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
-              </div>
-
-              <div class="ab-conf" id="abConf">
-                <div class="ab-conf-row">
-                  <span class="ab-conf-label">Confidence</span>
-                  <span class="ab-conf-text" id="abConfLabel">—</span>
+                <div class="abx-ov abx-ov--root">
+                  <div class="abx-ov-label">Root Cause</div>
+                  <div class="abx-ov-value" id="abRootCause">Loading...</div>
+                  <div class="abx-ov-sub" id="abRootEvidence">Confidence from this analysis</div>
                 </div>
-                <div class="ab-conf-meter">
-                  <span class="ab-conf-seg"></span>
-                  <span class="ab-conf-seg"></span>
-                  <span class="ab-conf-seg"></span>
+
+                <div class="abx-ov-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
                 </div>
+
+                <div class="abx-ov abx-ov--prio">
+                  <div class="abx-ov-label">Priority</div>
+                  <div class="abx-ov-priohead">
+                    <span class="abx-prio-value" id="abxPrioValue">—</span>
+                    <span class="abx-prio-dots" id="abPrioDots" title="Recommended actions in this plan">
+                      <i></i><i></i><i></i><i></i><i></i>
+                    </span>
+                  </div>
+                  <div class="abx-ov-sub" id="abxPrioSub">Do these first</div>
+                </div>
+
+                <div class="abx-ov-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+                </div>
+
+                <div class="abx-ov abx-ov--goal">
+                  <div class="abx-ov-label">Desired Outcome</div>
+                  <div class="abx-ov-goal" id="abxOutcome">Loading...</div>
+                  <div class="abx-ov-sub" id="abxOutcomeSub">The change we are aiming for</div>
+                </div>
+
               </div>
 
-              <div id="step4Cards" class="ab-dynamic"></div>
+              <div id="step4Cards" class="abx-dynamic"></div>
 
-              <div class="script-block ab-script">
+              <div class="abx-script">
+                <span class="abx-script-tag">How to frame it</span>
                 <div class="script-text" id="step4Script">Loading analysis...</div>
               </div>
 
-              <div class="ab-eyebrow ab-eyebrow--po">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-8"/><path d="M12 8h.01"/><circle cx="12" cy="12" r="10"/></svg>
-                <span class="ab-eyebrow-title">Priority &amp; Outcome</span>
+              <div class="abx-eyebrow">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                <span class="abx-eyebrow-title">Action Plan</span>
               </div>
 
-              <div class="ab-priority">
-                <div class="ab-prio-head">
-                  <div class="ab-panel-label ab-panel-label--amber">Priority &middot; Do These First</div>
-                  <div class="ab-prio-dots" title="Recommended actions in this plan">
-                    <i></i><i></i><i></i><i></i><i></i>
+              <div class="abx-workflow">
+
+                <div class="abx-wf abx-wf--do">
+                  <div class="abx-wf-head">
+                    <span class="abx-wf-ic"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>
+                    <span>What We'll Do</span>
                   </div>
+                  <div class="abx-primary" id="abxPrimary">Loading action...</div>
+                  <div class="abx-type" id="abxType">Action</div>
+                  <div class="abx-check" id="abxChecks"></div>
                 </div>
-                <div class="guidelines" id="step4Recommended"></div>
-              </div>
 
-              <div class="ab-prio-arrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
-              </div>
-
-              <div class="ab-flow">
-                <span class="ab-flow-step ab-flow-step--amber"><b>1</b> What</span>
-                <span class="ab-flow-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                <span class="ab-flow-step ab-flow-step--violet"><b>2</b> Who</span>
-                <span class="ab-flow-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                <span class="ab-flow-step ab-flow-step--teal"><b>3</b> When</span>
-              </div>
-
-              <div class="ab-when">
-                <div class="ab-when-head">
-                  <span>Execution Window</span>
-                  <b>Time to Act</b>
+                <div class="abx-wf-connector">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
                 </div>
-                <div class="ab-track">
-                  <div class="ab-track-point">
-                    <span class="ab-track-dot"></span>
-                    <div class="ab-track-body">
-                      <div class="ab-track-when">Now &middot; Immediate</div>
-                      <div class="ab-track-caption">Act on the Immediate Action in this session</div>
-                    </div>
+
+                <div class="abx-wf abx-wf--owner">
+                  <div class="abx-wf-head">
+                    <span class="abx-wf-ic"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+                    <span>Who Owns It</span>
                   </div>
-                  <div class="ab-track-point">
-                    <span class="ab-track-dot"></span>
-                    <div class="ab-track-body">
-                      <div class="ab-track-when">Within 1 Week &middot; Follow Through</div>
-                      <div class="ab-track-caption">This Week actions keep momentum after session</div>
-                    </div>
-                  </div>
+                  <div class="abx-owner" id="abxOwner"></div>
+                  <div class="abx-manager" id="abxManager"></div>
                 </div>
+
+                <div class="abx-wf-connector">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+                </div>
+
+                <div class="abx-wf abx-wf--when">
+                  <div class="abx-wf-head">
+                    <span class="abx-wf-ic"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+                    <span>When &amp; Milestones</span>
+                  </div>
+                  <div class="abx-timeline" id="abxTimeline"></div>
+                </div>
+
               </div>
 
-              <div class="ab-eyebrow ab-eyebrow--success">
+              <div class="abx-eyebrow">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
+                <span class="abx-eyebrow-title">Supporting Execution</span>
+              </div>
+
+              <div class="abx-support">
+
+                <div class="abx-col abx-col--risk">
+                  <div class="abx-col-head"><span class="abx-col-dot"></span>Risk / Avoid</div>
+                  <div class="guidelines abx-risk-list" id="step4Avoid"></div>
+                </div>
+
+                <div class="abx-col abx-col--cy">
+                  <div class="abx-col-head"><span class="abx-col-dot"></span>Support &amp; Resources</div>
+                  <div class="abx-rowlist" id="abxSupport"></div>
+                </div>
+
+                <div class="abx-col abx-col--vi">
+                  <div class="abx-col-head"><span class="abx-col-dot"></span>Measurement Plan</div>
+                  <div class="abx-rowlist abx-measure" id="abxMeasurement"></div>
+                </div>
+
+              </div>
+
+              <div class="abx-eyebrow">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                <span class="ab-eyebrow-title">Success Signal &middot; How Will We Know It Worked?</span>
+                <span class="abx-eyebrow-title">Commitment &amp; Follow-up</span>
               </div>
 
-              <div class="ab-commit">
-                <div class="ab-commit-left">
-                  <div class="ab-commit-badge">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a2 2 0 100-4 2 2 0 000 4z"/><path d="M12 2l2.4 4.9 5.6-1.2-1.2 5.6L23 12l-4.2 2.7 1.2 5.6-5.6-1.2L12 23l-2.4-4.9-5.6 1.2 1.2-5.6L1 12l4.2-2.7L4 3.7l5.6 1.2z"/></svg>
+              <div class="abx-commit">
+                <div class="abx-commit-main">
+                  <div class="abx-commit-ic">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a2 2 0 100-4 2 2 0 000 4z"/><path d="M12 2l2.4 4.9 5.6-1.2-1.2 5.6L23 12l-4.2 2.7 1.2 5.6-5.6-1.2L12 23l-2.4-4.9-5.6 1.2 1.2-5.6L1 12l4.2-2.7L4 3.7l5.6 1.2z"/></svg>
                   </div>
-                  <div class="ab-commit-copy">
-                    <div class="ab-panel-label ab-panel-label--violet">Manager Commitment</div>
-                    <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step4ManagerNotesContainer">
-                      <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+                  <div class="abx-commit-body">
+                    <div class="abx-commit-label">Manager Commitment</div>
+                    <div class="abx-commit-note" id="step4ManagerNotesContainer">
                       <div id="step4ManagerNotes"></div>
                     </div>
                   </div>
                 </div>
-                <div class="ab-commit-right">
+                <div class="abx-commit-notearea">
                   <label class="form-label">Add Note</label>
                   <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_4"></textarea>
                 </div>
               </div>
 
-              <div class="ab-avoid">
-                <div class="ab-panel-label ab-panel-label--red">Avoid &middot; Realistic Guardrails</div>
-                <div class="guidelines" id="step4Avoid"></div>
+              <div class="abx-footer">
+
+                <div class="abx-foot abx-foot--conf">
+                  <div class="abx-foot-label">Plan Confidence</div>
+                  <div class="abx-conf-meter">
+                    <span class="ab-conf-seg"></span>
+                    <span class="ab-conf-seg"></span>
+                    <span class="ab-conf-seg"></span>
+                  </div>
+                  <div class="abx-conf-text" id="abConfLabel">—</div>
+                </div>
+
+                <div class="abx-foot abx-foot--take">
+                  <div class="abx-foot-label">Key Takeaway</div>
+                  <div class="abx-take" id="abxTakeaway"></div>
+                </div>
+
+                <div class="abx-foot abx-foot--rank">
+                  <div class="abx-foot-label">Plan Health</div>
+                  <div class="abx-rank" id="abxRank">
+                    <div class="abx-rank-row"><span class="abx-rank-pip"></span><span>Actions defined</span><b id="abxRankActs">—</b></div>
+                    <div class="abx-rank-row"><span class="abx-rank-pip"></span><span>Ownership set</span><b id="abxRankOwner">—</b></div>
+                    <div class="abx-rank-row"><span class="abx-rank-pip"></span><span>Measurement ready</span><b id="abxRankMeas">—</b></div>
+                  </div>
+                </div>
+
               </div>
 
               <div class="step-nav">
@@ -4706,27 +4712,145 @@ function populateStep3(d) {
   if (mn) mn.textContent = d.manager_notes || '';
 }
 
+// ── Step 4 — qualitative signal → segmented meter (never invents numbers) ──
+function abxSignal(label) {
+  var low = String(label || '').toLowerCase();
+  if (low.indexOf('strong') > -1) return { count: 3, cls: 's3', tag: 'Strong' };
+  if (low.indexOf('moderate') > -1 || low.indexOf('medium') > -1) return { count: 2, cls: 's2', tag: 'Moderate' };
+  if (low.indexOf('light') > -1 || low.indexOf('low') > -1) return { count: 1, cls: 's1', tag: 'Light' };
+  return { count: 0, cls: 's0', tag: '' };
+}
+
+function abxItems(list) {
+  list = asList(list);
+  var out = [];
+  list.forEach(function(x) {
+    if (x && String(x).trim()) out.push(String(x).trim());
+  });
+  return out;
+}
+
+function abxRowList(container, rows) {
+  if (!container) return;
+  if (!rows.length) { container.innerHTML = '<div class="abx-empty">Limited transcript evidence.</div>'; return; }
+  var html = '';
+  rows.forEach(function(r) {
+    html += '<div class="abx-row"><span class="abx-row-ic"></span><span class="abx-row-tx">' + escHtml(r) + '</span></div>';
+  });
+  container.innerHTML = html;
+}
+
 // ── Step 4 Population ──
 function populateStep4(d) {
+  d = d || {};
   var el = document.getElementById('step4Script');
   if (el) el.textContent = d.suggested_script || 'Limited transcript evidence.';
 
-  var cards = document.getElementById('step4Cards');
-  if (cards) {
-    var html = renderQuote(d.title_question);
-    html += renderCard('Immediate Action', d.immediate, {borderColor:'var(--teal)'});
-    html += renderCard('This Week', d.this_week, {borderColor:'var(--amber)'});
-    html += renderCard('Manager Action', d.manager_action, {borderColor:'var(--violet)'});
-    html += renderCard('Employee Action', d.employee_action, {borderColor:'var(--teal)'});
-    html += renderCard('Environment', d.environment, {borderColor:'var(--ivory-faint)'});
-    html += renderCard('Success Metric', d.success_metric, {borderColor:'var(--teal)'});
-    html += renderCard('Expected Outcome', d.expected_outcome, {borderColor:'var(--amber)'});
-    html += '<div class="analysis-card analysis-card--violet"><div class="analysis-card-label">Why This Works</div><div class="analysis-why-it-works">' + escHtml(d.why_it_works || '') + '</div></div>';
-    html += renderTakeaway(d.key_takeaway);
-    cards.innerHTML = html;
+  // 1. What We'll Do — primary action is visually dominant
+  var prim = document.getElementById('abxPrimary');
+  if (prim) prim.textContent = d.immediate || 'No immediate action defined yet.';
+  var type = document.getElementById('abxType');
+  if (type) type.textContent = 'Immediate Action';
+
+  var checks = [
+    { t: 'Top priorities to clarify', v: d.recommended_actions },
+    { t: 'Keep momentum this week', v: d.this_week }
+  ];
+  var checkList = [];
+  checks.forEach(function(c) {
+    abxItems(c.v).forEach(function(x) { checkList.push(x); });
+  });
+  var chk = document.getElementById('abxChecks');
+  if (chk) {
+    if (!checkList.length) { chk.innerHTML = '<div class="abx-checkrow"><span class="abx-check-ic"></span><span>Limited transcript evidence.</span></div>'; }
+    else {
+      var h = '';
+      checkList.forEach(function(x) { h += '<div class="abx-checkrow"><span class="abx-check-ic"></span><span>' + escHtml(x) + '</span></div>'; });
+      chk.innerHTML = h;
+    }
   }
 
-  buildGuidelineItems(d.recommended_actions, 'step4Recommended', false);
+  // 2. Who Owns It — employee owner + manager support
+  var owner = document.getElementById('abxOwner');
+  if (owner) {
+    owner.innerHTML = '<span class="abx-avatar abx-avatar--emp">EE</span>' +
+      '<span class="abx-owner-body"><b class="abx-owner-name">Employee</b>' +
+      '<span class="abx-owner-role">Owner</span>' +
+      '<span class="abx-owner-tx">' + escHtml(d.employee_action || 'Takes the lead on this plan.') + '</span></span>';
+  }
+  var mgr = document.getElementById('abxManager');
+  if (mgr) {
+    mgr.innerHTML = '<span class="abx-avatar abx-avatar--mgr">MG</span>' +
+      '<span class="abx-owner-body"><b class="abx-owner-name">Manager</b>' +
+      '<span class="abx-owner-role abx-owner-role--mgr">Support</span>' +
+      '<span class="abx-owner-tx">' + escHtml(d.manager_action || 'Provides support and removes blockers.') + '</span></span>';
+  }
+
+  // 3. When & Milestones — connected vertical timeline
+  var tl = document.getElementById('abxTimeline');
+  if (tl) {
+    var miles = [
+      { when: 'NOW', caption: d.immediate || 'Act on the immediate action' },
+      { when: '1 WEEK', caption: d.this_week || 'Check in and follow through' },
+      { when: '3 WEEKS', caption: d.manager_action || 'Manager evaluates impact and adjusts' },
+      { when: 'ONGOING', caption: d.employee_action || 'Continue and reinforce the new approach' }
+    ];
+    var th = '';
+    miles.forEach(function(m, i) {
+      th += '<div class="abx-mile' + (i === 0 ? ' is-now' : i === miles.length - 1 ? ' is-last' : '') + '">' +
+        '<span class="abx-mile-dot"></span>' +
+        '<div class="abx-mile-body"><div class="abx-mile-when">' + m.when + '</div>' +
+        '<div class="abx-mile-tx">' + escHtml(m.caption) + '</div></div></div>';
+    });
+    tl.innerHTML = th;
+  }
+
+  // Desired outcome
+  var out = document.getElementById('abxOutcome');
+  if (out) out.textContent = d.expected_outcome || 'Improved clarity and balanced priorities.';
+  var outSub = document.getElementById('abxOutcomeSub');
+  if (outSub) outSub.textContent = d.title_question || 'The change we are aiming for';
+
+  // Support & Resources
+  var sup = document.getElementById('abxSupport');
+  if (sup) {
+    var supItems = abxItems(d.environment).concat(abxItems(d.why_it_works));
+    abxRowList(sup, supItems);
+  }
+
+  // Measurement Plan — visual checkpoint rows (qualitative status, not fake %)
+  var meas = document.getElementById('abxMeasurement');
+  if (meas) {
+    var mItems = abxItems(d.success_metric);
+    if (!mItems.length) {
+      meas.innerHTML = '<div class="abx-empty">Limited transcript evidence.</div>';
+    } else {
+      var mh = '';
+      mItems.forEach(function(x, i) {
+        var status = i === 0 ? 'pending' : 'pending';
+        mh += '<div class="abx-measurerow">' +
+          '<span class="abx-measure-dot"></span>' +
+          '<span class="abx-measure-ic"></span>' +
+          '<span class="abx-measure-tx">' + escHtml(x) + '</span>' +
+          '<span class="abx-measure-status">Check-in</span></div>';
+      });
+      meas.innerHTML = mh;
+    }
+  }
+
+  // Key takeaway
+  var tk = document.getElementById('abxTakeaway');
+  if (tk) tk.textContent = d.key_takeaway || 'Limited transcript evidence.';
+
+  // Plan health footer
+  var acts = abxItems(d.recommended_actions).concat(abxItems(d.this_week));
+  var rankActs = document.getElementById('abxRankActs');
+  if (rankActs) rankActs.textContent = acts.length ? String(acts.length) : '—';
+  var rankOwner = document.getElementById('abxRankOwner');
+  if (rankOwner) rankOwner.textContent = (d.immediate || d.employee_action) ? 'Set' : '—';
+  var rankMeas = document.getElementById('abxRankMeas');
+  if (rankMeas) rankMeas.textContent = abxItems(d.success_metric).length ? 'Ready' : '—';
+
   buildGuidelineItems(d.avoid_actions, 'step4Avoid', true);
 
   var mn = document.getElementById('step4ManagerNotes');
@@ -5248,31 +5372,6 @@ sessionPromise.then(function(s) {
     if (on) grid.classList.add(name); else grid.classList.remove(name);
   }
 
-  function tagCards() {
-    var cards = document.querySelectorAll('#step4Cards > .analysis-card');
-    if (!cards.length) return false;
-    var map = {
-      'Immediate Action': 'ab-mod ab-mod--now',
-      'This Week': 'ab-mod ab-mod--week',
-      'Manager Action': 'ab-mod ab-mod--manager',
-      'Employee Action': 'ab-mod ab-mod--employee',
-      'Environment': 'ab-context-panel',
-      'Why This Works': 'ab-why-panel',
-      'Expected Outcome': 'ab-outcome-panel',
-      'Success Metric': 'ab-success-panel'
-    };
-    Array.prototype.forEach.call(cards, function(card) {
-      if (card.classList.contains('ab-mod') ||
-          card.classList.contains('ab-context-panel') ||
-          card.classList.contains('ab-why-panel')) return;
-      var labelEl = card.querySelector('.analysis-card-label');
-      if (!labelEl) return;
-      var cls = map[String(labelEl.textContent).trim()];
-      if (cls) Array.prototype.forEach.call(cls.split(' '), function(c) { card.classList.add(c); });
-    });
-    return true;
-  }
-
   function fillData() {
     var d = window.analysisData;
     if (!d) return false;
@@ -5294,6 +5393,11 @@ sessionPromise.then(function(s) {
         setGridClass('no-root', true);
       }
     }
+    var evSub = document.getElementById('abRootEvidence');
+    if (evSub) {
+      var ev = s3.evidence_strength || s3.confidence_label || '';
+      evSub.textContent = String(ev).trim() ? ('Signal strength · ' + ev) : 'Confidence from this analysis';
+    }
 
     var conf = b.confidence_label || s3.confidence_label || '';
     var confEl = document.getElementById('abConfLabel');
@@ -5305,7 +5409,8 @@ sessionPromise.then(function(s) {
       else if (low.indexOf('moderate') > -1 || low.indexOf('medium') > -1) count = 2;
       else if (low.indexOf('light') > -1 || low.indexOf('low') > -1) count = 1;
       Array.prototype.forEach.call(segs, function(seg, i) { seg.classList.toggle('on', i < count); });
-      if (confEl.textContent !== conf) confEl.textContent = conf;
+      var label = String(conf).replace(/\s*Signal$/i, '');
+      if (confEl.textContent !== label) confEl.textContent = label;
       setGridClass('conf-strong', count === 3);
       setGridClass('conf-moderate', count === 2);
       setGridClass('conf-light', count === 1);
@@ -5317,21 +5422,30 @@ sessionPromise.then(function(s) {
     }
 
     var acts = b.recommended_actions || [];
-    var dots = document.querySelectorAll('#stepContent4 .ab-prio-dots i');
+    var dots = document.querySelectorAll('#stepContent4 #abPrioDots i');
     var onCount = Math.min(acts.length, dots.length);
     Array.prototype.forEach.call(dots, function(dot, i) { dot.classList.toggle('on', i < onCount); });
+    var prioVal = document.getElementById('abxPrioValue');
+    if (prioVal) {
+      var n = acts.length;
+      var pl = n >= 3 ? 'HIGH' : n === 2 ? 'MEDIUM' : n === 1 ? 'LOW' : '—';
+      if (prioVal.textContent !== pl) prioVal.textContent = pl;
+    }
+    var prioSub = document.getElementById('abxPrioSub');
+    if (prioSub) {
+      var ps = acts.length ? ('Do these first') : 'No prioritized actions';
+      if (prioSub.textContent !== ps) prioSub.textContent = ps;
+    }
 
     return true;
   }
 
   function apply() {
     var a = fillData();
-    var b = tagCards();
-    if (mo && a && b) mo.disconnect();
+    if (mo && a) mo.disconnect();
   }
 
   fillData();
-  tagCards();
   mo = new MutationObserver(apply);
   mo.observe(document.getElementById('stepContent4'), { childList: true, attributes: true, attributeFilter: ['style'], subtree: true });
 })();
