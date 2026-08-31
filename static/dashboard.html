@@ -311,10 +311,16 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
                 Filters
               </button>
-              <button class="btn btn-sm btn-outline" type="button" title="Export directory">
+              <button class="btn btn-sm btn-outline" type="button" id="dashExportCsvBtn" title="Download the employee directory as a CSV file">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Export
+                Export CSV
               </button>
+              <button class="btn btn-sm btn-outline" type="button" id="dashImportCsvBtn" title="Bulk import employees from a CSV file">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Import CSV
+              </button>
+              <input type="file" id="dashImportCsvInput" accept=".csv,text/csv" style="display:none;">
+              <a href="/api/employees/csv-template" id="dashCsvTemplateLink" style="display:none;"></a>
               <button class="btn btn-sm btn-gradient" type="button" title="Add a new employee">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Add Employee
@@ -346,6 +352,7 @@
                 <option value="healthy">Healthy</option>
               </select>
               <button class="dir-clear-btn" id="dashClearFilters" type="button">Clear</button>
+              <a href="/api/employees/csv-template" class="dir-select" style="text-decoration:none;display:inline-flex;align-items:center;gap:.35rem;cursor:pointer;" title="Download a CSV template with the expected column headers">Template</a>
             </div>
           </div>
 
@@ -1045,6 +1052,92 @@ function escHtml(str) {
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && overlay.style.display !== 'none') closePanel();
   });
+})();
+</script>
+
+<!-- ── CSV BULK IMPORT + EXPORT (employee directory) ── -->
+<script>
+(function() {
+  var exportBtn = document.getElementById('dashExportCsvBtn');
+  var importBtn = document.getElementById('dashImportCsvBtn');
+  var importInput = document.getElementById('dashImportCsvInput');
+  var toastEl = null;
+
+  function showToast(msg, isError) {
+    if (!toastEl) {
+      toastEl = document.createElement('div');
+      toastEl.className = 'toast-notification';
+      toastEl.style.zIndex = '400';
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.style.borderColor = isError ? 'var(--red-glow)' : '';
+    toastEl.style.color = isError ? 'var(--red)' : '';
+    toastEl.style.background = isError ? 'var(--red-soft)' : '';
+    if (window.gsap) {
+      gsap.killTweensOf(toastEl);
+      gsap.set(toastEl, { y: 60, opacity: 0 });
+      gsap.to(toastEl, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
+      toastEl._hide = setTimeout(function() {
+        gsap.to(toastEl, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in' });
+      }, 4200);
+    } else {
+      if (toastEl._hide) clearTimeout(toastEl._hide);
+      toastEl._hide = setTimeout(function() { toastEl.style.opacity = '0'; }, 4200);
+    }
+  }
+
+  // Export → trigger the same-origin CSV attachment download.
+  if (exportBtn) {
+    exportBtn.addEventListener('click', function() {
+      var a = document.createElement('a');
+      a.href = '/api/employees/export-csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('Employee directory CSV export started');
+    });
+  }
+
+  if (importBtn && importInput) {
+    importBtn.addEventListener('click', function() { importInput.click(); });
+    importInput.addEventListener('change', function() {
+      var file = importInput.files && importInput.files[0];
+      importInput.value = '';
+      if (!file) return;
+      var form = new FormData();
+      form.append('file', file);
+      importBtn.disabled = true;
+      importBtn.textContent = 'Importing\u2026';
+      fetch('/api/employees/import', { method: 'POST', body: form })
+        .then(function(res) { return res.json().catch(function() { return {}; }).then(function(b) { return { ok: res.ok, body: b }; }); })
+        .then(function(r) {
+          importBtn.disabled = false;
+          importBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import CSV';
+          if (!r.ok) {
+            var code = r.body && r.body.error;
+            var msg = code === 'file_required' ? 'Choose a CSV file to import'
+                    : code === 'file_too_large' ? 'File is too large — max 50 MB'
+                    : code === 'invalid_csv' ? 'The file is not a valid CSV'
+                    : code === 'invalid_encoding' ? 'The file must be UTF-8 encoded'
+                    : 'Import failed. Please try again.';
+            showToast(msg, true);
+            return;
+          }
+          var created = r.body.created || 0;
+          var failed = r.body.failed || [];
+          showToast('Import complete \u2014 ' + created + ' created' +
+            (failed.length ? ', ' + failed.length + ' failed' : ''));
+          // Refresh the directory table to reflect the new employees.
+          if (typeof loadEmployees === 'function') loadEmployees({ noAnimate: true });
+        })
+        .catch(function() {
+          importBtn.disabled = false;
+          importBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import CSV';
+          showToast('Network error during import', true);
+        });
+    });
+  }
 })();
 </script>
 

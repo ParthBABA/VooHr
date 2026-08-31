@@ -1,3 +1,5 @@
+import csv
+import io
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -6,6 +8,8 @@ from bson.errors import InvalidId
 from flask import Blueprint, jsonify, request, session, make_response
 
 from audit_log import (
+    ACTION_EMPLOYEE_BULK_EXPORT,
+    ACTION_EMPLOYEE_BULK_IMPORT,
     ACTION_EMPLOYEE_CREATE,
     ACTION_EMPLOYEE_DELETE,
     ACTION_EMPLOYEE_EXPORT,
@@ -13,6 +17,7 @@ from audit_log import (
     log_audit_event,
 )
 from blind_index import blind_index
+from config import Config
 from employee_scoring import score_employee
 from extensions import get_db, next_employee_id
 from field_encryption import decrypt_fields, encrypt_fields
@@ -35,6 +40,25 @@ MAX_EMPLOYEE_WM_LEN = 50           # work_mode
 MAX_EMPLOYEE_DATE_LEN = 30         # joining_date (ISO string)
 MAX_EMPLOYEE_STATUS_LEN = 30       # status enum
 MAX_PHOTO_BYTES = 2 * 1024 * 1024  # 2 MB for base64 data-URL string
+
+# ── CSV bulk import / export limits ─────────────────────────────────────
+# Import is capped by row count and by file size.  The byte cap stays below
+# the app-wide Config.MAX_CONTENT_LENGTH (50 MB) so a huge upload is rejected
+# here with a clear message rather than silently swallowed by the global cap.
+MAX_IMPORT_ROWS = 500              # max data rows per import
+MAX_IMPORT_BYTES = int(Config.MAX_CONTENT_LENGTH)  # reuse app's global upload cap
+
+# Ordered CSV columns (also the downloadable template header row).
+CSV_COLUMNS = [
+    "name",
+    "email",
+    "phone",
+    "department",
+    "position",
+    "employment_type",
+    "work_mode",
+    "joining_date",
+]
 
 
 class TOTPRequired(Exception):
@@ -341,6 +365,211 @@ def list_employees():
         "limit": limit,
         "has_more": has_more,
     })
+
+
+# NOTE: these bulk routes are registered deliberately BEFORE the
+# /employees/<emp_id> routes below.  Flask matches route patterns in
+# registration order, and "<emp_id>" (default string converter) would swallow
+# the literal path segments "import" / "export-csv" / "csv-template" if they
+# were registered after it.
+
+
+def _validate_import_row(name, email, phone, department, position,
+                         employment_type, work_mode, joining_date):
+    """Run the same field length/required checks as create_employee() for one
+    CSV row, reusing the shared MAX_* constants.  Returns None when valid, or
+    an error-code string matching create_employee()'s JSON responses (e.g.
+    "name_required", "email_too_long")."""
+    if not name:
+        return "name_required"
+    if len(name) > MAX_EMPLOYEE_NAME_LEN:
+        return "name_too_long"
+    if email and len(email) > MAX_EMPLOYEE_EMAIL_LEN:
+        return "email_too_long"
+    if phone and len(phone) > MAX_EMPLOYEE_PHONE_LEN:
+        return "phone_too_long"
+    if len(department) > MAX_EMPLOYEE_DEPT_LEN:
+        return "department_too_long"
+    if len(position) > MAX_EMPLOYEE_POSITION_LEN:
+        return "position_too_long"
+    if len(employment_type) > MAX_EMPLOYEE_ET_LEN:
+        return "employment_type_too_long"
+    if len(work_mode) > MAX_EMPLOYEE_WM_LEN:
+        return "work_mode_too_long"
+    if len(joining_date) > MAX_EMPLOYEE_DATE_LEN:
+        return "joining_date_too_long"
+    return None
+
+
+@employees_bp.route("/employees/import", methods=["POST"])
+def import_employees_csv():
+    """Bulk-create employees from an uploaded CSV (multipart/form-data).
+
+    Columns match CSV_COLUMNS / create_employee()'s accepted fields.  Rows are
+    validated with the same MAX_* guards, processed in a single pass, and bad
+    rows are collected instead of aborting the whole import (partial success is
+    normal and expected).  Logs one audit entry for the whole import — not one
+    per row, which would flood the audit log.
+    """
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"error": "file_required"}), 400
+
+    raw = file.read()
+    if len(raw) == 0:
+        return jsonify({"error": "empty_file"}), 400
+    # Reuse the app's global upload cap (Config.MAX_CONTENT_LENGTH via
+    # MAX_IMPORT_BYTES) so a huge CSV is rejected here with a clear message.
+    if len(raw) > MAX_IMPORT_BYTES:
+        return jsonify({"error": "file_too_large"}), 413
+
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return jsonify({"error": "invalid_encoding"}), 400
+
+    db = get_db()
+    created = 0
+    failed = []
+
+    try:
+        reader = csv.DictReader(io.StringIO(text))
+        if reader.fieldnames is None:
+            return jsonify({"error": "invalid_csv"}), 400
+
+        for row_no, row in enumerate(reader, start=2):  # header is row 1
+            data_row = row_no - 1
+            if data_row > MAX_IMPORT_ROWS:
+                break
+
+            name = (row.get("name") or "").strip()
+            email = (row.get("email") or "").strip()
+            phone = (row.get("phone") or "").strip()
+            department = (row.get("department") or "").strip()
+            position = (row.get("position") or "").strip()
+            employment_type = (row.get("employment_type") or "").strip()
+            work_mode = (row.get("work_mode") or "").strip()
+            joining_date = (row.get("joining_date") or "").strip()
+
+            err = _validate_import_row(
+                name, email, phone, department, position,
+                employment_type, work_mode, joining_date,
+            )
+            if err:
+                failed.append({"row": row_no, "error": err})
+                continue
+
+            employee_id = _next_employee_id(db, org_id)
+            encrypted_fields, wrapped_dek = encrypt_fields({
+                "name": name,
+                "email": email if email else None,
+                "phone": phone if phone else None,
+            })
+
+            emp_doc = {
+                "org_id": ObjectId(org_id),
+                "employee_id": employee_id,
+                "department": department,
+                "position": position,
+                "employment_type": employment_type,
+                "work_mode": work_mode,
+                "joining_date": joining_date,
+                "status": "active",
+                "email_hash": blind_index(email) if email else None,
+                "encrypted": encrypted_fields,
+                "wrapped_dek": wrapped_dek,
+                "signals": {
+                    "overtime_hours_last_3w": 0.0,
+                    "absences_last_30d": 0,
+                    "performance_delta_pct": 0.0,
+                    "missed_deadlines_last_30d": 0,
+                    "engagement_survey_score": None,
+                },
+                "photo": None,
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
+            }
+            db.employees.insert_one(emp_doc)
+            created += 1
+    except csv.Error:
+        return jsonify({"error": "invalid_csv"}), 400
+
+    log_audit_event(
+        db, org_id, session.get("user_id"), session.get("user_name") or "",
+        ACTION_EMPLOYEE_BULK_IMPORT,
+        target_type="employee",
+        meta={"created": created, "failed": len(failed)},
+    )
+
+    return jsonify({"created": created, "failed": failed})
+
+
+@employees_bp.route("/employees/export-csv")
+def export_employees_csv():
+    """Download the org's full employee list as a CSV.
+
+    Org-scoped (same org_id filter as list_employees()) and decrypts PII the
+    same way _employee_to_json() does.  A bulk PII export — logged once, with
+    the same seriousness as the single-employee export.
+    """
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    cursor = db.employees.find({"org_id": ObjectId(org_id)}).sort("created_at", -1)
+    employees = list(cursor)
+
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=CSV_COLUMNS)
+    writer.writeheader()
+    for emp in employees:
+        pii = decrypt_fields(emp.get("encrypted"), emp.get("wrapped_dek", ""))
+        writer.writerow({
+            "name": pii.get("name", ""),
+            "email": pii.get("email", ""),
+            "phone": pii.get("phone", ""),
+            "department": emp.get("department", ""),
+            "position": emp.get("position", ""),
+            "employment_type": emp.get("employment_type", ""),
+            "work_mode": emp.get("work_mode", ""),
+            "joining_date": emp.get("joining_date", ""),
+        })
+
+    log_audit_event(
+        db, org_id, session.get("user_id"), session.get("user_name") or "",
+        ACTION_EMPLOYEE_BULK_EXPORT,
+        target_type="employee",
+        meta={"count": len(employees)},
+    )
+
+    resp = make_response(buf.getvalue())
+    resp.headers["Content-Type"] = "text/csv; charset=utf-8"
+    resp.headers["Content-Disposition"] = 'attachment; filename="employees_export.csv"'
+    return resp
+
+
+@employees_bp.route("/employees/csv-template")
+def employee_csv_template():
+    """Download a CSV template (just the header row) so users know the exact
+    expected column order for the bulk import."""
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=CSV_COLUMNS)
+    writer.writeheader()
+    buf.seek(0)
+
+    resp = make_response(buf.getvalue())
+    resp.headers["Content-Type"] = "text/csv; charset=utf-8"
+    resp.headers["Content-Disposition"] = 'attachment; filename="employees_import_template.csv"'
+    return resp
 
 
 @employees_bp.route("/employees/<emp_id>")
