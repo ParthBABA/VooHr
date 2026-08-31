@@ -10,6 +10,112 @@
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/csrf.js"></script>
+<style>
+/* ════════════════════════════════════════════════════════════════════
+   SETTINGS — NEW LAYOUT (Phase 1)
+   A Settings-only rail + one independently-scrollable content pane.
+   Uses ONLY the existing VooHr design tokens (var(--...)); every accent
+   flips automatically with the light/dark theme.
+   ════════════════════════════════════════════════════════════════════ */
+.settings-layout{display:flex;gap:2.5rem;max-width:1180px;margin:0 auto;align-items:flex-start;padding-bottom:5rem;}
+
+/* ── LEFT RAIL (Settings-only sidebar, visually separate from main nav) ── */
+.settings-rail{width:238px;flex-shrink:0;position:sticky;top:5.5rem;align-self:flex-start;}
+.settings-rail-head{font-family:var(--font-rc);font-weight:700;font-size:0.62rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:1.3rem;display:flex;align-items:center;gap:0.6rem;}
+.settings-rail-head svg{width:15px;height:15px;}
+.settings-nav{display:flex;flex-direction:column;gap:0.15rem;}
+.settings-nav-group{font-family:var(--font-rc);font-weight:700;font-size:0.56rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--ivory-faint);margin:1.15rem 0 0.4rem;padding-left:0.75rem;opacity:0.75;}
+.settings-nav-group:first-child{margin-top:0;}
+.settings-nav-item{display:flex;align-items:center;gap:0.7rem;padding:0.5rem 0.75rem;border-radius:8px;color:var(--ivory-dim);font-family:var(--font-lato);font-weight:500;font-size:0.86rem;transition:all 0.18s var(--ease-out);border:1px solid transparent;cursor:pointer;text-decoration:none;}
+.settings-nav-item svg{width:16px;height:16px;flex-shrink:0;opacity:0.85;}
+.settings-nav-item:hover{background:var(--ivory-ghost);color:var(--ivory);}
+.settings-nav-item.active{background:var(--ivory-ghost);color:var(--ivory);border-color:var(--border-lit);font-weight:600;}
+.settings-nav-item.active svg{color:var(--amber);}
+.settings-nav-item .nav-ind{width:3px;height:16px;border-radius:2px;background:transparent;flex-shrink:0;margin-right:auto;}
+.settings-nav-item.active .nav-ind{background:var(--amber);}
+
+/* Per-section accent for the active indicator + icon */
+.settings-nav-item[data-accent="violet"].active .nav-ind,
+.settings-nav-item[data-accent="violet"].active svg{background:var(--violet);color:var(--violet);}
+.settings-nav-item[data-accent="teal"].active .nav-ind,
+.settings-nav-item[data-accent="teal"].active svg{background:var(--teal);color:var(--teal);}
+.settings-nav-item[data-accent="amber"].active .nav-ind,
+.settings-nav-item[data-accent="amber"].active svg{background:var(--amber);color:var(--amber);}
+.settings-nav-item[data-accent="red"].active .nav-ind,
+.settings-nav-item[data-accent="red"].active svg{background:var(--red);color:var(--red);}
+.settings-nav-item[data-accent="pink"].active .nav-ind,
+.settings-nav-item[data-accent="pink"].active svg{background:var(--pink);color:var(--pink);}
+
+/* ── RIGHT CONTENT PANE ── */
+.settings-content{flex:1;min-width:0;max-width:860px;}
+.settings-panel{display:none;animation:stPanelIn 0.35s var(--ease-out) both;}
+.settings-panel.active{display:block;}
+@keyframes stPanelIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* Page-level title + description */
+.st-page{padding-bottom:2.5rem;border-bottom:1px solid var(--border);margin-bottom:2rem;}
+.st-eyebrow{font-family:var(--font-rc);font-weight:700;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--amber);margin-bottom:0.6rem;display:flex;align-items:center;gap:0.6rem;}
+.st-eyebrow svg{width:15px;height:15px;}
+.st-title{font-family:var(--font-d);font-weight:600;font-size:1.55rem;letter-spacing:-0.01em;color:var(--ivory);line-height:1.15;}
+.st-desc{font-family:var(--font-lato);font-size:0.9rem;color:var(--ivory-dim);line-height:1.65;margin-top:0.55rem;max-width:600px;}
+
+/* Section headings + helper text */
+.st-section{margin-bottom:2.2rem;}
+.st-sec-head{display:flex;align-items:baseline;gap:0.75rem;margin-bottom:1.2rem;}
+.st-sec-title{font-family:var(--font-lato);font-weight:700;font-size:0.78rem;letter-spacing:0.04em;text-transform:uppercase;color:var(--ivory);}
+.st-sec-desc{font-family:var(--font-lato);font-size:0.8rem;color:var(--ivory-faint);}
+
+/* Field grid + groups */
+.st-fields{display:grid;grid-template-columns:1fr 1fr;gap:1.35rem 1.5rem;}
+.st-fields .span-2{grid-column:span 2;}
+.st-field{display:flex;flex-direction:column;}
+.st-field label{font-family:var(--font-rc);font-weight:600;font-size:0.66rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--ivory-dim);margin-bottom:0.45rem;}
+.st-field .st-hint{font-family:var(--font-lato);font-size:0.74rem;color:var(--ivory-faint);margin-top:0.4rem;line-height:1.5;}
+
+/* Reuse existing .form-input for inputs; align height */
+.st-field .form-input{height:42px;}
+.st-field input[readonly]{opacity:0.75;}
+
+/* Action footer */
+.st-actions{display:flex;justify-content:flex-end;gap:0.75rem;padding-top:1.4rem;border-top:1px solid var(--border);margin-top:2.2rem;}
+.st-actions .btn-primary{background:var(--amber);border-color:var(--amber);color:var(--void);}
+.st-actions .btn-primary:hover{background:var(--violet);border-color:var(--violet);}
+
+/* Thin nav divider rows */
+.st-note{font-family:var(--font-rc);font-weight:600;font-size:0.7rem;color:var(--ivory-dim);margin-top:0.8rem;}
+
+/* ── Preserved single-employee panels (Security / Sessions / Billing) ── */
+.st-panel-card{background:var(--ink);border:1px solid var(--border);padding:1.5rem;box-shadow:var(--shadow-sm);}
+.st-panel-card + .st-panel-card{margin-top:1rem;}
+.st-card-title{font-family:var(--font-d);font-weight:600;font-size:1.15rem;letter-spacing:normal;text-transform:none;color:var(--ivory);margin-bottom:0.3rem;}
+.st-card-eyebrow{font-family:var(--font-rc);font-weight:600;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--amber);margin-bottom:1.1rem;}
+.st-2col{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+
+/* ── Danger zone (Data & Privacy) preserved styling ── */
+.st-danger{border:1px solid var(--red-glow);background:var(--red-soft);}
+
+/* ── Responsive ── */
+@media(max-width:1000px){
+  .settings-layout{gap:1.6rem;}
+  .settings-rail{width:200px;}
+}
+@media(max-width:860px){
+  .settings-layout{flex-direction:column;gap:0.5rem;}
+  .settings-rail{position:static;width:100%;top:auto;}
+  .settings-rail-head{display:none;}
+  .settings-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:0.4rem;padding-bottom:0.25rem;-webkit-overflow-scrolling:touch;}
+  .settings-nav-group{display:none;}
+  .settings-nav-item{white-space:nowrap;padding:0.5rem 0.85rem;}
+  .settings-nav-item .nav-ind{display:none;}
+}
+@media(max-width:600px){
+  .st-fields{grid-template-columns:1fr;}
+  .st-fields .span-2{grid-column:span 1;}
+  .st-2col{grid-template-columns:1fr;}
+  .st-title{font-size:1.3rem;}
+  .settings-content{max-width:none;}
+}
+</style>
 </head>
 <body style="visibility:hidden">
 <script>
@@ -93,7 +199,7 @@
 </button>
 
 <div class="page-wrapper">
-  <!-- SIDEBAR -->
+  <!-- MAIN VOOhr NAVIGATION (unchanged global sidebar) -->
   <nav class="sidebar icon-only">
     <div class="sidebar-header">
       <div class="sidebar-logo">
@@ -130,7 +236,7 @@
       <div class="top-bar-left">
         <div>
           <div class="page-title">Settings</div>
-          <div class="breadcrumb"><span>Settings</span> / Profile</div>
+          <div class="breadcrumb"><span>Settings</span> / <span id="settingsBreadcrumb">Profile</span></div>
         </div>
       </div>
       <div class="top-bar-right">
@@ -144,250 +250,435 @@
       </div>
     </div>
 
-    <div class="content-area">
-      <div class="settings-grid">
+    <!-- NEW SETTINGS LAYOUT: Settings rail (left) + scrollable content (right) -->
+    <div class="settings-layout">
 
-        <!-- PROFILE -->
-        <div class="card fade-in">
-          <div class="card-header">
-            <div>
-              <div class="eyebrow">Account</div>
-              <h3 class="settings-section-title">Profile</h3>
+      <!-- SETTINGS SIDEBAR -->
+      <aside class="settings-rail">
+        <div class="settings-rail-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          Settings
+        </div>
+
+        <nav class="settings-nav">
+          <div class="settings-nav-group">Account</div>
+          <a href="#profile" class="settings-nav-item active" data-panel="profile" data-accent="violet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Profile <span class="nav-ind"></span>
+          </a>
+          <a href="#organization" class="settings-nav-item" data-panel="organization" data-accent="teal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+            Organization <span class="nav-ind"></span>
+          </a>
+
+          <div class="settings-nav-group">Communication</div>
+          <a href="#notifications" class="settings-nav-item" data-panel="notifications" data-accent="amber">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            Notifications <span class="nav-ind"></span>
+          </a>
+
+          <div class="settings-nav-group">Security</div>
+          <a href="#security" class="settings-nav-item" data-panel="security" data-accent="pink">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            Security <span class="nav-ind"></span>
+          </a>
+          <a href="#sessions" class="settings-nav-item" data-panel="sessions" data-accent="violet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            Sessions <span class="nav-ind"></span>
+          </a>
+          <a href="#activity-log" class="settings-nav-item" data-panel="activity-log" data-accent="teal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Activity Log <span class="nav-ind"></span>
+          </a>
+
+          <div class="settings-nav-group">Billing</div>
+          <a href="#billing" class="settings-nav-item" data-panel="billing" data-accent="amber">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            Plan &amp; Billing <span class="nav-ind"></span>
+          </a>
+
+          <div class="settings-nav-group">Data &amp; Privacy</div>
+          <a href="#data-privacy" class="settings-nav-item" data-panel="data-privacy" data-accent="red">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Data &amp; Privacy <span class="nav-ind"></span>
+          </a>
+        </nav>
+      </aside>
+
+      <!-- SETTINGS CONTENT -->
+      <section class="settings-content">
+
+        <!-- ═══ PROFILE ═══ -->
+        <div class="settings-panel active" data-panel="profile">
+          <div class="st-page">
+            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Account</div>
+            <h2 class="st-title">Profile</h2>
+            <p class="st-desc">Manage your personal information and how you appear across VooHr.</p>
+          </div>
+
+          <div class="st-section" id="profileIdentitySection">
+            <div class="profile-head" style="margin-bottom:1.4rem;">
+              <div class="profile-avatar" id="profileAvatar">U</div>
+              <div>
+                <div class="profile-name" id="profileDisplayName">You</div>
+                <div class="profile-role" id="profileDisplayRole">HR Admin</div>
+              </div>
             </div>
           </div>
 
-          <div class="profile-head">
-            <div class="profile-avatar" id="profileAvatar">U</div>
-            <div>
-              <div class="profile-name" id="profileDisplayName">You</div>
-              <div class="profile-role" id="profileDisplayRole">HR Admin</div>
+          <div class="st-section">
+            <div class="st-sec-head">
+              <span class="st-sec-title">Profile information</span>
+              <span class="st-sec-desc">Basic details about you</span>
+            </div>
+            <div class="st-fields">
+              <div class="st-field">
+                <label for="profileName">Full Name</label>
+                <input type="text" class="form-input" id="profileName" autocomplete="name" placeholder="Your full name">
+                <div class="field-error" id="profileNameError"></div>
+              </div>
+              <div class="st-field">
+                <label for="profileRole">Role</label>
+                <input type="text" class="form-input" id="profileRole" readonly value="HR Admin">
+              </div>
+              <div class="st-field">
+                <label for="profileDesignation">Designation</label>
+                <input type="text" class="form-input" id="profileDesignation" placeholder="e.g. People Ops Lead">
+                <span class="st-hint">Optional. Shown beside your name.</span>
+              </div>
             </div>
           </div>
 
-          <div class="settings-form-grid">
-            <div class="form-group">
-              <label class="form-label" for="profileName">Full Name</label>
-              <input type="text" class="form-input" id="profileName" autocomplete="name" placeholder="Your full name">
-              <div class="field-error" id="profileNameError"></div>
+          <div class="st-section">
+            <div class="st-sec-head">
+              <span class="st-sec-title">Contact information</span>
+              <span class="st-sec-desc">How teammates and the system reach you</span>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="profileEmail">Email</label>
-              <input type="email" class="form-input" id="profileEmail" autocomplete="email" placeholder="you@company.com">
-              <div class="field-error" id="profileEmailError"></div>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="profileRole">Role</label>
-              <input type="text" class="form-input" id="profileRole" readonly value="HR Admin" style="color:var(--ivory-dim);">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="profileDesignation">Designation</label>
-              <input type="text" class="form-input" id="profileDesignation" placeholder="e.g. People Ops Lead">
+            <div class="st-fields">
+              <div class="st-field span-2">
+                <label for="profileEmail">Email</label>
+                <input type="email" class="form-input" id="profileEmail" autocomplete="email" placeholder="you@company.com">
+                <div class="field-error" id="profileEmailError"></div>
+                <span class="st-hint">Your sign-in email. Contact support to change it.</span>
+              </div>
             </div>
           </div>
 
-          <div class="settings-actions">
-            <button class="btn btn-primary btn-sm" id="profileSaveBtn" type="button">Save Changes</button>
+          <div class="st-actions">
+            <button class="btn btn-primary" id="profileSaveBtn" type="button">Save Changes</button>
           </div>
         </div>
 
-        <!-- ORGANIZATION -->
-        <div class="card fade-in">
-          <div class="card-header">
-            <div>
-              <div class="eyebrow">Organization</div>
-              <h3 class="settings-section-title">Company Details</h3>
-            </div>
+        <!-- ═══ ORGANIZATION ═══ -->
+        <div class="settings-panel" data-panel="organization">
+          <div class="st-page">
+            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>Account</div>
+            <h2 class="st-title">Organization</h2>
+            <p class="st-desc">Update your company profile. These details affect your plan and how your team identifies the workspace.</p>
           </div>
 
-          <div class="settings-form-grid">
-            <div class="form-group">
-              <label class="form-label" for="orgName">Organization Name</label>
-              <input type="text" class="form-input" id="orgName" placeholder="Company name">
-              <div class="field-error" id="orgNameError"></div>
+          <div class="st-section">
+            <div class="st-sec-head">
+              <span class="st-sec-title">Organization information</span>
+              <span class="st-sec-desc">Editable only by organization admins</span>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="orgIndustry">Industry</label>
-              <select class="form-input" id="orgIndustry">
-                <option value="">Select industry</option>
-                <option value="Technology">Technology</option>
-                <option value="Finance">Finance</option>
-                <option value="Healthcare">Healthcare</option>
-                <option value="Education">Education</option>
-                <option value="Manufacturing">Manufacturing</option>
-                <option value="Retail">Retail</option>
-                <option value="Real Estate">Real Estate</option>
-                <option value="Media">Media</option>
-                <option value="Legal">Legal</option>
-                <option value="Consulting">Consulting</option>
-                <option value="Other">Other</option>
-              </select>
+            <div class="st-fields">
+              <div class="st-field span-2">
+                <label for="orgName">Organization Name</label>
+                <input type="text" class="form-input" id="orgName" placeholder="Company name">
+                <div class="field-error" id="orgNameError"></div>
+              </div>
+              <div class="st-field">
+                <label for="orgIndustry">Industry</label>
+                <select class="form-input" id="orgIndustry">
+                  <option value="">Select industry</option>
+                  <option value="Technology">Technology</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Healthcare">Healthcare</option>
+                  <option value="Education">Education</option>
+                  <option value="Manufacturing">Manufacturing</option>
+                  <option value="Retail">Retail</option>
+                  <option value="Real Estate">Real Estate</option>
+                  <option value="Media">Media</option>
+                  <option value="Legal">Legal</option>
+                  <option value="Consulting">Consulting</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="st-field">
+                <label for="orgSize">Company Size</label>
+                <select class="form-input" id="orgSize">
+                  <option value="">Select company size</option>
+                  <option value="1-10">1 – 10 employees</option>
+                  <option value="11-50">11 – 50 employees</option>
+                  <option value="51-200">51 – 200 employees</option>
+                  <option value="201-1000">201 – 1,000 employees</option>
+                  <option value="1000+">1,000+ employees</option>
+                </select>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="orgSize">Company Size</label>
-              <select class="form-input" id="orgSize">
-                <option value="">Select company size</option>
-                <option value="1-10">1 – 10 employees</option>
-                <option value="11-50">11 – 50 employees</option>
-                <option value="51-200">51 – 200 employees</option>
-                <option value="201-1000">201 – 1,000 employees</option>
-                <option value="1000+">1,000+ employees</option>
-              </select>
-            </div>
+            <div class="field-error" id="orgAdminNote" style="display:none;margin-top:1rem;">Only org admins can edit these details.</div>
           </div>
 
-          <div class="settings-actions">
-            <button class="btn btn-primary btn-sm" id="orgSaveBtn" type="button">Save Changes</button>
-            <div class="field-error" id="orgAdminNote" style="display:none;">Only org admins can edit these details.</div>
+          <div class="st-actions">
+            <button class="btn btn-primary" id="orgSaveBtn" type="button">Save Changes</button>
           </div>
         </div>
 
-        <!-- NOTIFICATIONS -->
-        <div class="card fade-in">
-          <div class="card-header">
-            <div>
-              <div class="eyebrow">Communication</div>
-              <h3 class="settings-section-title">Notifications</h3>
+        <!-- ═══ NOTIFICATIONS ═══ -->
+        <div class="settings-panel" data-panel="notifications">
+          <div class="st-page">
+            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>Communication</div>
+            <h2 class="st-title">Notifications</h2>
+            <p class="st-desc">Control which VooHr events and updates you receive.</p>
+          </div>
+
+          <div class="st-section">
+            <div class="st-sec-head">
+              <span class="st-sec-title">Email notifications</span>
+              <span class="st-sec-desc">Sent to your account email</span>
+            </div>
+            <div class="notif-prefs">
+              <label class="toggle-row">
+                <span class="toggle-label">
+                  <span class="toggle-title">Email alerts</span>
+                  <span class="toggle-desc">Notify me when an employee is added or updated.</span>
+                </span>
+                <span class="toggle-switch">
+                  <input type="checkbox" id="notifEmail" checked>
+                  <span class="toggle-slider"></span>
+                </span>
+              </label>
             </div>
           </div>
 
-          <div class="notif-prefs">
-            <label class="toggle-row">
-              <span class="toggle-label">
-                <span class="toggle-title">Email alerts</span>
-                <span class="toggle-desc">Notify me when an employee is added or updated.</span>
-              </span>
-              <span class="toggle-switch">
-                <input type="checkbox" id="notifEmail" checked>
-                <span class="toggle-slider"></span>
-              </span>
-            </label>
-            <label class="toggle-row">
-              <span class="toggle-label">
-                <span class="toggle-title">Risk &amp; burnout alerts</span>
-                <span class="toggle-desc">High-risk and wellbeing flags detected by AI.</span>
-              </span>
-              <span class="toggle-switch">
-                <input type="checkbox" id="notifRisk">
-                <span class="toggle-slider"></span>
-              </span>
-            </label>
-            <div id="notifRiskNote" style="display:none;font-family:var(--font-rc);font-size:0.62rem;letter-spacing:0.05em;color:var(--ivory-dim);padding:0.1rem 0 0.6rem;">Only org admins can change this.</div>
-            <label class="toggle-row">
-              <span class="toggle-label">
-                <span class="toggle-title">Weekly digest</span>
-                <span class="toggle-desc">A Monday summary of trends across your team.</span>
-              </span>
-              <span class="toggle-switch">
-                <input type="checkbox" id="notifWeekly" checked>
-                <span class="toggle-slider"></span>
-              </span>
-            </label>
-            <label class="toggle-row">
-              <span class="toggle-label">
-                <span class="toggle-title">Product updates</span>
-                <span class="toggle-desc">New features and improvements to VooVr.</span>
-              </span>
-              <span class="toggle-switch">
-                <input type="checkbox" id="notifProduct">
-                <span class="toggle-slider"></span>
-              </span>
-            </label>
+          <div class="st-section">
+            <div class="st-sec-head">
+              <span class="st-sec-title">HR / employee alerts</span>
+              <span class="st-sec-desc">Managed by your organization admins</span>
+            </div>
+            <div class="notif-prefs">
+              <label class="toggle-row">
+                <span class="toggle-label">
+                  <span class="toggle-title">Risk &amp; burnout alerts</span>
+                  <span class="toggle-desc">High-risk and wellbeing flags detected by AI.</span>
+                </span>
+                <span class="toggle-switch">
+                  <input type="checkbox" id="notifRisk">
+                  <span class="toggle-slider"></span>
+                </span>
+              </label>
+              <div id="notifRiskNote" style="display:none;font-family:var(--font-rc);font-size:0.62rem;letter-spacing:0.05em;color:var(--ivory-dim);padding:0.1rem 0 0.6rem;">Only org admins can change this.</div>
+            </div>
+          </div>
+
+          <div class="st-section">
+            <div class="st-sec-head">
+              <span class="st-sec-title">Product &amp; system updates</span>
+              <span class="st-sec-desc">Occasional news from the VooHr team</span>
+            </div>
+            <div class="notif-prefs">
+              <label class="toggle-row">
+                <span class="toggle-label">
+                  <span class="toggle-title">Weekly digest</span>
+                  <span class="toggle-desc">A Monday summary of trends across your team.</span>
+                </span>
+                <span class="toggle-switch">
+                  <input type="checkbox" id="notifWeekly" checked>
+                  <span class="toggle-slider"></span>
+                </span>
+              </label>
+              <label class="toggle-row">
+                <span class="toggle-label">
+                  <span class="toggle-title">Product updates</span>
+                  <span class="toggle-desc">New features and improvements to VooVr.</span>
+                </span>
+                <span class="toggle-switch">
+                  <input type="checkbox" id="notifProduct">
+                  <span class="toggle-slider"></span>
+                </span>
+              </label>
+            </div>
           </div>
         </div>
 
-        <!-- BILLING -->
-        <div class="card fade-in">
-          <div class="card-header">
-            <div>
-              <div class="eyebrow">Subscription</div>
-              <h3 class="settings-section-title">Billing</h3>
+        <!-- ═══ SECURITY (existing TOTP functionality preserved) ═══ -->
+        <div class="settings-panel" data-panel="security">
+          <div class="st-page">
+            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Security</div>
+            <h2 class="st-title">Security</h2>
+            <p class="st-desc">Protect your account with two-factor authentication.</p>
+          </div>
+
+          <div class="st-panel-card" id="securityCard" style="display:none;">
+            <div class="st-card-eyebrow">Security</div>
+            <h3 class="st-card-title">Two-Factor Authentication</h3>
+            <div class="st-2col" style="margin-top:1.2rem;">
+              <div class="st-field">
+                <label>Status</label>
+                <div id="totpStatusText" style="font-family:var(--font-rc);font-size:0.78rem;color:var(--ivory-dim);padding:.55rem 0;">Loading...</div>
+              </div>
+              <div class="st-field">
+                <label>Recovery codes</label>
+                <div id="backupCodesText" style="font-family:var(--font-rc);font-size:0.78rem;color:var(--ivory-dim);padding:.55rem 0;">Loading...</div>
+              </div>
             </div>
-          </div>
-
-          <div class="plan-summary">
-            <div>
-              <div class="plan-name">Growth Plan</div>
-              <div class="plan-org" id="planOrgName">Your Organization</div>
+            <div class="st-actions" id="securityActions" style="display:none;">
+              <button class="btn btn-sm btn-outline" id="regenerateCodesBtn" type="button">Regenerate codes</button>
             </div>
-            <span class="badge healthy">Active</span>
-          </div>
-
-          <p class="plan-desc">
-            Employee wellness analytics, AI sync rooms, and priority support for growing teams.
-          </p>
-
-          <div class="usage-head">
-            <span class="usage-label">Employee seats</span>
-            <span class="usage-value" id="usageText">&mdash;</span>
-          </div>
-          <div class="index-bar" style="width:100%;height:6px;">
-            <div class="fill high" id="usageFill" style="width:0%;"></div>
-          </div>
-
-          <div class="plan-foot">
-            <span class="plan-foot-note" id="planLimitNote">Loading usage&hellip;</span>
-            <button class="btn btn-sm btn-outline" id="manageBillingBtn" type="button">Manage Billing</button>
           </div>
         </div>
 
-        <!-- SECURITY / 2FA -->
-        <div class="card fade-in" id="securityCard" style="display:none;">
-          <div class="card-header">
-            <div>
-              <div class="eyebrow">Security</div>
-              <h3 class="settings-section-title">Two-Factor Authentication</h3>
-            </div>
+        <!-- ═══ SESSIONS (existing active-sessions functionality preserved) ═══ -->
+        <div class="settings-panel" data-panel="sessions">
+          <div class="st-page">
+            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Security</div>
+            <h2 class="st-title">Sessions</h2>
+            <p class="st-desc">Review and manage the devices currently signed in to your account.</p>
           </div>
 
-          <div class="settings-form-grid">
-            <div class="form-group">
-              <label class="form-label">Status</label>
-              <div id="totpStatusText" style="font-family:var(--font-rc);font-size:0.78rem;color:var(--ivory-dim);padding:.55rem 0;">Loading...</div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Recovery codes</label>
-              <div id="backupCodesText" style="font-family:var(--font-rc);font-size:0.78rem;color:var(--ivory-dim);padding:.55rem 0;">Loading...</div>
-            </div>
-          </div>
-
-          <div class="settings-actions" id="securityActions" style="display:none;">
-            <button class="btn btn-sm btn-outline" id="regenerateCodesBtn" type="button">Regenerate codes</button>
+          <div class="st-panel-card">
+            <div class="st-card-eyebrow">Sessions</div>
+            <h3 class="st-card-title">Active Sessions</h3>
+            <div class="sessions-list" id="sessionsList"></div>
           </div>
         </div>
 
-        <!-- ACTIVE SESSIONS -->
-        <div class="card fade-in">
-          <div class="card-header">
-            <div>
-              <div class="eyebrow">Sessions</div>
-              <h3 class="settings-section-title">Active Sessions</h3>
-            </div>
+        <!-- ═══ ACTIVITY LOG (existing audit-log functionality preserved) ═══ -->
+        <div class="settings-panel" data-panel="activity-log">
+          <div class="st-page">
+            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Security</div>
+            <h2 class="st-title">Activity Log</h2>
+            <p class="st-desc">A record of sensitive actions taken across your organization.</p>
           </div>
 
-          <div class="sessions-list" id="sessionsList"></div>
-        </div>
-
-        <!-- AUDIT LOG (admin only) -->
-        <div class="card fade-in" id="auditLogCard" style="display:none;">
-          <div class="card-header">
-            <div>
-              <div class="eyebrow">Audit</div>
-              <h3 class="settings-section-title">Activity Log</h3>
+          <div class="st-panel-card" id="auditLogCard" style="display:none;">
+            <div class="st-card-eyebrow">Audit</div>
+            <h3 class="st-card-title">Activity Log</h3>
+            <div class="sessions-list" id="auditLogList"></div>
+            <div class="st-actions" id="auditLogMoreWrap" style="display:none;">
+              <button class="btn btn-sm btn-outline" id="auditLogMoreBtn" type="button">Load more</button>
             </div>
-          </div>
-
-          <div class="sessions-list" id="auditLogList"></div>
-          <div class="settings-actions" id="auditLogMoreWrap" style="display:none;">
-            <button class="btn btn-sm btn-outline" id="auditLogMoreBtn" type="button">Load more</button>
           </div>
         </div>
 
-      </div>
+        <!-- ═══ BILLING (existing billing functionality preserved) ═══ -->
+        <div class="settings-panel" data-panel="billing">
+          <div class="st-page">
+            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Billing</div>
+            <h2 class="st-title">Plan &amp; Billing</h2>
+            <p class="st-desc">Your subscription, plan details and employee seat usage.</p>
+          </div>
+
+          <div class="st-panel-card">
+            <div class="plan-summary">
+              <div>
+                <div class="plan-name">Growth Plan</div>
+                <div class="plan-org" id="planOrgName">Your Organization</div>
+              </div>
+              <span class="badge healthy">Active</span>
+            </div>
+
+            <p class="plan-desc">
+              Employee wellness analytics, AI sync rooms, and priority support for growing teams.
+            </p>
+
+            <div class="usage-head">
+              <span class="usage-label">Employee seats</span>
+              <span class="usage-value" id="usageText">&mdash;</span>
+            </div>
+            <div class="index-bar" style="width:100%;height:6px;">
+              <div class="fill high" id="usageFill" style="width:0%;"></div>
+            </div>
+
+            <div class="plan-foot">
+              <span class="plan-foot-note" id="planLimitNote">Loading usage&hellip;</span>
+              <button class="btn btn-sm btn-outline" id="manageBillingBtn" type="button">Manage Billing</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ DATA &amp; PRIVACY (existing danger-zone functionality preserved) ═══ -->
+        <div class="settings-panel" data-panel="data-privacy">
+          <div class="st-page">
+            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Data &amp; Privacy</div>
+            <h2 class="st-title">Data &amp; Privacy</h2>
+            <p class="st-desc">Export or permanently delete your account data.</p>
+          </div>
+
+          <div class="st-danger st-panel-card" id="dangerZoneCard">
+            <div class="st-card-eyebrow" style="color:var(--red);">Danger Zone</div>
+            <h3 class="st-card-title">Data &amp; Account</h3>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.2rem;">
+              <div class="st-field">
+                <label style="color:var(--ivory-faint);">Export my data</label>
+                <p style="font-family:var(--font-rc);font-size:0.72rem;color:var(--ivory-faint);line-height:1.5;margin:.4rem 0 .8rem;">Download your own account profile and your organization&rsquo;s details as a JSON file. This does not include other employees&rsquo; HR data.</p>
+                <button class="btn btn-sm btn-outline" id="exportDataBtn" type="button">Export my data</button>
+              </div>
+              <div class="st-field">
+                <label style="color:var(--red);">Delete my account</label>
+                <p style="font-family:var(--font-rc);font-size:0.72rem;color:var(--ivory-faint);line-height:1.5;margin:.4rem 0 .8rem;">Permanently delete your account and, if you are the only member, your organization and all of its data. This cannot be undone.</p>
+                <button class="btn btn-sm" id="deleteAccountBtn" type="button" style="border:1px solid var(--red-glow);background:var(--red);color:var(--ivory);align-self:flex-start;">Delete my account</button>
+              </div>
+            </div>
+
+            <div id="deleteAccountConfirm" style="display:none;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--red-glow);">
+              <p style="font-family:var(--font-rc);font-size:0.72rem;color:var(--ivory-faint);line-height:1.5;margin-bottom:.8rem;">Re-confirm to continue. Provide your password or a 6-digit authenticator code to verify it&rsquo;s really you.</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div class="st-field" id="deletePasswordWrap">
+                  <label style="color:var(--ivory-faint);">Password</label>
+                  <input type="password" id="deletePassword" class="form-input" placeholder="Current password" autocomplete="current-password">
+                </div>
+                <div class="st-field" id="deleteTotpWrap">
+                  <label style="color:var(--ivory-faint);">Authenticator code</label>
+                  <input type="text" id="deleteTotpCode" class="form-input" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code">
+                </div>
+              </div>
+              <div class="st-actions" style="display:flex;gap:.5rem;">
+                <button class="btn btn-sm" id="confirmDeleteBtn" type="button" style="border:1px solid var(--red-glow);background:var(--red);color:var(--ivory);">Delete account</button>
+                <button class="btn btn-sm btn-outline" id="cancelDeleteBtn" type="button">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
     </div>
   </main>
 </div>
 
 <script>
+/* ── Settings sidebar navigation: switch visible panel ── */
+(function(){
+  var items = document.querySelectorAll('.settings-nav-item');
+  var panels = document.querySelectorAll('.settings-panel');
+  var crumb = document.getElementById('settingsBreadcrumb');
+
+  function activate(panelId){
+    var nav = document.querySelector('.settings-nav-item[data-panel="' + panelId + '"]');
+    items.forEach(function(x){ x.classList.toggle('active', x === nav); });
+    panels.forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-panel') === panelId); });
+    if (crumb && nav) crumb.textContent = nav.textContent.replace(/\s/,' ').trim().split('\u00a0')[0];
+    var content = document.querySelector('.settings-content');
+    if (content) content.scrollTop = 0;
+  }
+
+  items.forEach(function(item){
+    item.addEventListener('click', function(e){
+      e.preventDefault();
+      activate(item.getAttribute('data-panel'));
+    });
+  });
+
+  // Support ?panel=... deep link (e.g. ?panel=organization).
+  var params = new URLSearchParams(window.location.search);
+  var requested = params.get('panel');
+  if (requested && document.querySelector('.settings-nav-item[data-panel="' + requested + '"]')) {
+    activate(requested);
+  }
+})();
+
 function showToast(msg) {
   var t = document.createElement('div');
   t.className = 'toast-notification';
@@ -784,7 +1075,7 @@ function clearFieldError(input){
 })();
 
 /* ── AUDIT LOG: admin-only activity feed (uses the session-row classes so it
-      stays visually identical to the Active Sessions card above) ── */
+      stays visually identical to the Active Sessions panel above) ── */
 (function(){
   var card = document.getElementById('auditLogCard');
   var listEl = document.getElementById('auditLogList');
@@ -797,11 +1088,15 @@ function clearFieldError(input){
     'employee.update': 'Employee updated',
     'employee.delete': 'Employee deleted',
     'employee.export': 'Employee exported',
+    'employee.bulk_import': 'Employees imported',
+    'employee.bulk_export': 'Employee CSV exported',
     'organization.update': 'Organization updated',
     'totp.enable': 'Two-factor authentication enabled',
     'totp.disable': 'Two-factor authentication disabled',
     'totp.backup_codes_regenerate': 'Recovery codes regenerated',
-    'session.revoke': 'Session revoked'
+    'session.revoke': 'Session revoked',
+    'account.export': 'Account data exported',
+    'account.delete': 'Account deleted'
   };
 
   // Positive/enabled actions tint teal; destructive/delete actions tint red.
@@ -809,8 +1104,11 @@ function clearFieldError(input){
   var ACTION_TINT = {
     'totp.enable': 'var(--teal)',
     'totp.backup_codes_regenerate': 'var(--teal)',
+    'employee.bulk_import': 'var(--teal)',
+    'employee.bulk_export': 'var(--teal)',
     'employee.delete': 'var(--red)',
-    'session.revoke': 'var(--red)'
+    'session.revoke': 'var(--red)',
+    'account.delete': 'var(--red)'
   };
 
   var page = 1;
@@ -1169,10 +1467,6 @@ window.addEventListener('load', function() {
   var pageTitle = document.querySelector('.page-title');
   gsap.set(pageTitle, { opacity: 0, y: 16 });
   tl.to(pageTitle, { opacity: 1, y: 0, duration: 0.5 }, '-=0.35');
-
-  var cards = document.querySelectorAll('.card');
-  gsap.set(cards, { opacity: 0, y: 30 });
-  tl.to(cards, { opacity: 1, y: 0, duration: 0.5, stagger: 0.1 }, '-=0.2');
 
   var params = new URLSearchParams(window.location.search);
   if (params.get('focus') === 'name') {
