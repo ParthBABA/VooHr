@@ -904,6 +904,101 @@ function clearFieldError(input){
   loadPage();
 })();
 
+/* ── DANGER ZONE: self-service data export + account deletion ──
+      Uses only existing theme tokens (--red / --red-glow / --red-soft /
+      --ivory-faint) — no literal colors. */
+(function(){
+  var card = document.getElementById('dangerZoneCard');
+  var exportBtn = document.getElementById('exportDataBtn');
+  var deleteBtn = document.getElementById('deleteAccountBtn');
+  var confirmWrap = document.getElementById('deleteAccountConfirm');
+  var confirmBtn = document.getElementById('confirmDeleteBtn');
+  var cancelBtn = document.getElementById('cancelDeleteBtn');
+  var pwWrap = document.getElementById('deletePasswordWrap');
+  var totpWrap = document.getElementById('deleteTotpWrap');
+  var pwInp = document.getElementById('deletePassword');
+  var totpInp = document.getElementById('deleteTotpCode');
+  if (!card || !exportBtn || !deleteBtn) return;
+
+  // The server re-verifies whichever configured factor applies. Show the
+  // field(s) most likely needed: TOTP when it is enabled (the common admin
+  // case), otherwise password. A Google-OAuth-only account has neither, in
+  // which case the active session is the confirmation.
+  fetch('/auth/totp/status').then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+    var hasTotp = !!(d && d.totp_enabled);
+    if (hasTotp) { pwWrap.style.display = 'none'; }
+    else { pwWrap.style.display = ''; }
+    totpWrap.style.display = hasTotp ? '' : 'none';
+    if (pwInp) pwInp.placeholder = hasTotp ? 'Current password (optional)' : 'Current password';
+    if (totpInp) totpInp.placeholder = '6-digit code';
+  }).catch(function(){}).finally(function(){
+    card.style.display = '';
+  });
+
+  // "Export my data" -> trigger the same-origin GET attachment download.
+  if (exportBtn) {
+    exportBtn.addEventListener('click', function(){
+      exportBtn.disabled = true;
+      exportBtn.textContent = 'Preparing\u2026';
+      var a = document.createElement('a');
+      a.href = '/api/me/export';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){
+        exportBtn.textContent = 'Export my data';
+        exportBtn.disabled = false;
+      }, 900);
+    });
+  }
+
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', function(){
+      confirmWrap.style.display = '';
+      deleteBtn.disabled = true;
+      deleteBtn.style.opacity = '0.5';
+    });
+  }
+
+  function closeConfirm(){
+    confirmWrap.style.display = 'none';
+    if (pwInp) pwInp.value = '';
+    if (totpInp) totpInp.value = '';
+    if (deleteBtn) { deleteBtn.disabled = false; deleteBtn.style.opacity = ''; }
+  }
+
+  if (cancelBtn) cancelBtn.addEventListener('click', closeConfirm);
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', function(){
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Deleting\u2026';
+      fetch('/api/me', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password: pwInp ? pwInp.value : '',
+          totpCode: totpInp ? totpInp.value : ''
+        })
+      }).then(function(res){
+        if (res.ok) { window.location.href = '/signin'; return; }
+        return res.json().then(function(body){
+          var err = new Error(body.error || 'reconfirmation_required');
+          err.code = body.error;
+          throw err;
+        });
+      }).catch(function(err){
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Delete account';
+        if (err && err.code === 'not_authenticated') { window.location.href = '/signin'; return; }
+        showToast(err && err.code === 'reconfirmation_required'
+          ? 'Couldn\u2019t verify your identity. Check your password or authenticator code and try again.'
+          : 'Couldn\u2019t delete your account. Please try again.');
+      });
+    });
+  }
+})();
+
 /* ── SECURITY: backup codes status + regenerate ── */
 (function(){
   var card=document.getElementById('securityCard');

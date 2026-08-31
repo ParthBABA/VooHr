@@ -32,6 +32,8 @@ ACTION_TOTP_ENABLE = "totp.enable"
 ACTION_TOTP_DISABLE = "totp.disable"
 ACTION_TOTP_BACKUP_CODES_REGENERATE = "totp.backup_codes_regenerate"
 ACTION_SESSION_REVOKE = "session.revoke"
+ACTION_ACCOUNT_EXPORT = "account.export"
+ACTION_ACCOUNT_DELETE = "account.delete"
 
 # Pagination for the audit-log endpoint.
 DEFAULT_PAGE_LIMIT = 50

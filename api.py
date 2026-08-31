@@ -1,12 +1,19 @@
 from bson import ObjectId
 from bson.errors import InvalidId
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, make_response, request, session
 
 import re
 import threading
+from datetime import datetime, timezone
 
-from audit_log import ACTION_ORG_UPDATE, ACTION_SESSION_REVOKE, log_audit_event
-from extensions import get_db
+from audit_log import (
+    ACTION_ACCOUNT_DELETE,
+    ACTION_ACCOUNT_EXPORT,
+    ACTION_ORG_UPDATE,
+    ACTION_SESSION_REVOKE,
+    log_audit_event,
+)
+from extensions import check_rate_limit, get_db, record_rate_limit_event
 from employees import _session_is_active, TOTPRequired
 from field_encryption import decrypt_fields, encrypt_fields
 from login_flow import (
@@ -16,8 +23,16 @@ from login_flow import (
     _is_private_ip,
     _lookup_location,
 )
+from password_utils import verify_password
+from totp_utils import verify_backup_code, verify_code
 
 api_bp = Blueprint("api", __name__)
+
+# Rate-limit constants for self-service account data export (mirrors the
+# per-email / per-IP pattern used for OTP sends in auth_email.py).
+_ACCOUNT_EXPORT_MAX_PER_USER = 5     # max exports per user per window
+_ACCOUNT_EXPORT_MAX_PER_IP = 20      # max exports per IP per window
+_ACCOUNT_EXPORT_RATE_WINDOW = 900    # 15-minute sliding window in seconds
 
 
 def _check_auth():
@@ -149,6 +164,171 @@ def update_me():
     session["user_name"] = name
 
     return jsonify({"ok": True, "name": name})
+
+
+@api_bp.route("/me/export")
+def export_my_data():
+    """Self-service data portability: download the *logged-in user's own*
+    decrypted profile plus their organization's details as a JSON attachment.
+
+    This is deliberately distinct from /api/employees/<id>/export (which
+    downloads a single *employee's* HR record on behalf of the org).  Here we
+    export only the account holder's own data — no other employees' data — and
+    we rate-limit it like other sensitive routes.
+    """
+    user_id = _check_auth()
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        user = db.users.find_one({"_id": ObjectId(user_id)})
+    except InvalidId:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not user:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    ip = _client_ip()
+    user_key = f"account_export_user:{user_id}"
+    ip_key = f"account_export_ip:{ip}"
+    for key, max_events in (
+        (user_key, _ACCOUNT_EXPORT_MAX_PER_USER),
+        (ip_key, _ACCOUNT_EXPORT_MAX_PER_IP),
+    ):
+        allowed, retry_after = check_rate_limit(db, key, max_events, _ACCOUNT_EXPORT_RATE_WINDOW)
+        if not allowed:
+            return jsonify({"error": "rate_limited", "retry_after": retry_after}), 429
+    # Record the allowed event so the limits count toward future requests.
+    record_rate_limit_event(db, user_key, ttl_seconds=_ACCOUNT_EXPORT_RATE_WINDOW)
+    record_rate_limit_event(db, ip_key, ttl_seconds=_ACCOUNT_EXPORT_RATE_WINDOW)
+
+    org = db.organizations.find_one({"_id": user["org_id"]})
+    pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
+
+    export_data = {
+        "account": {
+            "id": str(user["_id"]),
+            "name": pii.get("name", ""),
+            "email": pii.get("email", ""),
+            "role": user.get("role", ""),
+            "picture": user.get("picture"),
+            "created_at": user.get("created_at").isoformat() if user.get("created_at") else None,
+            "last_login": user.get("last_login").isoformat() if user.get("last_login") else None,
+            "totp_enabled": user.get("totp_enabled") is True,
+        },
+        "organization": (
+            {
+                "id": str(org["_id"]),
+                "name": org.get("name"),
+                "industry": org.get("industry"),
+                "company_size": org.get("company_size"),
+                "created_at": org.get("created_at").isoformat() if org.get("created_at") else None,
+            }
+            if org
+            else None
+        ),
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    log_audit_event(
+        db, user.get("org_id"), user_id, session.get("user_name") or "",
+        ACTION_ACCOUNT_EXPORT,
+        target_type="account", target_id=user_id,
+        target_label="My account data export",
+    )
+
+    resp = make_response(jsonify(export_data))
+    resp.headers["Content-Disposition"] = 'attachment; filename="voovr_account_export.json"'
+    return resp
+
+
+@api_bp.route("/me", methods=["DELETE"])
+def delete_me():
+    """Self-service account deletion — destructive and irreversible.
+
+    Re-confirms identity by requiring the user's current password (if they
+    have one) OR a valid TOTP / recovery code (if TOTP is enabled).  A `role`
+    is always "admin" in this data model, so if this user is the *only* member
+    of their org, deleting the account would orphan the organization and all
+    of its tenant data (employees/sessions/notifications).  We choose to
+    CASCADE-DELETE that org + its data so no PII is left behind pointing at a
+    dead account.  (Blocking instead would trap the sole user with no one to
+    transfer to, since no non-admin role is wired up yet.)
+    """
+    user_id = _check_auth()
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        user = db.users.find_one({"_id": ObjectId(user_id)})
+    except InvalidId:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not user:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    data = request.get_json(silent=True) or {}
+    password = data.get("password") or ""
+    totp_code = data.get("totpCode") or ""
+
+    has_password = bool(user.get("password_hash"))
+    totp_enabled = user.get("totp_enabled") is True
+
+    # Re-confirmation is required only if the account has a configurable
+    # factor (password and/or TOTP).  A Google-OAuth-only account has no
+    # password_hash and no TOTP, so there is nothing further to verify —
+    # the already-validated session is the confirmation.
+    needs_confirmation = has_password or totp_enabled
+    method = None
+    if needs_confirmation:
+        if has_password and password:
+            if verify_password(password, user["password_hash"]):
+                method = "password"
+        if totp_enabled and totp_code and method is None:
+            if verify_code(user["totp_secret"], totp_code, valid_window=2):
+                method = "totp"
+            elif verify_backup_code(totp_code, user.get("totp_backup_codes") or []) is not None:
+                method = "backup"
+        if method is None:
+            return jsonify({"error": "reconfirmation_required"}), 400
+
+    org_id = user.get("org_id")
+
+    # Decide whether this account is the last member of its organization.
+    is_last_user = db.users.count_documents({"org_id": org_id}) <= 1
+    delete_org = is_last_user
+
+    # Log BEFORE deleting anything.  If the org is also deleted, this entry
+    # goes with it — that's expected and records the account removal.
+    log_audit_event(
+        db, org_id, user_id, session.get("user_name") or "",
+        ACTION_ACCOUNT_DELETE,
+        target_type="account", target_id=user_id,
+        meta={"method": method, "deleted_organization": delete_org},
+    )
+
+    # Revoke every auth session for this user, then delete the user doc.
+    db.active_sessions.delete_many({"user_id": user["_id"]})
+    db.users.delete_one({"_id": user["_id"]})
+
+    # If this was the only user in the org, cascade-delete the orphaned
+    # organization and its tenant data so nothing points at a dead account.
+    if delete_org and org_id:
+        db.employees.delete_many({"org_id": org_id})
+        db.sessions.delete_many({"org_id": org_id})
+        db.notifications.delete_many({"org_id": org_id})
+        db.audit_log.delete_many({"org_id": org_id})
+        db.organizations.delete_one({"_id": org_id})
+
+    session.clear()
+
+    return jsonify({"ok": True})
 
 
 VALID_ORG_INDUSTRIES = {
