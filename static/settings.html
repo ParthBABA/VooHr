@@ -94,6 +94,70 @@
 /* ── Danger zone (Data & Privacy) preserved styling ── */
 .st-danger{border:1px solid var(--red-glow);background:var(--red-soft);}
 
+/* ════ PHASE 2: Security / Sessions / Plan & Billing ════
+   Settings-row pattern: heading + description on the left, action on
+   the right, separated by subtle top dividers. Neutral surfaces; color
+   is used only for status indicators, badges and contextual actions. */
+.st-sec-head .st-sec-desc{flex:1;}
+
+/* A single settings row (one feature block inside a section). */
+.st-row{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;padding:1.15rem 0;}
+.st-row + .st-row{border-top:1px solid var(--border);}
+.st-row-main{min-width:0;}
+.st-row-title{font-family:var(--font-lato);font-weight:700;font-size:0.86rem;color:var(--ivory);display:flex;align-items:center;gap:0.55rem;}
+.st-row-desc{font-family:var(--font-lato);font-size:0.78rem;color:var(--ivory-dim);line-height:1.55;margin-top:0.25rem;max-width:520px;}
+.st-row-actions{flex-shrink:0;display:flex;align-items:center;gap:0.7rem;}
+
+/* Contextual status indicator: a small icon + tinted label. Color never
+   carries meaning alone — glyph and label text are always present. */
+.st-status{display:inline-flex;align-items:center;gap:0.55rem;font-family:var(--font-lato);font-size:0.78rem;font-weight:600;color:var(--ivory-dim);}
+.st-status .st-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--ivory-faint);}
+.st-status.ok{color:var(--teal);}
+.st-status.ok .st-dot{background:var(--teal);box-shadow:0 0 0 3px var(--teal-soft);}
+.st-status.warn{color:var(--amber);}
+.st-status.warn .st-dot{background:var(--amber);box-shadow:0 0 0 3px var(--amber-soft);}
+.st-status.crit{color:var(--red);}
+.st-status.crit .st-dot{background:var(--red);box-shadow:0 0 0 3px var(--red-soft);}
+.st-status.neutral .st-dot{background:var(--ivory-faint);}
+.st-status strong{font-weight:700;color:var(--ivory);}
+.st-status .st-status-sub{font-weight:500;color:var(--ivory-faint);}
+
+/* Subtle mono detail line for things like recovery-code counts. */
+.st-monoline{font-family:var(--font-rc);font-size:0.72rem;color:var(--ivory-dim);}
+
+/* Plan header — prominent but restrained; accent reserved for badge + bars. */
+.st-plan-head{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;}
+.st-plan-name{font-family:var(--font-d);font-weight:600;font-size:1.3rem;color:var(--ivory);letter-spacing:-0.01em;}
+.st-plan-org{font-family:var(--font-rc);font-weight:600;font-size:0.66rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);margin-top:0.35rem;}
+.st-plan-badge{font-family:var(--font-rc);font-weight:700;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--violet);border:1px solid var(--violet-glow);background:var(--violet-soft);padding:0.4rem 0.85rem;border-radius:100px;}
+.st-plan-desc{font-family:var(--font-lato);font-size:0.82rem;color:var(--ivory-dim);line-height:1.6;margin-top:0.8rem;max-width:560px;}
+
+/* Usage (employee seats) with a subtle violet-tinted progress. */
+.st-usage-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:0.7rem;}
+.st-usage-label{font-family:var(--font-lato);font-weight:700;font-size:0.66rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ivory-dim);}
+.st-usage-nums{font-family:var(--font-rc);font-weight:700;font-size:0.82rem;color:var(--ivory);}
+.st-usage-nums span{color:var(--ivory-faint);font-weight:500;}
+.st-usage-bar{width:100%;height:7px;border-radius:100px;background:var(--surface);border:1px solid var(--border);overflow:hidden;}
+.st-usage-bar .st-usage-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--violet),var(--violet));transition:width 0.6s var(--ease-out);}
+.st-usage-bar .st-usage-fill.warn{background:linear-gradient(90deg,var(--amber),var(--amber));}
+.st-usage-bar .st-usage-fill.crit{background:linear-gradient(90deg,var(--red),var(--red));}
+.st-usage-foot{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:0.7rem;}
+.st-usage-note{font-family:var(--font-m);font-size:0.7rem;color:var(--ivory-faint);}
+
+/* "Current session" summary card — subtler than a full form card. */
+.st-current{display:flex;align-items:center;gap:1.1rem;background:var(--ink);border:1px solid var(--border);padding:1.15rem 1.4rem;box-shadow:var(--shadow-sm);}
+.st-current .session-icon{color:var(--violet);}
+.st-current-row-main{min-width:0;}
+.st-current-device{font-family:var(--font-lato);font-weight:700;font-size:0.9rem;color:var(--ivory);display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;}
+.st-current-meta{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-dim);margin-top:0.3rem;}
+
+@media(max-width:600px){
+  .st-row{flex-direction:column;align-items:flex-start;gap:0.8rem;}
+  .st-row-actions{width:100%;}
+  .st-row-actions .btn{flex:1;}
+  .st-plan-head{flex-direction:column;align-items:flex-start;gap:0.8rem;}
+}
+
 /* ── Responsive ── */
 @media(max-width:1000px){
   .settings-layout{gap:1.6rem;}
@@ -278,7 +342,7 @@
           </a>
 
           <div class="settings-nav-group">Security</div>
-          <a href="#security" class="settings-nav-item" data-panel="security" data-accent="pink">
+          <a href="#security" class="settings-nav-item" data-panel="security" data-accent="teal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
             Security <span class="nav-ind"></span>
           </a>
@@ -292,7 +356,7 @@
           </a>
 
           <div class="settings-nav-group">Billing</div>
-          <a href="#billing" class="settings-nav-item" data-panel="billing" data-accent="amber">
+          <a href="#billing" class="settings-nav-item" data-panel="billing" data-accent="violet">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
             Plan &amp; Billing <span class="nav-ind"></span>
           </a>
@@ -502,29 +566,53 @@
           </div>
         </div>
 
-        <!-- ═══ SECURITY (existing TOTP functionality preserved) ═══ -->
+        <!-- ═══ SECURITY (existing TOTP + recovery functionality preserved) ═══ -->
         <div class="settings-panel" data-panel="security">
           <div class="st-page">
             <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Security</div>
             <h2 class="st-title">Security</h2>
-            <p class="st-desc">Protect your account with two-factor authentication.</p>
+            <p class="st-desc">Protect your VooHr account and manage authentication methods.</p>
           </div>
 
-          <div class="st-panel-card" id="securityCard" style="display:none;">
-            <div class="st-card-eyebrow">Security</div>
-            <h3 class="st-card-title">Two-Factor Authentication</h3>
-            <div class="st-2col" style="margin-top:1.2rem;">
-              <div class="st-field">
-                <label>Status</label>
-                <div id="totpStatusText" style="font-family:var(--font-rc);font-size:0.78rem;color:var(--ivory-dim);padding:.55rem 0;">Loading...</div>
+          <!-- TWO-FACTOR AUTHENTICATION -->
+          <div class="st-section" style="margin-bottom:1.2rem;">
+            <div class="st-sec-head">
+              <h3 class="st-sec-title">Two-Factor Authentication</h3>
+              <span class="st-sec-desc">Add an additional layer of protection to your account.</span>
+            </div>
+
+            <div class="st-row">
+              <div class="st-row-main">
+                <div class="st-row-title">Two-Factor Authentication</div>
+                <div class="st-row-desc">
+                  Requires a 6-digit code from your authenticator app whenever you sign in to a new device.
+                </div>
               </div>
-              <div class="st-field">
-                <label>Recovery codes</label>
-                <div id="backupCodesText" style="font-family:var(--font-rc);font-size:0.78rem;color:var(--ivory-dim);padding:.55rem 0;">Loading...</div>
+              <div class="st-row-actions">
+                <span class="st-status" id="totpStatusText"><span class="st-dot"></span>Loading&hellip;</span>
+                <a class="btn btn-sm btn-outline" id="enable2faBtn" href="/settings/security/setup-totp" style="display:none;">Enable 2FA</a>
               </div>
             </div>
-            <div class="st-actions" id="securityActions" style="display:none;">
-              <button class="btn btn-sm btn-outline" id="regenerateCodesBtn" type="button">Regenerate codes</button>
+          </div>
+
+          <!-- RECOVERY -->
+          <div class="st-section">
+            <div class="st-sec-head">
+              <h3 class="st-sec-title">Recovery</h3>
+              <span class="st-sec-desc">Backup codes let you regain access if you lose your authenticator device.</span>
+            </div>
+
+            <div class="st-row">
+              <div class="st-row-main">
+                <div class="st-row-title">Recovery codes</div>
+                <div class="st-row-desc">
+                  Each code is single-use. Store them somewhere safe — they are only shown when generated.
+                </div>
+              </div>
+              <div class="st-row-actions">
+                <span class="st-monoline" id="backupCodesText">Loading&hellip;</span>
+                <button class="btn btn-sm btn-outline" id="regenerateCodesBtn" type="button" style="display:none;">Regenerate codes</button>
+              </div>
             </div>
           </div>
         </div>
@@ -532,14 +620,34 @@
         <!-- ═══ SESSIONS (existing active-sessions functionality preserved) ═══ -->
         <div class="settings-panel" data-panel="sessions">
           <div class="st-page">
-            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Security</div>
+            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Sessions</div>
             <h2 class="st-title">Sessions</h2>
-            <p class="st-desc">Review and manage the devices currently signed in to your account.</p>
+            <p class="st-desc">Manage devices and active sessions connected to your VooHr account.</p>
           </div>
 
-          <div class="st-panel-card">
-            <div class="st-card-eyebrow">Sessions</div>
-            <h3 class="st-card-title">Active Sessions</h3>
+          <!-- CURRENT SESSION -->
+          <div class="st-section" style="margin-bottom:2.2rem;">
+            <div class="st-sec-head">
+              <h3 class="st-sec-title">Current Session</h3>
+              <span class="st-sec-desc">This is the device you are using right now.</span>
+            </div>
+
+            <div class="st-current" id="currentSessionCard" style="display:none;">
+              <span class="session-icon" id="currentSessionIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+              <div class="st-current-row-main">
+                <div class="st-current-device" id="currentSessionDevice">&mdash;</div>
+                <div class="st-current-meta" id="currentSessionMeta">&mdash;</div>
+              </div>
+              <span class="st-status ok" style="flex-shrink:0;"><span class="st-dot"></span><strong>Current session</strong></span>
+            </div>
+          </div>
+
+          <!-- ACTIVE SESSIONS -->
+          <div class="st-section">
+            <div class="st-sec-head">
+              <h3 class="st-sec-title">Active Sessions</h3>
+              <span class="st-sec-desc">Other devices signed in to your account.</span>
+            </div>
             <div class="sessions-list" id="sessionsList"></div>
           </div>
         </div>
@@ -570,30 +678,52 @@
             <p class="st-desc">Your subscription, plan details and employee seat usage.</p>
           </div>
 
-          <div class="st-panel-card">
-            <div class="plan-summary">
-              <div>
-                <div class="plan-name">Growth Plan</div>
-                <div class="plan-org" id="planOrgName">Your Organization</div>
-              </div>
-              <span class="badge healthy">Active</span>
+          <!-- CURRENT PLAN -->
+          <div class="st-section" style="margin-bottom:2.2rem;">
+            <div class="st-sec-head">
+              <h3 class="st-sec-title">Current Plan</h3>
+              <span class="st-sec-desc">Your subscription and organization information.</span>
             </div>
 
-            <p class="plan-desc">
+            <div class="st-plan-head">
+              <div>
+                <div class="st-plan-name">Growth Plan</div>
+                <div class="st-plan-org" id="planOrgName">Your Organization</div>
+              </div>
+              <span class="st-plan-badge">Active</span>
+            </div>
+
+            <p class="st-plan-desc">
               Employee wellness analytics, AI sync rooms, and priority support for growing teams.
             </p>
 
-            <div class="usage-head">
-              <span class="usage-label">Employee seats</span>
-              <span class="usage-value" id="usageText">&mdash;</span>
+            <div class="st-row" style="border-top:1px solid var(--border);margin-top:1.1rem;padding-bottom:0;">
+              <div class="st-row-main">
+                <div class="st-row-title">Manage your subscription</div>
+                <div class="st-row-desc">Update billing details, add seats or change your plan through the billing portal.</div>
+              </div>
+              <div class="st-row-actions">
+                <button class="btn btn-sm btn-outline" id="manageBillingBtn" type="button">Manage Billing</button>
+              </div>
             </div>
-            <div class="index-bar" style="width:100%;height:6px;">
-              <div class="fill high" id="usageFill" style="width:0%;"></div>
+          </div>
+
+          <!-- USAGE -->
+          <div class="st-section">
+            <div class="st-sec-head">
+              <h3 class="st-sec-title">Usage</h3>
+              <span class="st-sec-desc">Employee seats used across your organization this cycle.</span>
             </div>
 
-            <div class="plan-foot">
-              <span class="plan-foot-note" id="planLimitNote">Loading usage&hellip;</span>
-              <button class="btn btn-sm btn-outline" id="manageBillingBtn" type="button">Manage Billing</button>
+            <div class="st-usage-head">
+              <span class="st-usage-label">Employee seats</span>
+              <span class="st-usage-nums" id="usageText">&mdash; <span>seats used</span></span>
+            </div>
+            <div class="st-usage-bar">
+              <div class="st-usage-fill" id="usageFill" style="width:0%;"></div>
+            </div>
+            <div class="st-usage-foot">
+              <span class="st-usage-note" id="planLimitNote">Loading usage&hellip;</span>
             </div>
           </div>
         </div>
@@ -986,12 +1116,37 @@ function clearFieldError(input){
     return parts.length ? parts.join(', ') : 'Local network';
   }
 
+  function renderCurrentSession(s){
+    var card = document.getElementById('currentSessionCard');
+    if (!card) return;
+    if (!s) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    var icon = document.getElementById('currentSessionIcon');
+    if (icon) icon.innerHTML = deviceIconSvg(s.device ? s.device.device_type : '');
+    var dev = document.getElementById('currentSessionDevice');
+    if (dev) dev.textContent = deviceLabel(s.device);
+    var meta = document.getElementById('currentSessionMeta');
+    if (meta) {
+      var parts = [];
+      var loc = locationLabel(s.location, s.ip_private);
+      if (loc && loc !== 'Local network') parts.push(loc);
+      if (s.last_seen) parts.push('Active ' + formatLastSeen(s.last_seen));
+      meta.textContent = parts.join(' \u00b7 ') || 'Active session';
+    }
+  }
+
   function renderSessions(sessions){
     listEl.innerHTML = '';
     if (!sessions || !sessions.length) {
       listEl.innerHTML = '<div style="font-family:var(--font-rc);font-size:0.7rem;letter-spacing:0.06em;color:var(--ivory-faint);">No active sessions found.</div>';
+      renderCurrentSession(null);
       return;
     }
+    var current = null;
+    sessions.forEach(function(s){
+      if (s.is_current) current = s;
+    });
+    renderCurrentSession(current);
     sessions.forEach(function(s){
       var row = document.createElement('div');
       row.className = 'session-row';
@@ -1297,43 +1452,50 @@ function clearFieldError(input){
   }
 })();
 
-/* ── SECURITY: backup codes status + regenerate ── */
+/* ── SECURITY: 2FA status + backup-code status + regenerate ── */
 (function(){
-  var card=document.getElementById('securityCard');
   var statusText=document.getElementById('totpStatusText');
   var codesText=document.getElementById('backupCodesText');
-  var actions=document.getElementById('securityActions');
   var regenBtn=document.getElementById('regenerateCodesBtn');
-  if(!card) return;
+  var enableBtn=document.getElementById('enable2faBtn');
+  var dot=statusText?statusText.querySelector('.st-dot'):null;
+  if(!statusText) return;
+
+  function setStatus(state, label){
+    statusText.innerHTML='<span class="st-dot"></span>'+(label||'');
+    dot=statusText.querySelector('.st-dot');
+    statusText.className='st-status'+(state?' '+state:'');
+  }
 
   function loadStatus(){
     fetch('/auth/totp/status').then(function(r){return r.ok?r.json():null;}).then(function(d){
       if(!d||!d.totp_enabled){
-        statusText.textContent='Not enabled';
-        statusText.style.color='var(--ivory-faint)';
-        actions.style.display='none';
-        card.style.display='';
+        setStatus('warn','<span>2FA is <strong>off</strong></span>');
+        if (enableBtn) enableBtn.style.display='';
+        if (regenBtn) regenBtn.style.display='none';
+        if (codesText) codesText.textContent='Unavailable until 2FA is enabled';
         return;
       }
-      statusText.textContent='Enabled';
-      statusText.style.color='var(--teal)';
+      setStatus('ok','<span>2FA is <strong>on</strong></span>');
+      if (enableBtn) enableBtn.style.display='none';
+      if (regenBtn) regenBtn.style.display='';
       // Load backup codes count.
       fetch('/auth/totp/backup-codes-status').then(function(r){return r.ok?r.json():null;}).then(function(b){
         if(!b||!b.has_backup_codes){
-          codesText.textContent='No backup codes';
-          codesText.style.color='var(--ivory-faint)';
+          if(codesText){ codesText.textContent='No backup codes'; codesText.style.color='var(--amber)'; }
+          if(regenBtn) regenBtn.style.display='';
         } else {
-          codesText.textContent=b.codes_remaining+' unused codes remaining';
-          codesText.style.color=b.codes_remaining<=2?'var(--amber)':'var(--ivory-dim)';
+          if(codesText){
+            codesText.textContent=b.codes_remaining+' unused codes remaining';
+            codesText.style.color=b.codes_remaining<=2?'var(--amber)':'var(--ivory-dim)';
+          }
+          if(regenBtn) regenBtn.style.display='';
         }
-        actions.style.display='';
       }).catch(function(){
-        codesText.textContent='Could not load';
+        if(codesText){ codesText.textContent='Could not load'; codesText.style.color='var(--ivory-dim)'; }
       });
     }).catch(function(){
-      statusText.textContent='Could not load';
-    }).finally(function(){
-      card.style.display='';
+      setStatus('neutral','<span>Could not load</span>');
     });
   }
 
@@ -1428,12 +1590,12 @@ function loadBillingUsage(){
 
     var fill = document.getElementById('usageFill');
     if (fill) {
-      fill.className = 'fill ' + (pct >= 90 ? 'low' : (pct >= 60 ? 'medium' : 'high'));
+      fill.className = 'st-usage-fill ' + (pct >= 90 ? 'crit' : (pct >= 60 ? 'warn' : ''));
       fill.style.width = Math.min(pct, 100) + '%';
     }
 
     var usedEl = document.getElementById('usageText');
-    if (usedEl) usedEl.textContent = used + ' of ' + limit + ' employees';
+    if (usedEl) usedEl.innerHTML = used + ' <span>of ' + limit + ' seats used</span>';
 
     var note = document.getElementById('planLimitNote');
     if (note) {
