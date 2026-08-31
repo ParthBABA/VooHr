@@ -84,15 +84,42 @@
 /* Thin nav divider rows */
 .st-note{font-family:var(--font-rc);font-weight:600;font-size:0.7rem;color:var(--ivory-dim);margin-top:0.8rem;}
 
-/* ── Preserved single-employee panels (Security / Sessions / Billing) ── */
-.st-panel-card{background:var(--ink);border:1px solid var(--border);padding:1.5rem;box-shadow:var(--shadow-sm);}
-.st-panel-card + .st-panel-card{margin-top:1rem;}
-.st-card-title{font-family:var(--font-d);font-weight:600;font-size:1.15rem;letter-spacing:normal;text-transform:none;color:var(--ivory);margin-bottom:0.3rem;}
-.st-card-eyebrow{font-family:var(--font-rc);font-weight:600;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--amber);margin-bottom:1.1rem;}
-.st-2col{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+/* ════ PHASE 3: Activity Log + Data & Privacy ════
+   Activity rows — compact contextual rows with a small tinted icon.
+   Neutral surface; color only on the icon, never the whole row. */
+.activity-row{display:flex;align-items:flex-start;gap:0.9rem;padding:0.95rem 0;border-bottom:1px solid var(--border);}
+.activity-row:last-child{border-bottom:none;}
+.activity-icon{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--ivory-dim);}
+.activity-icon svg{width:16px;height:16px;}
+.activity-icon.blue{color:var(--violet);background:var(--violet-soft);border-color:var(--violet-glow);}
+.activity-icon.teal{color:var(--teal);background:var(--teal-soft);border-color:var(--teal-glow);}
+.activity-icon.amber{color:var(--amber);background:var(--amber-soft);border-color:var(--amber-glow);}
+.activity-icon.red{color:var(--red);background:var(--red-soft);border-color:var(--red-glow);}
+.activity-main{flex:1;min-width:0;padding-top:0.1rem;}
+.activity-title{font-family:var(--font-lato);font-weight:700;font-size:0.85rem;color:var(--ivory);}
+.activity-title .act-tint{font-weight:700;}
+.activity-detail{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-dim);margin-top:0.2rem;line-height:1.5;overflow-wrap:break-word;}
+.activity-time{font-family:var(--font-m);font-size:0.68rem;color:var(--ivory-faint);white-space:nowrap;margin-left:1rem;padding-top:0.25rem;}
 
-/* ── Danger zone (Data & Privacy) preserved styling ── */
-.st-danger{border:1px solid var(--red-glow);background:var(--red-soft);}
+/* Compact empty state (Activity Log / lists). */
+.activity-empty{display:flex;align-items:flex-start;gap:0.85rem;padding:1.2rem 0;}
+.st-empty-icon{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--ivory-faint);}
+.st-empty-icon svg{width:16px;height:16px;}
+.st-empty-title{font-family:var(--font-lato);font-weight:700;font-size:0.85rem;color:var(--ivory);}
+.st-empty-desc{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-faint);margin-top:0.2rem;line-height:1.5;}
+
+/* Admin-only restricted note (Activity Log). */
+.st-restricted{display:flex;align-items:flex-start;gap:0.85rem;padding:1.1rem 0;color:var(--ivory-dim);}
+.st-restricted-icon{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--amber-soft);border:1px solid var(--amber-glow);color:var(--amber);}
+.st-restricted-icon svg{width:16px;height:16px;}
+.st-restricted-title{font-family:var(--font-lato);font-weight:700;font-size:0.85rem;color:var(--ivory);}
+.st-restricted-desc{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-dim);margin-top:0.2rem;}
+
+/* Delete Account — restrained destructive treatment. Neutral surface with a
+   single subtle red accent line + red heading. No red background wash. */
+.st-delete-zone{border-top:1px solid var(--border);padding-top:0.2rem;}
+.st-delete-zone .st-row-desc,.st-confirm-note{color:var(--ivory-dim);}
+.st-confirm-note{font-family:var(--font-lato);font-size:0.78rem;line-height:1.55;background:var(--red-soft);border:1px solid var(--red-glow);color:var(--ivory-dim);padding:0.7rem 0.9rem;border-radius:8px;}
 
 /* ════ PHASE 2: Security / Sessions / Plan & Billing ════
    Settings-row pattern: heading + description on the left, action on
@@ -175,9 +202,12 @@
 @media(max-width:600px){
   .st-fields{grid-template-columns:1fr;}
   .st-fields .span-2{grid-column:span 1;}
-  .st-2col{grid-template-columns:1fr;}
   .st-title{font-size:1.3rem;}
   .settings-content{max-width:none;}
+  #deleteAccountConfirm > div[style]{grid-template-columns:1fr !important;}
+  .activity-time{display:none;}
+  .activity-row{flex-wrap:wrap;}
+  .activity-main{min-width:70%;}
 }
 </style>
 </head>
@@ -652,20 +682,32 @@
           </div>
         </div>
 
-        <!-- ═══ ACTIVITY LOG (existing audit-log functionality preserved) ═══ -->
+        <!-- ═══ ACTIVITY LOG (existing admin-only audit-log functionality preserved) ═══ -->
         <div class="settings-panel" data-panel="activity-log">
           <div class="st-page">
-            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Security</div>
+            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Activity Log</div>
             <h2 class="st-title">Activity Log</h2>
-            <p class="st-desc">A record of sensitive actions taken across your organization.</p>
+            <p class="st-desc">Review important activity and administrative changes across your VooHr organization.</p>
           </div>
 
-          <div class="st-panel-card" id="auditLogCard" style="display:none;">
-            <div class="st-card-eyebrow">Audit</div>
-            <h3 class="st-card-title">Activity Log</h3>
-            <div class="sessions-list" id="auditLogList"></div>
-            <div class="st-actions" id="auditLogMoreWrap" style="display:none;">
-              <button class="btn btn-sm btn-outline" id="auditLogMoreBtn" type="button">Load more</button>
+          <div class="st-section">
+            <div class="st-sec-head">
+              <h3 class="st-sec-title">Activity</h3>
+              <span class="st-sec-desc">Sensitive and administrative actions, newest first.</span>
+            </div>
+
+            <div id="auditLogCard" style="display:none;">
+              <div id="auditLogList" class="activity-list"></div>
+              <div id="auditLogRestricted" class="st-restricted" style="display:none;">
+                <span class="st-restricted-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
+                <div>
+                  <div class="st-restricted-title">Activity Log is admin-only</div>
+                  <div class="st-restricted-desc">Only organization admins can view the audit log.</div>
+                </div>
+              </div>
+              <div class="st-actions" id="auditLogMoreWrap" style="display:none;">
+                <button class="btn btn-sm btn-outline" id="auditLogMoreBtn" type="button">Load more</button>
+              </div>
             </div>
           </div>
         </div>
@@ -728,46 +770,72 @@
           </div>
         </div>
 
-        <!-- ═══ DATA &amp; PRIVACY (existing danger-zone functionality preserved) ═══ -->
+        <!-- ═══ DATA &amp; PRIVACY (existing export + account-deletion functionality preserved) ═══ -->
         <div class="settings-panel" data-panel="data-privacy">
           <div class="st-page">
             <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Data &amp; Privacy</div>
             <h2 class="st-title">Data &amp; Privacy</h2>
-            <p class="st-desc">Export or permanently delete your account data.</p>
+            <p class="st-desc">Export a copy of your data or permanently delete your account.</p>
           </div>
 
-          <div class="st-danger st-panel-card" id="dangerZoneCard">
-            <div class="st-card-eyebrow" style="color:var(--red);">Danger Zone</div>
-            <h3 class="st-card-title">Data &amp; Account</h3>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.2rem;">
-              <div class="st-field">
-                <label style="color:var(--ivory-faint);">Export my data</label>
-                <p style="font-family:var(--font-rc);font-size:0.72rem;color:var(--ivory-faint);line-height:1.5;margin:.4rem 0 .8rem;">Download your own account profile and your organization&rsquo;s details as a JSON file. This does not include other employees&rsquo; HR data.</p>
-                <button class="btn btn-sm btn-outline" id="exportDataBtn" type="button">Export my data</button>
+          <div id="dangerZoneCard" style="display:none;">
+            <!-- EXPORT YOUR DATA -->
+            <div class="st-section" style="margin-bottom:2.2rem;">
+              <div class="st-sec-head">
+                <h3 class="st-sec-title">Export Your Data</h3>
+                <span class="st-sec-desc">Download a copy of the data associated with your account.</span>
               </div>
-              <div class="st-field">
-                <label style="color:var(--red);">Delete my account</label>
-                <p style="font-family:var(--font-rc);font-size:0.72rem;color:var(--ivory-faint);line-height:1.5;margin:.4rem 0 .8rem;">Permanently delete your account and, if you are the only member, your organization and all of its data. This cannot be undone.</p>
-                <button class="btn btn-sm" id="deleteAccountBtn" type="button" style="border:1px solid var(--red-glow);background:var(--red);color:var(--ivory);align-self:flex-start;">Delete my account</button>
+
+              <div class="st-row">
+                <div class="st-row-main">
+                  <div class="st-row-title">Download a copy of your data</div>
+                  <div class="st-row-desc">
+                    Includes your account profile and your organization&rsquo;s details as a JSON file. This does not include other employees&rsquo; HR data.
+                  </div>
+                </div>
+                <div class="st-row-actions">
+                  <button class="btn btn-sm btn-outline" id="exportDataBtn" type="button">Export Data</button>
+                </div>
               </div>
             </div>
 
-            <div id="deleteAccountConfirm" style="display:none;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--red-glow);">
-              <p style="font-family:var(--font-rc);font-size:0.72rem;color:var(--ivory-faint);line-height:1.5;margin-bottom:.8rem;">Re-confirm to continue. Provide your password or a 6-digit authenticator code to verify it&rsquo;s really you.</p>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-                <div class="st-field" id="deletePasswordWrap">
-                  <label style="color:var(--ivory-faint);">Password</label>
-                  <input type="password" id="deletePassword" class="form-input" placeholder="Current password" autocomplete="current-password">
+            <!-- DELETE ACCOUNT (destructive — restrained, placed last) -->
+            <div class="st-section st-delete-zone">
+              <div class="st-sec-head">
+                <h3 class="st-sec-title" style="color:var(--red);">Delete Account</h3>
+                <span class="st-sec-desc">This action is permanent and cannot be undone.</span>
+              </div>
+
+              <div class="st-row">
+                <div class="st-row-main">
+                  <div class="st-row-title">Permanently delete your VooHr account</div>
+                  <div class="st-row-desc">
+                    Deletes your account and, if you are the only member, your organization and all of its data.
+                  </div>
                 </div>
-                <div class="st-field" id="deleteTotpWrap">
-                  <label style="color:var(--ivory-faint);">Authenticator code</label>
-                  <input type="text" id="deleteTotpCode" class="form-input" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code">
+                <div class="st-row-actions">
+                  <button class="btn btn-sm" id="deleteAccountBtn" type="button" style="border:1px solid var(--red-glow);background:var(--red);color:var(--ivory);">Delete Account</button>
                 </div>
               </div>
-              <div class="st-actions" style="display:flex;gap:.5rem;">
-                <button class="btn btn-sm" id="confirmDeleteBtn" type="button" style="border:1px solid var(--red-glow);background:var(--red);color:var(--ivory);">Delete account</button>
-                <button class="btn btn-sm btn-outline" id="cancelDeleteBtn" type="button">Cancel</button>
+
+              <div id="deleteAccountConfirm" style="display:none;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--red-glow);">
+                <div class="st-confirm-note">
+                  Re-confirm to continue. This cannot be undone. Provide your password or a 6-digit authenticator code to verify it&rsquo;s really you.
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem;">
+                  <div class="st-field" id="deletePasswordWrap">
+                    <label>Password</label>
+                    <input type="password" id="deletePassword" class="form-input" placeholder="Current password" autocomplete="current-password">
+                  </div>
+                  <div class="st-field" id="deleteTotpWrap">
+                    <label>Authenticator code</label>
+                    <input type="text" id="deleteTotpCode" class="form-input" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code">
+                  </div>
+                </div>
+                <div class="st-actions" style="display:flex;gap:.5rem;">
+                  <button class="btn btn-sm" id="confirmDeleteBtn" type="button" style="border:1px solid var(--red-glow);background:var(--red);color:var(--ivory);">Delete account</button>
+                  <button class="btn btn-sm btn-outline" id="cancelDeleteBtn" type="button">Cancel</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1229,13 +1297,17 @@ function clearFieldError(input){
   }).catch(function(){});
 })();
 
-/* ── AUDIT LOG: admin-only activity feed (uses the session-row classes so it
-      stays visually identical to the Active Sessions panel above) ── */
+/* ── AUDIT LOG: admin-only activity feed with contextual icons. Categories:
+       employee → blue/violet · security → teal · admin → violet
+       destructive → red · warning → amber. Color is never the only cue —
+       icon + label + text always present. Permissions handled server-side;
+       non-admins simply see the restricted note (no data is rendered). ── */
 (function(){
   var card = document.getElementById('auditLogCard');
   var listEl = document.getElementById('auditLogList');
   var moreWrap = document.getElementById('auditLogMoreWrap');
   var moreBtn = document.getElementById('auditLogMoreBtn');
+  var restricted = document.getElementById('auditLogRestricted');
   if (!card || !listEl) return;
 
   var ACTION_LABELS = {
@@ -1254,26 +1326,43 @@ function clearFieldError(input){
     'account.delete': 'Account deleted'
   };
 
-  // Positive/enabled actions tint teal; destructive/delete actions tint red.
-  // Everything references existing theme tokens — no literal colors.
-  var ACTION_TINT = {
-    'totp.enable': 'var(--teal)',
-    'totp.backup_codes_regenerate': 'var(--teal)',
-    'employee.bulk_import': 'var(--teal)',
-    'employee.bulk_export': 'var(--teal)',
-    'employee.delete': 'var(--red)',
-    'session.revoke': 'var(--red)',
-    'account.delete': 'var(--red)'
+  // Category → tint class for the icon chip. Surfaces stay neutral.
+  var ACTION_CATEGORY = {
+    'employee.create': 'blue',
+    'employee.update': 'blue',
+    'employee.delete': 'red',
+    'employee.export': 'blue',
+    'employee.bulk_import': 'blue',
+    'employee.bulk_export': 'blue',
+    'organization.update': 'blue',
+    'totp.enable': 'teal',
+    'totp.disable': 'teal',
+    'totp.backup_codes_regenerate': 'teal',
+    'session.revoke': 'red',
+    'account.export': 'blue',
+    'account.delete': 'red'
   };
 
-  var page = 1;
+  var _ICONS = {
+    person: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>',
+    activity: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>'
+  };
+
+  function categoryOf(action){
+    return ACTION_CATEGORY[action] || 'blue';
+  }
+
+  function iconOf(action){
+    var a = action || '';
+    if (a.indexOf('delete') !== -1 || a === 'session.revoke') return _ICONS.trash;
+    if (a.indexOf('totp') !== -1) return _ICONS.shield;
+    return _ICONS.person;
+  }
 
   function actionLabel(action){
     return ACTION_LABELS[action] || (action || 'Action performed');
-  }
-
-  function actionTint(action){
-    return ACTION_TINT[action] || null;
   }
 
   function timeAgo(iso){
@@ -1290,35 +1379,45 @@ function clearFieldError(input){
   function renderEvents(events){
     events.forEach(function(ev){
       var row = document.createElement('div');
-      row.className = 'session-row';
+      row.className = 'activity-row';
 
-      var meta = document.createElement('div');
-      meta.className = 'session-meta';
+      var icon = document.createElement('div');
+      icon.className = 'activity-icon ' + categoryOf(ev.action);
+      icon.innerHTML = iconOf(ev.action);
 
-      var action = document.createElement('div');
-      action.className = 'session-device';
-      action.textContent = actionLabel(ev.action);
-      var tint = actionTint(ev.action);
-      if (tint) action.style.color = tint;
+      var main = document.createElement('div');
+      main.className = 'activity-main';
+
+      var title = document.createElement('div');
+      title.className = 'activity-title';
+      title.textContent = actionLabel(ev.action);
 
       var detail = document.createElement('div');
-      detail.className = 'session-loc';
+      detail.className = 'activity-detail';
       var parts = [];
       if (ev.target_label) parts.push(ev.target_label);
       if (ev.actor_name) parts.push('by ' + ev.actor_name);
-      detail.textContent = parts.join(' · ');
+      detail.textContent = parts.join(' \u00b7 ');
 
-      meta.appendChild(action);
-      meta.appendChild(detail);
+      main.appendChild(title);
+      main.appendChild(detail);
 
       var time = document.createElement('div');
-      time.className = 'session-time';
+      time.className = 'activity-time';
       time.textContent = timeAgo(ev.created_at);
 
-      row.appendChild(meta);
+      row.appendChild(icon);
+      row.appendChild(main);
       row.appendChild(time);
       listEl.appendChild(row);
     });
+  }
+
+  function setEmpty(){
+    var s = document.createElement('div');
+    s.className = 'activity-empty';
+    s.innerHTML = '<span class="st-empty-icon">' + _ICONS.activity + '</span><div><div class="st-empty-title">No activity yet</div><div class="st-empty-desc">Administrative activity across your organization will appear here.</div></div>';
+    listEl.appendChild(s);
   }
 
   function loadPage(){
@@ -1329,19 +1428,26 @@ function clearFieldError(input){
       return res.json();
     }).then(function(body){
       if (!body) {
-        // Not an admin, or forbidden — keep the card hidden.
-        card.style.display = 'none';
+        // Not an admin, or forbidden. Permission is enforced server-side; we
+        // only ever show the informational note, never audit data.
+        listEl.style.display = 'none';
+        moreWrap.style.display = 'none';
+        if (restricted) restricted.style.display = '';
+        card.style.display = '';
         return;
       }
+      if (restricted) restricted.style.display = 'none';
+      listEl.style.display = '';
       if (!listEl.children.length) card.style.display = '';
       if (listEl.innerHTML === '' && (!body.events || !body.events.length)) {
-        listEl.innerHTML = '<div style="font-family:var(--font-rc);font-size:0.7rem;letter-spacing:0.06em;color:var(--ivory-faint);">No activity recorded yet.</div>';
+        setEmpty();
       }
       if (body.events && body.events.length) renderEvents(body.events);
       moreWrap.style.display = body.has_more ? '' : 'none';
       moreBtn.textContent = 'Load more';
       moreBtn.disabled = false;
     }).catch(function(){
+      moreWrap.style.display = '';
       moreBtn.textContent = 'Load more';
       moreBtn.disabled = false;
     });
