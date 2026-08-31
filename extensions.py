@@ -237,11 +237,66 @@ def record_rate_limit_event(db, key, ttl_seconds=3600):
     })
 
 
+def _is_private_ip(ip) -> bool:
+    """True for addresses that are never globally routable and therefore can
+    only be a proxy/edge hop rather than a direct client: loopback, RFC1918
+    private ranges, RFC6598 CGNAT, IPv6 and link-local."""
+    if not ip:
+        return True
+    if ip == "::1" or ":" in ip:
+        return True
+    try:
+        parts = [int(p) for p in ip.split(".")]
+    except ValueError:
+        return True
+    if len(parts) != 4:
+        return True
+    a, b, _c, _d = parts
+    if a == 10 or a == 127:
+        return True
+    if a == 172 and 16 <= b <= 31:
+        return True
+    if a == 192 and b == 168:
+        return True
+    # RFC6598 shared address space (CGNAT / Tailscale) — not routable.
+    if a == 100 and 64 <= b <= 127:
+        return True
+    # Link-local (APIPA) — never routable.
+    if a == 169 and b == 254:
+        return True
+    return False
+
+
 def client_ip():
-    """Return the real client IP, respecting X-Forwarded-For from a trusted
-    reverse proxy.  Returns the leftmost (original) client IP.
+    """Return the real client IP for rate-limiting / CSRF/IP-keying.
+
+    Trust boundary (do not regress): X-Forwarded-For is ONLY trusted when the
+    request actually arrived through our known reverse proxy (Render/Railway
+    terminate TLS and forward to us, so remote_addr is a private hop there).
+    A proxy APPENDS the client IP to the XFF chain, while any client can plant
+    arbitrary values at the FRONT of the header — so blindly trusting the
+    leftmost entry lets an attacker rotate fake IPs to bypass rate limits on
+    login, OTP, CSRF token generation, etc.  We therefore:
+      1. If the direct peer (remote_addr) is a PUBLIC address, the TCP
+         connection itself identifies the client — trust remote_addr only.
+      2. Otherwise the peer is a trusted proxy — walk the XFF chain RIGHT to
+         LEFT, skipping private/proxy hops, and return the first public
+         address the proxy appended.  Leftmost (client-planted) entries are
+         ignored.
+      3. If no trusted-proxy signal yields an IP, fall back to remote_addr.
     """
-    return request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
+    peer = request.remote_addr or ""
+    if peer and not _is_private_ip(peer):
+        # Direct, publicly-reachable client — no proxy involved. Trust the
+        # TCP peer only; never read XFF from an arbitrary caller.
+        return peer
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        for candidate in reversed([c.strip() for c in forwarded.split(",")]):
+            if candidate and not _is_private_ip(candidate):
+                return candidate
+    # No trusted-proxy signal → use the direct peer.
+    return peer or "unknown"
 
 
 def get_db():

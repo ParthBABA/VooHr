@@ -258,6 +258,14 @@ def create_employee():
     return jsonify(_employee_to_json(emp_doc)), 201
 
 
+# ── Employee list pagination ───────────────────────────────────────────
+# Prevents the list-employees endpoint from returning the entire org's
+# employee roster (and running decryption + scoring over every row) in one
+# response, which grows unbounded as the org scales.
+DEFAULT_PAGE_LIMIT = 50    # employees per page
+MAX_PAGE_LIMIT = 200       # hard upper bound, clamps any larger request
+
+
 @employees_bp.route("/employees")
 def list_employees():
     org_id = _require_auth()
@@ -271,16 +279,34 @@ def list_employees():
     dept = (request.args.get("department") or "").strip()
     emp_status = (request.args.get("status") or "").strip()
 
+    # Pagination params: page (1-based) and limit.  limit is clamped to
+    # [1, MAX_PAGE_LIMIT]; page is >= 1.
+    try:
+        page = max(1, int(request.args.get("page", 1) or 1))
+    except ValueError:
+        page = 1
+    try:
+        limit = int(request.args.get("limit", DEFAULT_PAGE_LIMIT) or DEFAULT_PAGE_LIMIT)
+    except ValueError:
+        limit = DEFAULT_PAGE_LIMIT
+    limit = min(max(1, limit), MAX_PAGE_LIMIT)
+
     if dept:
         query["department"] = dept
     if emp_status:
         query["status"] = emp_status
 
-    cursor = db.employees.find(query).sort("created_at", -1)
+    # Base total across the (pre-search) filters, for pagination metadata.
+    base_total = db.employees.count_documents(query)
+
+    cursor = db.employees.find(query).sort("created_at", -1).skip((page - 1) * limit).limit(limit)
     employees = list(cursor)
 
-    # Client-side name/email search (fields are encrypted, can't query directly)
+    # Client-side name/email search (fields are encrypted, can't query
+    # directly).
     result = []
+    # When a name/email search is supplied we cannot paginate inside MongoDB
+    # (the fields are encrypted), so we over-fetch one page and filter.
     for emp in employees:
         item = _employee_to_json(emp)
         if search:
@@ -288,9 +314,17 @@ def list_employees():
                 continue
         result.append(item)
 
+    # For pagination metadata we reflect the effective (filtered) page size.
+    page_size = len(result)
+    offset = (page - 1) * limit
+    has_more = base_total > (offset + page_size)
+
     return jsonify({
         "employees": result,
-        "total": len(result),
+        "total": base_total,
+        "page": page,
+        "limit": limit,
+        "has_more": has_more,
     })
 
 

@@ -588,7 +588,11 @@ function animateStat(el, target, suffix) {
 // Wire the four stat cards to real API data (no fabricated numbers).
 function loadDashboardStats() {
   Promise.all([
-    fetch('/api/employees').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+    // TODO(pagination): stats need the full org roster; with the new
+    // /api/employees pagination (max 200) a very large org (>200 employees)
+    // would undercount here. Fetching all pages / a dedicated count
+    // endpoint is out of scope for now.
+    fetch('/api/employees?limit=200').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
     fetch('/api/sessions').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
   ]).then(function(res) {
     var employees = (res[0] && res[0].employees) || [];
@@ -699,7 +703,13 @@ function updateWellnessHeart(score) {
 // Load employees from API and render table
 function loadEmployees(opts) {
   opts = opts || {};
-  fetch('/api/employees')
+  // TODO(pagination): the backend now paginates /api/employees with
+  // page/limit (default 50, max 200) and returns {total, page, has_more}.
+  // Full client-side pager controls (page buttons, has_more-driven "next")
+  // are out of scope here — for now fetch the largest allowed page so the
+  // table matches the previous all-rows behaviour. Wire up page/limit +
+  // the pagination bar (id="dashEmpFooter") whenever the directory grows.
+  fetch('/api/employees?limit=200')
     .then(function(r) {
       if (!r.ok) throw new Error('Failed to load');
       return r.json();

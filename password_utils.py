@@ -37,9 +37,22 @@ def verify_password(raw: str, stored_hash: str) -> bool:
         return False
 
 
+# Upper bound on password length before it is argon2-hashed.  Argon2 is
+# intentionally CPU/memory-expensive, so an unbounded length is a CPU
+# exhaustion / DoS vector via very large inputs.  MUST be enforced here
+# (before hash_password) as well as in the callers (auth_email signup/signin).
+MAX_PASSWORD_LENGTH = 128   # characters — far above any real password
+
+
 def password_strength_ok(raw: str) -> bool:
-    """True if the password is at least 8 chars and mixes letters & digits."""
+    """True if the password is 8..MAX_PASSWORD_LENGTH chars and mixes
+    letters & digits.  Overlong passwords are rejected (return False) so no
+    call site ever feeds an oversized input to argon2 hash_password()."""
+    if not isinstance(raw, str):
+        return False
     if len(raw) < 8:
+        return False
+    if len(raw) > MAX_PASSWORD_LENGTH:
         return False
     has_letter = any(c.isalpha() for c in raw)
     has_digit = any(c.isdigit() for c in raw)
