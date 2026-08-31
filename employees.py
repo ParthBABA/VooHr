@@ -5,6 +5,13 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from flask import Blueprint, jsonify, request, session, make_response
 
+from audit_log import (
+    ACTION_EMPLOYEE_CREATE,
+    ACTION_EMPLOYEE_DELETE,
+    ACTION_EMPLOYEE_EXPORT,
+    ACTION_EMPLOYEE_UPDATE,
+    log_audit_event,
+)
 from blind_index import blind_index
 from employee_scoring import score_employee
 from extensions import get_db, next_employee_id
@@ -255,6 +262,14 @@ def create_employee():
     result = db.employees.insert_one(emp_doc)
     emp_doc["_id"] = result.inserted_id
 
+    log_audit_event(
+        db, org_id, session.get("user_id"), session.get("user_name") or "",
+        ACTION_EMPLOYEE_CREATE,
+        target_type="employee", target_id=str(emp_doc["_id"]),
+        target_label=employee_id or name,
+        meta={"employee_id": employee_id, "department": department},
+    )
+
     return jsonify(_employee_to_json(emp_doc)), 201
 
 
@@ -453,6 +468,14 @@ def update_employee(emp_id: str):
     db.employees.update_one({"_id": ObjectId(emp_id)}, update)
     emp = db.employees.find_one({"_id": ObjectId(emp_id)})
 
+    log_audit_event(
+        db, org_id, session.get("user_id"), session.get("user_name") or "",
+        ACTION_EMPLOYEE_UPDATE,
+        target_type="employee", target_id=emp_id,
+        target_label=emp.get("employee_id") or emp_id,
+        meta={"employee_id": emp.get("employee_id")},
+    )
+
     return jsonify(_employee_to_json(emp))
 
 
@@ -479,6 +502,14 @@ def delete_employee(emp_id: str):
     except Exception:
         logger.exception("Employee deletion failed (employee=%s)", emp_id)
         return jsonify({"error": "deletion_failed"}), 500
+
+    log_audit_event(
+        db, org_id, session.get("user_id"), session.get("user_name") or "",
+        ACTION_EMPLOYEE_DELETE,
+        target_type="employee", target_id=emp_id,
+        target_label=emp.get("employee_id") or emp_id,
+        meta={"employee_id": emp.get("employee_id"), "delete_related": True},
+    )
 
     return jsonify({"ok": True})
 
@@ -532,4 +563,13 @@ def export_employee(emp_id: str):
     resp = make_response(jsonify(export_data))
     safe_name = (emp.get("employee_id") or "employee").replace(" ", "_")
     resp.headers["Content-Disposition"] = f'attachment; filename="{safe_name}_export.json"'
+
+    log_audit_event(
+        db, org_id, session.get("user_id"), session.get("user_name") or "",
+        ACTION_EMPLOYEE_EXPORT,
+        target_type="employee", target_id=emp_id,
+        target_label=emp.get("employee_id") or emp_id,
+        meta={"employee_id": emp.get("employee_id")},
+    )
+
     return resp

@@ -367,6 +367,21 @@
           <div class="sessions-list" id="sessionsList"></div>
         </div>
 
+        <!-- AUDIT LOG (admin only) -->
+        <div class="card fade-in" id="auditLogCard" style="display:none;">
+          <div class="card-header">
+            <div>
+              <div class="eyebrow">Audit</div>
+              <h3 class="settings-section-title">Activity Log</h3>
+            </div>
+          </div>
+
+          <div class="sessions-list" id="auditLogList"></div>
+          <div class="settings-actions" id="auditLogMoreWrap" style="display:none;">
+            <button class="btn btn-sm btn-outline" id="auditLogMoreBtn" type="button">Load more</button>
+          </div>
+        </div>
+
       </div>
     </div>
   </main>
@@ -766,6 +781,127 @@ function clearFieldError(input){
   }).then(function(body){
     if (body && body.sessions) renderSessions(body.sessions);
   }).catch(function(){});
+})();
+
+/* ── AUDIT LOG: admin-only activity feed (uses the session-row classes so it
+      stays visually identical to the Active Sessions card above) ── */
+(function(){
+  var card = document.getElementById('auditLogCard');
+  var listEl = document.getElementById('auditLogList');
+  var moreWrap = document.getElementById('auditLogMoreWrap');
+  var moreBtn = document.getElementById('auditLogMoreBtn');
+  if (!card || !listEl) return;
+
+  var ACTION_LABELS = {
+    'employee.create': 'Employee created',
+    'employee.update': 'Employee updated',
+    'employee.delete': 'Employee deleted',
+    'employee.export': 'Employee exported',
+    'organization.update': 'Organization updated',
+    'totp.enable': 'Two-factor authentication enabled',
+    'totp.disable': 'Two-factor authentication disabled',
+    'totp.backup_codes_regenerate': 'Recovery codes regenerated',
+    'session.revoke': 'Session revoked'
+  };
+
+  // Positive/enabled actions tint teal; destructive/delete actions tint red.
+  // Everything references existing theme tokens — no literal colors.
+  var ACTION_TINT = {
+    'totp.enable': 'var(--teal)',
+    'totp.backup_codes_regenerate': 'var(--teal)',
+    'employee.delete': 'var(--red)',
+    'session.revoke': 'var(--red)'
+  };
+
+  var page = 1;
+
+  function actionLabel(action){
+    return ACTION_LABELS[action] || (action || 'Action performed');
+  }
+
+  function actionTint(action){
+    return ACTION_TINT[action] || null;
+  }
+
+  function timeAgo(iso){
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    var diff = Math.round((Date.now() - d.getTime()) / 60000);
+    if (diff < 1) return 'just now';
+    if (diff < 60) return diff + 'm ago';
+    if (diff < 1440) return Math.round(diff / 60) + 'h ago';
+    return Math.round(diff / 1440) + 'd ago';
+  }
+
+  function renderEvents(events){
+    events.forEach(function(ev){
+      var row = document.createElement('div');
+      row.className = 'session-row';
+
+      var meta = document.createElement('div');
+      meta.className = 'session-meta';
+
+      var action = document.createElement('div');
+      action.className = 'session-device';
+      action.textContent = actionLabel(ev.action);
+      var tint = actionTint(ev.action);
+      if (tint) action.style.color = tint;
+
+      var detail = document.createElement('div');
+      detail.className = 'session-loc';
+      var parts = [];
+      if (ev.target_label) parts.push(ev.target_label);
+      if (ev.actor_name) parts.push('by ' + ev.actor_name);
+      detail.textContent = parts.join(' · ');
+
+      meta.appendChild(action);
+      meta.appendChild(detail);
+
+      var time = document.createElement('div');
+      time.className = 'session-time';
+      time.textContent = timeAgo(ev.created_at);
+
+      row.appendChild(meta);
+      row.appendChild(time);
+      listEl.appendChild(row);
+    });
+  }
+
+  function loadPage(){
+    moreBtn.disabled = true;
+    moreBtn.textContent = 'Loading\u2026';
+    fetch('/api/audit-log?page=' + page + '&limit=50').then(function(res){
+      if (!res.ok) return null;
+      return res.json();
+    }).then(function(body){
+      if (!body) {
+        // Not an admin, or forbidden — keep the card hidden.
+        card.style.display = 'none';
+        return;
+      }
+      if (!listEl.children.length) card.style.display = '';
+      if (listEl.innerHTML === '' && (!body.events || !body.events.length)) {
+        listEl.innerHTML = '<div style="font-family:var(--font-rc);font-size:0.7rem;letter-spacing:0.06em;color:var(--ivory-faint);">No activity recorded yet.</div>';
+      }
+      if (body.events && body.events.length) renderEvents(body.events);
+      moreWrap.style.display = body.has_more ? '' : 'none';
+      moreBtn.textContent = 'Load more';
+      moreBtn.disabled = false;
+    }).catch(function(){
+      moreBtn.textContent = 'Load more';
+      moreBtn.disabled = false;
+    });
+  }
+
+  if (moreBtn) {
+    moreBtn.addEventListener('click', function(){
+      page += 1;
+      loadPage();
+    });
+  }
+
+  loadPage();
 })();
 
 /* ── SECURITY: backup codes status + regenerate ── */

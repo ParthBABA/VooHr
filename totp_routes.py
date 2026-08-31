@@ -26,6 +26,11 @@ from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from flask import Blueprint, jsonify, request, session
 
+from audit_log import (
+    ACTION_TOTP_BACKUP_CODES_REGENERATE,
+    ACTION_TOTP_ENABLE,
+    log_audit_event,
+)
 from extensions import get_db, check_rate_limit, record_rate_limit_event
 from totp_utils import (
     generate_backup_codes,
@@ -180,7 +185,7 @@ def totp_verify_setup():
     db = get_db()
     user = db.users.find_one(
         {"_id": user_id},
-        {"pending_totp_secret": 1, "pending_totp_secret_expires": 1},
+        {"pending_totp_secret": 1, "pending_totp_secret_expires": 1, "org_id": 1},
     )
     if not user:
         return jsonify({"error": "user_not_found"}), 404
@@ -237,6 +242,14 @@ def totp_verify_setup():
     )
 
     session["totp_verified_session"] = session.get("session_token", "")
+
+    log_audit_event(
+        db, user.get("org_id"), str(user_id), session.get("user_name") or "",
+        ACTION_TOTP_ENABLE,
+        target_type="user", target_id=str(user_id),
+        target_label="Two-factor authentication",
+        meta={"backup_codes_generated": len(plaintext_codes)},
+    )
 
     return jsonify({"ok": True, "backup_codes": plaintext_codes}), 200
 
@@ -371,7 +384,7 @@ def totp_regenerate_backup_codes():
         return jsonify({"error": "totp_not_verified"}), 403
 
     db = get_db()
-    user = db.users.find_one({"_id": user_id}, {"totp_enabled": 1})
+    user = db.users.find_one({"_id": user_id}, {"totp_enabled": 1, "org_id": 1})
     if not user:
         return jsonify({"error": "user_not_found"}), 404
     if user.get("totp_enabled") is not True:
@@ -386,6 +399,14 @@ def totp_regenerate_backup_codes():
     db.users.update_one(
         {"_id": user_id},
         {"$set": {"totp_backup_codes": hashed_codes}},
+    )
+
+    log_audit_event(
+        db, user.get("org_id"), str(user_id), session.get("user_name") or "",
+        ACTION_TOTP_BACKUP_CODES_REGENERATE,
+        target_type="user", target_id=str(user_id),
+        target_label="Recovery codes",
+        meta={"backup_codes_generated": len(plaintext_codes)},
     )
 
     return jsonify({"ok": True, "backup_codes": plaintext_codes}), 200

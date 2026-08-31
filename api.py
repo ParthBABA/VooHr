@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request, session
 import re
 import threading
 
+from audit_log import ACTION_ORG_UPDATE, ACTION_SESSION_REVOKE, log_audit_event
 from extensions import get_db
 from employees import _session_is_active, TOTPRequired
 from field_encryption import decrypt_fields, encrypt_fields
@@ -207,6 +208,14 @@ def update_organization():
     db.organizations.update_one(
         {"_id": org["_id"]},
         {"$set": {"name": name, "industry": industry, "company_size": company_size}},
+    )
+
+    log_audit_event(
+        db, user["org_id"], user_id, session.get("user_name") or "",
+        ACTION_ORG_UPDATE,
+        target_type="organization", target_id=str(org["_id"]),
+        target_label=name or "Organization",
+        meta={"name": name, "industry": industry, "company_size": company_size},
     )
 
     return jsonify(
@@ -592,8 +601,42 @@ def revoke_active_session(session_doc_id):
     if not doc:
         return jsonify({"error": "not_found"}), 404
 
-    if doc.get("session_token") == _hash_session_token(session.get("session_token", "")):
+    current_hash = _hash_session_token(session.get("session_token", ""))
+    is_self_revoke = doc.get("session_token") == current_hash
+    if is_self_revoke:
         return jsonify({"error": "cannot_revoke_current"}), 400
 
+    device = _parse_device(
+        doc.get("user_agent", ""),
+        doc.get("ch_platform"),
+        doc.get("ch_platform_version"),
+    )
+    device_label = _device_label(device)
+
     db.active_sessions.delete_one({"_id": doc_id})
+
+    org_id = db.users.find_one({"_id": ObjectId(user_id)}, {"org_id": 1})
+    log_audit_event(
+        db, (org_id or {}).get("org_id"), user_id, session.get("user_name") or "",
+        ACTION_SESSION_REVOKE,
+        target_type="session", target_id=session_doc_id,
+        target_label=device_label,
+        meta={"self_revoke": is_self_revoke},
+    )
+
     return jsonify({"ok": True})
+
+
+def _device_label(device) -> str:
+    """Human-readable device label for the audit log, mirroring the frontend's
+    renderer (e.g. "Laptop · Chrome on Windows")."""
+    if not device:
+        return "Unknown device"
+    d_type = device.get("device_type")
+    typ = {"Mobile": "Phone", "Tablet": "Tablet"}.get(d_type, "Laptop")
+    parts = []
+    if device.get("browser") and device["browser"] != "Unknown":
+        parts.append(device["browser"])
+    if device.get("os") and device["os"] != "Unknown":
+        parts.append(device["os"])
+    return typ + (" · " + " on ".join(parts) if parts else "")

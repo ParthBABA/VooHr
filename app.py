@@ -9,6 +9,7 @@ from bson import ObjectId
 from flask import Flask, jsonify, request, send_from_directory, redirect, render_template, session
 
 from api import api_bp
+from audit_log import audit_bp
 from auth import auth_bp, register_google_oauth
 from auth_email import auth_email_bp
 from config import Config
@@ -117,6 +118,7 @@ def create_app():
     app.register_blueprint(auth_email_bp, url_prefix="/auth")
     app.register_blueprint(totp_bp, url_prefix="/auth")
     app.register_blueprint(api_bp, url_prefix="/api")
+    app.register_blueprint(audit_bp, url_prefix="/api")
     app.register_blueprint(employees_bp, url_prefix="/api")
     app.register_blueprint(sessions_bp, url_prefix="/api")
     app.register_blueprint(notifications_bp, url_prefix="/api")
