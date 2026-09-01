@@ -2,20 +2,17 @@ import base64
 import logging
 import os
 
-import requests
+from google import genai
 
 from providers.tts import BaseTTS
 
 logger = logging.getLogger(__name__)
 
-_TTS_ENDPOINT = "https://texttospeech.googleapis.com/v1/text:synthesize"
-
 _MODEL_NAME = "gemini-3.1-flash-tts-preview"
 
-# Cloud Text-to-Speech Gemini-TTS hard limit is 4000 bytes of input text per
-# request. We use a conservative margin well below that. This matters a lot
-# for non-Latin scripts (e.g. Hindi/Devanagari) which run ~2.5-3 bytes per
-# character.
+# Gemini-TTS input is limited to 4000 bytes per request. We use a
+# conservative margin well below that. This matters a lot for non-Latin
+# scripts (e.g. Hindi/Devanagari) which run ~2.5-3 bytes per character.
 _MAX_CHUNK_BYTES = 3500
 
 # Sentence boundary characters used to split long text into aligned chunks.
@@ -27,30 +24,24 @@ _DEFAULT_VOICE = "Kore"
 
 
 class GeminiTTS(BaseTTS):
-    """Google Cloud Text-to-Speech Gemini-TTS provider using the REST API directly.
+    """Google Gemini-TTS provider using the google-genai SDK.
 
-    Uses the ``gemini-3.1-flash-tts-preview`` model. The voice is selected via
-    *voice_name* (a Gemini-TTS prebuilt voice such as "Kore" or "Leda") and
-    defaults to the ``GEMINI_TTS_VOICE`` env var (or "Kore").
+    Uses the ``gemini-3.1-flash-tts-preview`` model via the Gemini API. The
+    voice is selected via *voice_name* (a Gemini-TTS prebuilt voice such as
+    "Kore" or "Leda") and defaults to the ``GEMINI_TTS_VOICE`` env var (or
+    "Kore").
     """
 
     def __init__(self):
-        self.api_key = (
+        api_key = (
             os.environ.get("GEMINI_TTS_API_KEY")
+            or os.environ.get("GEMINI_API_KEY")
             or os.environ.get("GOOGLE_TTS_API_KEY")
             or os.environ.get("GOOGLE_TTS", "")
         )
         self.default_voice = os.environ.get("GEMINI_TTS_VOICE", _DEFAULT_VOICE)
-        self.endpoint = _TTS_ENDPOINT
         self.model_name = _MODEL_NAME
-
-    def _ensure_api_key(self) -> str:
-        if not self.api_key:
-            raise RuntimeError(
-                "Gemini-TTS API key is not configured. Set GEMINI_TTS_API_KEY "
-                "(or GOOGLE_TTS_API_KEY / GOOGLE_TTS) in the environment."
-            )
-        return self.api_key
+        self._client = genai.Client(api_key=api_key or None) if api_key else genai.Client()
 
     def _split_chunks(self, text: str) -> list:
         """Split text into byte-safe chunks at sentence boundaries.
@@ -89,40 +80,32 @@ class GeminiTTS(BaseTTS):
 
         return chunks
 
-    def _synthesize_chunk(self, text: str, language_code: str, voice_name: str) -> bytes:
-        api_key = self._ensure_api_key()
-        payload = {
-            "input": {"text": text},
-            "voice": {
-                "languageCode": language_code,
-                "name": voice_name,
-                "modelName": self.model_name,
-            },
-            "audioConfig": {"audioEncoding": "MP3"},
-        }
-        try:
-            resp = requests.post(
-                self.endpoint,
-                params={"key": api_key},
-                json=payload,
-                timeout=60,
-            )
-        except requests.RequestException as exc:
-            raise RuntimeError(
-                f"Gemini-TTS request failed: {exc}"
-            ) from exc
+    def _synthesize_chunk(self, text: str, voice_name: str) -> bytes:
+        response = self._client.models.generate_content(
+            model=self.model_name,
+            contents=text,
+            config=genai.types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=genai.types.SpeechConfig(
+                    voice_config=genai.types.VoiceConfig(
+                        prebuilt_voice_config=genai.types.PrebuiltVoiceConfig(
+                            voice_name=voice_name
+                        )
+                    )
+                ),
+            ),
+        )
 
-        if resp.status_code != 200:
-            raise RuntimeError(
-                f"Gemini-TTS returned HTTP {resp.status_code}: {resp.text}"
-            )
-
-        data = resp.json()
-        audio_b64 = data.get("audioContent")
-        if not audio_b64:
+        audio = None
+        if response.candidates:
+            for part in response.candidates[0].content.parts:
+                if part.inline_data:
+                    audio = part.inline_data.data
+                    break
+        if not audio:
             raise RuntimeError("Gemini-TTS response contained no audio content")
 
-        return base64.b64decode(audio_b64)
+        return base64.b64decode(audio)
 
     def synthesize(self, text: str, language_code: str, voice_name: str = None, voice_tier: str = None) -> bytes:
         text = (text or "").strip()
@@ -133,12 +116,12 @@ class GeminiTTS(BaseTTS):
 
         chunks = self._split_chunks(text)
         logger.debug(
-            "Gemini-TTS synthesize: language=%s voice=%s chunks=%d bytes=%d",
-            language_code, voice, len(chunks), len(text.encode("utf-8")),
+            "Gemini-TTS synthesize: voice=%s chunks=%d bytes=%d",
+            voice, len(chunks), len(text.encode("utf-8")),
         )
 
         parts = []
         for chunk in chunks:
-            parts.append(self._synthesize_chunk(chunk, language_code, voice))
+            parts.append(self._synthesize_chunk(chunk, voice))
 
         return b"".join(parts)
