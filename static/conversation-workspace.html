@@ -1341,10 +1341,10 @@ window.voovrInitWorkspace = function() {
 
   function setup() {
     var wraps = document.querySelectorAll('.wsx-narr');
-    for (var i = 0; i < wraps.length; i++) {
-      var wrap = wraps[i];
-      var btn = wrap.querySelector('.wsx-narr-btn');
-      var sel = wrap.querySelector('.wsx-narr-select');
+    for (let i = 0; i < wraps.length; i++) {
+      let wrap = wraps[i];
+      let btn = wrap.querySelector('.wsx-narr-btn');
+      let sel = wrap.querySelector('.wsx-narr-select');
       if (!btn || !sel) continue;
 
       // Populate language dropdown.

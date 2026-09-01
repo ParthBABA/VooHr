@@ -1,6 +1,6 @@
 import logging
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, current_app, jsonify, request
 
 from employees import _require_auth
 from providers import get_llm_provider, get_tts_provider
@@ -39,8 +39,10 @@ def synthesize():
 
         tts = get_tts_provider()
         audio_bytes = tts.synthesize(text, language_code)
-    except Exception:
+    except Exception as e:
         logger.exception("TTS synthesize failed")
+        if current_app.debug:
+            return jsonify({"error": "internal_server_error", "detail": str(e)}), 500
         return jsonify({"error": "internal_server_error"}), 500
 
     return Response(audio_bytes, mimetype="audio/mpeg")
