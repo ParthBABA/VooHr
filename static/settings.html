@@ -1605,6 +1605,8 @@ function clearFieldError(input){
   var restricted = document.getElementById('auditLogRestricted');
   if (!card || !listEl) return;
 
+  var page = 1;
+
   var ACTION_LABELS = {
     'employee.create': 'Employee created',
     'employee.update': 'Employee updated',
