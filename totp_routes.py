@@ -1,4 +1,4 @@
-"""TOTP setup & verification routes for VooHr.
+"""TOTP setup & verification routes for VooVr.
 
 These routes handle the mandatory TOTP enrollment that every admin must
 complete after registration.  The flow is:

@@ -262,7 +262,7 @@
         resendLink.addEventListener('click', function(e) {
           e.preventDefault();
           
-          var email = sessionStorage.getItem('voohr_pending_email');
+          var email = sessionStorage.getItem('voovr_pending_email');
           if (!email) return;
           
           resendLink.textContent = 'Sending...';
@@ -307,7 +307,7 @@
       }
 
       function showStep1() {
-        sessionStorage.removeItem('voohr_pending_email');
+        sessionStorage.removeItem('voovr_pending_email');
         if (countdownInterval) clearInterval(countdownInterval);
         otpStep.style.display = 'none';
         step1Form.style.display = 'block';
@@ -377,7 +377,7 @@
           if (data.ok) {
             if (data.requires_otp) {
               // Store email for OTP flow and show OTP step
-              sessionStorage.setItem('voohr_pending_email', email);
+              sessionStorage.setItem('voovr_pending_email', email);
               updateOtpEmailDisplay(email);
               // Transition to OTP step with fade/slide animation
               gsap.set(step1Form, { opacity: 0, y: 20 });
@@ -395,7 +395,7 @@
           } else if (data.error === 'invalid_credentials') {
             alert('Invalid email or password. Please try again.');
           } else if (data.error === 'account_requires_otp') {
-            sessionStorage.setItem('voohr_pending_email', email);
+            sessionStorage.setItem('voovr_pending_email', email);
             updateOtpEmailDisplay(email);
             gsap.set(step1Form, { opacity: 0, y: 20 });
             gsap.to(step1Form, { opacity: 0, y: -20, duration: 0.3, ease: 'power2.in', onComplete: function() {

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -8,7 +8,7 @@
 // Set theme before first paint to avoid a flash of the wrong theme.
 (function(){
   try {
-    var saved = localStorage.getItem('voohr-theme');
+    var saved = localStorage.getItem('voovr-theme');
     if (saved === 'light' || saved === 'dark') {
       document.documentElement.setAttribute('data-theme', saved);
     }
@@ -814,7 +814,7 @@ function escHtml(str) {
     } else {
       document.documentElement.setAttribute('data-theme', 'light');
     }
-    try { localStorage.setItem('voohr-theme', next); } catch (e) {}
+    try { localStorage.setItem('voovr-theme', next); } catch (e) {}
   });
 })();
 

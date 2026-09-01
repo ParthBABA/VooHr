@@ -1,5 +1,5 @@
 /*
- * VooHr — deterministic transcript speaker attribution.
+ * VooVr — deterministic transcript speaker attribution.
  *
  * Priority order (never falls back to alternating by line position):
  *   1. Explicit speaker labels  ("HR:", "Harshit:", "Harshit Rana:", "Employee:")
@@ -252,6 +252,6 @@
   }
 
   var api = { parse: parse };
-  global.VooHrTranscript = api;
+  global.VooVrTranscript = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

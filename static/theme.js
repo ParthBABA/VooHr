@@ -1,5 +1,5 @@
 (function () {
-  var STORAGE_KEY = 'voohr-theme';
+  var STORAGE_KEY = 'voovr-theme';
 
   function applyTheme(theme) {
     if (theme === 'light') {

@@ -1,6 +1,6 @@
 # LLM Data Privacy — Data Flow Record
 
-This document records every path where VooHr employee/user data is sent to
+This document records every path where VooVr employee/user data is sent to
 an external or local LLM provider, and whether PII minimization is applied.
 
 ---
@@ -45,7 +45,7 @@ or encryption keys are included.
 - The LLM provider (DeepSeek or OpenAI) receives the transcript as part of
   a chat completion request.
 - Provider retention policies are governed by the respective provider's
-  terms of service. VooHr does not control provider-side data retention.
+  terms of service. VooVr does not control provider-side data retention.
 - The analysis result (structured JSON) is stored in the `sessions` collection
   under `analysis` and propagated to `employees.ai_wellness`.
 
@@ -189,8 +189,8 @@ the image itself.
 
 ### Remaining Considerations
 
-- Provider-side data retention is outside VooHr's control. Organizations
-  using VooHr should be aware that transcript text is processed by
+- Provider-side data retention is outside VooVr's control. Organizations
+  using VooVr should be aware that transcript text is processed by
   third-party LLM providers (DeepSeek or OpenAI).
 - If transcript data contains highly sensitive employee information,
   the organization should consider their LLM provider's data processing

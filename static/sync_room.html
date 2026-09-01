@@ -431,7 +431,7 @@
      STEP 1 — PSYCHOLOGICAL SAFETY — conversation intelligence
      workspace redesign. Scoped strictly to #stepContent (the
      main content area below the step heading). Reuses the
-     --step-* tokens and the existing VooHr accent language.
+     --step-* tokens and the existing VooVr accent language.
      ========================================================= */
   #stepContent{ padding: 3rem 3.25rem 2.75rem; }
   #stepContent, #stepContent2, #stepContent3, #stepContent4, #stepContent5{ overflow: visible; }
@@ -1920,7 +1920,7 @@
      Scoped strictly to #stepContent4 (the main content area).
      Restructured IA: ROOT CAUSE → PRIORITY → OUTCOME → ACTION →
      OWNER → TIMELINE → MEASUREMENT → FOLLOW-UP → CONFIDENCE.
-     Uses the --step-* tokens and the VooHr accent language.
+     Uses the --step-* tokens and the VooVr accent language.
      Every measurement is qualitative (never fabricates numbers).
      ========================================================= */
   #stepContent4{ padding: 3rem 3.25rem 2.75rem; }
@@ -4371,7 +4371,7 @@ var STEP2_DRIVER_AXES = [
   'Recognition Gap', 'Growth Stagnation'
 ];
 
-/* Accent colour per driver axis — kept within the existing VooHr palette. */
+/* Accent colour per driver axis — kept within the existing VooVr palette. */
 var STEP2_DRIVER_ACCENTS = {
   'Workload Pressure': '#A78BFA',
   'Lack of Clarity': '#C9BDF8',
@@ -5340,7 +5340,7 @@ sessionPromise.then(function(s) {
     var used = document.getElementById('capOpenerUsed');
     if (canCapture && used && used.checked) {
       var openerText = (function(){
-        var lang = document.documentElement.getAttribute('data-lang') || (window.localStorage && localStorage.getItem('voohr-lang')) || 'en';
+        var lang = document.documentElement.getAttribute('data-lang') || (window.localStorage && localStorage.getItem('voovr-lang')) || 'en';
         var el = lang === 'hi'
           ? document.getElementById('psychSafetyScriptHi')
           : document.getElementById('psychSafetyScriptEn');
@@ -5398,7 +5398,7 @@ sessionPromise.then(function(s) {
     } else {
       document.documentElement.setAttribute('data-theme', 'light');
     }
-    try { localStorage.setItem('voohr-theme', next); } catch (e) {}
+    try { localStorage.setItem('voovr-theme', next); } catch (e) {}
   });
 })();
 </script>
@@ -5406,7 +5406,7 @@ sessionPromise.then(function(s) {
 (function() {
   var btn = document.getElementById('useOpenerBtn');
   if (!btn) return;
-  var lang = document.documentElement.getAttribute('data-lang') || (localStorage.getItem('voohr-lang') || 'en');
+  var lang = document.documentElement.getAttribute('data-lang') || (localStorage.getItem('voovr-lang') || 'en');
   function activeScript() {
     var el = lang === 'hi'
       ? document.getElementById('psychSafetyScriptHi')

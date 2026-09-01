@@ -85,7 +85,7 @@ def _parse(transcript, employee_name=EMPLOYEE_NAME, duration=120):
     """Run the real parser under node and return its JSON output."""
     if not _NODE:
         pytest.skip("node is not available")
-    tmpdir = tempfile.mkdtemp(prefix="voohr_parser_")
+    tmpdir = tempfile.mkdtemp(prefix="voovr_parser_")
     cfg_path = os.path.join(tmpdir, "cfg.json")
     with open(cfg_path, "w", encoding="utf-8") as fh:
         json.dump(
@@ -431,12 +431,12 @@ class TestWorkspaceIntegration:
 
     def test_workspace_delegates_to_priority_parser(self):
         src = _read(_WORKSPACE_HTML)
-        assert "VooHrTranscript.parse(state.transcriptText" in src
+        assert "VooVrTranscript.parse(state.transcriptText" in src
 
     def test_parser_loaded_before_workspace_init(self):
         src = _read(_WORKSPACE_HTML)
         assert src.find("transcript-parser.js") != -1
-        assert src.find("transcript-parser.js") < src.find("voohrInitWorkspace")
+        assert src.find("transcript-parser.js") < src.find("voovrInitWorkspace")
 
     def test_parser_itself_never_alternates(self):
         src = _read(_PARSER_JS)

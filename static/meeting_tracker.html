@@ -7,7 +7,7 @@
 <script>
 (function(){
   try {
-    var saved = localStorage.getItem('voohr-theme');
+    var saved = localStorage.getItem('voovr-theme');
     if (saved === 'light' || saved === 'dark') {
       document.documentElement.setAttribute('data-theme', saved);
     }
@@ -20,7 +20,7 @@
 <style>
   .gsap-hidden { opacity: 0 !important; }
 
-  /* ── Page-scoped design tokens (native VooHr palette) ── */
+  /* ── Page-scoped design tokens (native VooVr palette) ── */
   .mt-root {
     --mt-violet: #8B5CF6;
     --mt-teal: #34D399;
@@ -1151,7 +1151,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       document.documentElement.setAttribute('data-theme', 'light');
     }
-    try { localStorage.setItem('voohr-theme', next); } catch (e) {}
+    try { localStorage.setItem('voovr-theme', next); } catch (e) {}
   });
 })();
 </script>

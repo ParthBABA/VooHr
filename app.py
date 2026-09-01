@@ -108,7 +108,7 @@ def create_app():
         "Email config: BREVO_API_KEY=%s BREVO_SENDER_EMAIL=%s BREVO_SENDER_NAME=%s",
         "set" if os.environ.get("BREVO_API_KEY") else "MISSING",
         os.environ.get("BREVO_SENDER_EMAIL") or "MISSING",
-        os.environ.get("BREVO_SENDER_NAME") or "(default VooHr)",
+        os.environ.get("BREVO_SENDER_NAME") or "(default VooVr)",
     )
 
     init_db(app)

@@ -1,4 +1,4 @@
-"""Shared login-flow helpers for VooHr.
+"""Shared login-flow helpers for VooVr.
 
 Placed in a separate module to avoid circular imports between auth.py
 (Google OAuth) and auth_email.py (email/password auth).  Both import

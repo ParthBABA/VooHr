@@ -4,7 +4,7 @@ Configuration is read from the environment:
 
   BREVO_API_KEY      — Brevo v3 API key (required; starts with "xkeysib-")
   BREVO_SENDER_EMAIL — verified Brevo sender address (required)
-  BREVO_SENDER_NAME  — display name used as the email sender (default "VooHr")
+  BREVO_SENDER_NAME  — display name used as the email sender (default "VooVr")
 
 Emails are sent with the existing `requests` dependency to
 POST https://api.brevo.com/v3/smtp/email (no extra SDK).
@@ -24,7 +24,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
-OTP_SUBJECT = "Your VooHr verification code"
+OTP_SUBJECT = "Your VooVr verification code"
 
 # Bare-address check (rejects formats like "Name<email@example.com>").
 _SENDER_RE = re.compile(r"^[^<>\s]+@[^<>\s]+\.[^<>\s]+$")
@@ -70,7 +70,7 @@ def _brevo_error_message(resp) -> str:
 def _send_via_brevo(to_email: str, otp: str) -> bool:
     api_key = os.environ.get("BREVO_API_KEY", "")
     sender_email = os.environ.get("BREVO_SENDER_EMAIL", "")
-    sender_name = os.environ.get("BREVO_SENDER_NAME", "VooHr")
+    sender_name = os.environ.get("BREVO_SENDER_NAME", "VooVr")
 
     if not api_key or not sender_email:
         logger.error(

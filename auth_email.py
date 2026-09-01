@@ -1,4 +1,4 @@
-"""Password-based signup (email OTP verification) for VooHr.
+"""Password-based signup (email OTP verification) for VooVr.
 
 An additional auth path alongside the existing Google OAuth flow in auth.py.
 Follows the same security patterns: blind_index for lookups, KMS envelope

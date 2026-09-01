@@ -1,5 +1,5 @@
 /**
- * CSRF protection for VooHr.
+ * CSRF protection for VooVr.
  *
  * Fetches the session-bound CSRF token from /api/csrf-token (a GET, so no
  * token needed) and monkey-patches window.fetch so every subsequent

@@ -8,7 +8,7 @@
 // Set theme before first paint to avoid a flash of the wrong theme.
 (function(){
   try {
-    var saved = localStorage.getItem('voohr-theme');
+    var saved = localStorage.getItem('voovr-theme');
     if (saved === 'light' || saved === 'dark') {
       document.documentElement.setAttribute('data-theme', saved);
     }
@@ -44,11 +44,11 @@
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function(){
         populate(data);
-        window.voohrInitRiskDrift && window.voohrInitRiskDrift();
+        window.voovrInitRiskDrift && window.voovrInitRiskDrift();
       });
     } else {
       populate(data);
-      window.voohrInitRiskDrift && window.voohrInitRiskDrift();
+      window.voovrInitRiskDrift && window.voovrInitRiskDrift();
     }
   }).catch(function(){
     window.location.href = '/signin';
@@ -214,7 +214,7 @@
     } else {
       document.documentElement.setAttribute('data-theme', 'light');
     }
-    try { localStorage.setItem('voohr-theme', next); } catch (e) {}
+    try { localStorage.setItem('voovr-theme', next); } catch (e) {}
   });
 })();
 </script>
@@ -381,7 +381,7 @@
 
 <!-- ── RISK DRIFT PAGE LOGIC ── -->
 <script>
-window.voohrInitRiskDrift = function() {
+window.voovrInitRiskDrift = function() {
   var params = new URLSearchParams(window.location.search);
   var nid = params.get('notification');
 

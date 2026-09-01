@@ -8,7 +8,7 @@
 // Set theme before first paint to avoid a flash of the wrong theme.
 (function(){
   try {
-    var saved = localStorage.getItem('voohr-theme');
+    var saved = localStorage.getItem('voovr-theme');
     if (saved === 'light' || saved === 'dark') {
       document.documentElement.setAttribute('data-theme', saved);
     }
@@ -41,7 +41,7 @@ fetch('/api/me').then(function(res){
   if (roleEl) roleEl.textContent = data.role === 'admin' ? 'HR Admin' : data.role;
   if (avatarEl) avatarEl.textContent = (data.name || 'U').trim().charAt(0).toUpperCase();
   document.body.style.visibility = 'visible';
-  window.voohrInitWorkspace && window.voohrInitWorkspace();
+  window.voovrInitWorkspace && window.voovrInitWorkspace();
 }).catch(function(){
   window.location.href = '/signin';
 });
@@ -262,7 +262,7 @@ fetch('/api/me').then(function(res){
 <div class="ws-flag-popover" id="wsFlagPopover" style="display:none;"></div>
 
 <script>
-window.voohrInitWorkspace = function() {
+window.voovrInitWorkspace = function() {
   var params = new URLSearchParams(window.location.search);
   var sessionId = params.get('session_id');
   var employeeId = params.get('employee_id');
@@ -338,7 +338,7 @@ window.voohrInitWorkspace = function() {
   // forced. Transcript text itself is never modified.
   function parseTranscript() {
     var empName = (state.employee && state.employee.name) ? state.employee.name.trim() : '';
-    var result = window.VooHrTranscript.parse(state.transcriptText, {
+    var result = window.VooVrTranscript.parse(state.transcriptText, {
       employeeName: empName,
       duration: estimateDuration()
     });
@@ -1170,7 +1170,7 @@ window.voohrInitWorkspace = function() {
     } else {
       document.documentElement.setAttribute('data-theme', 'light');
     }
-    try { localStorage.setItem('voohr-theme', next); } catch (e) {}
+    try { localStorage.setItem('voovr-theme', next); } catch (e) {}
   });
 })();
 </script>

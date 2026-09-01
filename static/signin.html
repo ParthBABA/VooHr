@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (data.ok) {
         if (data.requires_otp) {
           // Store email for OTP flow
-          sessionStorage.setItem('voohr_pending_email', email);
+          sessionStorage.setItem('voovr_pending_email', email);
           window.location.href = '/verify-otp';
         } else {
           window.location.href = data.redirect;
@@ -500,7 +500,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorBox.style.display = 'block';
         errorBox.textContent = 'This account requires OTP verification. A code has been sent to your email.';
         // Store email for OTP flow
-        sessionStorage.setItem('voohr_pending_email', email);
+        sessionStorage.setItem('voovr_pending_email', email);
         window.location.href = '/verify-otp';
       } else if (data.error === 'google_only_account') {
         errorBox.style.display = 'block';

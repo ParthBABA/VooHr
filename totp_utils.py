@@ -1,4 +1,4 @@
-"""TOTP (Time-based One-Time Password) utilities for VooHr.
+"""TOTP (Time-based One-Time Password) utilities for VooVr.
 
 Provides secret generation, provisioning URI creation, QR code rendering,
 time-window-aware code verification, and backup/recovery code generation
@@ -21,7 +21,7 @@ def generate_secret() -> str:
     return pyotp.random_base32()
 
 
-def provisioning_uri(secret: str, email: str, issuer_name: str = "VooHr") -> str:
+def provisioning_uri(secret: str, email: str, issuer_name: str = "VooVr") -> str:
     """Return an otpauth:// URI that authenticator apps can parse to add the
     account.  Used both for QR codes and for copy-to-clipboard flows.
     """
