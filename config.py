@@ -52,6 +52,7 @@ class Config:
     LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "deepseek")
     STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "local")
     VISION_PROVIDER = os.environ.get("VISION_PROVIDER", "openai")
+    TTS_PROVIDER = os.environ.get("TTS_PROVIDER", "google")
 
     # OpenAI (used for Whisper speech-to-text)
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_KEY", "")

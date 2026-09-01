@@ -1159,6 +1159,12 @@ class BaseLLM(ABC):
         """
         ...
 
+    @abstractmethod
+    def translate(self, text: str, target_language: str) -> str:
+        """Translate text into the target language (a human-readable name,
+        e.g. "Hindi"). Returns ONLY the translated text."""
+        ...
+
 
 class OpenAILLM(BaseLLM):
     def __init__(self):
@@ -1211,6 +1217,21 @@ class OpenAILLM(BaseLLM):
             validator=validate_phrasing_analysis, fallback=FALLBACK_PHRASING_ANALYSIS,
             temperature=0.2, supports_json_mode=True,
         )
+
+    def translate(self, text: str, target_language: str) -> str:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=self.api_key)
+        prompt = (
+            f"Translate the following text into {target_language}. "
+            f"Return ONLY the translated text, no preamble, no quotes, no explanation:\n\n{text}"
+        )
+        resp = client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+        )
+        return (resp.choices[0].message.content or "").strip()
 
 
 class DeepSeekLLM(BaseLLM):
@@ -1272,3 +1293,18 @@ class DeepSeekLLM(BaseLLM):
             validator=validate_phrasing_analysis, fallback=FALLBACK_PHRASING_ANALYSIS,
             temperature=0.2, supports_json_mode=False, log_label="DeepSeek analyze_phrasing",
         )
+
+    def translate(self, text: str, target_language: str) -> str:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        prompt = (
+            f"Translate the following text into {target_language}. "
+            f"Return ONLY the translated text, no preamble, no quotes, no explanation:\n\n{text}"
+        )
+        resp = client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+        )
+        return (resp.choices[0].message.content or "").strip()

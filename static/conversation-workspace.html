@@ -30,6 +30,18 @@
 .page-skeleton-spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--ink);border-top-color:var(--amber);animation:page-skeleton-spin .8s linear infinite;}
 @keyframes page-skeleton-spin{to{transform:rotate(360deg);}}
 .page-skeleton.is-hidden{opacity:0;pointer-events:none;}
+
+/* AI Narration ("Listen") controls */
+.wsx-narr{position:relative;display:inline-flex;align-items:center;flex-shrink:0;z-index:2;}
+.wsx-narr .wsx-narr-btn{width:30px;height:30px;}
+.wsx-narr .wsx-narr-btn svg{width:15px;height:15px;}
+.wsx-narr .wsx-narr-btn.loading svg{opacity:0;animation:wsx-narr-spin .8s linear infinite;}
+.wsx-narr .wsx-narr-btn.loading::after{content:'';position:absolute;width:13px;height:13px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--violet);}
+@keyframes wsx-narr-spin{to{transform:rotate(360deg);}}
+.wsx-narr .wsx-narr-btn.playing{color:var(--violet);border-color:rgba(123,79,255,0.55);background:var(--violet-soft);}
+.wsx-narr .wsx-narr-btn.error{color:var(--red);border-color:rgba(232,69,69,0.5);background:var(--red-soft);}
+.wsx-narr-select{display:none;position:absolute;top:calc(100% + 6px);right:0;left:auto;min-width:150px;z-index:20;}
+.wsx-narr-select.open{display:block;}
 </style>
 </head>
 <body>
@@ -204,6 +216,14 @@ withTimeout(fetch('/api/me').then(function(res){
             <div class="wsx-score-head">
               <h2 class="wsx-score-title">Live Conversation Score</h2>
               <span class="wsx-score-status unmeasured" id="wsScoreStatus" style="display:none;">Not measured</span>
+              <span class="wsx-narr" data-narr-target=".ws-hero">
+                <button type="button" class="icon-btn wsx-narr-btn" title="Listen to this section">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+                </button>
+                <select class="ws-tool-select wsx-narr-select" title="Listen language" aria-label="Listen language">
+                  <option value="">Listen</option>
+                </select>
+              </span>
             </div>
             <div class="wsx-score-main">
               <span class="ws-score-num unmeasured" id="wsScoreNum">--</span>
@@ -226,6 +246,14 @@ withTimeout(fetch('/api/me').then(function(res){
               <div class="wsx-section-head">
                 <h3 class="wsx-section-title">What Matters</h3>
                 <span class="wsx-section-rule"></span>
+                <span class="wsx-narr" data-narr-target="wsMatters">
+                  <button type="button" class="icon-btn wsx-narr-btn" title="Listen to this section">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+                  </button>
+                  <select class="ws-tool-select wsx-narr-select" title="Listen language" aria-label="Listen language">
+                    <option value="">Listen</option>
+                  </select>
+                </span>
               </div>
               <div id="wsMatters"></div>
             </div>
@@ -235,6 +263,14 @@ withTimeout(fetch('/api/me').then(function(res){
               <div class="wsx-section-head">
                 <h3 class="wsx-section-title">Follow-up Plan</h3>
                 <span class="wsx-section-rule"></span>
+                <span class="wsx-narr" data-narr-target="wsFollow">
+                  <button type="button" class="icon-btn wsx-narr-btn" title="Listen to this section">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+                  </button>
+                  <select class="ws-tool-select wsx-narr-select" title="Listen language" aria-label="Listen language">
+                    <option value="">Listen</option>
+                  </select>
+                </span>
               </div>
               <div id="wsFollow"></div>
             </div>
@@ -253,6 +289,14 @@ withTimeout(fetch('/api/me').then(function(res){
               <div class="wsx-section-head">
                 <h3 class="wsx-section-title">Conversation Signals</h3>
                 <span class="wsx-section-rule"></span>
+                <span class="wsx-narr" data-narr-target="wsSignals">
+                  <button type="button" class="icon-btn wsx-narr-btn" title="Listen to this section">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+                  </button>
+                  <select class="ws-tool-select wsx-narr-select" title="Listen language" aria-label="Listen language">
+                    <option value="">Listen</option>
+                  </select>
+                </span>
               </div>
               <div id="wsSignals"></div>
             </div>
@@ -278,6 +322,8 @@ withTimeout(fetch('/api/me').then(function(res){
 </div>
 
 <div class="ws-flag-popover" id="wsFlagPopover" style="display:none;"></div>
+
+<audio id="wsNarrationPlayer" preload="none" style="display:none;"></audio>
 
 <script>
 window.voovrInitWorkspace = function() {
@@ -1190,6 +1236,152 @@ window.voovrInitWorkspace = function() {
     }
     try { localStorage.setItem('voovr-theme', next); } catch (e) {}
   });
+})();
+</script>
+
+<script>
+// ── AI Narration ("Listen") — additive layer ─────────────────────────────
+(function() {
+  var NARRATION_LANGUAGES = [
+    { label: 'English', languageCode: 'en-US', translate: false },
+    { label: 'Hindi', languageCode: 'hi-IN', translate: true },
+    { label: 'Hinglish', languageCode: 'en-US', translate: false },
+    { label: 'Spanish', languageCode: 'es-ES', translate: true },
+    { label: 'French', languageCode: 'fr-FR', translate: true }
+  ];
+
+  var player = document.getElementById('wsNarrationPlayer');
+  if (!player) return;
+
+  function resolveTarget(sel) {
+    var s = String(sel || '').trim();
+    if (!s) return null;
+    if (/^[.#\[]/.test(s)) return document.querySelector(s);
+    return document.getElementById(s);
+  }
+
+  // Read the block's rendered text directly from the DOM (never re-fetch the
+  // analysis). Clone to safely drop interactive/icon elements and labels.
+  function readBlockText(sel) {
+    var el = resolveTarget(sel);
+    if (!el) return '';
+    var clone = el.cloneNode(true);
+    var drop = clone.querySelectorAll(
+      'button, select, input, script, style, textarea, .wsx-narr, .wsx-ev, .wsx-score-title, .wsx-score-status, .wsx-section-title, a.wsx-footer'
+    );
+    for (var i = 0; i < drop.length; i++) drop[i].remove();
+    var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+    return text;
+  }
+
+  // Only one narrator plays at a time: stop any other playback first.
+  function stopAll(exceptBtn) {
+    if (!player.paused) player.pause();
+    var btns = document.querySelectorAll('.wsx-narr-btn');
+    for (var i = 0; i < btns.length; i++) {
+      if (btns[i] === exceptBtn) continue;
+      btns[i].classList.remove('playing', 'loading', 'error');
+    }
+  }
+
+  function setState(btn, state) {
+    btn.classList.remove('loading', 'playing', 'error');
+    if (state) btn.classList.add(state);
+    setTimeout(function() { btn.classList.remove('error'); }, 2500);
+  }
+
+  function closeAllSelects() {
+    var sels = document.querySelectorAll('.wsx-narr-select');
+    for (var i = 0; i < sels.length; i++) sels[i].classList.remove('open');
+  }
+
+  function synthesizeAndPlay(btn, wrap, lang) {
+    var text = readBlockText(wrap.getAttribute('data-narr-target'));
+    if (!text) {
+      console.warn('Narration: block has no text to read', wrap);
+      setState(btn, 'error');
+      return;
+    }
+    var body = {
+      text: text,
+      language_code: lang.languageCode,
+      translate: lang.translate
+    };
+    setState(btn, 'loading');
+    fetch('/api/tts/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+      .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Narration failed'); });
+        return r.blob();
+      })
+      .then(function(blob) {
+        stopAll(btn);
+        player.src = URL.createObjectURL(blob);
+        player.onended = function() { setState(btn, null); };
+        player.onpause = function() { setState(btn, null); };
+        player.onerror = function() { setState(btn, 'error'); console.error('Narration audio playback failed'); };
+        setState(btn, null);
+        return player.play().then(function() {
+          setState(btn, 'playing');
+        }).catch(function(err) {
+          console.error('Narration play failed', err);
+          setState(btn, 'error');
+          stopAll(btn);
+        });
+      })
+      .catch(function(err) {
+        console.error('Narration request failed', err);
+        setState(btn, 'error');
+        stopAll(btn);
+      });
+  }
+
+  function setup() {
+    var wraps = document.querySelectorAll('.wsx-narr');
+    for (var i = 0; i < wraps.length; i++) {
+      var wrap = wraps[i];
+      var btn = wrap.querySelector('.wsx-narr-btn');
+      var sel = wrap.querySelector('.wsx-narr-select');
+      if (!btn || !sel) continue;
+
+      // Populate language dropdown.
+      for (var j = 0; j < NARRATION_LANGUAGES.length; j++) {
+        var opt = document.createElement('option');
+        opt.value = String(j);
+        opt.textContent = NARRATION_LANGUAGES[j].label;
+        sel.appendChild(opt);
+      }
+
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        closeAllSelects();
+        sel.classList.toggle('open');
+      });
+
+      sel.addEventListener('change', function() {
+        var idx = parseInt(sel.value, 10);
+        var lang = NARRATION_LANGUAGES[idx];
+        sel.classList.remove('open');
+        if (!lang) return;
+        if (btn.classList.contains('playing')) {
+          // Toggle: if this block is playing, pause.
+          player.pause();
+          stopAll(btn);
+          return;
+        }
+        synthesizeAndPlay(btn, wrap, lang);
+      });
+    }
+  }
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.wsx-narr')) closeAllSelects();
+  });
+
+  setup();
 })();
 </script>
 </body>

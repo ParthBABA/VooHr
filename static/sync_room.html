@@ -109,6 +109,30 @@
     color: var(--step-text-secondary);
   }
 
+  /* ---------- AI Narration ("Listen") controls ---------- */
+  .step-title-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px;}
+  .step-title-row .step-title{margin:0;}
+  .wsx-narr{position:relative;display:inline-flex;align-items:center;flex-shrink:0;z-index:5;}
+  .step-content .wsx-narr-btn{width:34px;height:34px;border:1px solid var(--step-border-strong);border-radius:50%;background:var(--step-surface-raised);color:var(--step-text-secondary);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;position:relative;}
+  .step-content .wsx-narr-btn:hover{border-color:var(--step-primary);color:var(--step-primary);}
+  .step-content .wsx-narr-btn svg{width:16px;height:16px;}
+  .step-content .wsx-narr-btn.loading svg{opacity:0;animation:wsx-narr-spin .8s linear infinite;}
+  .step-content .wsx-narr-btn.loading::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;border:2px solid var(--step-border-strong);border-top-color:var(--step-primary);}
+  @keyframes wsx-narr-spin{to{transform:rotate(360deg);}}
+  .step-content .wsx-narr-btn.playing{color:var(--step-primary);border-color:var(--step-primary);background:var(--step-accent-tint);}
+  .step-content .wsx-narr-btn.error{color:#E74C3C;border-color:rgba(231,76,60,0.5);background:rgba(231,76,60,0.08);}
+  .step-content .wsx-narr-select{display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:150px;z-index:30;}
+  .step-content .wsx-narr-select.open{display:block;}
+  #stepContent .wsx-narr-btn{
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--ivory-dim);
+    width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;position:relative;
+  }
+  #stepContent .wsx-narr-btn:hover{color:var(--ivory);border-color:var(--border-lit);}
+  #stepContent .wsx-narr-btn.playing{color:var(--violet);border-color:rgba(123,79,255,0.55);}
+  #stepContent .wsx-narr-btn.error{color:var(--red);border-color:rgba(232,69,69,0.5);}
+
   /* ---------- Suggested Language block ---------- */
   #stepContent2 .script-block,
   #stepContent3 .script-block,
@@ -3137,7 +3161,17 @@
           <div class="step-content scale-in gsap-hidden" id="stepContent">
             <div class="step-header">
               <div class="step-number">Step 1 of 5</div>
-              <h2 class="step-title">Establish Psychological Safety</h2>
+              <div class="step-title-row">
+                <h2 class="step-title">Establish Psychological Safety</h2>
+                <span class="wsx-narr" data-narr-target="stepContent">
+                  <button type="button" class="wsx-narr-btn" title="Listen to this step" aria-label="Listen to this step">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+                  </button>
+                  <select class="ws-tool-select wsx-narr-select" title="Listen language" aria-label="Listen language">
+                    <option value="">Listen</option>
+                  </select>
+                </span>
+              </div>
               <p class="step-desc" data-lang="en">Set the tone before any performance discussion. The employee must feel secure that this conversation is about growth, not punishment.</p>
               <p class="step-desc" data-lang="hi" style="display:none;">Kisi bhi performance discussion se pehle mahaul set karein. Employee ko safe feel hona chahiye ki ye baat growth ke baare mein hai, sazaa ke nahi.</p>
             </div>
@@ -3306,7 +3340,17 @@
           <div class="step-content scale-in" id="stepContent2" style="display:none;">
             <div class="step-header">
               <div class="step-number">Step 2 of 5</div>
-              <h2 class="step-title">Behavioural Intelligence</h2>
+              <div class="step-title-row">
+                <h2 class="step-title">Behavioural Intelligence</h2>
+                <span class="wsx-narr" data-narr-target="stepContent2">
+                  <button type="button" class="wsx-narr-btn" title="Listen to this step" aria-label="Listen to this step">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+                  </button>
+                  <select class="ws-tool-select wsx-narr-select" title="Listen language" aria-label="Listen language">
+                    <option value="">Listen</option>
+                  </select>
+                </span>
+              </div>
               <p class="step-desc">Understand what behavioural patterns are visible in the conversation. This is NOT diagnosis — it explains observable behaviour only.</p>
             </div>
 
@@ -3459,7 +3503,17 @@
           <div class="step-content scale-in" id="stepContent3" style="display:none;">
             <div class="step-header">
               <div class="step-number">Step 3 of 5</div>
-              <h2 class="step-title">Root Cause Analysis</h2>
+              <div class="step-title-row">
+                <h2 class="step-title">Root Cause Analysis</h2>
+                <span class="wsx-narr" data-narr-target="stepContent3">
+                  <button type="button" class="wsx-narr-btn" title="Listen to this step" aria-label="Listen to this step">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+                  </button>
+                  <select class="ws-tool-select wsx-narr-select" title="Listen language" aria-label="Listen language">
+                    <option value="">Listen</option>
+                  </select>
+                </span>
+              </div>
               <p class="step-desc">Understand WHY the AI believes the behaviour is occurring. Never diagnoses. Never claims certainty. Always explains reasoning using transcript evidence.</p>
             </div>
 
@@ -3629,7 +3683,17 @@
           <div class="step-content scale-in" id="stepContent4" style="display:none;">
             <div class="step-header">
               <div class="step-number">Step 4 of 5</div>
-              <h2 class="step-title">Action Blueprint</h2>
+              <div class="step-title-row">
+                <h2 class="step-title">Action Blueprint</h2>
+                <span class="wsx-narr" data-narr-target="stepContent4">
+                  <button type="button" class="wsx-narr-btn" title="Listen to this step" aria-label="Listen to this step">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+                  </button>
+                  <select class="ws-tool-select wsx-narr-select" title="Listen language" aria-label="Listen language">
+                    <option value="">Listen</option>
+                  </select>
+                </span>
+              </div>
               <p class="step-desc">Generate realistic actions that can actually be implemented. Every recommendation includes WHY it works.</p>
             </div>
 
@@ -3827,7 +3891,17 @@
           <div class="step-content scale-in" id="stepContent5" style="display:none;">
             <div class="step-header">
               <div class="step-number">Step 5 of 5</div>
-              <h2 class="step-title">Conversation Strategy</h2>
+              <div class="step-title-row">
+                <h2 class="step-title">Conversation Strategy</h2>
+                <span class="wsx-narr" data-narr-target="stepContent5">
+                  <button type="button" class="wsx-narr-btn" title="Listen to this step" aria-label="Listen to this step">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+                  </button>
+                  <select class="ws-tool-select wsx-narr-select" title="Listen language" aria-label="Listen language">
+                    <option value="">Listen</option>
+                  </select>
+                </span>
+              </div>
               <p class="step-desc">Prepare for the next discussion. This page is about future conversation planning with the employee.</p>
             </div>
 
@@ -5786,6 +5860,161 @@ sessionPromise.then(function(s) {
     if (tag()) mo.disconnect();
   });
   mo.observe(t, { childList: true, subtree: true });
+})();
+</script>
+
+<audio id="wsNarrationPlayer" preload="none" style="display:none;"></audio>
+
+<script>
+// ── AI Narration ("Listen") — additive layer ─────────────────────────────
+(function() {
+  var NARRATION_LANGUAGES = [
+    { label: 'English', languageCode: 'en-US', translate: false },
+    { label: 'Hindi', languageCode: 'hi-IN', translate: true },
+    { label: 'Hinglish', languageCode: 'en-US', translate: false },
+    { label: 'Spanish', languageCode: 'es-ES', translate: true },
+    { label: 'French', languageCode: 'fr-FR', translate: true }
+  ];
+
+  var player = document.getElementById('wsNarrationPlayer');
+  if (!player) return;
+
+  function resolveTarget(sel) {
+    var s = String(sel || '').trim();
+    if (!s) return null;
+    if (/^[.#\[]/.test(s)) return document.querySelector(s);
+    return document.getElementById(s);
+  }
+
+  function stripHidden(el) {
+    var all = el.querySelectorAll('*');
+    for (var i = all.length - 1; i >= 0; i--) {
+      var n = all[i];
+      if (n.style && n.style.display === 'none') n.remove();
+    }
+  }
+
+  // Read the block's rendered text directly from the DOM (never re-fetch the
+  // analysis). Clone to safely drop interactive/icon elements, labels, and
+  // hidden language variants.
+  function readBlockText(sel) {
+    var el = resolveTarget(sel);
+    if (!el) return '';
+    var clone = el.cloneNode(true);
+    stripHidden(clone);
+    var drop = clone.querySelectorAll(
+      'button, select, input, script, style, textarea, .wsx-narr, .wsx-ev, .step-title-row .wsx-narr, [onclick]'
+    );
+    for (var i = 0; i < drop.length; i++) drop[i].remove();
+    var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+    return text;
+  }
+
+  function stopAll(exceptBtn) {
+    if (!player.paused) player.pause();
+    var btns = document.querySelectorAll('.wsx-narr-btn');
+    for (var i = 0; i < btns.length; i++) {
+      if (btns[i] === exceptBtn) continue;
+      btns[i].classList.remove('playing', 'loading', 'error');
+    }
+  }
+
+  function setState(btn, state) {
+    btn.classList.remove('loading', 'playing', 'error');
+    if (state) btn.classList.add(state);
+    setTimeout(function() { btn.classList.remove('error'); }, 2500);
+  }
+
+  function closeAllSelects() {
+    var sels = document.querySelectorAll('.wsx-narr-select');
+    for (var i = 0; i < sels.length; i++) sels[i].classList.remove('open');
+  }
+
+  function synthesizeAndPlay(btn, wrap, lang) {
+    var text = readBlockText(wrap.getAttribute('data-narr-target'));
+    if (!text) {
+      console.warn('Narration: block has no text to read', wrap);
+      setState(btn, 'error');
+      return;
+    }
+    setState(btn, 'loading');
+    fetch('/api/tts/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: text,
+        language_code: lang.languageCode,
+        translate: lang.translate
+      })
+    })
+      .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Narration failed'); });
+        return r.blob();
+      })
+      .then(function(blob) {
+        stopAll(btn);
+        player.src = URL.createObjectURL(blob);
+        player.onended = function() { setState(btn, null); };
+        player.onpause = function() { setState(btn, null); };
+        player.onerror = function() { setState(btn, 'error'); console.error('Narration audio playback failed'); };
+        setState(btn, null);
+        return player.play().then(function() {
+          setState(btn, 'playing');
+        }).catch(function(err) {
+          console.error('Narration play failed', err);
+          setState(btn, 'error');
+          stopAll(btn);
+        });
+      })
+      .catch(function(err) {
+        console.error('Narration request failed', err);
+        setState(btn, 'error');
+        stopAll(btn);
+      });
+  }
+
+  function setup() {
+    var wraps = document.querySelectorAll('.wsx-narr');
+    for (var i = 0; i < wraps.length; i++) {
+      (function(wrap) {
+        var btn = wrap.querySelector('.wsx-narr-btn');
+        var sel = wrap.querySelector('.wsx-narr-select');
+        if (!btn || !sel) return;
+
+        for (var j = 0; j < NARRATION_LANGUAGES.length; j++) {
+          var opt = document.createElement('option');
+          opt.value = String(j);
+          opt.textContent = NARRATION_LANGUAGES[j].label;
+          sel.appendChild(opt);
+        }
+
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          closeAllSelects();
+          sel.classList.toggle('open');
+        });
+
+        sel.addEventListener('change', function() {
+          var idx = parseInt(sel.value, 10);
+          var lang = NARRATION_LANGUAGES[idx];
+          sel.classList.remove('open');
+          if (!lang) return;
+          if (btn.classList.contains('playing')) {
+            player.pause();
+            stopAll(btn);
+            return;
+          }
+          synthesizeAndPlay(btn, wrap, lang);
+        });
+      })(wraps[i]);
+    }
+  }
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.wsx-narr')) closeAllSelects();
+  });
+
+  setup();
 })();
 </script>
 </body>

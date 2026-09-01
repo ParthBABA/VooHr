@@ -28,6 +28,14 @@ def get_llm_provider():
     raise ValueError(f"Unknown LLM provider: {name}")
 
 
+def get_tts_provider():
+    name = current_app.config.get("TTS_PROVIDER", "google")
+    if name == "google":
+        from providers.google_tts import GoogleNeural2TTS
+        return GoogleNeural2TTS()
+    raise ValueError(f"Unknown TTS provider: {name}")
+
+
 def get_storage_provider():
     name = current_app.config.get("STORAGE_PROVIDER", "local")
     if name == "local":
