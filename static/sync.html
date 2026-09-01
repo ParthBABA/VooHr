@@ -133,24 +133,42 @@
   .nsb-loading-text{display:none;font-family:var(--font-m);font-size:0.72rem;color:var(--ivory-dim);margin-top:0.5rem;opacity:0;transition:opacity 0.6s ease;}
   .nsb-loading-text.visible{display:block;}
   .nsb-loading-text.fade-in{opacity:1;}
+
+  .page-skeleton{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--void);transition:opacity .3s var(--ease-out);}
+  .page-skeleton-spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--ink);border-top-color:var(--amber);animation:page-skeleton-spin .8s linear infinite;}
+  @keyframes page-skeleton-spin{to{transform:rotate(360deg);}}
+  .page-skeleton.is-hidden{opacity:0;pointer-events:none;}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="/csrf.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+<script src="/csrf.js" defer></script>
 </head>
-<body style="visibility:hidden">
+<body>
+<div id="page-skeleton" class="page-skeleton" aria-hidden="true"><div class="page-skeleton-spinner"></div></div>
 <script>
-fetch('/api/me').then(function(res){
+function revealPage(){
+  var sk = document.getElementById('page-skeleton');
+  if (sk) sk.classList.add('is-hidden');
+}
+
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, ms); })
+  ]);
+}
+
+withTimeout(fetch('/api/me').then(function(res){
   if (!res.ok) { window.location.href = '/signin'; return null; }
   return res.json();
-}).then(function(data){
-  if (!data) return;
+}), 8000).then(function(data){
+  if (!data) { revealPage(); return; }
   var nameEl = document.getElementById('userName');
   var roleEl = document.getElementById('userRole');
   var avatarEl = document.getElementById('userAvatar');
   if (nameEl) nameEl.textContent = data.name;
   if (roleEl) roleEl.textContent = data.role === 'admin' ? 'HR Admin' : data.role;
   if (avatarEl) avatarEl.textContent = (data.name || 'U').trim().charAt(0).toUpperCase();
-  document.body.style.visibility = 'visible';
+  revealPage();
 }).catch(function(){
   window.location.href = '/signin';
 });
