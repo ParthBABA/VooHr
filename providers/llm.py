@@ -14,7 +14,7 @@ SECTION_FIELDS = {
         "string": ["title_question", "behaviour_summary", "observed_behaviour", "behaviour_pattern",
                     "supporting_evidence", "ai_interpretation", "alternative_interpretation",
                     "conversation_direction", "suggested_script", "manager_notes", "key_takeaway"],
-        "list": ["recommended_actions", "avoid_actions"],
+        "list": ["recommended_actions", "avoid_actions", "underlying_drivers"],
         "confidence_label": ["confidence_label"],
     },
     "step3_root_cause_analysis": {
@@ -613,6 +613,14 @@ Return a JSON object with these fields:
     "supporting_evidence": "Direct quote or specific observation from transcript",
     "ai_interpretation": "What this pattern likely indicates (use probabilistic language) — never attach a clinical or trait label; describe the specific behaviour in plain, descriptive language anchored to what they said; never speculate about unstated motives, fears, or needs (no 'possibly because...', no 'this suggests he may be...')",
     "alternative_interpretation": "A different plausible explanation if evidence is limited",
+    "underlying_drivers": [
+      {
+        "name": "One of: Workload Pressure | Lack of Clarity | Resource Constraints | Recognition Gap | Growth Stagnation",
+        "confidence": "0-100 — how strongly the transcript evidence supports this as an underlying driver for the observed behaviour"
+      }
+      // Include only the drivers that have real transcript support — omit axes with no evidence rather than guessing a value.
+      // Do not include a driver unless there is genuine transcript evidence for it — omitting an axis is correct when the evidence isn't there.
+    ],
     "conversation_direction": "exploratory | solution-seeking | emotional | defensive | uncertain",
     "confidence_label": "Strong Signal | Moderate Signal | Light Signal",
     "suggested_script": "Transcript-specific follow-up response that helps HR explore the behaviour naturally",
@@ -783,6 +791,14 @@ Return a JSON object with these fields:
     "supporting_evidence": "Direct quote or specific observation from transcript",
     "ai_interpretation": "What this pattern likely indicates (use probabilistic language) — never attach a clinical or trait label; describe the specific behaviour in plain, descriptive language anchored to what they said; never speculate about unstated motives, fears, or needs (no 'possibly because...', no 'this suggests he may be...')",
     "alternative_interpretation": "A different plausible explanation if evidence is limited",
+    "underlying_drivers": [
+      {
+        "name": "One of: Workload Pressure | Lack of Clarity | Resource Constraints | Recognition Gap | Growth Stagnation",
+        "confidence": "0-100 — how strongly the transcript evidence supports this as an underlying driver for the observed behaviour"
+      }
+      // Include only the drivers that have real transcript support — omit axes with no evidence rather than guessing a value.
+      // Do not include a driver unless there is genuine transcript evidence for it — omitting an axis is correct when the evidence isn't there.
+    ],
     "conversation_direction": "exploratory | solution-seeking | emotional | defensive | uncertain",
     "confidence_label": "Strong Signal | Moderate Signal | Light Signal",
     "suggested_script": "Transcript-specific follow-up response that helps HR explore the behaviour naturally",
@@ -909,7 +925,8 @@ FALLBACK_ANALYSIS = {
         "title_question": "", "behaviour_summary": "", "observed_behaviour": "", "behaviour_pattern": "",
         "supporting_evidence": "", "ai_interpretation": "", "alternative_interpretation": "",
         "conversation_direction": "", "confidence_label": "", "suggested_script": "",
-        "recommended_actions": [], "avoid_actions": [], "manager_notes": "", "key_takeaway": ""
+        "recommended_actions": [], "avoid_actions": [], "manager_notes": "", "key_takeaway": "",
+        "underlying_drivers": []
     },
     "step3_root_cause_analysis": {
         "title_question": "", "primary_trigger": "", "secondary_contributors": [],
