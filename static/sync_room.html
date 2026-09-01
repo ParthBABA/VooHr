@@ -2502,6 +2502,7 @@
   #stepContent5 .fs-eyebrow svg{ color: var(--step-primary-soft); flex: 0 0 auto; }
   #stepContent5 .fs-eyebrow-title{ white-space: nowrap; }
   #stepContent5 .fs-eyebrow--summary{ grid-row: 1; grid-column: 1 / 7; }
+  #stepContent5 .sparse-note{ grid-row: 2; grid-column: 1 / 7; }
   #stepContent5 .fs-eyebrow--follow{ grid-row: 6; grid-column: 1 / 7; }
   #stepContent5 .fs-eyebrow--focus{ grid-row: 8; grid-column: 1 / 7; }
   #stepContent5 .fs-eyebrow--learn{ grid-row: 15; grid-column: 1 / 7; }
@@ -2989,6 +2990,30 @@
     font-size: 13px; font-weight: 700;
     letter-spacing: 0.06em;
   }
+
+  /* When the sparse-data note (grid-row 2) is present it takes the row
+     directly below the Conversation Summary eyebrow, so everything that
+     follows shifts down by one row to avoid overlapping it. */
+  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-quote{ grid-row: 3; }
+  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-takeaway{ grid-row: 4; }
+  #stepContent5 .fs-grid:has(.sparse-note) .fs-script{ grid-row: 5; }
+  #stepContent5 .fs-grid:has(.sparse-note) .fs-stats{ grid-row: 6; }
+  #stepContent5 .fs-grid:has(.sparse-note) .fs-eyebrow--follow{ grid-row: 7; }
+  #stepContent5 .fs-grid:has(.sparse-note) .fs-schedule{ grid-row: 8; }
+  #stepContent5 .fs-grid:has(.sparse-note) .fs-eyebrow--focus{ grid-row: 9; }
+  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-goal{ grid-row: 10; }
+  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-focus{ grid-row: 11; }
+  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-opening{ grid-row: 12; }
+  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-followup{ grid-row: 13; }
+  #stepContent5 .fs-grid:has(.sparse-note) .fs-progress{ grid-row: 10 / 14; }
+  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-response{ grid-row: 14; }
+  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-reply{ grid-row: 14; }
+  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-listen{ grid-row: 14; }
+  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-success{ grid-row: 15; }
+  #stepContent5 .fs-grid:has(.sparse-note) .fs-eyebrow--learn{ grid-row: 16; }
+  #stepContent5 .fs-grid:has(.sparse-note) .fs-learn{ grid-row: 17; }
+  #stepContent5 .fs-grid:has(.sparse-note) .fs-guard{ grid-row: 18; }
+  #stepContent5 .fs-grid:has(.sparse-note) .step-nav{ grid-row: 19; }
 
   @media (max-width: 1040px){
     #stepContent5 .fs-grid{ grid-template-columns: 1fr; }
