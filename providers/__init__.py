@@ -33,6 +33,9 @@ def get_tts_provider():
     if name == "google":
         from providers.google_tts import GoogleNeural2TTS
         return GoogleNeural2TTS()
+    if name == "gemini":
+        from providers.gemini_tts import GeminiTTS
+        return GeminiTTS()
     raise ValueError(f"Unknown TTS provider: {name}")
 
 
