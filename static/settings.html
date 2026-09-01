@@ -20,13 +20,18 @@
    ════════════════════════════════════════════════════════════════════ */
 
 /* ── Layout: no global sidebar — main takes full width, settings rail is the only left nav ── */
+:root{
+  --sp-sm:0.75rem;
+  --sp-md:1.5rem;
+  --sp-lg:2.5rem;
+}
 .main-content{flex:1;margin-left:0;}
-.settings-layout{display:flex;gap:0;align-items:flex-start;max-width:1240px;margin:0;padding:2rem clamp(1.5rem,4vw,3.5rem) 5rem;}
+.settings-layout{display:flex;gap:clamp(1.5rem,4vw,3rem);align-items:flex-start;max-width:1240px;margin:0 auto;padding:2rem clamp(1.5rem,4vw,3.5rem) 5rem;}
 
 /* Settings sidebar — dedicated, sticky, anchored just right of the global nav.
    Deliberately distinct from the icon-only VooVr sidebar (full-width labels,
    grouped sections, active indicator, no giant card treatment). */
-.settings-rail{width:236px;flex-shrink:0;position:sticky;top:5.9rem;align-self:flex-start;margin-right:clamp(1.75rem,3.5vw,3rem);padding:0.4rem 0.4rem 1rem;border-right:1px solid var(--border);}
+.settings-rail{width:236px;flex-shrink:0;position:sticky;top:5.9rem;align-self:flex-start;padding:0.4rem 0.4rem 1rem;border-right:1px solid var(--border);}
 .settings-rail-head{font-family:var(--font-lato);font-weight:700;font-size:0.66rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--ivory-dim);padding:0.35rem 0.85rem 0.95rem;display:flex;align-items:center;gap:0.55rem;}
 .settings-rail-head svg{width:15px;height:15px;color:var(--amber);}
 .settings-nav{display:flex;flex-direction:column;}
@@ -67,12 +72,12 @@
 /* ── Section heading: section title / description ── */
 .st-section{margin-bottom:2.6rem;}
 .st-sec-head{display:flex;align-items:baseline;gap:0.75rem;margin-bottom:1.15rem;}
-.st-sec-title{font-family:var(--font-lato);font-weight:700;font-size:0.82rem;letter-spacing:0.02em;color:var(--ivory);}
+.st-sec-title{font-family:var(--font-lato);font-weight:700;font-size:0.82rem;letter-spacing:0.02em;color:var(--ivory);margin:0;}
 .st-sec-desc{font-family:var(--font-lato);font-size:0.8rem;color:var(--ivory-faint);}
 
-/* ── Field grid + groups (consistent, restrained) ── */
-.st-fields{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem 1.75rem;}
-.st-fields .span-2{grid-column:span 2;}
+/* ── Field grid + groups (responsive auto-fit columns) ── */
+.st-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem 1.75rem;}
+.st-fields .span-2{grid-column:1 / -1;}
 .st-field{display:flex;flex-direction:column;}
 .st-field label{font-family:var(--font-lato);font-weight:600;font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--ivory-dim);margin-bottom:0.5rem;}
 .st-field .st-hint{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-faint);margin-top:0.45rem;line-height:1.5;}
@@ -203,7 +208,7 @@
 
 /* ════ RESPONSIVE ════ */
 @media(max-width:1024px){
-  .settings-rail{margin-right:1.75rem;}
+  .settings-layout{gap:clamp(1.25rem,3vw,1.75rem);}
 }
 @media(max-width:900px){
   .settings-layout{flex-direction:column;}
@@ -216,8 +221,6 @@
   .settings-content{max-width:none;}
 }
 @media(max-width:600px){
-  .st-fields{grid-template-columns:1fr;}
-  .st-fields .span-2{grid-column:span 1;}
   .st-title{font-size:1.5rem;}
   .st-row{flex-direction:column;align-items:flex-start;gap:0.8rem;}
   .st-row-actions{width:100%;}
@@ -225,7 +228,7 @@
   .toggle-row{flex-direction:column;align-items:flex-start;gap:0.6rem;}
   .toggle-switch{align-self:flex-start;}
   .st-plan-head{flex-direction:column;align-items:flex-start;gap:0.8rem;}
-  #deleteAccountConfirm > div[style]{grid-template-columns:1fr !important;}
+  .st-confirm-fields{grid-template-columns:1fr !important;}
   .activity-time{display:none;}
   .activity-row{flex-wrap:wrap;}
   .activity-main{min-width:70%;}
@@ -348,11 +351,9 @@
   .settings-nav-item.active::before{top:0.4rem;bottom:0.4rem;}
 }
 @media(max-width:600px){
-  .st-fields{grid-template-columns:1fr;}
-  .st-fields .span-2{grid-column:span 1;}
   .st-title{font-size:1.3rem;}
   .settings-content{max-width:none;}
-  #deleteAccountConfirm > div[style]{grid-template-columns:1fr !important;}
+  .st-confirm-fields{grid-template-columns:1fr !important;}
   .activity-time{display:none;}
   .activity-row{flex-wrap:wrap;}
   .activity-main{min-width:70%;}
@@ -418,6 +419,32 @@ html[data-theme="light"]{
    !important keeps the red fill consistent against the base .btn styles. */
 .settings-content .st-danger-btn{background:var(--red)!important;border:1px solid var(--red-glow)!important;color:#fff!important;}
 .settings-content .st-danger-btn:hover{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important;}
+
+/* ════ REFACTOR: shared spacing utilities (CSS custom props, no inline styles) ════ */
+.mt-sm{margin-top:var(--sp-sm);}.mt-md{margin-top:var(--sp-md);}.mt-lg{margin-top:var(--sp-lg);}
+.mb-sm{margin-bottom:var(--sp-sm);}.mb-md{margin-bottom:var(--sp-md);}.mb-lg{margin-bottom:var(--sp-lg);}
+.pt-sm{padding-top:var(--sp-sm);}.pt-md{padding-top:var(--sp-md);}.pt-lg{padding-top:var(--sp-lg);}
+.pb-sm{padding-bottom:var(--sp-sm);}.pb-md{padding-bottom:var(--sp-md);}.pb-lg{padding-bottom:var(--sp-lg);}
+.pb-0{padding-bottom:0;}
+
+/* Section-title danger variant (Delete Account heading) */
+.st-sec-title--danger{color:var(--red);}
+
+/* Billing "Manage your subscription" divider row */
+.st-row--bordered{border-top:1px solid var(--settings-divider);}
+
+/* Small contextual note under a toggle (non-admin lockout note) */
+.st-note{font-family:var(--font-rc);font-size:0.62rem;letter-spacing:0.05em;color:var(--ivory-dim);padding:0.1rem 0 0.6rem;}
+
+/* Delete-account confirm block + its credential fields + action bar */
+.st-confirm-zone{margin-top:var(--sp-md);padding-top:var(--sp-md);border-top:1px solid var(--red-glow);}
+.st-confirm-fields{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem;}
+.st-actions--tight{gap:0.5rem;}
+
+/* Row/action right-hand grouping: keep status + buttons vertically centered,
+   right-aligned and non-shrinking identically across all rows. */
+.st-row-actions{align-self:center;}
+.st-current .st-status{flex-shrink:0;}
 </style>
 </head>
 <body style="visibility:hidden">
@@ -578,7 +605,7 @@ html[data-theme="light"]{
           </div>
 
           <div class="st-section" id="profileIdentitySection">
-            <div class="profile-head" style="margin-bottom:1.4rem;">
+            <div class="profile-head mb-md">
               <div class="profile-avatar" id="profileAvatar">U</div>
               <div>
                 <div class="profile-name" id="profileDisplayName">You</div>
@@ -589,7 +616,7 @@ html[data-theme="light"]{
 
           <div class="st-section">
             <div class="st-sec-head">
-              <span class="st-sec-title">Profile information</span>
+              <h3 class="st-sec-title">Profile information</h3>
               <span class="st-sec-desc">Basic details about you</span>
             </div>
             <div class="st-fields">
@@ -612,7 +639,7 @@ html[data-theme="light"]{
 
           <div class="st-section">
             <div class="st-sec-head">
-              <span class="st-sec-title">Contact information</span>
+              <h3 class="st-sec-title">Contact information</h3>
               <span class="st-sec-desc">How teammates and the system reach you</span>
             </div>
             <div class="st-fields">
@@ -640,7 +667,7 @@ html[data-theme="light"]{
 
           <div class="st-section">
             <div class="st-sec-head">
-              <span class="st-sec-title">Organization information</span>
+              <h3 class="st-sec-title">Organization information</h3>
               <span class="st-sec-desc">Editable only by organization admins</span>
             </div>
             <div class="st-fields">
@@ -678,7 +705,7 @@ html[data-theme="light"]{
                 </select>
               </div>
             </div>
-            <div class="field-error" id="orgAdminNote" style="display:none;margin-top:1rem;">Only org admins can edit these details.</div>
+            <div class="field-error mt-md" id="orgAdminNote" style="display:none;">Only org admins can edit these details.</div>
           </div>
 
           <div class="st-actions">
@@ -696,7 +723,7 @@ html[data-theme="light"]{
 
           <div class="st-section">
             <div class="st-sec-head">
-              <span class="st-sec-title">Email notifications</span>
+              <h3 class="st-sec-title">Email notifications</h3>
               <span class="st-sec-desc">Sent to your account email</span>
             </div>
             <div class="notif-prefs">
@@ -715,7 +742,7 @@ html[data-theme="light"]{
 
           <div class="st-section">
             <div class="st-sec-head">
-              <span class="st-sec-title">HR / employee alerts</span>
+              <h3 class="st-sec-title">HR / employee alerts</h3>
               <span class="st-sec-desc">Managed by your organization admins</span>
             </div>
             <div class="notif-prefs">
@@ -729,13 +756,13 @@ html[data-theme="light"]{
                   <span class="toggle-slider"></span>
                 </span>
               </label>
-              <div id="notifRiskNote" style="display:none;font-family:var(--font-rc);font-size:0.62rem;letter-spacing:0.05em;color:var(--ivory-dim);padding:0.1rem 0 0.6rem;">Only org admins can change this.</div>
+              <div id="notifRiskNote" class="st-note" style="display:none;">Only org admins can change this.</div>
             </div>
           </div>
 
           <div class="st-section">
             <div class="st-sec-head">
-              <span class="st-sec-title">Product &amp; system updates</span>
+              <h3 class="st-sec-title">Product &amp; system updates</h3>
               <span class="st-sec-desc">Occasional news from the VooVr team</span>
             </div>
             <div class="notif-prefs">
@@ -772,7 +799,7 @@ html[data-theme="light"]{
           </div>
 
           <!-- TWO-FACTOR AUTHENTICATION -->
-          <div class="st-section" style="margin-bottom:1.2rem;">
+          <div class="st-section mb-md">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Two-Factor Authentication</h3>
               <span class="st-sec-desc">Add an additional layer of protection to your account.</span>
@@ -823,7 +850,7 @@ html[data-theme="light"]{
           </div>
 
           <!-- CURRENT SESSION -->
-          <div class="st-section" style="margin-bottom:2.2rem;">
+          <div class="st-section mb-lg">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Current Session</h3>
               <span class="st-sec-desc">This is the device you are using right now.</span>
@@ -835,7 +862,7 @@ html[data-theme="light"]{
                 <div class="st-current-device" id="currentSessionDevice">&mdash;</div>
                 <div class="st-current-meta" id="currentSessionMeta">&mdash;</div>
               </div>
-              <span class="st-status ok" style="flex-shrink:0;"><span class="st-dot"></span><strong>Current session</strong></span>
+              <span class="st-status ok"><span class="st-dot"></span><strong>Current session</strong></span>
             </div>
           </div>
 
@@ -888,7 +915,7 @@ html[data-theme="light"]{
           </div>
 
           <!-- CURRENT PLAN -->
-          <div class="st-section" style="margin-bottom:2.2rem;">
+          <div class="st-section mb-lg">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Current Plan</h3>
               <span class="st-sec-desc">Your subscription and organization information.</span>
@@ -906,7 +933,7 @@ html[data-theme="light"]{
               Employee wellness analytics, AI sync rooms, and priority support for growing teams.
             </p>
 
-            <div class="st-row" style="border-top:1px solid var(--settings-divider);margin-top:1.1rem;padding-bottom:0;">
+            <div class="st-row st-row--bordered mt-md pb-0">
               <div class="st-row-main">
                 <div class="st-row-title">Manage your subscription</div>
                 <div class="st-row-desc">Update billing details, add seats or change your plan through the billing portal.</div>
@@ -1010,32 +1037,10 @@ html[data-theme="light"]{
               <p class="st-data-intro">You can <strong>export</strong> a copy of your account data or <strong>permanently delete</strong> your account. Your export only ever contains your own account and organization details &mdash; it never includes other employees&rsquo; HR data.</p>
             </div>
 
-            <!-- ACCOUNT DATA (lifecycle overview) -->
-            <div class="st-section">
-              <div class="st-sec-head">
-                <h3 class="st-sec-title">Account Data</h3>
-                <span class="st-sec-desc">Data actions available to your account.</span>
-              </div>
-              <div class="st-row">
-                <div class="st-row-main">
-                  <div class="st-row-title">Export my data</div>
-                  <div class="st-row-desc">Download a copy of the data associated with your account.</div>
-                </div>
-                <div class="st-row-actions"><span class="st-status neutral"><span class="st-dot"></span>Available</span></div>
-              </div>
-              <div class="st-row">
-                <div class="st-row-main">
-                  <div class="st-row-title">Delete my account</div>
-                  <div class="st-row-desc">Permanently remove your account and associated account data.</div>
-                </div>
-                <div class="st-row-actions"><span class="st-status crit"><span class="st-dot"></span>Permanent</span></div>
-              </div>
-            </div>
-
             <!-- DELETE ACCOUNT (destructive — restrained, placed last) -->
             <div class="st-section st-delete-zone">
               <div class="st-sec-head">
-                <h3 class="st-sec-title" style="color:var(--red);">Delete Account</h3>
+                <h3 class="st-sec-title st-sec-title--danger">Delete Account</h3>
                 <span class="st-sec-desc">Permanently delete your VooVr account and associated account data.</span>
               </div>
 
@@ -1051,11 +1056,11 @@ html[data-theme="light"]{
                 </div>
               </div>
 
-              <div id="deleteAccountConfirm" style="display:none;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--red-glow);">
+              <div id="deleteAccountConfirm" class="st-confirm-zone" style="display:none;">
                 <div class="st-confirm-note">
                   Re-confirm to continue. This action is permanent and cannot be undone. Provide your password or a 6-digit authenticator code to verify it&rsquo;s really you.
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem;">
+                <div class="st-confirm-fields">
                   <div class="st-field" id="deletePasswordWrap">
                     <label>Password</label>
                     <input type="password" id="deletePassword" class="form-input" placeholder="Current password" autocomplete="current-password">
@@ -1065,7 +1070,7 @@ html[data-theme="light"]{
                     <input type="text" id="deleteTotpCode" class="form-input" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code">
                   </div>
                 </div>
-                <div class="st-actions" style="display:flex;gap:.5rem;">
+                <div class="st-actions st-actions--tight">
                   <button class="btn btn-sm st-danger-btn" id="confirmDeleteBtn" type="button">Delete account</button>
                   <button class="btn btn-sm btn-outline" id="cancelDeleteBtn" type="button">Cancel</button>
                 </div>
