@@ -356,6 +356,52 @@
   .activity-row{flex-wrap:wrap;}
   .activity-main{min-width:70%;}
 }
+
+/* ════ SETTINGS DIVIDER SYSTEM (visual polish only — no behavior changes) ════
+   Theme-aware 1px semantic divider, stronger than the global faint --border so
+   setting groups scan clearly, but still subtle. Dark = cool slate, Light =
+   cool gray. Applied to major panels, sub-sections, content rows, sidebar
+   groups and Settings inputs. Rules below override the faint defaults above. */
+:root{
+  --settings-divider:rgba(130,160,220,0.20);
+}
+html[data-theme="light"]{
+  --settings-divider:rgba(20,30,60,0.26);
+}
+
+/* Major section boundary: panel-to-panel on the continuous scroll */
+.settings-panel + .settings-panel{border-top:1px solid var(--settings-divider);padding-top:2.4rem;}
+
+/* Page header underline (title + description) */
+.st-page{border-bottom-color:var(--settings-divider);}
+
+/* Sub-section boundaries inside a panel (Profile info → Contact info, etc.) */
+.settings-panel .st-section + .st-section{border-top:1px solid var(--settings-divider);padding-top:2.1rem;}
+
+/* Settings content rows + toggle-list separators */
+.st-row + .st-row,
+.toggle-row + .toggle-row{border-color:var(--settings-divider);}
+
+/* Sessions + activity-log editorial list separators */
+.session-row{border-bottom-color:var(--settings-divider);}
+.activity-row{border-bottom-color:var(--settings-divider);}
+.sessions-list .session-row{border-bottom-color:var(--settings-divider);}
+.activity-list .activity-row{border-bottom-color:var(--settings-divider);}
+
+/* Footer actions + destructive-zone neutral dividers */
+.st-actions{border-top-color:var(--settings-divider);}
+.st-delete-zone{border-top-color:var(--settings-divider);}
+
+/* Settings rail lining + sidebar group structure */
+.settings-rail{border-right-color:var(--settings-divider);}
+@media(max-width:900px){.settings-rail{border-bottom-color:var(--settings-divider);}}
+@media(min-width:901px){
+  .settings-nav-group{border-top:1px solid var(--settings-divider);margin-top:1.35rem;padding-top:0.9rem;}
+  .settings-nav-group:first-child{border-top:none;margin-top:0.35rem;padding-top:0;}
+}
+
+/* Settings input borders kept visible in both themes (never dominant) */
+.settings-content .form-input{border-color:var(--settings-divider);}
 </style>
 </head>
 <body style="visibility:hidden">
@@ -886,7 +932,7 @@
               Employee wellness analytics, AI sync rooms, and priority support for growing teams.
             </p>
 
-            <div class="st-row" style="border-top:1px solid var(--border);margin-top:1.1rem;padding-bottom:0;">
+            <div class="st-row" style="border-top:1px solid var(--settings-divider);margin-top:1.1rem;padding-bottom:0;">
               <div class="st-row-main">
                 <div class="st-row-title">Manage your subscription</div>
                 <div class="st-row-desc">Update billing details, add seats or change your plan through the billing portal.</div>
