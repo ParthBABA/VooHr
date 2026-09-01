@@ -802,14 +802,14 @@ html[data-theme="light"]{
           <div class="st-section mb-md">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Two-Factor Authentication</h3>
-              <span class="st-sec-desc">Add an additional layer of protection to your account.</span>
+              <span class="st-sec-desc">Extra protection for your account.</span>
             </div>
 
             <div class="st-row">
               <div class="st-row-main">
                 <div class="st-row-title">Two-Factor Authentication</div>
                 <div class="st-row-desc">
-                  Requires a 6-digit code from your authenticator app whenever you sign in to a new device.
+                  A 6-digit code from your authenticator app on new sign-ins.
                 </div>
               </div>
               <div class="st-row-actions">
@@ -823,14 +823,14 @@ html[data-theme="light"]{
           <div class="st-section">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Recovery</h3>
-              <span class="st-sec-desc">Backup codes let you regain access if you lose your authenticator device.</span>
+              <span class="st-sec-desc">Backup access if you lose your device.</span>
             </div>
 
             <div class="st-row">
               <div class="st-row-main">
                 <div class="st-row-title">Recovery codes</div>
                 <div class="st-row-desc">
-                  Each code is single-use. Store them somewhere safe — they are only shown when generated.
+                  Single-use backup codes. Shown only when generated.
                 </div>
               </div>
               <div class="st-row-actions">
@@ -977,79 +977,58 @@ html[data-theme="light"]{
             <div class="st-section">
               <div class="st-sec-head">
                 <h3 class="st-sec-title">Your Data</h3>
-                <span class="st-sec-desc">Your data belongs to you.</span>
+                <span class="st-sec-desc">Download, review, or delete your account data.</span>
               </div>
-              <p class="st-data-intro">VooVr stores the information you provide and the activity your account generates. From this page you can download a copy of your account data, review the categories your account holds, or permanently delete your account.</p>
+              <p class="st-data-intro">Download a copy of your data, review what we store, or permanently delete your account. Exports only include your own account and organization details &mdash; never other employees&rsquo; HR data.</p>
             </div>
 
-            <!-- EXPORT YOUR DATA -->
+            <!-- DATA WE STORE -->
             <div class="st-section">
               <div class="st-sec-head">
-                <h3 class="st-sec-title">Export Your Data</h3>
-                <span class="st-sec-desc">Download a copy of the data associated with your VooVr account.</span>
+                <h3 class="st-sec-title">Data We Store</h3>
+                <span class="st-sec-desc">Categories of information your account holds.</span>
+              </div>
+              <div class="st-data-list">
+                <div class="st-data-item">
+                  <div class="st-data-title">Profile</div>
+                  <div class="st-data-desc">Your name, email, role.</div>
+                </div>
+                <div class="st-data-item">
+                  <div class="st-data-title">Organization</div>
+                  <div class="st-data-desc">Company name, industry, size, plan.</div>
+                </div>
+                <div class="st-data-item">
+                  <div class="st-data-title">Security</div>
+                  <div class="st-data-desc">2FA, recovery codes, sessions.</div>
+                </div>
+                <div class="st-data-item">
+                  <div class="st-data-title">Activity</div>
+                  <div class="st-data-desc">Admin and security actions.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- EXPORT & DELETE -->
+            <div class="st-section">
+              <div class="st-sec-head">
+                <h3 class="st-sec-title">Export &amp; Delete</h3>
+                <span class="st-sec-desc">Download your data or delete your account.</span>
               </div>
 
               <div class="st-row">
                 <div class="st-row-main">
                   <div class="st-row-title">Download a copy of your data</div>
-                  <div class="st-row-desc">
-                    Includes your account profile and your organization&rsquo;s details as a JSON file. This does not include other employees&rsquo; HR data.
-                  </div>
+                  <div class="st-row-desc">Your account profile and organization details as JSON.</div>
                 </div>
                 <div class="st-row-actions">
                   <button class="btn btn-sm btn-outline" id="exportDataBtn" type="button">Export Data</button>
                 </div>
               </div>
-            </div>
-
-            <!-- DATA WE STORE (retention / storage info) -->
-            <div class="st-section">
-              <div class="st-sec-head">
-                <h3 class="st-sec-title">Data We Store</h3>
-                <span class="st-sec-desc">Categories of information your account currently holds.</span>
-              </div>
-              <div class="st-data-list">
-                <div class="st-data-item">
-                  <div class="st-data-title">Profile</div>
-                  <div class="st-data-desc">Your name, email, role and how you appear across VooVr.</div>
-                </div>
-                <div class="st-data-item">
-                  <div class="st-data-title">Organization</div>
-                  <div class="st-data-desc">Your organization&rsquo;s name, industry, size and subscription plan.</div>
-                </div>
-                <div class="st-data-item">
-                  <div class="st-data-title">Security</div>
-                  <div class="st-data-desc">Authentication details such as two-factor status, recovery codes and session records.</div>
-                </div>
-                <div class="st-data-item">
-                  <div class="st-data-title">Activity</div>
-                  <div class="st-data-desc">Administrative and security actions recorded in your organization&rsquo;s audit log.</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- PRIVACY INFORMATION -->
-            <div class="st-section">
-              <div class="st-sec-head">
-                <h3 class="st-sec-title">Privacy Information</h3>
-                <span class="st-sec-desc">What you can do with your data.</span>
-              </div>
-              <p class="st-data-intro">You can <strong>export</strong> a copy of your account data or <strong>permanently delete</strong> your account. Your export only ever contains your own account and organization details &mdash; it never includes other employees&rsquo; HR data.</p>
-            </div>
-
-            <!-- DELETE ACCOUNT (destructive — restrained, placed last) -->
-            <div class="st-section st-delete-zone">
-              <div class="st-sec-head">
-                <h3 class="st-sec-title st-sec-title--danger">Delete Account</h3>
-                <span class="st-sec-desc">Permanently delete your VooVr account and associated account data.</span>
-              </div>
 
               <div class="st-row">
                 <div class="st-row-main">
-                  <div class="st-row-title">Permanently delete your VooVr account</div>
-                  <div class="st-row-desc">
-                    This action is permanent and cannot be undone. Deletes your account and, if you are the only member, your organization and all of its data.
-                  </div>
+                  <div class="st-row-title">Delete your account</div>
+                  <div class="st-row-desc">Permanent &mdash; removes your account and, if you&rsquo;re the only member, your organization.</div>
                 </div>
                 <div class="st-row-actions">
                   <button class="btn btn-sm st-danger-btn" id="deleteAccountBtn" type="button">Delete Account</button>
