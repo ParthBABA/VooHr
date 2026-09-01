@@ -21,6 +21,8 @@ def synthesize():
     text = (data.get("text") or "").strip()
     language_code = (data.get("language_code") or "").strip()
     translate_flag = bool(data.get("translate", False))
+    voice_name = (data.get("voice_name") or "").strip() or None
+    voice_tier = (data.get("voice_tier") or "").strip() or None
 
     # ── Input validation — reject oversized / empty requests before any
     # provider is hit. ──
@@ -38,7 +40,7 @@ def synthesize():
             text = llm.translate(text, language_code)
 
         tts = get_tts_provider()
-        audio_bytes = tts.synthesize(text, language_code)
+        audio_bytes = tts.synthesize(text, language_code, voice_name=voice_name, voice_tier=voice_tier)
     except Exception as e:
         logger.exception("TTS synthesize failed")
         if current_app.debug:

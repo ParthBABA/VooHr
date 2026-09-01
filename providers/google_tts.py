@@ -20,18 +20,31 @@ _MAX_CHUNK_BYTES = 4500
 _SENTENCE_BOUNDARIES = ".!?\u0964"
 
 
+_VALID_VOICE_TIERS = frozenset({"Neural2", "Studio", "Wavenet", "Standard"})
+
+
 class GoogleNeural2TTS(BaseTTS):
     """Google Cloud Text-to-Speech provider using the REST API directly.
 
-    Uses the Neural2 voice tier by default, building the voice name as
-    f"{language_code}-Neural2-{variant}" (default variant "A"). An explicit
-    voice_name may be supplied to override this.
+    Builds the voice name as ``f"{language_code}-{tier}-{variant}"`` where
+    *tier* defaults to the ``GOOGLE_TTS_VOICE_TIER`` env var (or "Neural2")
+    and *variant* defaults to ``GOOGLE_TTS_VOICE_VARIANT`` (or "A").  An
+    explicit *voice_name* may be supplied to override the generated name
+    entirely.
     """
 
     def __init__(self):
         self.api_key = (
             os.environ.get("GOOGLE_TTS_API_KEY") or os.environ.get("GOOGLE_TTS", "")
         )
+        tier = os.environ.get("GOOGLE_TTS_VOICE_TIER", "Neural2")
+        if tier not in _VALID_VOICE_TIERS:
+            logger.warning(
+                "Invalid GOOGLE_TTS_VOICE_TIER=%r – falling back to 'Neural2'. "
+                "Valid tiers: %s", tier, ", ".join(sorted(_VALID_VOICE_TIERS)),
+            )
+            tier = "Neural2"
+        self.default_tier = tier
         self.default_variant = os.environ.get("GOOGLE_TTS_VOICE_VARIANT", "A")
         self.endpoint = _TTS_ENDPOINT
 
@@ -116,15 +129,19 @@ class GoogleNeural2TTS(BaseTTS):
 
         return base64.b64decode(audio_b64)
 
-    def synthesize(self, text: str, language_code: str, voice_name: str = None) -> bytes:
+    def synthesize(self, text: str, language_code: str, voice_name: str = None, voice_tier: str = None) -> bytes:
         text = (text or "").strip()
         if not text:
             return b""
 
         if not voice_name:
-            voice_name = (
-                f"{language_code}-Neural2-{self.default_variant}"
-            )
+            tier = voice_tier if (voice_tier and voice_tier in _VALID_VOICE_TIERS) else self.default_tier
+            if voice_tier and voice_tier not in _VALID_VOICE_TIERS:
+                logger.warning(
+                    "Invalid voice_tier=%r requested – falling back to default '%s'.",
+                    voice_tier, self.default_tier,
+                )
+            voice_name = f"{language_code}-{tier}-{self.default_variant}"
 
         chunks = self._split_chunks(text)
         logger.debug(
