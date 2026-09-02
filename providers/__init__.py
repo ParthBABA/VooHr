@@ -36,6 +36,9 @@ def get_tts_provider():
     if name == "gemini":
         from providers.gemini_tts import GeminiTTS
         return GeminiTTS()
+    if name == "deepgram":
+        from providers.deepgram_tts import DeepgramTTS
+        return DeepgramTTS()
     raise ValueError(f"Unknown TTS provider: {name}")
 
 

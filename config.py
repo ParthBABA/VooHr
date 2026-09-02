@@ -53,7 +53,8 @@ class Config:
     STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "local")
     VISION_PROVIDER = os.environ.get("VISION_PROVIDER", "openai")
     # TTS: "google" -> GoogleNeural2TTS (chirp/classic voices), "gemini" ->
-    # GeminiTTS (gemini-3.1-flash-tts-preview).
+    # GeminiTTS (gemini-3.1-flash-tts-preview), "deepgram" -> DeepgramTTS
+    # (aura-2-thalia-en).
     TTS_PROVIDER = os.environ.get("TTS_PROVIDER", "google")
 
     # OpenAI (used for Whisper speech-to-text)
