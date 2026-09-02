@@ -28,20 +28,12 @@ _MAX_CHUNK_CHARS = 1900
 # Includes the Devanagari danda ('।') used by Hindi/Nepali/etc.
 _SENTENCE_BOUNDARIES = ".!?\u0964"
 
-# WebSocket streaming emits raw audio only. linear16 is 16-bit signed little-
-# endian PCM; the default streaming-compatible encoding. 24 kHz is the
-# Deepgram streaming default sample rate.
+# Synthesis encoding. linear16 is 16-bit signed little-endian PCM; 24 kHz is
+# the Deepgram default sample rate. Raw linear16 PCM concatenates cleanly
+# across chunks (no per-chunk encoder state), so it is used for both the
+# streaming path and the single complete WAV returned by synthesize().
 _ENCODING = "linear16"
 _SAMPLE_RATE = 24000
-
-# REST (non-streaming) synthesis encoding. Deepgram's "Audio Format
-# Combinations" table allows exactly two bitrates for mp3: 32000 and 48000
-# (48000 is Deepgram's default). Sending any other value is invalid and would
-# be rejected/coerced by the API, so we validate locally instead of letting an
-# invalid value through silently.
-_REST_ENCODING = "mp3"
-_MP3_BIT_RATES = (32000, 48000)
-_REST_BIT_RATE = 48000
 
 
 class _DoneSentinel:
@@ -125,52 +117,6 @@ class DeepgramTTS(BaseTTS):
             start = end
 
         return chunks
-
-    def _synthesize_chunk(self, text: str, model: str, bit_rate: int = _REST_BIT_RATE) -> bytes:
-        api_key = self._ensure_api_key()
-        # mp3 only accepts 32000 or 48000 bps per Deepgram's Audio Format
-        # Combinations table. Reject anything else early with a clear error
-        # instead of silently sending an invalid bitrate to the API.
-        if _REST_ENCODING == "mp3" and bit_rate not in _MP3_BIT_RATES:
-            raise ValueError(
-                f"Invalid mp3 bit_rate {bit_rate!r}: Deepgram only supports "
-                f"bitrates {sorted(_MP3_BIT_RATES)} for mp3 encoding"
-            )
-        headers = {
-            "Authorization": f"Token {api_key}",
-            "Content-Type": "application/json",
-        }
-        # MP3 is Deepgram's default encoding and 48000 its default bitrate, but
-        # we send them explicitly (rather than relying on the implicit default)
-        # so the response format is pinned and predictable.
-        params = {
-            "model": model,
-            "encoding": _REST_ENCODING,
-            "bit_rate": bit_rate,
-        }
-        payload = {"text": text}
-        try:
-            resp = requests.post(
-                self.endpoint,
-                params=params,
-                headers=headers,
-                json=payload,
-                timeout=60,
-            )
-        except requests.RequestException as exc:
-            raise RuntimeError(
-                f"Deepgram TTS request failed: {exc}"
-            ) from exc
-
-        if resp.status_code != 200:
-            raise RuntimeError(
-                f"Deepgram TTS returned HTTP {resp.status_code}: {resp.text}"
-            )
-
-        if not resp.content:
-            raise RuntimeError("Deepgram TTS response contained no audio content")
-
-        return resp.content
 
     def _synthesize_chunk_wav(self, text: str, model: str) -> bytes:
         """Synthesize one chunk to a fully-formed WAV file via the REST API.
@@ -263,16 +209,13 @@ class DeepgramTTS(BaseTTS):
             model, len(chunks), len(text),
         )
 
-        # Single chunk: the common short-phrase path. Keep mp3 @ 48kbps —
-        # best quality/size, and there is nothing to join (the seam/header
-        # artifact problem only exists when multiple streams are spliced).
+        # Always return ONE complete WAV file so the browser can decode the
+        # whole narration as a single contiguous AudioBuffer (no per-chunk
+        # seams). Each chunk is synthesized independently as linear16 WAV and
+        # concatenated sample-for-sample; raw PCM splices cleanly with no
+        # clicks/pops (unlike splicing independent mp3 streams).
         if len(chunks) == 1:
-            return self._synthesize_chunk(chunks[0], model)
-
-        # Multi-chunk (long text): each chunk is synthesized as linear16 WAV
-        # and the raw PCM is concatenated sample-for-sample into one
-        # continuous, artifact-free WAV. Concatenating independent mp3
-        # streams here would splice encoder headers/state and click/pop.
+            return self._synthesize_chunk_wav(chunks[0], model)
         parts = [self._synthesize_chunk_wav(chunk, model) for chunk in chunks]
         return self._concat_wav_chunks(parts)
 

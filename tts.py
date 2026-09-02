@@ -41,18 +41,14 @@ def synthesize():
 
         tts = get_tts_provider()
 
-        # Stream raw linear16 PCM (24000 Hz) back chunk-by-chunk over the
-        # WebSocket so the browser can begin playback as soon as the first
-        # audio arrives. The frontend (narration-stream.js) wraps each chunk
-        # in a WAV header itself and decodes it via Web Audio.
-        def generate():
-            for chunk in tts.synthesize_stream(
-                text, language_code, voice_name=voice_name, voice_tier=voice_tier
-            ):
-                if chunk:
-                    yield chunk
-
-        return Response(generate(), mimetype="audio/wav")
+        # Return ONE complete WAV file (whole text synthesized/concatenated
+        # on the server). The frontend decodes this single buffer once and
+        # plays it as one contiguous source — no per-chunk re-wrapping, so
+        # there are no seam/header artifacts and playback is clean.
+        audio = tts.synthesize(
+            text, language_code, voice_name=voice_name, voice_tier=voice_tier
+        )
+        return Response(audio, mimetype="audio/wav")
     except Exception as e:
         logger.exception("TTS synthesize failed")
         if current_app.debug:

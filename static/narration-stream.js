@@ -1,16 +1,17 @@
-// ── Low-latency streaming narration playback ─────────────────────────────
-// The /api/tts/synthesize endpoint streams raw linear16 PCM audio chunks
-// (audio/wav). Instead of waiting for the whole response and loading it into
-// an <audio> element, we decode each arriving chunk as a WAV and schedule it
-// on a Web Audio AudioContext so playback starts as soon as the first chunk
-// lands. Behavioral contract with callers:
+// ── Narration playback ────────────────────────────────────────────────────
+// /api/tts/synthesize returns ONE complete WAV file (whole text synthesized
+// and concatenated on the server). We fetch the full body, decode it as a
+// single AudioBuffer, and play it as one contiguous AudioBufferSourceNode.
+// Decoding once (rather than re-wrapping streamed micro-frames in WAV headers
+// and scheduling them back-to-back) avoids the seam/header artifacts that
+// showed up as crackling/static. Behavioral contract with callers:
 //
 //   createNarrationStream() -> {
-//     play(body) : POST /api/tts/synthesize then stream-play. Resolves once
-//                  the first audio chunk has been decoded and scheduled for
-//                  playback; rejects on pre-playback failure.
+//     play(body) : POST /api/tts/synthesize then play the returned audio.
+//                  Resolves once playback has been scheduled to start;
+//                  rejects on pre-playback failure.
 //     stop()     : stop playback and disconnect the current stream.
-//     onDone     : callback fired when all scheduled audio has finished.
+//     onDone     : callback fired when playback has finished.
 //     onError    : callback fired on transport/decode errors after playback
 //                  has started.
 //   }
@@ -20,12 +21,13 @@
 (function (global) {
   'use strict';
 
-  var SAMPLE_RATE = 24000; // matches Deepgram streaming default used by backend
+  var SAMPLE_RATE = 24000; // matches the backend's linear16 sample rate
 
   var activePlayer = null;
 
-  // Build a minimal 44-byte WAV header around raw linear16 PCM so the browser
-  // can decode the chunk via decodeAudioData without a full file container.
+  // Build a 44-byte WAV header around raw linear16 PCM in case the response is
+  // raw PCM (no container). If the payload is already a complete WAV (starts
+  // with RIFF/WAVE), we pass it through untouched.
   function buildWavHeader(dataLength, sampleRate) {
     var buffer = new ArrayBuffer(44);
     var view = new DataView(buffer);
@@ -55,25 +57,25 @@
     return buffer;
   }
 
-  function decodeChunk(pcmBytes, sampleRate, ctx) {
-    var pcm = new Uint8Array(pcmBytes);
-    var wav = new Uint8Array(44 + pcm.length);
-    wav.set(new Uint8Array(buildWavHeader(pcm.length, sampleRate)), 0);
-    wav.set(pcm, 44);
-    return ctx.decodeAudioData(wav.buffer);
+  function toWavIfNeeded(bytes) {
+    var arr = new Uint8Array(bytes);
+    var isWav = arr.length > 12 &&
+      arr[0] === 0x52 && arr[1] === 0x49 && arr[2] === 0x46 && arr[3] === 0x46 &&
+      arr[8] === 0x57 && arr[9] === 0x41 && arr[10] === 0x56 && arr[11] === 0x45;
+    if (isWav) return bytes;
+    var wav = new Uint8Array(44 + arr.length);
+    wav.set(new Uint8Array(buildWavHeader(arr.length, SAMPLE_RATE)), 0);
+    wav.set(arr, 44);
+    return wav.buffer;
   }
 
   function createNarrationStream() {
     var ctx = null;
     var stopped = false;
-    var reader = null;
-    var runId = 0;
     var player;
 
     function stopStream() {
       stopped = true;
-      runId++;
-      if (reader) { try { reader.cancel(); } catch (e) {} reader = null; }
       if (ctx) {
         try { ctx.close(); } catch (e) {}
         ctx = null;
@@ -91,8 +93,6 @@
     }
 
     function play(body) {
-      // Always stop any in-flight narration before starting a new stream so
-      // audio never overlaps even when the same player is reused.
       stopStream();
 
       if (activePlayer && activePlayer !== player) {
@@ -104,28 +104,37 @@
       var audioCtx;
       try {
         audioCtx = initiateCtx();
-        // AudioContext starts suspended until a user gesture; resume when able.
         if (audioCtx.state === 'suspended') audioCtx.resume().catch(function () {});
       } catch (e) {
         return Promise.reject(e);
       }
 
-      var myRun = runId;
+      var gotStarted = false;
       var startedResolve, startedReject;
       var startedPromise = new Promise(function (res, rej) {
         startedResolve = res;
         startedReject = rej;
       });
-      var gotStarted = false;
 
       function fail(err) {
-        if (myRun !== runId || stopped) return; // stale run: ignore
+        if (stopped) return;
         if (gotStarted) {
           if (player.onError) player.onError(err);
         } else {
           gotStarted = true;
           startedReject(err);
         }
+      }
+
+      function playBuffer(buf) {
+        if (stopped) return;
+        var src = audioCtx.createBufferSource();
+        src.buffer = buf;
+        src.connect(audioCtx.destination);
+        src.onended = function () {
+          if (!stopped && player.onDone) player.onDone();
+        };
+        src.start(0);
       }
 
       fetch('/api/tts/synthesize', {
@@ -139,76 +148,24 @@
               throw new Error(e.error || 'Narration failed');
             });
           }
-          if (!r.body || !r.body.getReader) {
-            throw new Error('Streaming not supported by this browser');
-          }
-          reader = r.body.getReader();
-          return pumpChunks(reader, audioCtx, player, myRun, function onFirstBuffer() {
-            if (myRun !== runId || stopped) return;
-            if (!gotStarted) { gotStarted = true; startedResolve(true); }
-          }, function onEmpty() {
+          return r.arrayBuffer();
+        })
+        .then(function (buffer) {
+          if (stopped) return;
+          if (!buffer || buffer.byteLength === 0) {
             fail(new Error('No audio received'));
-          }, fail);
+            return;
+          }
+          var wav = toWavIfNeeded(buffer);
+          return audioCtx.decodeAudioData(wav).then(function (decoded) {
+            if (stopped) return;
+            if (!gotStarted) { gotStarted = true; startedResolve(true); }
+            playBuffer(decoded);
+          });
         })
         .catch(function (err) { fail(err); });
 
       return startedPromise;
-    }
-
-    // Read chunks from the response body, decode each into an AudioBuffer,
-    // and schedule them contiguously on the audio context. Each chunk is
-    // played back-to-back so there are no gaps between the streamed frames.
-    function pumpChunks(rdr, audioCtx, plr, myRun, onFirstBuffer, onEmpty, onStreamError) {
-      var queueTime = 0;
-      var first = true;
-      var pending = 0;
-
-      function isStale() { return stopped || myRun !== runId; }
-
-      function schedule(buf) {
-        if (isStale()) return;
-        var now = audioCtx.currentTime;
-        if (first) {
-          queueTime = now + 0.02; // ~20ms lead-in
-          first = false;
-        }
-        var src = audioCtx.createBufferSource();
-        src.buffer = buf;
-        src.connect(audioCtx.destination);
-        src.start(queueTime);
-        queueTime += buf.duration;
-        pending++;
-        src.onended = function () {
-          pending--;
-          if (pending <= 0 && !isStale() && plr.onDone) plr.onDone();
-        };
-      }
-
-      function pump() {
-        if (isStale()) return Promise.resolve();
-        return rdr.read().then(function (result) {
-          if (isStale()) return;
-          if (result.done) {
-            if (first) onEmpty();
-            return;
-          }
-          var bytes = result.value;
-          if (bytes && bytes.byteLength) {
-            return decodeChunk(bytes, SAMPLE_RATE, audioCtx).then(function (buf) {
-              if (isStale()) return;
-              schedule(buf);
-              onFirstBuffer();
-              return pump();
-            });
-          }
-          return pump();
-        });
-      }
-
-      return pump().catch(function (err) {
-        if (isStale()) return;
-        if (onStreamError) onStreamError(err);
-      });
     }
 
     player = {
