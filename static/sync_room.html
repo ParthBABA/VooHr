@@ -3060,6 +3060,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="/csrf.js"></script>
+<script src="narration-stream.js"></script>
 </head>
 <body>
 <button class="mobile-toggle" id="mobileToggle">
@@ -5876,8 +5877,10 @@ sessionPromise.then(function(s) {
     { label: 'French', languageCode: 'fr-FR', translate: true }
   ];
 
-  var player = document.getElementById('wsNarrationPlayer');
-  if (!player) return;
+  // Streaming player: decodes raw PCM chunks as they arrive and schedules
+  // them on a Web Audio context so playback starts on the first chunk.
+  var narrPlayer = window.createNarrationStream();
+  if (!narrPlayer) return;
 
   function resolveTarget(sel) {
     var s = String(sel || '').trim();
@@ -5911,7 +5914,7 @@ sessionPromise.then(function(s) {
   }
 
   function stopAll(exceptBtn) {
-    if (!player.paused) player.pause();
+    narrPlayer.stop();
     var btns = document.querySelectorAll('.wsx-narr-btn');
     for (var i = 0; i < btns.length; i++) {
       if (btns[i] === exceptBtn) continue;
@@ -5938,39 +5941,25 @@ sessionPromise.then(function(s) {
       return;
     }
     setState(btn, 'loading');
-    fetch('/api/tts/synthesize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: text,
-        language_code: lang.languageCode,
-        translate: lang.translate
-      })
-    })
-      .then(function(r) {
-        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Narration failed'); });
-        return r.blob();
-      })
-      .then(function(blob) {
-        stopAll(btn);
-        player.src = URL.createObjectURL(blob);
-        player.onended = function() { setState(btn, null); };
-        player.onpause = function() { setState(btn, null); };
-        player.onerror = function() { setState(btn, 'error'); console.error('Narration audio playback failed'); };
-        setState(btn, null);
-        return player.play().then(function() {
-          setState(btn, 'playing');
-        }).catch(function(err) {
-          console.error('Narration play failed', err);
-          setState(btn, 'error');
-          stopAll(btn);
-        });
-      })
-      .catch(function(err) {
-        console.error('Narration request failed', err);
-        setState(btn, 'error');
-        stopAll(btn);
-      });
+
+    narrPlayer.onDone = function() { setState(btn, null); };
+    narrPlayer.onError = function(err) {
+      console.error('Narration audio playback failed', err);
+      setState(btn, 'error');
+      stopAll(btn);
+    };
+
+    narrPlayer.play({
+      text: text,
+      language_code: lang.languageCode,
+      translate: lang.translate
+    }).then(function() {
+      setState(btn, 'playing');
+    }).catch(function(err) {
+      console.error('Narration play failed', err);
+      setState(btn, 'error');
+      stopAll(btn);
+    });
   }
 
   function setup() {
@@ -6000,7 +5989,7 @@ sessionPromise.then(function(s) {
           sel.classList.remove('open');
           if (!lang) return;
           if (btn.classList.contains('playing')) {
-            player.pause();
+            narrPlayer.stop();
             stopAll(btn);
             return;
           }

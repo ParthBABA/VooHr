@@ -40,11 +40,21 @@ def synthesize():
             text = llm.translate(text, language_code)
 
         tts = get_tts_provider()
-        audio_bytes = tts.synthesize(text, language_code, voice_name=voice_name, voice_tier=voice_tier)
+
+        # Stream the synthesized audio back to the client chunk-by-chunk so
+        # the browser can begin playback as soon as the first audio arrives,
+        # instead of waiting for the entire response. Deepgram's provider
+        # emits linear16 PCM chunks incrementally over WebSocket.
+        def generate():
+            for chunk in tts.synthesize_stream(
+                text, language_code, voice_name=voice_name, voice_tier=voice_tier
+            ):
+                if chunk:
+                    yield chunk
+
+        return Response(generate(), mimetype="audio/wav")
     except Exception as e:
         logger.exception("TTS synthesize failed")
         if current_app.debug:
             return jsonify({"error": "internal_server_error", "detail": str(e)}), 500
         return jsonify({"error": "internal_server_error"}), 500
-
-    return Response(audio_bytes, mimetype="audio/mpeg")

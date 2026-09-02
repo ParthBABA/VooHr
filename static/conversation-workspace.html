@@ -21,6 +21,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <script src="/csrf.js" defer></script>
 <script src="transcript-parser.js"></script>
+<script src="narration-stream.js"></script>
 <style>
 .ws-loading-text{display:none;font-family:var(--font-m);font-size:0.75rem;color:var(--ivory-dim);margin-top:0.8rem;opacity:0;transition:opacity 0.6s ease;text-align:center;}
 .ws-loading-text.visible{display:block;}
@@ -1250,8 +1251,10 @@ window.voovrInitWorkspace = function() {
     { label: 'French', languageCode: 'fr-FR', translate: true }
   ];
 
-  var player = document.getElementById('wsNarrationPlayer');
-  if (!player) return;
+  // Streaming player: decodes raw PCM chunks as they arrive and schedules
+  // them on a Web Audio context so playback starts on the first chunk.
+  var narrPlayer = window.createNarrationStream();
+  if (!narrPlayer) return;
 
   function resolveTarget(sel) {
     var s = String(sel || '').trim();
@@ -1276,7 +1279,7 @@ window.voovrInitWorkspace = function() {
 
   // Only one narrator plays at a time: stop any other playback first.
   function stopAll(exceptBtn) {
-    if (!player.paused) player.pause();
+    narrPlayer.stop();
     var btns = document.querySelectorAll('.wsx-narr-btn');
     for (var i = 0; i < btns.length; i++) {
       if (btns[i] === exceptBtn) continue;
@@ -1308,32 +1311,20 @@ window.voovrInitWorkspace = function() {
       translate: lang.translate
     };
     setState(btn, 'loading');
-    fetch('/api/tts/synthesize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    })
-      .then(function(r) {
-        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Narration failed'); });
-        return r.blob();
-      })
-      .then(function(blob) {
-        stopAll(btn);
-        player.src = URL.createObjectURL(blob);
-        player.onended = function() { setState(btn, null); };
-        player.onpause = function() { setState(btn, null); };
-        player.onerror = function() { setState(btn, 'error'); console.error('Narration audio playback failed'); };
-        setState(btn, null);
-        return player.play().then(function() {
-          setState(btn, 'playing');
-        }).catch(function(err) {
-          console.error('Narration play failed', err);
-          setState(btn, 'error');
-          stopAll(btn);
-        });
+
+    narrPlayer.onDone = function() { setState(btn, null); };
+    narrPlayer.onError = function(err) {
+      console.error('Narration audio playback failed', err);
+      setState(btn, 'error');
+      stopAll(btn);
+    };
+
+    narrPlayer.play(body)
+      .then(function() {
+        setState(btn, 'playing');
       })
       .catch(function(err) {
-        console.error('Narration request failed', err);
+        console.error('Narration play failed', err);
         setState(btn, 'error');
         stopAll(btn);
       });
@@ -1368,7 +1359,7 @@ window.voovrInitWorkspace = function() {
         if (!lang) return;
         if (btn.classList.contains('playing')) {
           // Toggle: if this block is playing, pause.
-          player.pause();
+          narrPlayer.stop();
           stopAll(btn);
           return;
         }
