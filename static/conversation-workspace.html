@@ -43,6 +43,13 @@
 .wsx-narr .wsx-narr-btn.error{color:var(--red);border-color:rgba(232,69,69,0.5);background:var(--red-soft);}
 .wsx-narr-select{display:none;position:absolute;top:calc(100% + 6px);right:0;left:auto;min-width:150px;z-index:20;}
 .wsx-narr-select.open{display:block;}
+.wsx-mini-player{display:inline-flex;align-items:center;gap:6px;max-width:210px;padding:3px 6px;border:1px solid var(--border);border-radius:20px;background:var(--card-bg,transparent);}
+.wsx-mini-player .wsx-mp-play{width:26px;height:26px;}
+.wsx-mini-player .wsx-mp-play svg{width:12px;height:12px;}
+.wsx-mini-player .wsx-mp-cancel{width:22px;height:22px;color:var(--muted,#999);}
+.wsx-mini-player .wsx-mp-cancel:hover{color:var(--red);border-color:rgba(232,69,69,0.5);background:var(--red-soft);}
+.wsx-mini-player .wsx-mp-range{flex:1;min-width:60px;max-width:110px;accent-color:var(--violet,#7b4fff);cursor:pointer;}
+.wsx-mini-player .wsx-mp-time{font-size:10px;color:var(--muted,#999);white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -1251,8 +1258,8 @@ window.voovrInitWorkspace = function() {
     { label: 'French', languageCode: 'fr-FR', translate: true }
   ];
 
-  // Streaming player: decodes raw PCM chunks as they arrive and schedules
-  // them on a Web Audio context so playback starts on the first chunk.
+  // Mini-player: shows a small <audio>-based player (timeline + play/pause +
+  // close) in place of the mic button once a language is chosen.
   var narrPlayer = window.createNarrationStream();
   if (!narrPlayer) return;
 
@@ -1305,29 +1312,11 @@ window.voovrInitWorkspace = function() {
       setState(btn, 'error');
       return;
     }
-    var body = {
+    narrPlayer.play({
       text: text,
       language_code: lang.languageCode,
       translate: lang.translate
-    };
-    setState(btn, 'loading');
-
-    narrPlayer.onDone = function() { setState(btn, null); };
-    narrPlayer.onError = function(err) {
-      console.error('Narration audio playback failed', err);
-      setState(btn, 'error');
-      stopAll(btn);
-    };
-
-    narrPlayer.play(body)
-      .then(function() {
-        setState(btn, 'playing');
-      })
-      .catch(function(err) {
-        console.error('Narration play failed', err);
-        setState(btn, 'error');
-        stopAll(btn);
-      });
+    }, wrap);
   }
 
   function setup() {
@@ -1352,19 +1341,13 @@ window.voovrInitWorkspace = function() {
         sel.classList.toggle('open');
       });
 
-      sel.addEventListener('change', function() {
-        var idx = parseInt(sel.value, 10);
-        var lang = NARRATION_LANGUAGES[idx];
-        sel.classList.remove('open');
-        if (!lang) return;
-        if (btn.classList.contains('playing')) {
-          // Toggle: if this block is playing, pause.
-          narrPlayer.stop();
-          stopAll(btn);
-          return;
-        }
-        synthesizeAndPlay(btn, wrap, lang);
-      });
+        sel.addEventListener('change', function() {
+          var idx = parseInt(sel.value, 10);
+          var lang = NARRATION_LANGUAGES[idx];
+          sel.classList.remove('open');
+          if (!lang) return;
+          synthesizeAndPlay(btn, wrap, lang);
+        });
     }
   }
 

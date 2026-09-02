@@ -1,176 +1,257 @@
-// ── Narration playback ────────────────────────────────────────────────────
-// /api/tts/synthesize returns ONE complete WAV file (whole text synthesized
-// and concatenated on the server). We fetch the full body, decode it as a
-// single AudioBuffer, and play it as one contiguous AudioBufferSourceNode.
-// Decoding once (rather than re-wrapping streamed micro-frames in WAV headers
-// and scheduling them back-to-back) avoids the seam/header artifacts that
-// showed up as crackling/static. Behavioral contract with callers:
+// ── AI Narration mini-player ───────────────────────────────────────────────
+// Renders a small, native-quality <audio>-based player inside the section's
+// .wsx-narr control (replacing the mic button) whenever the user picks a
+// language. The backend returns ONE complete WAV for the whole text, so we
+// load it as a Blob into an <audio> element and let the browser decode/play
+// it natively — no Web Audio re-wrapping, hence clean playback.
+//
+// Behavioral contract with callers:
 //
 //   createNarrationStream() -> {
-//     play(body) : POST /api/tts/synthesize then play the returned audio.
-//                  Resolves once playback has been scheduled to start;
-//                  rejects on pre-playback failure.
-//     stop()     : stop playback and disconnect the current stream.
-//     onDone     : callback fired when playback has finished.
-//     onError    : callback fired on transport/decode errors after playback
-//                  has started.
+//     play(body, wrap) : fetch /api/tts/synthesize and show the mini-player
+//                        inside `wrap` (a .wsx-narr element). Resolves once
+//                        the audio is loaded and playing; rejects on failure.
+//     stop()           : stop playback, hide the mini-player, restore the
+//                        default mic-button control for the active wrap.
+//     onDone           : callback fired when playback finishes naturally.
+//     onError          : callback fired on transport/decode errors.
 //   }
 //
-// Only one instance plays at a time; the module keeps a singleton so starting
-// a new narration stops any that is currently playing.
+// Only one mini-player shows at a time (module singleton), so starting a new
+// narration closes any that is currently open.
 (function (global) {
   'use strict';
 
-  var SAMPLE_RATE = 24000; // matches the backend's linear16 sample rate
-
   var activePlayer = null;
+  var activeWrap = null;
 
-  // Build a 44-byte WAV header around raw linear16 PCM in case the response is
-  // raw PCM (no container). If the payload is already a complete WAV (starts
-  // with RIFF/WAVE), we pass it through untouched.
-  function buildWavHeader(dataLength, sampleRate) {
-    var buffer = new ArrayBuffer(44);
-    var view = new DataView(buffer);
-    function writeString(offset, str) {
-      for (var i = 0; i < str.length; i++) {
-        view.setUint8(offset + i, str.charCodeAt(i));
-      }
-    }
-    var numChannels = 1;
-    var bitsPerSample = 16;
-    var byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-    var blockAlign = numChannels * (bitsPerSample / 8);
-
-    writeString(0, 'RIFF');
-    view.setUint32(4, 36 + dataLength, true);
-    writeString(8, 'WAVE');
-    writeString(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);          // PCM
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, byteRate, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, bitsPerSample, true);
-    writeString(36, 'data');
-    view.setUint32(40, dataLength, true);
-    return buffer;
+  function fmtTime(sec) {
+    if (!isFinite(sec) || sec < 0) sec = 0;
+    var m = Math.floor(sec / 60);
+    var s = Math.floor(sec % 60);
+    return m + ':' + (s < 10 ? '0' : '') + s;
   }
 
-  function toWavIfNeeded(bytes) {
-    var arr = new Uint8Array(bytes);
-    var isWav = arr.length > 12 &&
-      arr[0] === 0x52 && arr[1] === 0x49 && arr[2] === 0x46 && arr[3] === 0x46 &&
-      arr[8] === 0x57 && arr[9] === 0x41 && arr[10] === 0x56 && arr[11] === 0x45;
-    if (isWav) return bytes;
-    var wav = new Uint8Array(44 + arr.length);
-    wav.set(new Uint8Array(buildWavHeader(arr.length, SAMPLE_RATE)), 0);
-    wav.set(arr, 44);
-    return wav.buffer;
+  function iconPlay() {
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '12');
+    svg.setAttribute('height', '12');
+    svg.setAttribute('fill', 'currentColor');
+    var p = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    p.setAttribute('points', '6 3 20 12 6 21 6 3');
+    svg.appendChild(p);
+    return svg;
+  }
+
+  function iconPause() {
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '12');
+    svg.setAttribute('height', '12');
+    svg.setAttribute('fill', 'currentColor');
+    var r1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    r1.setAttribute('x', '5'); r1.setAttribute('y', '4');
+    r1.setAttribute('width', '5'); r1.setAttribute('height', '16');
+    r1.setAttribute('rx', '1');
+    var r2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    r2.setAttribute('x', '14'); r2.setAttribute('y', '4');
+    r2.setAttribute('width', '5'); r2.setAttribute('height', '16');
+    r2.setAttribute('rx', '1');
+    svg.appendChild(r1); svg.appendChild(r2);
+    return svg;
+  }
+
+  function iconClose() {
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '12');
+    svg.setAttribute('height', '12');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    var l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l1.setAttribute('x1', '6'); l1.setAttribute('y1', '6');
+    l1.setAttribute('x2', '18'); l1.setAttribute('y2', '18');
+    var l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l2.setAttribute('x1', '18'); l2.setAttribute('y1', '6');
+    l2.setAttribute('x2', '6'); l2.setAttribute('y2', '18');
+    svg.appendChild(l1); svg.appendChild(l2);
+    return svg;
   }
 
   function createNarrationStream() {
-    var ctx = null;
-    var stopped = false;
     var player;
+    var objUrl = null;
+    var audio = null;
+    var root = null;
 
-    function stopStream() {
-      stopped = true;
-      if (ctx) {
-        try { ctx.close(); } catch (e) {}
-        ctx = null;
+    function cleanup() {
+      if (audio) {
+        try { audio.pause(); } catch (e) {}
+        try { audio.removeAttribute('src'); audio.load(); } catch (e) {}
+        audio = null;
       }
-      if (activePlayer === player) activePlayer = null;
+      if (objUrl) { try { URL.revokeObjectURL(objUrl); } catch (e) {} objUrl = null; }
+      if (root && root.parentNode) { root.parentNode.removeChild(root); }
+      root = null;
     }
 
-    function initiateCtx() {
-      if (!ctx) {
-        var AC = global.AudioContext || global.webkitAudioContext;
-        if (!AC) throw new Error('Web Audio not supported in this browser');
-        ctx = new AC();
+    function restoreWrap() {
+      if (activeWrap) {
+        var btn = activeWrap.querySelector('.wsx-narr-btn');
+        var sel = activeWrap.querySelector('.wsx-narr-select');
+        if (btn) btn.style.display = '';
+        if (sel) sel.style.display = '';
+        activeWrap = null;
       }
-      return ctx;
     }
 
-    function play(body) {
-      stopStream();
+    function stopPlayback() {
+      if (activePlayer !== player) return;
+      cleanup();
+      restoreWrap();
+      activePlayer = null;
+    }
 
-      if (activePlayer && activePlayer !== player) {
-        activePlayer.stop();
+    function play(body, wrapEl) {
+      // Close any narration that is currently open first.
+      if (activePlayer && activePlayer !== player) activePlayer.stop();
+      if (activePlayer === player) stopPlayback();
+
+      var wrap = wrapEl || null;
+      if (!wrap || !wrap.querySelector('.wsx-narr-btn')) {
+        return Promise.reject(new Error('Narration target not found'));
       }
+
+      // Swap the mic button + dropdown for the mini-player.
+      var btn = wrap.querySelector('.wsx-narr-btn');
+      var sel = wrap.querySelector('.wsx-narr-select');
+      btn.style.display = 'none';
+      sel.style.display = 'none';
+
+      activeWrap = wrap;
       activePlayer = player;
-      stopped = false;
 
-      var audioCtx;
-      try {
-        audioCtx = initiateCtx();
-        if (audioCtx.state === 'suspended') audioCtx.resume().catch(function () {});
-      } catch (e) {
-        return Promise.reject(e);
-      }
+      root = document.createElement('div');
+      root.className = 'wsx-mini-player';
 
-      var gotStarted = false;
-      var startedResolve, startedReject;
-      var startedPromise = new Promise(function (res, rej) {
-        startedResolve = res;
-        startedReject = rej;
+      var playBtn = document.createElement('button');
+      playBtn.type = 'button';
+      playBtn.className = 'icon-btn wsx-mp-play';
+      playBtn.title = 'Play / Pause';
+      playBtn.appendChild(iconPlay());
+
+      var range = document.createElement('input');
+      range.type = 'range';
+      range.className = 'wsx-mp-range';
+      range.min = '0';
+      range.max = '1000';
+      range.value = '0';
+      range.step = '1';
+      range.title = 'Seek';
+
+      var timeEl = document.createElement('span');
+      timeEl.className = 'wsx-mp-time';
+      timeEl.textContent = '0:00';
+
+      var cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'icon-btn wsx-mp-cancel';
+      cancelBtn.title = 'Close';
+      cancelBtn.appendChild(iconClose());
+
+      root.appendChild(playBtn);
+      root.appendChild(range);
+      root.appendChild(timeEl);
+      root.appendChild(cancelBtn);
+      wrap.appendChild(root);
+
+      audio = document.createElement('audio');
+      audio.preload = 'auto';
+
+      var seeking = false;
+      range.addEventListener('input', function () {
+        if (!audio || !audio.duration) return;
+        seeking = true;
+        var t = (parseFloat(range.value) / 1000) * audio.duration;
+        try { audio.currentTime = t; } catch (e) {}
+      });
+      range.addEventListener('change', function () { seeking = false; });
+      audio.addEventListener('timeupdate', function () {
+        if (seeking || !audio.duration) return;
+        range.value = String((audio.currentTime / audio.duration) * 1000);
+        timeEl.textContent = fmtTime(audio.currentTime) + ' / ' + fmtTime(audio.duration);
+      });
+      audio.addEventListener('loadedmetadata', function () {
+        timeEl.textContent = '0:00 / ' + fmtTime(audio.duration);
+      });
+      audio.addEventListener('play', function () {
+        playBtn.replaceChild(iconPause(), playBtn.firstChild);
+      });
+      audio.addEventListener('pause', function () {
+        playBtn.replaceChild(iconPlay(), playBtn.firstChild);
+      });
+      audio.addEventListener('ended', function () {
+        range.value = '1000';
+        timeEl.textContent = fmtTime(audio.duration) + ' / ' + fmtTime(audio.duration);
+        playBtn.replaceChild(iconPlay(), playBtn.firstChild);
+        if (player.onDone) player.onDone();
+        stopPlayback();
+      });
+      audio.addEventListener('error', function () {
+        if (player.onError) player.onError(new Error('Audio playback failed'));
+        stopPlayback();
       });
 
-      function fail(err) {
-        if (stopped) return;
-        if (gotStarted) {
-          if (player.onError) player.onError(err);
+      playBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (audio.paused) {
+          audio.play().catch(function () {});
         } else {
-          gotStarted = true;
-          startedReject(err);
+          audio.pause();
         }
-      }
+      });
 
-      function playBuffer(buf) {
-        if (stopped) return;
-        var src = audioCtx.createBufferSource();
-        src.buffer = buf;
-        src.connect(audioCtx.destination);
-        src.onended = function () {
-          if (!stopped && player.onDone) player.onDone();
-        };
-        src.start(0);
-      }
+      cancelBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        stopPlayback();
+      });
 
-      fetch('/api/tts/synthesize', {
+      return fetch('/api/tts/synthesize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
         .then(function (r) {
           if (!r.ok) {
-            return r.json().then(function (e) {
-              throw new Error(e.error || 'Narration failed');
+            return r.json().then(function (err) {
+              throw new Error(err.error || 'Narration failed');
             });
           }
-          return r.arrayBuffer();
+          return r.blob();
         })
-        .then(function (buffer) {
-          if (stopped) return;
-          if (!buffer || buffer.byteLength === 0) {
-            fail(new Error('No audio received'));
-            return;
-          }
-          var wav = toWavIfNeeded(buffer);
-          return audioCtx.decodeAudioData(wav).then(function (decoded) {
-            if (stopped) return;
-            if (!gotStarted) { gotStarted = true; startedResolve(true); }
-            playBuffer(decoded);
-          });
+        .then(function (blob) {
+          if (activePlayer !== player) throw new Error('Playback stopped');
+          if (!blob || blob.size === 0) throw new Error('No audio received');
+          objUrl = URL.createObjectURL(blob);
+          audio.src = objUrl;
+          audio.load();
+          // Play right away (tolerate autoplay-block by leaving it to the
+          // play/pause button rather than tearing the player down).
+          audio.play().catch(function () {});
         })
-        .catch(function (err) { fail(err); });
-
-      return startedPromise;
+        .catch(function (err) {
+          stopPlayback();
+          if (player.onError) player.onError(err);
+          throw err;
+        });
     }
 
     player = {
       play: play,
-      stop: stopStream,
+      stop: stopPlayback,
       onDone: null,
       onError: null
     };

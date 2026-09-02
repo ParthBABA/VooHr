@@ -123,6 +123,14 @@
   .step-content .wsx-narr-btn.error{color:#E74C3C;border-color:rgba(231,76,60,0.5);background:rgba(231,76,60,0.08);}
   .step-content .wsx-narr-select{display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:150px;z-index:30;}
   .step-content .wsx-narr-select.open{display:block;}
+  .wsx-mini-player{display:inline-flex;align-items:center;gap:6px;max-width:210px;padding:3px 6px;border:1px solid var(--border,var(--step-border-strong,#333));border-radius:20px;background:var(--card-bg,var(--step-surface-raised,transparent));}
+  .wsx-mini-player .wsx-mp-play{width:26px;height:26px;border:1px solid var(--border,var(--step-border-strong,#333));border-radius:50%;}
+  .wsx-mini-player .wsx-mp-play svg{width:12px;height:12px;}
+  .wsx-mini-player .wsx-mp-play.playing{color:var(--violet,var(--step-primary,#7b4fff));border-color:rgba(123,79,255,0.55);background:var(--violet-soft,var(--step-accent-tint,transparent));}
+  .wsx-mini-player .wsx-mp-cancel{width:22px;height:22px;color:var(--muted,#999);}
+  .wsx-mini-player .wsx-mp-cancel:hover{color:var(--red,#E74C3C);border-color:rgba(232,69,69,0.5);background:var(--red-soft,rgba(231,76,60,0.08));}
+  .wsx-mini-player .wsx-mp-range{flex:1;min-width:60px;max-width:110px;accent-color:var(--violet,var(--step-primary,#7b4fff));cursor:pointer;}
+  .wsx-mini-player .wsx-mp-time{font-size:10px;color:var(--muted,#999);white-space:nowrap;}
   #stepContent .wsx-narr-btn{
     border:1px solid var(--border);
     background:var(--surface);
@@ -5877,8 +5885,8 @@ sessionPromise.then(function(s) {
     { label: 'French', languageCode: 'fr-FR', translate: true }
   ];
 
-  // Streaming player: decodes raw PCM chunks as they arrive and schedules
-  // them on a Web Audio context so playback starts on the first chunk.
+  // Mini-player: shows a small <audio>-based player (timeline + play/pause +
+  // close) in place of the mic button once a language is chosen.
   var narrPlayer = window.createNarrationStream();
   if (!narrPlayer) return;
 
@@ -5940,26 +5948,11 @@ sessionPromise.then(function(s) {
       setState(btn, 'error');
       return;
     }
-    setState(btn, 'loading');
-
-    narrPlayer.onDone = function() { setState(btn, null); };
-    narrPlayer.onError = function(err) {
-      console.error('Narration audio playback failed', err);
-      setState(btn, 'error');
-      stopAll(btn);
-    };
-
     narrPlayer.play({
       text: text,
       language_code: lang.languageCode,
       translate: lang.translate
-    }).then(function() {
-      setState(btn, 'playing');
-    }).catch(function(err) {
-      console.error('Narration play failed', err);
-      setState(btn, 'error');
-      stopAll(btn);
-    });
+    }, wrap);
   }
 
   function setup() {
@@ -5988,11 +5981,6 @@ sessionPromise.then(function(s) {
           var lang = NARRATION_LANGUAGES[idx];
           sel.classList.remove('open');
           if (!lang) return;
-          if (btn.classList.contains('playing')) {
-            narrPlayer.stop();
-            stopAll(btn);
-            return;
-          }
           synthesizeAndPlay(btn, wrap, lang);
         });
       })(wraps[i]);
