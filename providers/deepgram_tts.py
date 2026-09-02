@@ -1,15 +1,17 @@
 import asyncio
+import io
 import json
 import logging
 import os
 import queue
 import threading
+import wave
 
 import requests
 import websockets
 
 from providers.tts import BaseTTS
-from providers.text_normalize import humanize_numbers
+from providers.text_normalize import prepare_text_for_speech
 
 logger = logging.getLogger(__name__)
 
@@ -82,12 +84,12 @@ class DeepgramTTS(BaseTTS):
         return self.api_key
 
     def _normalize_text(self, text: str, language_code: str) -> str:
-        """Rewrite numbers/quantities into words, falling back to raw text."""
+        """Strip symbols then humanize numbers, falling back to raw text."""
         try:
-            return humanize_numbers(text, language_code)
+            return prepare_text_for_speech(text, language_code)
         except Exception:
             logger.warning(
-                "Deepgram TTS number normalization failed; using raw text "
+                "Deepgram TTS text normalization failed; using raw text "
                 "(language_code=%s)", language_code,
                 exc_info=True,
             )
@@ -170,108 +172,82 @@ class DeepgramTTS(BaseTTS):
 
         return resp.content
 
-    def _strip_mp3_prelude(self, data: bytes) -> bytes:
-        """Remove an MP3 stream's leading header/metadata so it can be spliced.
+    def _synthesize_chunk_wav(self, text: str, model: str) -> bytes:
+        """Synthesize one chunk to a fully-formed WAV file via the REST API.
 
-        Deepgram wraps each REST mp3 response with its own ID3v2 tag and an
-        initial Xing/Info/LAME header frame. Naively concatenating several
-        independent mp3 streams leaves those per-chunk headers embedded in the
-        joined output; decoders may emit a click/pop or skip audio where they
-        suddenly reappear mid-stream.
-
-        This strips the ID3v2 tag and the initial Xing/Info/LAME header frame
-        (a metadata-only first MPEG frame) from a chunk sent to the splicer. If
-        anything looks malformed the bytes are returned unchanged so we never
-        corrupt audio.
+        Uses ``linear16`` PCM wrapped in a WAV container at 24 kHz (raw PCM
+        carries no per-chunk framing, so independent chunks can be
+        concatenated sample-for-sample without the clicks/pops that splicing
+        independent mp3 streams produces). ``linear16`` is a streaming-native
+        encoding, so sample rate is explicit (Deepgram default is 24 kHz).
         """
-        body = self._skip_id3v2(data)
-        frame = self._find_mp3_frame(body)
-        if frame is None:
-            return body
-        head = frame[4:40]
-        if head.find(b"Xing") >= 0 or head.find(b"Info") >= 0 or head.find(b"LAME") >= 0:
-            length = self._mp3_frame_len(frame)
-            start = body.find(frame)
-            return body[start + length:]
-        return body
-
-    @staticmethod
-    def _skip_id3v2(data: bytes) -> bytes:
-        """Return *data* with any leading ID3v2 tag removed."""
-        if data[:3] == b"ID3" and len(data) >= 10:
-            size = (
-                ((data[6] & 0x7F) << 21)
-                | ((data[7] & 0x7F) << 14)
-                | ((data[8] & 0x7F) << 7)
-                | (data[9] & 0x7F)
-            )
-            end = 10 + size
-            if end <= len(data):
-                return data[end:]
-        return data
-
-    @staticmethod
-    def _find_mp3_frame(data: bytes) -> bytes:
-        """Return the MPEG audio frame header bytes if a frame sync is found."""
-        for i in range(min(len(data) - 3, 1024 * 4)):
-            if data[i] == 0xFF and (data[i + 1] & 0xE0) == 0xE0:
-                return data[i:i + 4]
-        return None
-
-    @staticmethod
-    def _mp3_frame_len(header: bytes) -> int:
-        """Best-effort MPEG frame length from a 4-byte frame header."""
-        if len(header) < 4:
-            return 4
-        bitrate_idx = (header[2] >> 4) & 0x0F
-        srate_idx = (header[2] >> 2) & 0x03
-        padding = (header[2] >> 1) & 0x01
-        version = (header[1] >> 3) & 0x03  # 3=MPEG1, 2=MPEG2/2.5
-        layer = (header[1] >> 1) & 0x03    # 1=LayerIII, 2=LayerII, 3=LayerI
-
-        bitrates = {
-            (1, 1): [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
-            (1, 2): [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384],
-            (1, 3): [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448],
-            (2, 1): [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256],
-            (2, 2): [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
-            (2, 3): [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+        api_key = self._ensure_api_key()
+        headers = {
+            "Authorization": f"Token {api_key}",
+            "Content-Type": "application/json",
         }
-        if bitrate_idx == 0 or bitrate_idx >= 15:
-            return 4
-        if layer == 0:  # reserved
-            return 4
-        srates = {3: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000]}
-        srate = srates.get(version, srates[3])[srate_idx] if srate_idx < 3 else 0
-        br = bitrates.get((version, layer), [0] * 16).__getitem__(bitrate_idx) * 1000
-        if br <= 0 or srate <= 0:
-            return 4
-        if layer == 3:  # Layer I
-            return int((12 * br / srate + padding) * 4)
-        if layer == 2:  # Layer II
-            return int(144 * br / srate + padding)
-        # Layer III: MPEG1 uses 144 slots/frame, MPEG2/2.5 uses 72.
-        if version == 1:
-            return int(144 * br / srate + padding)
-        return int(72 * br / srate + padding)
+        params = {
+            "model": model,
+            "encoding": "linear16",
+            "container": "wav",
+            "sample_rate": _SAMPLE_RATE,
+        }
+        payload = {"text": text}
+        try:
+            resp = requests.post(
+                self.endpoint,
+                params=params,
+                headers=headers,
+                json=payload,
+                timeout=60,
+            )
+        except requests.RequestException as exc:
+            raise RuntimeError(
+                f"Deepgram TTS request failed: {exc}"
+            ) from exc
 
-    def _join_mp3_parts(self, parts: list) -> bytes:
-        """Concatenate independent mp3 byte streams with clean splices.
+        if resp.status_code != 200:
+            raise RuntimeError(
+                f"Deepgram TTS returned HTTP {resp.status_code}: {resp.text}"
+            )
 
-        Each Deepgram response is a self-contained mp3 stream carrying its own
-        ID3v2 tag and Xing/Info/LAME header frame. Naively ``b"".join``ing
-        them leaves a foreign header frame mid-stream at every boundary, which
-        decoders can render as a click/pop/static. We keep the first chunk
-        intact (it carries the tag) and strip the header prelude from every
-        subsequent chunk before joining, so the output is one continuous mp3
-        stream.
+        if not resp.content:
+            raise RuntimeError("Deepgram TTS response contained no audio content")
+
+        return resp.content
+
+    @staticmethod
+    def _concat_wav_chunks(wav_parts) -> bytes:
+        """Concatenate multiple WAV files into one continuous WAV.
+
+        Raw PCM concatenates cleanly (no per-chunk encoder state or framing),
+        so we read the samples out of each WAV and write them all into one
+        new WAV. All chunks are synthesized with the same sample rate /
+        channels, so this is a trivial sample-for-sample copy.
+
+        A list of length 1 is passed through unchanged (single-chunk no-op).
         """
-        if len(parts) == 1:
-            return parts[0]
-        joined = [parts[0]]
-        for part in parts[1:]:
-            joined.append(self._strip_mp3_prelude(part))
-        return b"".join(joined)
+        if len(wav_parts) == 1:
+            return wav_parts[0]
+
+        sample_width = None
+        sample_rate = None
+        channels = None
+        frames = []
+        for part in wav_parts:
+            with wave.open(io.BytesIO(part), "rb") as w:
+                sample_rate = w.getframerate()
+                sample_width = w.getsampwidth()
+                channels = w.getnchannels()
+                frames.append(w.readframes(w.getnframes()))
+
+        out = io.BytesIO()
+        with wave.open(out, "wb") as w:
+            w.setnchannels(channels)
+            w.setsampwidth(sample_width)
+            w.setframerate(sample_rate)
+            w.writeframes(b"".join(frames))
+        return out.getvalue()
 
     def synthesize(self, text: str, language_code: str, voice_name: str = None, voice_tier: str = None) -> bytes:
         text = (text or "").strip()
@@ -287,14 +263,18 @@ class DeepgramTTS(BaseTTS):
             model, len(chunks), len(text),
         )
 
-        parts = []
-        for chunk in chunks:
-            parts.append(self._synthesize_chunk(chunk, model))
+        # Single chunk: the common short-phrase path. Keep mp3 @ 48kbps —
+        # best quality/size, and there is nothing to join (the seam/header
+        # artifact problem only exists when multiple streams are spliced).
+        if len(chunks) == 1:
+            return self._synthesize_chunk(chunks[0], model)
 
-        # For text split across multiple requests we join the independent mp3
-        # streams, stripping each trailing chunk's ID3/Xing header so no
-        # mid-stream header frames cause boundary clicks/pops.
-        return self._join_mp3_parts(parts)
+        # Multi-chunk (long text): each chunk is synthesized as linear16 WAV
+        # and the raw PCM is concatenated sample-for-sample into one
+        # continuous, artifact-free WAV. Concatenating independent mp3
+        # streams here would splice encoder headers/state and click/pop.
+        parts = [self._synthesize_chunk_wav(chunk, model) for chunk in chunks]
+        return self._concat_wav_chunks(parts)
 
     def synthesize_stream(self, text: str, language_code: str, voice_name: str = None, voice_tier: str = None):
         """Synthesize text and yield raw linear16 PCM audio chunks as they arrive.

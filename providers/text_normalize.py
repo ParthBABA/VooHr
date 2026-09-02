@@ -1,8 +1,17 @@
-"""Text normalization for TTS: humanize numbers before they reach the engine.
+"""Text normalization for TTS.
 
-Converts quantities (integers, decimals, percentages, currency, ordinals)
-into spoken-word form while leaving identifiers (phone numbers, OTPs, long
-digit runs, alphanumeric codes) untouched so they are read digit-by-digit.
+Two layers:
+
+1. ``strip_unspoken_symbols`` — strip markdown/emoji/symbol noise that an
+   LLM leaves in replies and that Deepgram Aura would skip, read literally,
+   or occasionally glitch on.
+2. ``humanize_numbers`` — convert quantities (integers, decimals,
+   percentages, currency, ordinals) into spoken-word form while leaving
+   identifiers (phone numbers, OTPs, long digit runs, alphanumeric codes)
+   untouched so they are read digit-by-digit.
+
+``prepare_text_for_speech`` chains them (markdown stripped first, then
+numbers) for use by the TTS provider.
 
 English, and any other language supported by the ``num2words`` library, is
 handled by ``num2words``; Hindi (unsupported by ``num2words``) uses the
@@ -13,7 +22,7 @@ import re
 
 from num2words import num2words
 
-__all__ = ["humanize_numbers"]
+__all__ = ["humanize_numbers", "strip_unspoken_symbols", "prepare_text_for_speech"]
 
 # ── Masking placeholders ────────────────────────────────────────────────
 # Identifiers are replaced with digit-free placeholders *before* number
@@ -299,6 +308,120 @@ def _convert_numbers(text: str, lang: str) -> str:
 
 
 # ── Public entry point ───────────────────────────────────────────────────
+# ── Symbol stripping (ISSUE 2) ───────────────────────────────────────────
+# Markdown inline constructs: keep the inner text, drop the markers/syntax.
+_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+_INLINE_CODE_RE = re.compile(r"`([^`]*)`")
+_BOLD_RE = re.compile(r"\*\*(.+?)\*\*|__(.+?)__")
+_STRIKE_RE = re.compile(r"~~(.+?)~~")
+_ITALIC_STAR_RE = re.compile(r"(?<!\w)\*([^*\n]+?)\*(?!\w)")
+_ITALIC_UNDERSCORE_RE = re.compile(r"(?<!\w)_([^_\n]+?)_(?!\w)")
+
+# Leading markdown markers (line start, multiline).
+_HEADER_RE = re.compile(r"^[ \t]*#{1,6}[ \t]+", re.MULTILINE)
+_BULLET_RE = re.compile(r"^[ \t]*[-*•][ \t]+", re.MULTILINE)
+_NUMBERED_ITEM_RE = re.compile(r"^[ \t]*\d{1,4}[.)][ \t]+", re.MULTILINE)
+
+# Emoji / pictographs / dingbats / flags / modifiers / variation selectors.
+_EMOJI_RANGES = (
+    "\U0001F600-\U0001F64F"   # emoticons
+    "\U0001F300-\U0001F5FF"   # misc symbols & pictographs
+    "\U0001F680-\U0001F6FF"   # transport & map symbols
+    "\U0001F700-\U0001F8FF"   # alchemical / shapes / arrows ext
+    "\U0001F900-\U0001F9FF"   # supplemental symbols & pictographs
+    "\U0001FA00-\U0001FAFF"   # chess / symbols extended-A
+    "\U00002600-\U000026FF"   # misc symbols (weather, dingbats)
+    "\U00002700-\U000027BF"   # dingbats
+    "\U0001F1E6-\U0001F1FF"   # regional indicator symbols (flags)
+    "\U0001F3FB-\U0001F3FF"   # emoji skin-tone modifiers
+    "\U0000FE00-\U0000FE0F"   # variation selectors
+)
+_EMOJI_RE = re.compile("[" + _EMOJI_RANGES + "]")
+
+
+def _lang_symbol_tables(language_code: str):
+    short = _short(_resolve_lang(language_code))
+    if short == "hi":
+        return {"and": "और", "at": "ऐट", "number": "नंबर ", "range": "से"}
+    return {"and": "and", "at": "at", "number": "number ", "range": "to"}
+
+
+# Remaining punctuation/symbols that carry no spoken value: remove outright.
+# Includes zero-width joiners / direction marks left over from stripping
+# multi-codepoint emoji.
+_NOISE_RE = re.compile(r"[*_~^`|<>{}[\]\\#@\u200c\u200d\u200e\u200f\u2060\ufeff]")
+
+
+def strip_unspoken_symbols(text: str, language_code: str = "en") -> str:
+    """Remove markdown/symbol noise from LLM-generated text before TTS.
+
+    Handles, in order:
+      1. Markdown inline (keep inner text): ``[text](url)``, `` `code` ``,
+         ``**bold**``/``__bold__``, ``*italic*``/``_italic_``,
+         ``~~strike~~``, plus leading headers / bullets / numbered items.
+      2. Emoji, pictographs, dingbats, flags (no spoken meaning).
+      3. Symbols with spoken meaning, per language: ``&`` -> and,
+         ``@`` (word-to-word) -> at, ``#123`` -> number 123, and a hyphen
+         range ``10-15`` -> "10 to 15".
+      4. Any remaining no-value symbols (``* _ ~ ^ ` | < > { } [ ] \\``).
+      5. Collapse leftover whitespace and blank lines.
+
+    ``%`` and currency characters (``$ € £ ₹``) are left intact so the number
+    pipeline can convert them afterward.
+    """
+    if text is None:
+        return ""
+    text = str(text)
+    if not text:
+        return text
+
+    words = _lang_symbol_tables(language_code)
+
+    # 1) Markdown inline / leading markers — keep inner text.
+    text = _LINK_RE.sub(r"\1", text)
+    text = _INLINE_CODE_RE.sub(r"\1", text)
+    text = _BOLD_RE.sub(lambda m: m.group(1) or m.group(2), text)
+    text = _STRIKE_RE.sub(r"\1", text)
+    text = _ITALIC_STAR_RE.sub(r"\1", text)
+    text = _ITALIC_UNDERSCORE_RE.sub(r"\1", text)
+    # Leading markers last so a stray "-" bullet is only removed at line start.
+    text = _HEADER_RE.sub("", text)
+    text = _BULLET_RE.sub("", text)
+    text = _NUMBERED_ITEM_RE.sub("", text)
+
+    # 2) Emoji / pictographs / flags — drop entirely.
+    text = _EMOJI_RE.sub("", text)
+
+    # 3) Symbols that carry spoken meaning.
+    text = re.sub(r"&", " " + words["and"] + " ", text)
+    text = re.sub(r"(?<=\w)@(?=\w)", " " + words["at"] + " ", text)
+    # "#" immediately before digits reads as "number ".
+    text = re.sub(r"#(?=\d)", words["number"], text)
+    # Range dash between two numbers: 10-15 / 10 – 15 / 10–15.
+    text = re.sub(r"(?<=\d)\s*[-–—]\s*(?=\d)", " " + words["range"] + " ", text)
+
+    # 4) Remaining no-value symbols.
+    text = _NOISE_RE.sub("", text)
+
+    # 5) Collapse whitespace and blank lines.
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def prepare_text_for_speech(text: str, language_code: str = "en") -> str:
+    """Normalize text for TTS: strip symbols first, then humanize numbers.
+
+    Order matters — markdown/symbols must be removed *before* number
+    conversion so something like ``**72%**`` isn't thrown off by leftover
+    asterisks when the percent/number pass runs.
+    """
+    if text is None:
+        return ""
+    cleaned = strip_unspoken_symbols(str(text), language_code)
+    return humanize_numbers(cleaned, language_code)
+
+
 def humanize_numbers(text: str, language_code: str = "en") -> str:
     """Rewrite quantities in *text* into spoken-word form for TTS.
 
@@ -434,3 +557,58 @@ if __name__ == "__main__":
             print(f"FAIL: {label}: placeholder leaked -> {out!r}")
         else:
             print(f"PASS: {label}: no placeholder leaked")
+
+    print("\n── Symbol stripping (ISSUE 2) ──────────────────────────────────")
+    check("markdown bold", strip_unspoken_symbols("**bold** and __b__", "en"), "bold and b")
+    check("markdown italic", strip_unspoken_symbols("*ital* and _it2_", "en"), "ital and it2")
+    check("markdown strike", strip_unspoken_symbols("~~gone~~", "en"), "gone")
+    check("markdown code", strip_unspoken_symbols("`code` now", "en"), "code now")
+    check("markdown link", strip_unspoken_symbols("[click here](https://x.com)", "en"), "click here")
+    check("markdown header", strip_unspoken_symbols("## Section title", "en"), "Section title")
+    check(
+        "markdown bullets",
+        strip_unspoken_symbols("- one\n* two\n1. three\n2. four", "en"),
+        "one\ntwo\nthree\nfour",
+    )
+    check("emoji", strip_unspoken_symbols("go 😀🚀🇮🇳", "en"), "go")
+    check("zwj emoji", strip_unspoken_symbols("👨\u200d👩\u200d👧 family", "en"), "family")
+    check("amp", strip_unspoken_symbols("A & B", "en"), "A and B")
+    check("at word", strip_unspoken_symbols("user@example.com", "en"), "user at example.com")
+    check("hash number", strip_unspoken_symbols("issue #123", "en"), "issue number 123")
+    check("hash tag", strip_unspoken_symbols("#hashtag", "en"), "hashtag")
+    check("range dash", strip_unspoken_symbols("pages 10-15", "en"), "pages 10 to 15")
+    check("range dash spaced", strip_unspoken_symbols("20 – 25", "en"), "20 to 25")
+    check("symbols removed", strip_unspoken_symbols("A | B < C > D {x} \\ y", "en"), "A B C D x y")
+
+    # Symbol stripping in Hindi
+    check("hi amp", strip_unspoken_symbols("A & B", "hi"), "A और B")
+    check("hi hashtag", strip_unspoken_symbols("विकल्प #7", "hi"), "विकल्प नंबर 7")
+
+    # prepare_text_for_speech chains stripping then number conversion
+    check("prep bold percent", prepare_text_for_speech("**72%** raise", "en"), "seventy-two percent raise")
+    check(
+        "prep range+amp",
+        prepare_text_for_speech("pages 10-15 and A & B", "en"),
+        "pages ten to fifteen and A and B",
+    )
+    check(
+        "prep markdown numbers",
+        prepare_text_for_speech("## Step 1: fix 3 bugs", "en"),
+        "Step one: fix three bugs",
+    )
+
+    print("\n── Number regex regression (ISSUE 2) ───────────────────────────")
+    # Trailing punctuation must NOT be swallowed by the number matcher.
+    check("comma not swallowed", humanize_numbers("15, salary hike", "en"), "fifteen, salary hike")
+    check("period not swallowed", humanize_numbers("Total is 42.", "en"), "Total is forty-two.")
+    check("semicolon not swallowed", humanize_numbers("Error 500; retry", "en"), "Error five hundred; retry")
+    check(
+        "multi numbers kept",
+        humanize_numbers("we have 3, 4 and 5 items", "en"),
+        "we have three, four and five items",
+    )
+    check(
+        "numbers inside markdown stripped",
+        prepare_text_for_speech("**15%**", "en"),
+        "fifteen percent",
+    )

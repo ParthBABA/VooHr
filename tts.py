@@ -11,6 +11,31 @@ logger = logging.getLogger(__name__)
 _MAX_TEXT_CHARS = 50000
 
 
+def _sniff_audio_mimetype(audio: bytes) -> str:
+    """Detect the audio container from the leading magic bytes.
+
+    The TTS REST provider returns mp3 for the common single-chunk path but
+    WAV (concatenated linear16 PCM) for the multi-chunk long-text path, so
+    the response's Content-Type can no longer be hardcoded. The format is
+    determined here instead:
+
+    * RIFF..WAVE header           -> ``audio/wav``
+    * ID3 tag (``ID3``)           -> ``audio/mpeg``
+    * MPEG audio frame sync
+      (0xFF 0xFB/0xF3/... 0xEx)   -> ``audio/mpeg``
+    * unknown sentinel            -> ``audio/mpeg`` (mp3 is the default path)
+    """
+    if not audio:
+        return "audio/mpeg"
+    if audio[:4] == b"RIFF" and audio[8:12] == b"WAVE":
+        return "audio/wav"
+    if audio[:3] == b"ID3":
+        return "audio/mpeg"
+    if audio[0] == 0xFF and (audio[1] & 0xE0) == 0xE0:
+        return "audio/mpeg"
+    return "audio/mpeg"
+
+
 @tts_bp.route("/tts/synthesize", methods=["POST"])
 def synthesize():
     org_id = _require_auth()
@@ -41,18 +66,13 @@ def synthesize():
 
         tts = get_tts_provider()
 
-        # Stream the synthesized audio back to the client chunk-by-chunk so
-        # the browser can begin playback as soon as the first audio arrives,
-        # instead of waiting for the entire response. Deepgram's provider
-        # emits linear16 PCM chunks incrementally over WebSocket.
-        def generate():
-            for chunk in tts.synthesize_stream(
-                text, language_code, voice_name=voice_name, voice_tier=voice_tier
-            ):
-                if chunk:
-                    yield chunk
-
-        return Response(generate(), mimetype="audio/wav")
+        # The provider returns mp3 (short text) or WAV (long/multi-chunk
+        # text), so sniff the actual container from the bytes rather than
+        # hardcoding a format and return the correct Content-Type.
+        audio = tts.synthesize(
+            text, language_code, voice_name=voice_name, voice_tier=voice_tier
+        )
+        return Response(audio, mimetype=_sniff_audio_mimetype(audio))
     except Exception as e:
         logger.exception("TTS synthesize failed")
         if current_app.debug:
