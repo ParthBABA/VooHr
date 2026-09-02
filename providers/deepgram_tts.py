@@ -32,6 +32,15 @@ _SENTENCE_BOUNDARIES = ".!?\u0964"
 _ENCODING = "linear16"
 _SAMPLE_RATE = 24000
 
+# REST (non-streaming) synthesis encoding. Deepgram's "Audio Format
+# Combinations" table allows exactly two bitrates for mp3: 32000 and 48000
+# (48000 is Deepgram's default). Sending any other value is invalid and would
+# be rejected/coerced by the API, so we validate locally instead of letting an
+# invalid value through silently.
+_REST_ENCODING = "mp3"
+_MP3_BIT_RATES = (32000, 48000)
+_REST_BIT_RATE = 48000
+
 
 class _DoneSentinel:
     pass
@@ -115,13 +124,28 @@ class DeepgramTTS(BaseTTS):
 
         return chunks
 
-    def _synthesize_chunk(self, text: str, model: str) -> bytes:
+    def _synthesize_chunk(self, text: str, model: str, bit_rate: int = _REST_BIT_RATE) -> bytes:
         api_key = self._ensure_api_key()
+        # mp3 only accepts 32000 or 48000 bps per Deepgram's Audio Format
+        # Combinations table. Reject anything else early with a clear error
+        # instead of silently sending an invalid bitrate to the API.
+        if _REST_ENCODING == "mp3" and bit_rate not in _MP3_BIT_RATES:
+            raise ValueError(
+                f"Invalid mp3 bit_rate {bit_rate!r}: Deepgram only supports "
+                f"bitrates {sorted(_MP3_BIT_RATES)} for mp3 encoding"
+            )
         headers = {
             "Authorization": f"Token {api_key}",
             "Content-Type": "application/json",
         }
-        params = {"model": model}
+        # MP3 is Deepgram's default encoding and 48000 its default bitrate, but
+        # we send them explicitly (rather than relying on the implicit default)
+        # so the response format is pinned and predictable.
+        params = {
+            "model": model,
+            "encoding": _REST_ENCODING,
+            "bit_rate": bit_rate,
+        }
         payload = {"text": text}
         try:
             resp = requests.post(
@@ -146,6 +170,109 @@ class DeepgramTTS(BaseTTS):
 
         return resp.content
 
+    def _strip_mp3_prelude(self, data: bytes) -> bytes:
+        """Remove an MP3 stream's leading header/metadata so it can be spliced.
+
+        Deepgram wraps each REST mp3 response with its own ID3v2 tag and an
+        initial Xing/Info/LAME header frame. Naively concatenating several
+        independent mp3 streams leaves those per-chunk headers embedded in the
+        joined output; decoders may emit a click/pop or skip audio where they
+        suddenly reappear mid-stream.
+
+        This strips the ID3v2 tag and the initial Xing/Info/LAME header frame
+        (a metadata-only first MPEG frame) from a chunk sent to the splicer. If
+        anything looks malformed the bytes are returned unchanged so we never
+        corrupt audio.
+        """
+        body = self._skip_id3v2(data)
+        frame = self._find_mp3_frame(body)
+        if frame is None:
+            return body
+        head = frame[4:40]
+        if head.find(b"Xing") >= 0 or head.find(b"Info") >= 0 or head.find(b"LAME") >= 0:
+            length = self._mp3_frame_len(frame)
+            start = body.find(frame)
+            return body[start + length:]
+        return body
+
+    @staticmethod
+    def _skip_id3v2(data: bytes) -> bytes:
+        """Return *data* with any leading ID3v2 tag removed."""
+        if data[:3] == b"ID3" and len(data) >= 10:
+            size = (
+                ((data[6] & 0x7F) << 21)
+                | ((data[7] & 0x7F) << 14)
+                | ((data[8] & 0x7F) << 7)
+                | (data[9] & 0x7F)
+            )
+            end = 10 + size
+            if end <= len(data):
+                return data[end:]
+        return data
+
+    @staticmethod
+    def _find_mp3_frame(data: bytes) -> bytes:
+        """Return the MPEG audio frame header bytes if a frame sync is found."""
+        for i in range(min(len(data) - 3, 1024 * 4)):
+            if data[i] == 0xFF and (data[i + 1] & 0xE0) == 0xE0:
+                return data[i:i + 4]
+        return None
+
+    @staticmethod
+    def _mp3_frame_len(header: bytes) -> int:
+        """Best-effort MPEG frame length from a 4-byte frame header."""
+        if len(header) < 4:
+            return 4
+        bitrate_idx = (header[2] >> 4) & 0x0F
+        srate_idx = (header[2] >> 2) & 0x03
+        padding = (header[2] >> 1) & 0x01
+        version = (header[1] >> 3) & 0x03  # 3=MPEG1, 2=MPEG2/2.5
+        layer = (header[1] >> 1) & 0x03    # 1=LayerIII, 2=LayerII, 3=LayerI
+
+        bitrates = {
+            (1, 1): [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+            (1, 2): [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384],
+            (1, 3): [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448],
+            (2, 1): [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256],
+            (2, 2): [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+            (2, 3): [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+        }
+        if bitrate_idx == 0 or bitrate_idx >= 15:
+            return 4
+        if layer == 0:  # reserved
+            return 4
+        srates = {3: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000]}
+        srate = srates.get(version, srates[3])[srate_idx] if srate_idx < 3 else 0
+        br = bitrates.get((version, layer), [0] * 16).__getitem__(bitrate_idx) * 1000
+        if br <= 0 or srate <= 0:
+            return 4
+        if layer == 3:  # Layer I
+            return int((12 * br / srate + padding) * 4)
+        if layer == 2:  # Layer II
+            return int(144 * br / srate + padding)
+        # Layer III: MPEG1 uses 144 slots/frame, MPEG2/2.5 uses 72.
+        if version == 1:
+            return int(144 * br / srate + padding)
+        return int(72 * br / srate + padding)
+
+    def _join_mp3_parts(self, parts: list) -> bytes:
+        """Concatenate independent mp3 byte streams with clean splices.
+
+        Each Deepgram response is a self-contained mp3 stream carrying its own
+        ID3v2 tag and Xing/Info/LAME header frame. Naively ``b"".join``ing
+        them leaves a foreign header frame mid-stream at every boundary, which
+        decoders can render as a click/pop/static. We keep the first chunk
+        intact (it carries the tag) and strip the header prelude from every
+        subsequent chunk before joining, so the output is one continuous mp3
+        stream.
+        """
+        if len(parts) == 1:
+            return parts[0]
+        joined = [parts[0]]
+        for part in parts[1:]:
+            joined.append(self._strip_mp3_prelude(part))
+        return b"".join(joined)
+
     def synthesize(self, text: str, language_code: str, voice_name: str = None, voice_tier: str = None) -> bytes:
         text = (text or "").strip()
         if not text:
@@ -164,7 +291,10 @@ class DeepgramTTS(BaseTTS):
         for chunk in chunks:
             parts.append(self._synthesize_chunk(chunk, model))
 
-        return b"".join(parts)
+        # For text split across multiple requests we join the independent mp3
+        # streams, stripping each trailing chunk's ID3/Xing header so no
+        # mid-stream header frames cause boundary clicks/pops.
+        return self._join_mp3_parts(parts)
 
     def synthesize_stream(self, text: str, language_code: str, voice_name: str = None, voice_tier: str = None):
         """Synthesize text and yield raw linear16 PCM audio chunks as they arrive.

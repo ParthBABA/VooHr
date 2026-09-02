@@ -369,3 +369,68 @@ if __name__ == "__main__":
         humanize_numbers("मेरे पास 72 रुपये और OTP 483920 है", "hi"),
         "मेरे पास बहत्तर रुपये और OTP 483920 है",
     )
+
+    print("\n── Edge cases (Q3) ─────────────────────────────────────────────")
+    # Numbers immediately followed by punctuation, no space
+    check("punct period", humanize_numbers("72.", "en"), "seventy-two.")
+    check("punct bang", humanize_numbers("72!", "en"), "seventy-two!")
+    check("punct paren", humanize_numbers("(72)", "en"), "(seventy-two)")
+    check("punct close", humanize_numbers("72) and 8.5", "en"), "seventy-two) and eight point five")
+    check("punct percent", humanize_numbers("30%. ", "en"), "thirty percent. ")
+
+    # Multiple numbers in one sentence
+    check(
+        "multi numbers",
+        humanize_numbers("we have 3, 4 and 5 items", "en"),
+        "we have three, four and five items",
+    )
+    check(
+        "multi + currency",
+        humanize_numbers("It costs Rs. 500 and 15% tax", "en"),
+        "It costs five hundred rupees and fifteen percent tax",
+    )
+    check(
+        "multi ordinals",
+        humanize_numbers("The 1st, 2nd, and 3rd place.", "en"),
+        "The first, second, and third place.",
+    )
+    check(
+        "multi + identifier",
+        humanize_numbers("call 9876543210 and 72% done", "en"),
+        "call 9876543210 and seventy-two percent done",
+    )
+    check(
+        "multi + code",
+        humanize_numbers("Price is $72 and ID EMP1023 stays.", "en"),
+        "Price is seventy-two dollars and ID EMP1023 stays.",
+    )
+
+    # Mixed English + Hindi in a single string (language drives conversion,
+    # Latin digits/IDs and Latin word tokens are handled as before)
+    check(
+        "mixed en+hi",
+        humanize_numbers("हमारे पास 72 रुपये और 15% टैक्स है और code TCKT-88।", "hi"),
+        "हमारे पास बहत्तर रुपये और पंद्रह प्रतिशत टैक्स है और code TCKT-88।",
+    )
+    check(
+        "mixed translit",
+        humanize_numbers("सर्वर downtime 72 घंटे", "hi"),
+        "सर्वर downtime बहत्तर घंटे",
+    )
+    check(
+        "mixed decimal+code",
+        humanize_numbers("Score 3.14 and code AB-12", "en"),
+        "Score three point one four and code AB-12",
+    )
+
+    # No stray placeholder characters may survive in any output
+    for label, text, lang in [
+        ("leak-phone", "5 and EMP1023 done", "en"),
+        ("leak-otp", "OTP 483920 arrived", "en"),
+        ("leak-empty", "", "en"),
+    ]:
+        out = humanize_numbers(text, lang)
+        if "\x00" in out:
+            print(f"FAIL: {label}: placeholder leaked -> {out!r}")
+        else:
+            print(f"PASS: {label}: no placeholder leaked")
