@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from authlib.integrations.base_client.errors import MismatchingStateError
@@ -16,6 +17,8 @@ from login_flow import _login_result_for_user, _record_active_session
 
 oauth = OAuth()
 auth_bp = Blueprint("auth", __name__)
+
+log = logging.getLogger(__name__)
 
 
 def register_google_oauth(app):
@@ -65,6 +68,17 @@ def invite_accept():
     Non-state-changing redirect only — no DB writes here.
     """
     token = (session.get("pending_invite_token") or "").strip() or (request.args.get("token") or "").strip()
+    # TEMPORARY diagnostic logging — confirms whether a token is hit more than
+    # once (email-client/scanner prefetch vs a real browser click) and from
+    # which remote addr / user-agent. Removed once the root cause is verified.
+    log.info(
+        "invite_accept hit token=%.8s%s ip=%s ua=%s ts=%s",
+        token,
+        "" if token else "(empty)",
+        request.remote_addr,
+        request.headers.get("User-Agent"),
+        datetime.now(timezone.utc).isoformat(),
+    )
     if not token:
         return _invite_error_redirect("invalid")
 
@@ -166,6 +180,17 @@ def google_callback():
 
     if flow == "invite":
         invite_token = session.pop("pending_invite_token", "")
+        # TEMPORARY diagnostic logging — confirms whether a token is hit more
+        # than once at callback time (scanner prefetch vs real user) and from
+        # which remote addr / user-agent. Removed once the root cause is seen.
+        log.info(
+            "invite callback hit token=%.8s%s ip=%s ua=%s ts=%s",
+            invite_token,
+            "" if invite_token else "(empty)",
+            request.remote_addr,
+            request.headers.get("User-Agent"),
+            datetime.now(timezone.utc).isoformat(),
+        )
         invite = db.invites.find_one({"token": invite_token}) if invite_token else None
         if not invite:
             return _invite_error_redirect("invalid")
@@ -193,6 +218,23 @@ def google_callback():
         if existing_user:
             return redirect("/signin?error=already_registered")
 
+        # Atomic compare-and-swap: only the single request that successfully
+        # transitions this invite from `pending` to `accepted` proceeds to
+        # create the user. A second near-simultaneous request for the same
+        # token will not match `status: "pending"` here and is rejected below
+        # instead of double-inserting a user doc.
+        accepted = db.invites.find_one_and_update(
+            {"_id": invite["_id"], "status": "pending"},
+            {"$set": {"status": "accepted", "accepted_at": now}},
+        )
+        if not accepted:
+            # Either a concurrent request already consumed it, or it was
+            # superseded/expired between our read and this write. Distinguish
+            # for the error page by re-fetching the latest status.
+            latest = db.invites.find_one({"_id": invite["_id"]})
+            reason = (latest or {}).get("status") or "invalid"
+            return _invite_error_redirect(reason if reason != "pending" else "invalid")
+
         org_id = invite.get("org_id")
         encrypted_fields, wrapped_dek = encrypt_fields({
             "name": name,
@@ -212,11 +254,6 @@ def google_callback():
             "last_login": datetime.now(timezone.utc),
         }
         user_id = db.users.insert_one(user_doc).inserted_id
-
-        db.invites.update_one(
-            {"_id": invite["_id"]},
-            {"$set": {"status": "accepted", "accepted_at": now}},
-        )
 
         log_audit_event(
             db, invite.get("org_id"), user_id, name,
