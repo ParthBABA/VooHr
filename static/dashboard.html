@@ -873,26 +873,72 @@ function showManagerInvitePrompt(empId) {
   var msg = document.getElementById('managerInviteText');
   if (msg) msg.textContent = nameLabel + " doesn't have VooVr access yet. Invite them as a Manager?";
   var btn = document.getElementById('managerInviteBtn');
-  if (btn) btn.style.display = '';
+  if (btn) {
+    btn.style.display = '';
+    btn.disabled = false;
+    btn.textContent = 'Send Invite';
+  }
+  managerResendMode = false;
+  clearManagerResendTimer();
   container.setAttribute('data-emp-id', empId);
 }
 
 function hideManagerInvitePrompt() {
   var container = document.getElementById('managerInvitePrompt');
   if (container) container.style.display = 'none';
+  managerResendMode = false;
+  clearManagerResendTimer();
 }
 
-// Pending invite already sent for this employee — inform the admin instead of
-// offering another send (resending would just supersede the previous one).
+// Frontend-only resend cooldown (60s) to avoid accidental rapid re-clicks
+// spamming the recipient's inbox. Not a backend restriction.
+var managerResendCooldownUntil = 0;
+var managerResendTimer = null;
+var managerResendMode = false;
+
+function clearManagerResendTimer() {
+  if (managerResendTimer) { clearInterval(managerResendTimer); managerResendTimer = null; }
+}
+
+function refreshManagerResendCooldown() {
+  if (!managerResendMode) return;
+  var btn = document.getElementById('managerInviteBtn');
+  if (!btn) return;
+  var remaining = Math.max(0, Math.ceil((managerResendCooldownUntil - Date.now()) / 1000));
+  if (remaining > 0) {
+    btn.disabled = true;
+    btn.textContent = 'Resent \u2014 you can send again in ' + remaining + 's';
+    if (!managerResendTimer) managerResendTimer = setInterval(refreshManagerResendCooldown, 1000);
+  } else {
+    clearManagerResendTimer();
+    managerResendCooldownUntil = 0;
+    btn.disabled = false;
+    btn.textContent = 'Resend Invite';
+  }
+}
+
+function startManagerResendCooldown() {
+  managerResendCooldownUntil = Date.now() + 60000;
+  refreshManagerResendCooldown();
+}
+
+// Pending invite already sent for this employee — inform the admin and offer
+// a "Resend Invite" button (the backend supersedes the old pending invite and
+// issues a fresh one, so resending is safe by design).
 function showManagerInvitePending(empId) {
   var container = document.getElementById('managerInvitePrompt');
   if (!container) return;
   var msg = document.getElementById('managerInviteText');
-  if (msg) msg.textContent = 'An invite is already pending for this employee. They\'ll receive access once they accept it.';
+  if (msg) msg.textContent = 'An invite is already pending for this employee. If the email never arrived, you can resend it.';
   var btn = document.getElementById('managerInviteBtn');
-  if (btn) btn.style.display = 'none';
+  if (btn) {
+    btn.style.display = '';
+    btn.textContent = 'Resend Invite';
+  }
   container.style.display = '';
   container.setAttribute('data-emp-id', empId);
+  managerResendMode = true;
+  refreshManagerResendCooldown();
 }
 
 // Send the invite (only fires on explicit "Send Invite" click).
@@ -911,6 +957,15 @@ function sendManagerInvite(empId) {
     if (btn) { btn.disabled = false; btn.textContent = original; }
     if (!res.ok) {
       alert((res.body && res.body.error) === 'email_send_failed' ? 'The invite could not be emailed. Please try again.' : 'Invite failed. Please try again.');
+      return;
+    }
+    if (managerResendMode) {
+      // Resend of a pending invite: keep the pending prompt visible and start
+      // the 60s frontend cooldown so rapid re-clicks don't spam the inbox.
+      var resendContainer = document.getElementById('managerInvitePrompt');
+      var pendingEmpId = resendContainer ? resendContainer.getAttribute('data-emp-id') : '';
+      showManagerInvitePending(pendingEmpId);
+      startManagerResendCooldown();
       return;
     }
     hideManagerInvitePrompt();
