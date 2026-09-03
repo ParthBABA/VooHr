@@ -3,8 +3,12 @@ from datetime import datetime, timezone
 from authlib.integrations.base_client.errors import MismatchingStateError
 from authlib.integrations.flask_client import OAuth
 from bson import ObjectId
-from flask import Blueprint, current_app, redirect, session, url_for
+from flask import Blueprint, current_app, redirect, request, session, url_for
 
+from audit_log import (
+    ACTION_MANAGER_INVITE_ACCEPTED,
+    log_audit_event,
+)
 from blind_index import blind_index
 from extensions import get_db
 from field_encryption import decrypt_fields, encrypt_fields
@@ -42,6 +46,45 @@ def google_register():
 def google_signin():
     """Returning-user sign-in from signin.html."""
     session["oauth_flow"] = "signin"
+    redirect_uri = current_app.config.get("GOOGLE_REDIRECT_URI") or url_for("auth.google_callback", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+def _invite_error_redirect(reason: str):
+    """Friendly error redirect for failed/expired manager invites."""
+    return redirect(f"/invite-error?reason={reason}")
+
+
+@auth_bp.route("/invite/accept")
+def invite_accept():
+    """Entry point for a manager-invite email link.
+
+    Validates the token (exists, pending, not expired), stashes it in the
+    session so google_callback() can finalize the account, then routes the
+    user into the existing Google OAuth flow with oauth_flow == "invite".
+    Non-state-changing redirect only — no DB writes here.
+    """
+    token = (session.get("pending_invite_token") or "").strip() or (request.args.get("token") or "").strip()
+    if not token:
+        return _invite_error_redirect("invalid")
+
+    db = get_db()
+    invite = db.invites.find_one({"token": token})
+    if not invite:
+        return _invite_error_redirect("invalid")
+
+    if invite.get("status") != "pending":
+        return _invite_error_redirect("already_used")
+
+    now = datetime.now(timezone.utc)
+    expires_at = invite.get("expires_at")
+    if expires_at and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if not expires_at or now > expires_at:
+        return _invite_error_redirect("expired")
+
+    session["pending_invite_token"] = token
+    session["oauth_flow"] = "invite"
     redirect_uri = current_app.config.get("GOOGLE_REDIRECT_URI") or url_for("auth.google_callback", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
@@ -118,6 +161,75 @@ def google_callback():
         session["just_registered"] = True
         _record_active_session(db, user_id)
         return redirect("/onboarding-complete.html")
+
+    if flow == "invite":
+        invite_token = session.pop("pending_invite_token", "")
+        invite = db.invites.find_one({"token": invite_token}) if invite_token else None
+        if not invite or invite.get("status") != "pending":
+            return _invite_error_redirect("invalid")
+
+        now = datetime.now(timezone.utc)
+        expires_at = invite.get("expires_at")
+        if expires_at and expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if not expires_at or now > expires_at:
+            return _invite_error_redirect("expired")
+
+        # The Google account's email MUST match the invited address — reject
+        # loudly (don't silently fall through to sign-in).
+        email_hash = blind_index(email)
+        if email_hash != invite.get("email_hash"):
+            return _invite_error_redirect("email_mismatch")
+
+        # Reject if this email is already a user in the org (shouldn't happen,
+        # but never create a duplicate manager account).
+        existing_user = db.users.find_one({"email_hash": email_hash})
+        if existing_user:
+            return redirect("/signin?error=already_registered")
+
+        org_id = invite.get("org_id")
+        encrypted_fields, wrapped_dek = encrypt_fields({
+            "name": name,
+            "email": email,
+        })
+
+        user_doc = {
+            "google_id": google_id,
+            "email_hash": email_hash,
+            "encrypted": encrypted_fields,
+            "wrapped_dek": wrapped_dek,
+            "picture": picture,
+            "org_id": org_id,
+            "role": "manager",
+            "linked_employee_id": invite.get("linked_employee_id"),
+            "created_at": datetime.now(timezone.utc),
+            "last_login": datetime.now(timezone.utc),
+        }
+        user_id = db.users.insert_one(user_doc).inserted_id
+
+        db.invites.update_one(
+            {"_id": invite["_id"]},
+            {"$set": {"status": "accepted", "accepted_at": now}},
+        )
+
+        log_audit_event(
+            db, invite.get("org_id"), user_id, name,
+            ACTION_MANAGER_INVITE_ACCEPTED,
+            target_type="employee",
+            target_id=str(invite.get("linked_employee_id")) if invite.get("linked_employee_id") else None,
+            meta={"invite_id": str(invite["_id"])},
+        )
+
+        session.permanent = True
+        session["user_id"] = str(user_id)
+        session["org_id"] = str(org_id) if org_id else None
+        session["user_name"] = name
+        session["user_email"] = email
+        session["just_registered"] = True
+        _record_active_session(db, user_id)
+
+        result = _login_result_for_user(db, user_doc)
+        return redirect(result["redirect"])
 
     # --- sign-in flow ---
     email_hash = blind_index(email)

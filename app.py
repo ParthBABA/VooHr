@@ -322,6 +322,10 @@ def create_app():
         if guard: return guard
         return send_from_directory(app.static_folder, "meeting_tracker.html")
 
+    @app.route("/invite-error")
+    def invite_error():
+        return send_from_directory(app.static_folder, "invite-error.html")
+
     @app.route("/privacy")
     def privacy():
         return send_from_directory(app.static_folder, "privacy-policy.html")

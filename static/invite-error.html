@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Copilot - Invitation</title>
+<script>
+(function(){
+  try {
+    var saved = localStorage.getItem('voovr-theme');
+    if (saved === 'light' || saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+  } catch (e) {}
+})();
+</script>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css">
+<style>
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;}
+  .invite-card{max-width:460px;width:100%;margin:24px;padding:40px;text-align:left;}
+  .invite-title{font-size:1.6rem;font-family:var(--font-d);margin-bottom:12px;}
+  .invite-body{color:var(--ivory-faint);margin-bottom:28px;line-height:1.6;}
+  .invite-actions{display:flex;flex-wrap:wrap;gap:10px;}
+  .invite-actions a{text-decoration:none;}
+</style>
+</head>
+<body>
+  <div class="card invite-card">
+    <div class="eyebrow">HR Copilot</div>
+    <h1 class="invite-title" id="inviteTitle">Invitation unavailable</h1>
+    <p class="invite-body" id="inviteBody">This invitation link is invalid or has expired. Please ask your admin to resend it.</p>
+    <div class="invite-actions">
+      <a href="/signin" class="btn btn-sm btn-gradient">Go to Sign In</a>
+      <a href="/" class="btn btn-sm btn-outline">Back to Home</a>
+    </div>
+  </div>
+  <script>
+  (function(){
+    var reason = new URLSearchParams(window.location.search).get('reason') || '';
+    var title = document.getElementById('inviteTitle');
+    var body = document.getElementById('inviteBody');
+    if (reason === 'expired') {
+      title.textContent = 'This invite has expired';
+      body.textContent = 'This invite link has expired. Ask your admin to resend a new invitation.';
+    } else if (reason === 'email_mismatch') {
+      title.textContent = 'Email mismatch';
+      body.textContent = 'The Google account you signed in with doesn\u2019t match the invited email address. Please sign in with the invited email.';
+    } else if (reason === 'already_used') {
+      title.textContent = 'Invite already used';
+      body.textContent = 'This invitation has already been used. If you believe this is a mistake, contact your admin.';
+    } else {
+      title.textContent = 'Invalid invitation';
+      body.textContent = 'This invitation link is invalid. Please ask your admin to send it again.';
+    }
+  })();
+  </script>
+</body>
+</html>

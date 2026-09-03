@@ -184,6 +184,15 @@ def _init_indexes(db):
         background=True,
     )
 
+    # ── invites ────────────────────────────────────────────────────────
+    # Query: find_one({"token": ...}) in auth.invite_accept / google_callback
+    db.invites.create_index("token", unique=True, background=True)
+    # Query: admin lookup of pending invites per employee
+    db.invites.create_index(
+        [("org_id", ASCENDING), ("linked_employee_id", ASCENDING)],
+        background=True,
+    )
+
 
 # ── Atomic employee ID generation ────────────────────────────────────
 

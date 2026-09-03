@@ -183,3 +183,101 @@ def send_otp_email(to_email: str, otp: str) -> bool:
     except Exception:
         logger.exception("email_failed=unexpected_exception recipient=%s", to_email)
         return False
+
+
+def _manager_invite_html(org_name: str, invite_link: str) -> str:
+    return (
+        "<p>You've been invited by an admin to join <strong>"
+        + _escape_html(org_name)
+        + "</strong> on HR Copilot as a <strong>Manager</strong>.</p>"
+        "<p>Click the button below to accept your invitation and set up your "
+        "account:</p>"
+        f"<p style=\"margin:24px 0;\"><a href=\"{invite_link}\" "
+        "style=\"background:#f5b301;color:#121212;text-decoration:none;"
+        "padding:12px 22px;border-radius:8px;font-weight:600;display:inline-block;\">"
+        "Accept Invitation</a></p>"
+        "<p>This link expires in 7 days. If you didn't expect this invite, you "
+        "can safely ignore this email.</p>"
+        + _email_footer()
+    )
+
+
+def _escape_html(value: str) -> str:
+    return (value or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def send_manager_invite_email(to_email: str, org_name: str, invite_link: str) -> bool:
+    """Send a manager-invitation email via Brevo (reuses _send_via_brevo).
+
+    Returns True on success, False on any failure.  A separate subject/html
+    template from the OTP path — literally mirrors its structure while leaving
+    the OTP code path untouched.
+    """
+    api_key = os.environ.get("BREVO_API_KEY", "")
+    sender_email = os.environ.get("BREVO_SENDER_EMAIL", "")
+    if not api_key or not sender_email:
+        logger.error(
+            "email_failed=missing_config recipient=%s api_key_set=%s sender_email_set=%s",
+            to_email,
+            bool(api_key),
+            bool(sender_email),
+        )
+        return False
+    if not _SENDER_RE.match(sender_email):
+        logger.error(
+            "email_failed=invalid_sender_format recipient=%s sender=%s",
+            to_email,
+            sender_email,
+        )
+        return False
+
+    payload = {
+        "sender": {
+            "email": sender_email,
+            "name": os.environ.get("BREVO_SENDER_NAME", "VooVr"),
+        },
+        "to": [{"email": to_email}],
+        "subject": "You've been invited to HR Copilot as a Manager",
+        "htmlContent": _manager_invite_html(org_name, invite_link),
+    }
+
+    try:
+        resp = requests.post(
+            BREVO_API_URL,
+            headers={
+                "api-key": api_key,
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=15,
+        )
+    except requests.Timeout:
+        logger.error(
+            "email_failed=timeout recipient=%s url=%s", to_email, BREVO_API_URL
+        )
+        return False
+    except requests.RequestException as exc:
+        logger.error(
+            "email_failed=network recipient=%s url=%s error=%s",
+            to_email,
+            BREVO_API_URL,
+            exc,
+        )
+        return False
+
+    if not resp.ok:
+        logger.error(
+            "email_failed=api_error status=%s recipient=%s body=%s",
+            resp.status_code,
+            to_email,
+            _brevo_error_message(resp),
+        )
+        return False
+
+    logger.info(
+        "email_sent provider=brevo status=%s recipient=%s kind=manager_invite",
+        resp.status_code,
+        to_email,
+    )
+    return True

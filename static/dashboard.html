@@ -494,7 +494,13 @@
           </div>
           <div class="form-group">
             <label class="form-label">Reporting Manager</label>
-            <input type="text" class="form-input" id="empManager" placeholder="Enter manager's name">
+            <select class="form-input" id="empManager">
+              <option value="">No manager / Top of hierarchy</option>
+            </select>
+            <div id="managerInvitePrompt" style="display:none;margin-top:10px;padding:12px;border:1px solid var(--amber-soft, #f5b30155);border-radius:10px;background:var(--amber-soft, #f5b30114);">
+              <div style="font-size:0.85rem;color:var(--ivory-faint);margin-bottom:8px;" id="managerInviteText"></div>
+              <button type="button" class="btn btn-sm btn-gradient" id="managerInviteBtn">Send Invite</button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">Joining Date</label>
@@ -726,6 +732,99 @@ function updateWellnessHeart(score) {
   else heart.classList.add('heart-red');
 }
 
+// Populate the reporting-manager dropdown (value = employee _id) from the
+// same employee list the directory table uses.
+function populateManagerDropdown(employees) {
+  var sel = document.getElementById('empManager');
+  if (!sel) return;
+  var current = sel.value;
+  sel.innerHTML = '';
+  var empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = 'No manager / Top of hierarchy';
+  sel.appendChild(empty);
+  (employees || []).forEach(function(emp) {
+    if (!emp.id) return;
+    var opt = document.createElement('option');
+    opt.value = emp.id;
+    var label = [emp.name, emp.position].filter(Boolean).join(' — ');
+    opt.textContent = label || emp.id;
+    sel.appendChild(opt);
+  });
+  if (current) sel.value = current;
+}
+
+// Part 2 — detect whether the selected manager already has login access.
+function checkManagerStatus(empId) {
+  if (!empId) return;
+  fetch('/api/employees/' + encodeURIComponent(empId) + '/manager-status')
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
+    .then(function(data) {
+      if (data.has_access === false) {
+        showManagerInvitePrompt(empId);
+      } else {
+        hideManagerInvitePrompt();
+      }
+    })
+    .catch(function() { hideManagerInvitePrompt(); });
+}
+
+// Inline prompt (not auto-triggered — user must click "Send Invite").
+function showManagerInvitePrompt(empId) {
+  var container = document.getElementById('managerInvitePrompt');
+  if (!container) return;
+  var sel = document.getElementById('empManager');
+  var name = sel && sel.selectedOptions.length ? sel.selectedOptions[0].textContent : '';
+  var nameLabel = name || 'This employee';
+  container.style.display = '';
+  var msg = document.getElementById('managerInviteText');
+  if (msg) msg.textContent = nameLabel + " doesn't have VooVr access yet. Invite them as a Manager?";
+  container.setAttribute('data-emp-id', empId);
+}
+
+function hideManagerInvitePrompt() {
+  var container = document.getElementById('managerInvitePrompt');
+  if (container) container.style.display = 'none';
+}
+
+// Send the invite (only fires on explicit "Send Invite" click).
+function sendManagerInvite(empId) {
+  if (!empId) return;
+  var btn = document.getElementById('managerInviteBtn');
+  var original = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending\u2026'; }
+  fetch('/api/employees/' + encodeURIComponent(empId) + '/invite-manager', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  }).then(function(r) {
+    return r.json().catch(function() { return {}; }).then(function(b) { return { ok: r.ok, body: b }; });
+  }).then(function(res) {
+    if (btn) { btn.disabled = false; btn.textContent = original; }
+    if (!res.ok) {
+      alert((res.body && res.body.error) === 'email_send_failed' ? 'The invite could not be emailed. Please try again.' : 'Invite failed. Please try again.');
+      return;
+    }
+    hideManagerInvitePrompt();
+    var toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = 'Manager invite sent';
+    document.body.appendChild(toast);
+    if (typeof gsap !== 'undefined') {
+      gsap.set(toast, { y: 60, opacity: 0 });
+      gsap.to(toast, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
+      setTimeout(function() {
+        gsap.to(toast, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { toast.remove(); } });
+      }, 4000);
+    } else {
+      setTimeout(function() { toast.remove(); }, 4000);
+    }
+  }).catch(function() {
+    if (btn) { btn.disabled = false; btn.textContent = original; }
+    alert('Network error while sending invite.');
+  });
+}
+
 // Load employees from API and render table
 function loadEmployees(opts) {
   opts = opts || {};
@@ -744,6 +843,8 @@ function loadEmployees(opts) {
       var tbody = document.querySelector('#dashEmpTable tbody');
       if (!tbody) return;
       tbody.innerHTML = '';
+
+      populateManagerDropdown(data.employees || []);
 
       (data.employees || []).forEach(function(emp) {
         var name = emp.name || '';
@@ -884,6 +985,7 @@ function escHtml(str) {
     // Reset form fields
     var formInputs = document.querySelectorAll('#addEmpPanel input, #addEmpPanel select');
     formInputs.forEach(function(el) { if (el.type !== 'file') el.value = ''; });
+    hideManagerInvitePrompt();
     var preview = document.getElementById('photoPreview');
     var placeholder = document.querySelector('.photo-placeholder');
     if (preview) preview.style.display = 'none';
@@ -954,6 +1056,21 @@ function escHtml(str) {
   if (nextBtn) nextBtn.addEventListener('click', nextStep);
   if (backBtn) backBtn.addEventListener('click', prevStep);
 
+  // Reporting manager — after selection, detect whether they already have
+  // access and offer an (explicit, manual-click) invite if not.
+  var managerSel = document.getElementById('empManager');
+  if (managerSel) {
+    managerSel.addEventListener('change', function() { checkManagerStatus(managerSel.value); });
+  }
+  var inviteBtn = document.getElementById('managerInviteBtn');
+  if (inviteBtn) {
+    inviteBtn.addEventListener('click', function() {
+      var container = document.getElementById('managerInvitePrompt');
+      var empId = container ? container.getAttribute('data-emp-id') : '';
+      sendManagerInvite(empId);
+    });
+  }
+
   // Photo upload
   (function() {
     var upload = document.getElementById('photoUpload');
@@ -1011,6 +1128,7 @@ function escHtml(str) {
       var department = document.getElementById('empDepartment').value;
       var position = document.getElementById('empDesignation').value.trim();
       var joining_date = document.getElementById('empJoiningDate').value;
+      var reports_to = document.getElementById('empManager').value || null;
       var aiConsent = document.getElementById('aiConsent').checked;
 
       if (!name) return;
@@ -1025,6 +1143,7 @@ function escHtml(str) {
         department: department || undefined,
         position: position || undefined,
         joining_date: joining_date || undefined,
+        reports_to: reports_to,
         photo: currentPhotoData || undefined,
       };
 

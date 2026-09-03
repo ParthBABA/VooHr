@@ -1,11 +1,12 @@
 import csv
 import io
 import logging
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
 from bson.errors import InvalidId
-from flask import Blueprint, jsonify, request, session, make_response
+from flask import Blueprint, jsonify, request, session, make_response, url_for
 
 from audit_log import (
     ACTION_EMPLOYEE_BULK_EXPORT,
@@ -14,10 +15,13 @@ from audit_log import (
     ACTION_EMPLOYEE_DELETE,
     ACTION_EMPLOYEE_EXPORT,
     ACTION_EMPLOYEE_UPDATE,
+    ACTION_MANAGER_INVITE_ACCEPTED,
+    ACTION_MANAGER_INVITE_SENT,
     log_audit_event,
 )
 from blind_index import blind_index
 from config import Config
+from email_service import send_manager_invite_email
 from employee_scoring import score_employee
 from extensions import get_db, next_employee_id
 from field_encryption import decrypt_fields, encrypt_fields
@@ -198,6 +202,7 @@ def _employee_to_json(emp) -> dict:
         "wellness_source": wellness_source,
         "reasons": reasons,
         "photo": emp.get("photo"),
+        "reports_to": str(emp["reports_to"]) if emp.get("reports_to") else None,
         "created_at": emp.get("created_at").isoformat() if emp.get("created_at") else None,
         "updated_at": emp.get("updated_at").isoformat() if emp.get("updated_at") else None,
     }
@@ -241,6 +246,20 @@ def create_employee():
         return jsonify({"error": "joining_date_too_long"}), 400
 
     db = get_db()
+
+    # reports_to — optional ObjectId referencing a manager employee in the same org
+    reports_to = data.get("reports_to")
+    if reports_to is not None and reports_to != "" and reports_to != "null":
+        try:
+            reports_to_oid = ObjectId(reports_to)
+        except (InvalidId, TypeError):
+            return jsonify({"error": "invalid_reports_to"}), 400
+        if not db.employees.find_one({"_id": reports_to_oid, "org_id": ObjectId(org_id)}):
+            return jsonify({"error": "reports_to_not_found"}), 400
+        reports_to = reports_to_oid
+    else:
+        reports_to = None
+
     employee_id = _next_employee_id(db, org_id)
 
     encrypted_fields, wrapped_dek = encrypt_fields({
@@ -280,6 +299,7 @@ def create_employee():
         "wrapped_dek": wrapped_dek,
         "signals": signals,
         "photo": photo or None,
+        "reports_to": reports_to,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
     }
@@ -624,6 +644,20 @@ def update_employee(emp_id: str):
                 return jsonify({"error": f"{field}_too_long"}), 400
             set_fields[field] = val
 
+    # reports_to — nullable ObjectId referencing a manager employee in the same org
+    if "reports_to" in data:
+        reports_to = data.get("reports_to")
+        if reports_to is not None and reports_to != "" and reports_to != "null":
+            try:
+                reports_to_oid = ObjectId(reports_to)
+            except (InvalidId, TypeError):
+                return jsonify({"error": "invalid_reports_to"}), 400
+            if not db.employees.find_one({"_id": reports_to_oid, "org_id": ObjectId(org_id)}):
+                return jsonify({"error": "reports_to_not_found"}), 400
+            set_fields["reports_to"] = reports_to_oid
+        else:
+            set_fields["reports_to"] = None
+
     # Photo — validate data-URL prefix, or clear
     if "photo" in data:
         photo = (data["photo"] or "").strip()
@@ -741,6 +775,134 @@ def delete_employee(emp_id: str):
     )
 
     return jsonify({"ok": True})
+
+
+def _require_admin():
+    """Admin-only session check for manager-invite routes.
+
+    Returns the authenticated admin's org_id (str) on success, None when
+    unauthenticated / not an admin.  Reuses the same active-session + TOTP
+    validation as _require_auth() but also enforces role == "admin".
+    """
+    user_id = session.get("user_id")
+    org_id = session.get("org_id")
+    if not user_id or not org_id:
+        return None
+    try:
+        ObjectId(user_id)
+        ObjectId(org_id)
+    except InvalidId:
+        session.clear()
+        return None
+    if not _session_is_active(user_id, session.get("session_token")):
+        session.clear()
+        return None
+    if _totp_required():
+        raise TOTPRequired()
+    db = get_db()
+    user = db.users.find_one({"_id": ObjectId(user_id)}, {"role": 1})
+    if not user or user.get("role") != "admin":
+        return None
+    return org_id
+
+
+# ── Reporting-manager helpers ─────────────────────────────────────────
+# Managers are referenced by their employee ObjectId (reports_to), never by
+# plaintext name, consistent with how org_id is handled elsewhere.
+
+@employees_bp.route("/employees/<emp_id>/manager-status")
+def manager_status(emp_id: str):
+    """Return whether the employee already has VooVr login access as a
+    manager/admin, so the UI can offer an invite when they don't.
+
+    Response: {"has_access": bool, "role": "manager"|"admin"|null}
+    """
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        emp_oid = ObjectId(emp_id)
+    except InvalidId:
+        return jsonify({"error": "invalid_id"}), 400
+
+    emp = db.employees.find_one({"_id": emp_oid, "org_id": ObjectId(org_id)})
+    if not emp:
+        return jsonify({"error": "not_found"}), 404
+
+    user = db.users.find_one(
+        {"linked_employee_id": emp_oid},
+        {"role": 1},
+    )
+    if not user:
+        return jsonify({"has_access": False, "role": None})
+
+    return jsonify({"has_access": True, "role": user.get("role")})
+
+
+@employees_bp.route("/employees/<emp_id>/invite-manager", methods=["POST"])
+def invite_manager(emp_id: str):
+    """Send a manager-invite email for the given employee (admin-only).
+
+    Looks up the employee's stored (decrypted) email, creates an ``invites``
+    document with a 7-day expiry token, and emails the invite link via Brevo.
+    Never stores the manager's plaintext name anywhere new — always references
+    the employee by its ObjectId and the invite by token/email_hash.
+    """
+    org_id = _require_admin()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        emp_oid = ObjectId(emp_id)
+    except InvalidId:
+        return jsonify({"error": "invalid_id"}), 400
+
+    emp = db.employees.find_one({"_id": emp_oid, "org_id": ObjectId(org_id)})
+    if not emp:
+        return jsonify({"error": "not_found"}), 404
+
+    pii = decrypt_fields(emp.get("encrypted"), emp.get("wrapped_dek", ""))
+    email = pii.get("email")
+    if not email:
+        return jsonify({"error": "no_email"}), 400
+
+    org = db.organizations.find_one({"_id": ObjectId(org_id)}, {"name": 1})
+    org_name = (org or {}).get("name") or "your organization"
+
+    token = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+    invite_doc = {
+        "org_id": ObjectId(org_id),
+        "email": email,
+        "email_hash": blind_index(email),
+        "role": "manager",
+        "linked_employee_id": emp_oid,
+        "token": token,
+        "created_by": session.get("user_id"),
+        "status": "pending",
+        "expires_at": now + timedelta(days=7),
+        "created_at": now,
+    }
+    db.invites.insert_one(invite_doc)
+
+    invite_link = url_for("auth.invite_accept", token=token, _external=True)
+    sent = send_manager_invite_email(email, org_name, invite_link)
+
+    log_audit_event(
+        db, org_id, session.get("user_id"), session.get("user_name") or "",
+        ACTION_MANAGER_INVITE_SENT,
+        target_type="employee", target_id=emp_id,
+        target_label=emp.get("employee_id") or emp_id,
+        meta={"employee_id": emp.get("employee_id"), "email_sent": sent},
+    )
+
+    if not sent:
+        return jsonify({"error": "email_send_failed"}), 502
+
+    return jsonify({"ok": True, "email": email})
 
 
 @employees_bp.route("/employees/<emp_id>/export", methods=["GET"])
