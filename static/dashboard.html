@@ -34,6 +34,32 @@
 <div id="page-skeleton" class="page-skeleton" aria-hidden="true"><div class="page-skeleton-spinner"></div></div>
 <script>
 (function(){
+  // Manager-role dashboard view: hide org-wide/admin-only widgets and
+  // retitle the (server-scoped) directory to "My Team".  Admins keep the
+  // full dashboard untouched.  The employee list itself is already scoped
+  // server-side by reports_to, so managers never receive other teams' data.
+  function applyRoleView(data){
+    if (data.role !== 'manager') return;
+
+    var adminEls = document.querySelectorAll('.admin-only');
+    adminEls.forEach(function(el){ el.style.display = 'none'; });
+
+    // Hide the org-level Settings link in the sidebar for managers.
+    var settingsNav = document.querySelector('a.nav-item[href="settings.html"]');
+    if (settingsNav) settingsNav.style.display = 'none';
+
+    // Retitle the (auto-scoped) directory as a team view.
+    var dirTitle = document.getElementById('dashDirTitle');
+    if (dirTitle) dirTitle.textContent = 'My Team';
+    var dirTitleHi = document.getElementById('dashDirTitleHi');
+    if (dirTitleHi) dirTitleHi.textContent = 'My Team';
+
+    // Hide the Add Employee side panel for non-admins (belt-and-braces:
+    // the add button is already hidden, this stops a stray open()).
+    var addOverlay = document.getElementById('addEmpOverlay');
+    if (addOverlay) addOverlay.style.display = 'none';
+  }
+
   function populate(data){
     var nameEl = document.getElementById('userName');
     var roleEl = document.getElementById('userRole');
@@ -41,6 +67,9 @@
     if (nameEl) nameEl.textContent = data.name;
     if (roleEl) roleEl.textContent = data.role === 'admin' ? 'HR Admin' : data.role;
     if (avatarEl) avatarEl.textContent = (data.name || 'U').trim().charAt(0).toUpperCase();
+
+    // Role-scoped view: managers get a lighter, team-only dashboard.
+    applyRoleView(data);
 
     var welcomeTitle = document.getElementById('welcomeTitle');
     var welcomeNameEl = document.getElementById('welcomeName');
@@ -320,8 +349,8 @@
               <div>
                 <div class="eyebrow" data-lang="en">Workforce</div>
                 <div class="eyebrow" data-lang="hi">Workforce</div>
-                <h3 class="card-title" data-lang="en">Employee Directory</h3>
-                <h3 class="card-title" data-lang="hi">Employee Directory</h3>
+                <h3 class="card-title" data-lang="en" id="dashDirTitle">Employee Directory</h3>
+                <h3 class="card-title" data-lang="hi" id="dashDirTitleHi" style="display:none;">Employee Directory</h3>
               </div>
               <div class="ffolder big pink" id="dashEmpCount"><span>Loading...</span></div>
             </div>
@@ -330,17 +359,17 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
                 Filters
               </button>
-              <button class="btn btn-sm btn-outline" type="button" id="dashExportCsvBtn" title="Download the employee directory as a CSV file">
+              <button class="btn btn-sm btn-outline admin-only" type="button" id="dashExportCsvBtn" title="Download the employee directory as a CSV file">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Export CSV
               </button>
-              <button class="btn btn-sm btn-outline" type="button" id="dashImportCsvBtn" title="Bulk import employees from a CSV file">
+              <button class="btn btn-sm btn-outline admin-only" type="button" id="dashImportCsvBtn" title="Bulk import employees from a CSV file">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 Import CSV
               </button>
               <input type="file" id="dashImportCsvInput" accept=".csv,text/csv" style="display:none;">
               <a href="/api/employees/csv-template" id="dashCsvTemplateLink" style="display:none;"></a>
-              <button class="btn btn-sm btn-gradient" type="button" title="Add a new employee">
+              <button class="btn btn-sm btn-gradient admin-only" type="button" title="Add a new employee">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Add Employee
               </button>

@@ -451,6 +451,19 @@ html[data-theme="light"]{
 .page-skeleton-spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--ink);border-top-color:var(--amber);animation:page-skeleton-spin .8s linear infinite;}
 @keyframes page-skeleton-spin{to{transform:rotate(360deg);}}
 .page-skeleton.is-hidden{opacity:0;pointer-events:none;}
+
+/* ── Manager Roles: table + badges ── */
+.st-table{width:100%;border-collapse:collapse;font-size:0.85rem;}
+.st-table th{text-align:left;padding:0.7rem 1rem;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;}
+.st-table td{padding:0.7rem 1rem;border-bottom:1px solid var(--line);vertical-align:top;}
+.st-table tbody tr:hover{background:var(--surface-soft);}
+.st-table tbody tr.row-selected{background:rgba(51,160,143,0.08);}
+.st-badge{display:inline-block;padding:0.2rem 0.6rem;border-radius:999px;font-size:0.72rem;font-weight:600;white-space:nowrap;}
+.badge-violet{background:rgba(124,93,250,0.14);color:var(--violet);}
+.badge-green{background:rgba(40,167,100,0.14);color:var(--teal);}
+.badge-amber{background:rgba(243,156,18,0.16);color:#b7791f;}
+.badge-grey{background:rgba(120,120,128,0.14);color:var(--muted);}
+.mr-toast{font-size:0.82rem;font-weight:600;font-family:var(--font-rc);}
 </style>
 </head>
 <body>
@@ -502,6 +515,13 @@ html[data-theme="light"]{
       var notifRiskNote = document.getElementById('notifRiskNote');
       if (notifRisk) notifRisk.disabled = true;
       if (notifRiskNote) notifRiskNote.style.display = 'block';
+    }
+
+    if (data.role === 'admin') {
+      document.querySelectorAll('.admin-only').forEach(function(el){
+        el.style.display = '';
+      });
+      loadManagerRolesOverview();
     }
 
     loadBillingUsage();
@@ -576,6 +596,10 @@ html[data-theme="light"]{
           <a href="#organization" class="settings-nav-item" data-panel="organization" data-accent="teal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
             Organization <span class="nav-ind"></span>
+          </a>
+          <a href="#manager-roles" class="settings-nav-item admin-only" data-panel="manager-roles" data-accent="indigo" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            Manager Roles <span class="nav-ind"></span>
           </a>
 
           <div class="settings-nav-group">Communication</div>
@@ -730,6 +754,53 @@ html[data-theme="light"]{
           <div class="st-actions">
             <button class="btn btn-primary" id="orgSaveBtn" type="button">Save Changes</button>
           </div>
+        </div>
+
+        <!-- ═══ MANAGER ROLES ═══ -->
+        <div class="settings-panel admin-only" data-panel="manager-roles" style="display:none;">
+          <div class="st-page">
+            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Access</div>
+            <h2 class="st-title">Manager Roles</h2>
+            <p class="st-desc">Send manager invites to employees who need read-only, scoped access to their team's data.</p>
+          </div>
+
+          <div class="st-section" id="mrLoading" style="padding:1.5rem;">
+            <div class="st-muted">Loading roster…</div>
+          </div>
+
+          <div class="st-section" id="mrTableWrap" style="display:none;">
+            <div class="mr-actions" style="display:flex;align-items:center;gap:0.75rem;padding:0 1.5rem 1rem;flex-wrap:wrap;">
+              <button class="btn btn-sm btn-primary" id="mrBulkInviteBtn" type="button" disabled>Send Invites</button>
+              <span class="st-muted" id="mrSelectedInfo">0 selected</span>
+              <span style="flex:1;"></span>
+              <button class="btn btn-sm btn-outline" id="mrCsvImportBtn" type="button">Import via CSV</button>
+              <input type="file" id="mrCsvInput" accept=".csv,text/csv" style="display:none;">
+            </div>
+
+            <div style="overflow-x:auto;">
+              <table class="st-table" id="mrTable">
+                <thead>
+                  <tr>
+                    <th style="width:2.5rem;"><input type="checkbox" id="mrSelectAll" title="Select all"></th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Reports</th>
+                    <th>Access Status</th>
+                  </tr>
+                </thead>
+                <tbody id="mrTableBody"></tbody>
+              </table>
+            </div>
+
+            <div class="st-section" style="padding:1.5rem;">
+              <div class="field-group">
+                <label class="field-label">How manager invites work</label>
+                <p class="st-muted" style="font-size:0.82rem;line-height:1.55;">Employees with no account and a valid email receive an invite link. Invites expire after 7 days. Clicking the link creates a manager account scoped to their direct reports — no admin access, no code-deploy access.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mr-toast" id="mrToast" style="display:none;"></div>
         </div>
 
         <!-- ═══ NOTIFICATIONS ═══ -->
@@ -1133,6 +1204,12 @@ html[data-theme="light"]{
     }
   }
 })();
+
+function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
 
 function showToast(msg) {
   var t = document.createElement('div');
@@ -1997,6 +2074,231 @@ window.addEventListener('load', function() {
     if (nameInp) nameInp.focus();
   }
 });
+
+/* ══ MANAGER ROLES: admin-only bulk invite UI (server is admin-guarded too) ══ */
+(function(){
+  var employees = [];
+  var selected = {};
+  var busy = false;
+
+  function mrEl(id){ return document.getElementById(id); }
+
+  function mrToast(msg, isError){
+    var t = mrEl('mrToast');
+    if (!t) return;
+    t.textContent = msg;
+    t.style.display = 'block';
+    t.style.background = isError ? 'rgba(220,60,60,0.12)' : 'rgba(40,167,100,0.12)';
+    t.style.color = isError ? '#c0392b' : '#1d7d4f';
+    t.style.padding = '0.9rem 1.2rem';
+    t.style.borderRadius = '10px';
+    t.style.margin = '1rem 1.5rem 0';
+    t.style.border = '1px solid ' + (isError ? 'rgba(220,60,60,0.4)' : 'rgba(40,167,100,0.4)');
+    clearTimeout(t._h);
+    t._h = setTimeout(function(){ t.style.display = 'none'; }, isError ? 6000 : 4000);
+  }
+
+  function accessBadge(status){
+    var map = {
+      'admin': { label: 'Admin', cls: 'badge-violet' },
+      'manager': { label: 'Manager', cls: 'badge-green' },
+      'invite_pending': { label: 'Invite pending', cls: 'badge-amber' },
+      'no_account': { label: 'No account', cls: 'badge-grey' }
+    };
+    var m = map[status] || { label: status || '—', cls: 'badge-grey' };
+    return '<span class="st-badge ' + m.cls + '">' + m.label + '</span>';
+  }
+
+  function invitable(emp){
+    return emp.has_email && emp.access_status === 'no_account';
+  }
+
+  function renderTable(){
+    var tbody = mrEl('mrTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    employees.forEach(function(emp){
+      var can = invitable(emp);
+      var tr = document.createElement('tr');
+      var nameCell = document.createElement('td');
+      nameCell.innerHTML = '<strong>' + escapeHtml(emp.name || 'Unnamed') + '</strong>' +
+        (emp.email ? '<br><span class="st-muted">' + escapeHtml(emp.email) + '</span>' : '') +
+        (emp.position ? '<br><span class="st-muted">' + escapeHtml(emp.position) + '</span>' : '');
+      var deptCell = document.createElement('td');
+      deptCell.textContent = emp.department || '—';
+      var repCell = document.createElement('td');
+      repCell.textContent = emp.reports_count;
+      var accCell = document.createElement('td');
+      accCell.innerHTML = accessBadge(emp.access_status);
+
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.disabled = !can;
+      if (can) {
+        cb.checked = !!selected[emp.id];
+        var cls = selected[emp.id] ? 'row-selected' : '';
+        if (cls) tr.className = cls;
+        cb.addEventListener('change', function(){
+          if (cb.checked) selected[emp.id] = true; else delete selected[emp.id];
+          tr.className = cb.checked ? 'row-selected' : '';
+          updateSelection();
+        });
+      } else {
+        cb.title = 'No invitable email or already has access';
+      }
+      var cbCell = document.createElement('td');
+      cbCell.appendChild(cb);
+      tr.appendChild(cbCell);
+      tr.appendChild(nameCell);
+      tr.appendChild(deptCell);
+      tr.appendChild(repCell);
+      tr.appendChild(accCell);
+      tbody.appendChild(tr);
+    });
+  }
+
+  function updateSelection(){
+    var sel = Object.keys(selected);
+    mrEl('mrSelectedInfo').textContent = sel.length + ' selected';
+    mrEl('mrBulkInviteBtn').disabled = sel.length === 0 || busy;
+
+    var all = document.getElementById('mrSelectAll');
+    if (all) all.checked = sel.length > 0 && sel.length === employees.filter(invitable).length;
+  }
+
+  function setTableVisible(){
+    mrEl('mrLoading').style.display = 'none';
+    mrEl('mrTableWrap').style.display = '';
+  }
+
+  function loadManagerRolesOverview(){
+    var loading = mrEl('mrLoading');
+    if (loading) loading.style.display = '';
+    fetch('/api/manager-roles/overview', { credentials: 'same-origin' })
+      .then(function(r){
+        if (r.status === 401) { mrEl('mrTableWrap').style.display = 'none'; if (loading) loading.style.display = 'none'; return null; }
+        return r.json();
+      })
+      .then(function(data){
+        if (!data) return;
+        employees = data.employees || [];
+        selected = {};
+        renderTable();
+        updateSelection();
+        setTableVisible();
+      })
+      .catch(function(){ mrToast('Could not load the manager roster.', true); });
+  }
+
+  document.getElementById('mrSelectAll').addEventListener('change', function(){
+    var all = this.checked;
+    selected = {};
+    if (all) {
+      employees.filter(invitable).forEach(function(emp){ selected[emp.id] = true; });
+    }
+    var boxes = mrEl('mrTableBody').querySelectorAll('input[type="checkbox"]');
+    boxes.forEach(function(b){ if (!b.disabled) b.checked = all; });
+    mrEl('mrTableBody').querySelectorAll('tr').forEach(function(tr){ tr.className = all ? 'row-selected' : ''; });
+    updateSelection();
+  });
+
+  document.getElementById('mrBulkInviteBtn').addEventListener('click', function(){
+    if (busy) return;
+    var ids = Object.keys(selected);
+    if (!ids.length) return;
+    busy = true;
+    var btn = mrEl('mrBulkInviteBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    mrToast('Sending ' + ids.length + ' invite' + (ids.length > 1 ? 's' : '') + '…');
+
+    var pending = ids.slice();
+    var ok = 0, fail = 0;
+    var queued = function(){
+      if (!pending.length) {
+        busy = false;
+        btn.textContent = 'Send Invites';
+        btn.disabled = false;
+        if (fail > 0 && ok > 0) mrToast('Sent ' + ok + ', ' + fail + ' failed.', true);
+        else if (fail > 0) mrToast('All ' + fail + ' failed to send.', true);
+        else mrToast('Sent ' + ok + ' manager invite(s).');
+        loadManagerRolesOverview();
+        return;
+      }
+      var id = pending.shift();
+      fetch('/api/employees/' + encodeURIComponent(id) + '/invite-manager', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' }
+      }).then(function(r){ return r.json(); }).then(function(j){
+        if (j && (j.ok || j.error === 'already_pending' || j.error === 'already_manager')) ok++;
+        else fail++;
+        queued();
+      }).catch(function(){ fail++; queued(); });
+    };
+    queued();
+  });
+
+  document.getElementById('mrCsvImportBtn').addEventListener('click', function(){
+    var inp = mrEl('mrCsvInput');
+    if (inp) inp.click();
+  });
+
+  document.getElementById('mrCsvInput').addEventListener('change', function(){
+    var file = this.files && this.files[0];
+    this.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e){
+      importCsv(file.name, String(e.target.result || ''));
+    };
+    reader.readAsText(file);
+  });
+
+  function csvRowsToEmails(text){
+    var lines = text.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+    var emails = [];
+    lines.forEach(function(line){
+      var cols = line.split(',').map(function(c){ return c.replace(/^"|"$/g, '').trim(); });
+      cols.forEach(function(c){
+        if (c && c.indexOf('@') !== -1) emails.push(c.toLowerCase());
+      });
+    });
+    return emails;
+  }
+
+  function importCsv(fileName, text){
+    var emails = csvRowsToEmails(text);
+    if (!emails.length) { mrToast('No email addresses found in ' + fileName + '.', true); return; }
+    var byEmail = {};
+    employees.forEach(function(emp){
+      if (emp.email) byEmail[emp.email.toLowerCase()] = emp;
+    });
+    var uniq = [];
+    emails.forEach(function(e){ if (uniq.indexOf(e) === -1) uniq.push(e); });
+    var selectedFresh = 0, missing = 0, noEmail = 0, alreadyAccess = 0;
+    uniq.forEach(function(e){
+      var emp = byEmail[e];
+      if (!emp) { missing++; return; }
+      if (!emp.has_email) { noEmail++; return; }
+      if (emp.access_status !== 'no_account') { alreadyAccess++; return; }
+      if (!selected[emp.id]) {
+        selected[emp.id] = true;
+        selectedFresh++;
+      }
+    });
+    renderTable();
+    updateSelection();
+    var parts = [uniq.length + ' unique email(s) from ' + fileName];
+    parts.push(selectedFresh + ' newly selected');
+    if (missing) parts.push(missing + ' not in directory');
+    if (noEmail) parts.push(noEmail + ' without an inviteable email');
+    if (alreadyAccess) parts.push(alreadyAccess + ' already have access');
+    mrToast(parts.join(' — '), selectedFresh === 0);
+  }
+
+  window.loadManagerRolesOverview = loadManagerRolesOverview;
+})();
 </script>
 </body>
 </html>

@@ -110,6 +110,7 @@ def me():
             "email": pii.get("email", ""),
             "role": user["role"],
             "picture": user.get("picture"),
+            "linked_employee_id": str(user["linked_employee_id"]) if user.get("linked_employee_id") else None,
             "just_registered": session.pop("just_registered", False),
             "organization": (
                 {

@@ -334,6 +334,11 @@ def list_employees():
     db = get_db()
     query: dict = {"org_id": ObjectId(org_id)}
 
+    # Manager-role scoping: restrict to the session user's direct reports.
+    # Admin sessions are unaffected (empty extra filter).  Fail-closed for
+    # any manager whose linked_employee_id is missing/malformed.
+    query.update(_employee_scope_filter(db, org_id))
+
     search = (request.args.get("search") or "").strip().lower()
     dept = (request.args.get("department") or "").strip()
     emp_status = (request.args.get("status") or "").strip()
@@ -541,7 +546,9 @@ def export_employees_csv():
         return jsonify({"error": "not_authenticated"}), 401
 
     db = get_db()
-    cursor = db.employees.find({"org_id": ObjectId(org_id)}).sort("created_at", -1)
+    query: dict = {"org_id": ObjectId(org_id)}
+    query.update(_employee_scope_filter(db, org_id))
+    cursor = db.employees.find(query).sort("created_at", -1)
     employees = list(cursor)
 
     buf = io.StringIO()
@@ -607,6 +614,9 @@ def get_employee(emp_id: str):
     if not emp:
         return jsonify({"error": "not_found"}), 404
 
+    if not _employee_accessible(db, org_id, emp):
+        return jsonify({"error": "forbidden"}), 403
+
     return jsonify(_employee_to_json(emp))
 
 
@@ -624,6 +634,9 @@ def update_employee(emp_id: str):
 
     if not emp:
         return jsonify({"error": "not_found"}), 404
+
+    if not _employee_accessible(db, org_id, emp):
+        return jsonify({"error": "forbidden"}), 403
 
     data = request.get_json(silent=True) or {}
     set_fields: dict = {}
@@ -758,6 +771,9 @@ def delete_employee(emp_id: str):
     if not emp:
         return jsonify({"error": "not_found"}), 404
 
+    if not _employee_accessible(db, org_id, emp):
+        return jsonify({"error": "forbidden"}), 403
+
     try:
         db.sessions.delete_many({"employee_id": emp_oid, "org_id": ObjectId(org_id)})
         db.notifications.delete_many({"employee_id": emp_oid, "org_id": ObjectId(org_id)})
@@ -804,6 +820,70 @@ def _require_admin():
     if not user or user.get("role") != "admin":
         return None
     return org_id
+
+
+# ── Manager-role data scoping ─────────────────────────────────────────
+# Managers may only ever see the employees who report to them.  Every
+# employee-data query for a manager session is scoped to
+# `{ "reports_to": <linked_employee_id> }`.  These helpers are fail-closed:
+# a manager whose linked_employee_id is missing/malformed gets a filter that
+# matches nothing, never the org-wide roster.  Admin sessions always return
+# an empty extra filter (full org, unaffected).
+
+_NEVER_MATCH = {"_id": None}  # matches no employee documents
+
+
+def _employee_scope_filter(db, org_id: str):
+    """Return an extra MongoDB filter dict to AND into employee queries.
+
+    ``{}``            → admin (or otherwise unscoped): full org access.
+    {"reports_to": oid} → manager: reports_to scoped to their team.
+    _NEVER_MATCH      → fail-closed: no data for a malformed/unknown scope.
+    """
+    user_id = session.get("user_id")
+    try:
+        uid = ObjectId(user_id)
+    except (InvalidId, TypeError):
+        return _NEVER_MATCH
+
+    user = db.users.find_one(
+        {"_id": uid},
+        {"role": 1, "org_id": 1, "linked_employee_id": 1},
+    )
+    if not user or str(user.get("org_id")) != org_id:
+        return _NEVER_MATCH
+
+    role = user.get("role")
+    if role == "admin":
+        return {}
+    if role == "manager":
+        linked = user.get("linked_employee_id")
+        if isinstance(linked, ObjectId):
+            return {"reports_to": linked}
+        if linked:
+            try:
+                return {"reports_to": ObjectId(linked)}
+            except (InvalidId, TypeError):
+                return _NEVER_MATCH
+        return _NEVER_MATCH
+    # Unknown role — never fail open to org-wide data.
+    return _NEVER_MATCH
+
+
+def _employee_accessible(db, org_id: str, emp) -> bool:
+    """Whether the current session may access a single employee document.
+
+    Admin sees everything; a manager may only see employees reporting to
+    them (their own document or a direct report).  Always fails closed on
+    missing/malformed scope.
+    """
+    scope = _employee_scope_filter(db, org_id)
+    if scope == _NEVER_MATCH:
+        return False
+    if not scope:
+        return True  # admin
+    linked = scope.get("reports_to")
+    return emp.get("reports_to") == linked or emp.get("_id") == linked
 
 
 # ── Reporting-manager helpers ─────────────────────────────────────────
@@ -921,6 +1001,9 @@ def export_employee(emp_id: str):
     if not emp:
         return jsonify({"error": "not_found"}), 404
 
+    if not _employee_accessible(db, org_id, emp):
+        return jsonify({"error": "forbidden"}), 403
+
     pii = decrypt_fields(emp.get("encrypted"), emp.get("wrapped_dek", ""))
     signals = emp.get("signals") or {}
     ai = emp.get("ai_wellness") or {}
@@ -964,3 +1047,94 @@ def export_employee(emp_id: str):
     )
 
     return resp
+
+
+@employees_bp.route("/manager-roles/overview")
+def manager_roles_overview():
+    """Admin-only roster for the "Manager Roles" settings section.
+
+    Returns every employee with the info needed to bulk-invite managers:
+      id             — employee _id (ObjectId as string)
+      name / email   — decrypted PII (same pattern as _employee_to_json)
+      position       — display position
+      reports_count  — number of employees whose reports_to == this _id
+      has_email      — whether a stored (invitable) email exists
+      access_status  — "admin" | "manager" | "invite_pending" | "no_account"
+      manager_since  — created_at ISO date of the linked users doc (manager only)
+
+    Admin-only: sending invites must stay with role == "admin".
+    """
+    org_id = _require_admin()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    org_oid = ObjectId(org_id)
+
+    employees = list(db.employees.find({"org_id": org_oid}))
+
+    # Per-employee direct-report counts (reports_to -> count).
+    report_counts = {
+        (row["_id"]): row["cnt"]
+        for row in db.employees.aggregate([
+            {"$match": {"org_id": org_oid, "reports_to": {"$ne": None}}},
+            {"$group": {"_id": "$reports_to", "cnt": {"$sum": 1}}},
+        ])
+    }
+
+    # users joined by linked_employee_id (manager/admin accounts), one per employee.
+    users_by_linked = {}
+    for u in db.users.find(
+        {"org_id": org_oid, "linked_employee_id": {"$ne": None}},
+        {"role": 1, "linked_employee_id": 1, "created_at": 1},
+    ):
+        users_by_linked[u.get("linked_employee_id")] = u
+
+    # pending invites joined by linked_employee_id.
+    pending_linked = set()
+    for inv in db.invites.find(
+        {"org_id": org_oid, "status": "pending", "linked_employee_id": {"$ne": None}},
+        {"linked_employee_id": 1},
+    ):
+        pending_linked.add(inv.get("linked_employee_id"))
+
+    rows = []
+    for emp in employees:
+        pii = decrypt_fields(emp.get("encrypted"), emp.get("wrapped_dek", ""))
+        email = (pii.get("email") or "").strip()
+        eid = emp["_id"]
+
+        user = users_by_linked.get(eid)
+        access_status = "no_account"
+        manager_since = None
+        if user:
+            if user.get("role") == "admin":
+                access_status = "admin"
+            elif user.get("role") == "manager":
+                access_status = "manager"
+                created = user.get("created_at")
+                if created:
+                    try:
+                        manager_since = created.strftime("%Y-%m-%d")
+                    except Exception:
+                        manager_since = None
+            else:
+                access_status = user.get("role") or "no_account"
+        elif eid in pending_linked:
+            access_status = "invite_pending"
+
+        rows.append({
+            "id": str(eid),
+            "employee_id": emp.get("employee_id"),
+            "name": pii.get("name", ""),
+            "email": email,
+            "has_email": bool(email),
+            "position": emp.get("position", ""),
+            "reports_count": report_counts.get(eid, 0),
+            "access_status": access_status,
+            "manager_since": manager_since,
+        })
+
+    rows.sort(key=lambda r: (r["name"] or "").lower())
+
+    return jsonify({"employees": rows})
