@@ -38,6 +38,7 @@ ACTION_ACCOUNT_EXPORT = "account.export"
 ACTION_ACCOUNT_DELETE = "account.delete"
 ACTION_MANAGER_INVITE_SENT = "manager.invite_sent"
 ACTION_MANAGER_INVITE_ACCEPTED = "manager.invite_accepted"
+ACTION_MANAGER_INVITE_SUPERSEDED = "manager.invite_superseded"
 
 # Pagination for the audit-log endpoint.
 DEFAULT_PAGE_LIMIT = 50

@@ -50,6 +50,9 @@
     } else if (reason === 'already_used') {
       title.textContent = 'Invite already used';
       body.textContent = 'This invitation has already been used. If you believe this is a mistake, contact your admin.';
+    } else if (reason === 'superseded') {
+      title.textContent = 'This invite link is no longer valid';
+      body.textContent = 'A newer invite was sent for this account. Ask your admin to resend it.';
     } else {
       title.textContent = 'Invalid invitation';
       body.textContent = 'This invitation link is invalid. Please ask your admin to send it again.';

@@ -74,6 +74,8 @@ def invite_accept():
         return _invite_error_redirect("invalid")
 
     if invite.get("status") != "pending":
+        if invite.get("status") == "superseded":
+            return _invite_error_redirect("superseded")
         return _invite_error_redirect("already_used")
 
     now = datetime.now(timezone.utc)
@@ -165,7 +167,11 @@ def google_callback():
     if flow == "invite":
         invite_token = session.pop("pending_invite_token", "")
         invite = db.invites.find_one({"token": invite_token}) if invite_token else None
-        if not invite or invite.get("status") != "pending":
+        if not invite:
+            return _invite_error_redirect("invalid")
+        if invite.get("status") != "pending":
+            if invite.get("status") == "superseded":
+                return _invite_error_redirect("superseded")
             return _invite_error_redirect("invalid")
 
         now = datetime.now(timezone.utc)
@@ -228,8 +234,9 @@ def google_callback():
         session["just_registered"] = True
         _record_active_session(db, user_id)
 
-        result = _login_result_for_user(db, user_doc)
-        return redirect(result["redirect"])
+        # A freshly-accepted manager lands in the manager-scoped dashboard
+        # (built for them), not the generic post-login target used for admins.
+        return redirect("/dashboard.html?role=manager&welcome=1")
 
     # --- sign-in flow ---
     email_hash = blind_index(email)

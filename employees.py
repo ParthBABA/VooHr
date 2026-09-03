@@ -17,6 +17,7 @@ from audit_log import (
     ACTION_EMPLOYEE_UPDATE,
     ACTION_MANAGER_INVITE_ACCEPTED,
     ACTION_MANAGER_INVITE_SENT,
+    ACTION_MANAGER_INVITE_SUPERSEDED,
     log_audit_event,
 )
 from blind_index import blind_index
@@ -893,9 +894,16 @@ def _employee_accessible(db, org_id: str, emp) -> bool:
 @employees_bp.route("/employees/<emp_id>/manager-status")
 def manager_status(emp_id: str):
     """Return whether the employee already has VooVr login access as a
-    manager/admin, so the UI can offer an invite when they don't.
+    manager/admin, plus the current invite state, so the UI can offer or
+    hold an invite appropriately.
 
-    Response: {"has_access": bool, "role": "manager"|"admin"|null}
+    Response:
+      {"has_access": bool, "role": "manager"|"admin"|null,
+       "invite_status": "pending"|null}
+
+    Only a still-``pending`` invite is reported as "Invite pending".  A
+    ``superseded`` (or expired/accepted) invite reads the same as no invite
+    having been sent — the admin can freely click "Send Invite" again.
     """
     org_id = _require_auth()
     if not org_id:
@@ -915,10 +923,21 @@ def manager_status(emp_id: str):
         {"linked_employee_id": emp_oid},
         {"role": 1},
     )
-    if not user:
-        return jsonify({"has_access": False, "role": None})
 
-    return jsonify({"has_access": True, "role": user.get("role")})
+    pending_invite = db.invites.find_one(
+        {
+            "org_id": ObjectId(org_id),
+            "linked_employee_id": emp_oid,
+            "status": "pending",
+        },
+        {"_id": 1},
+    )
+
+    return jsonify({
+        "has_access": bool(user),
+        "role": user.get("role") if user else None,
+        "invite_status": "pending" if pending_invite else None,
+    })
 
 
 @employees_bp.route("/employees/<emp_id>/invite-manager", methods=["POST"])
@@ -954,6 +973,33 @@ def invite_manager(emp_id: str):
 
     token = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
+
+    # Void any still-pending invites for this employee before issuing a new
+    # one. This guarantees at most one valid `pending` invite per employee at
+    # any time, so the most recently sent email link is always the one that
+    # works — an older, still-unused email link (if clicked) fails with a
+    # clear `superseded` reason instead of a confusing already_used/
+    # mismatched result on what looks like the first attempt.
+    superseded = db.invites.update_many(
+        {
+            "org_id": ObjectId(org_id),
+            "linked_employee_id": emp_oid,
+            "status": "pending",
+        },
+        {"$set": {"status": "superseded", "superseded_at": now}},
+    )
+    if superseded.modified_count > 0:
+        log_audit_event(
+            db, org_id, session.get("user_id"), session.get("user_name") or "",
+            ACTION_MANAGER_INVITE_SUPERSEDED,
+            target_type="employee", target_id=emp_id,
+            target_label=emp.get("employee_id") or emp_id,
+            meta={
+                "employee_id": emp.get("employee_id"),
+                "superseded_count": superseded.modified_count,
+            },
+        )
+
     invite_doc = {
         "org_id": ObjectId(org_id),
         "email": email,
