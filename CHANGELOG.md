@@ -4,6 +4,8 @@ All notable changes to this project are tracked here going forward.
 
 ## Unreleased
 
+- Removed unreferenced `static/product-3.png` (~1.6 MB) left after the webp image
+  migration; the `.webp` equivalent is unaffected.
 - Removed 8 unreferenced `*.png` originals left after the webp image migration
   (`access-bg`, `aes-bg`, `audit-bg`, `privacy-bg`, `product-1`, `product-2`,
   `security-bg`, `totp-background`), reclaiming ~11.7 MB. Their `.webp`
