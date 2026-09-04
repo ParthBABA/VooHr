@@ -26,6 +26,11 @@ ORG_B = "bbbbbbbbbbbbbbbbbbbbbbbb"
 EMP_1 = "111111111111111111111111"
 EMP_B = "222222222222222222222222"
 SESSION_1 = "333333333333333333333333"
+ADMIN_USER = "999999999999999999999999"
+EMP_2 = "444444444444444444444444"
+EMP_OTHER = "555555555555555555555555"
+EMP_MGR_OTHER = "666666666666666666666666"
+MANAGER_USER = "888888888888888888888888"
 
 
 class FakeCollection:
@@ -36,7 +41,10 @@ class FakeCollection:
 
     def _match(self, doc, filt):
         for k, v in filt.items():
-            if isinstance(v, dict) and "$ne" in v:
+            if k == "$or":
+                if not any(self._match(doc, sub) for sub in v):
+                    return False
+            elif isinstance(v, dict) and "$ne" in v:
                 if doc.get(k) == v["$ne"]:
                     return False
             elif isinstance(v, dict) and "$in" in v:
@@ -46,13 +54,13 @@ class FakeCollection:
                 return False
         return True
 
-    def find_one(self, filt):
+    def find_one(self, filt, *args, **kw):
         for d in self._docs:
             if self._match(d, filt):
                 return dict(d)
         return None
 
-    def find(self, filt=None, **kw):
+    def find(self, filt=None, *args, **kw):
         filt = filt or {}
         wrapped = [dict(d) for d in self._docs if self._match(d, filt)]
 
@@ -106,6 +114,7 @@ class FakeDB:
         self.employees = FakeCollection()
         self.sessions = FakeCollection()
         self.notifications = FakeCollection()
+        self.users = FakeCollection()
 
 
 @pytest.fixture
@@ -122,6 +131,12 @@ def fake():
     db.sessions.insert_one({
         "_id": ObjectId(SESSION_1), "org_id": ObjectId(ORG_A), "employee_id": ObjectId(EMP_1),
         "status": "completed", "created_at": datetime(2026, 8, 29, tzinfo=timezone.utc),
+    })
+    # The test session acts as an org admin: the role-scoping helpers
+    # (_employee_scope_filter / _employee_accessible) treat admins as full-org
+    # (no filter), preserving the org-wide behavior these tests exercise.
+    db.users.insert_one({
+        "_id": ObjectId(ADMIN_USER), "role": "admin", "org_id": ObjectId(ORG_A),
     })
     return db
 
@@ -150,6 +165,8 @@ def client(monkeypatch, fake):
     app.config["TESTING"] = True
     app.secret_key = "test"
     with app.test_client() as c:
+        with c.session_transaction() as sess:
+            sess["user_id"] = ADMIN_USER
         yield c
 
 
@@ -349,4 +366,153 @@ def test_dashboard_previous_session_linked(client):
     row = d["people"][0]
     # SESSION_1 is the latest completed session for EMP_1
     assert row["previous_session"]["session_id"] == SESSION_1
+
+
+# ── Manager-role scoping ─────────────────────────────────────────────────
+
+@pytest.fixture
+def mgr_client(monkeypatch):
+    """Authenticates as a manager whose ``linked_employee_id`` is EMP_1 and
+    yields ``(db, client)``.
+
+    Employees in ORG_A: EMP_1 (the manager's own record), EMP_2 (direct
+    report of EMP_1), and EMP_OTHER (reports to a different manager
+    EMP_MGR_OTHER).  A manager must only ever see EMP_1 / EMP_2.  Already
+    contains one meeting for EMP_2 (in-team, id=``my_meeting``) and one for
+    EMP_OTHER (out-of-team, id=``other_meeting``), pre-inserted directly
+    because creating an out-of-team meeting via the API is itself forbidden.
+    """
+    from flask import Flask
+    now = datetime.now(timezone.utc)
+    db = FakeDB()
+    db.employees.insert_one({
+        "_id": ObjectId(EMP_1), "employee_id": "EMP001", "name": "Manager Rana",
+        "position": "Design Lead", "department": "Design", "org_id": ObjectId(ORG_A), "status": "active",
+        "created_at": now,
+    })
+    db.employees.insert_one({
+        "_id": ObjectId(EMP_2), "employee_id": "EMP002", "name": "Direct Report",
+        "position": "Designer", "department": "Design", "org_id": ObjectId(ORG_A), "status": "active",
+        "reports_to": ObjectId(EMP_1), "created_at": now,
+    })
+    db.employees.insert_one({
+        "_id": ObjectId(EMP_OTHER), "employee_id": "EMP003", "name": "Other Team",
+        "position": "Engineer", "department": "Eng", "org_id": ObjectId(ORG_A), "status": "active",
+        "reports_to": ObjectId(EMP_MGR_OTHER), "created_at": now,
+    })
+    db.users.insert_one({
+        "_id": ObjectId(MANAGER_USER), "role": "manager",
+        "org_id": ObjectId(ORG_A), "linked_employee_id": ObjectId(EMP_1),
+    })
+    my_meeting = db.meetings.insert_one({
+        "org_id": ObjectId(ORG_A), "employee_id": ObjectId(EMP_2),
+        "title": "my team", "status": "scheduled",
+        "scheduled_at": datetime(2026, 9, 5, 10, 0, tzinfo=timezone.utc),
+        "created_at": now, "updated_at": now,
+    })
+    other_meeting = db.meetings.insert_one({
+        "org_id": ObjectId(ORG_A), "employee_id": ObjectId(EMP_OTHER),
+        "title": "other team", "status": "scheduled",
+        "scheduled_at": datetime(2026, 9, 6, 10, 0, tzinfo=timezone.utc),
+        "created_at": now, "updated_at": now,
+    })
+    db._manager_meeting_ids = {"my_meeting": my_meeting.inserted_id, "other_meeting": other_meeting.inserted_id}
+
+    monkeypatch.setattr(meetings_mod, "get_db", lambda: db)
+    monkeypatch.setattr(meetings_mod, "_require_auth", lambda: ORG_A)
+
+    def emp_json(emp):
+        return {
+            "id": str(emp["_id"]),
+            "employee_id": emp.get("employee_id"),
+            "name": emp.get("name", ""),
+            "position": emp.get("position", ""),
+            "department": emp.get("department", ""),
+        }
+    monkeypatch.setattr(meetings_mod, "_employee_to_json", emp_json)
+
+    app = Flask(__name__)
+    app.register_blueprint(meetings_mod.meetings_bp, url_prefix="/api")
+    app.config["TESTING"] = True
+    app.secret_key = "test"
+    with app.test_client() as c:
+        with c.session_transaction() as sess:
+            sess["user_id"] = MANAGER_USER
+        yield db, c
+
+
+def _create_meeting_for(client, employee_id, scheduled_at="2026-09-05T10:00:00", title="1:1"):
+    return client.post("/api/meetings", json={
+        "employee_id": employee_id, "scheduled_at": scheduled_at, "title": title,
+    })
+
+
+def test_manager_list_meetings_scoped(mgr_client):
+    db, c = mgr_client
+    d = c.get("/api/meetings").get_json()
+    assert d["total"] == 1
+    assert [m["employee_id"] for m in d["meetings"]] == [EMP_2]
+
+
+def test_manager_list_meetings_respects_employee_param_scope(mgr_client):
+    db, c = mgr_client
+    # Asking for an out-of-team employee must not leak that team's meeting.
+    d = c.get("/api/meetings?employee_id=" + EMP_OTHER).get_json()
+    assert d["total"] == 0
+
+
+def test_manager_get_other_team_meeting_denied(mgr_client):
+    db, c = mgr_client
+    mid = str(db._manager_meeting_ids["other_meeting"])
+    r = c.get(f"/api/meetings/{mid}")
+    assert r.status_code == 403
+    assert r.get_json()["error"] == "forbidden"
+
+
+def test_manager_can_get_own_team_meeting(mgr_client):
+    db, c = mgr_client
+    mid = str(db._manager_meeting_ids["my_meeting"])
+    assert c.get(f"/api/meetings/{mid}").status_code == 200
+
+
+def test_manager_update_other_team_meeting_denied(mgr_client):
+    db, c = mgr_client
+    mid = str(db._manager_meeting_ids["other_meeting"])
+    r = c.patch(f"/api/meetings/{mid}", json={"status": "cancelled"})
+    assert r.status_code == 403
+
+
+def test_manager_delete_other_team_meeting_denied(mgr_client):
+    db, c = mgr_client
+    mid = str(db._manager_meeting_ids["other_meeting"])
+    r = c.delete(f"/api/meetings/{mid}")
+    assert r.status_code == 403
+    # Still present for the owning team.
+    assert c.get(f"/api/meetings/{mid}").status_code == 403
+
+
+def test_manager_create_for_other_team_denied(mgr_client):
+    db, c = mgr_client
+    r = _create_meeting_for(c, EMP_OTHER)
+    assert r.status_code == 403
+    assert r.get_json()["error"] == "forbidden"
+
+
+def test_manager_create_for_own_team_ok(mgr_client):
+    db, c = mgr_client
+    r = _create_meeting_for(c, EMP_2)
+    assert r.status_code == 201
+
+
+def test_manager_dashboard_scoped(mgr_client):
+    db, c = mgr_client
+    d = c.get("/api/meetings/dashboard").get_json()
+    emp_ids = {e["id"] for e in d["employees"]}
+    assert EMP_1 in emp_ids
+    assert EMP_2 in emp_ids
+    assert EMP_OTHER not in emp_ids
+    # EMP_OTHER's meeting must never surface on the manager's board.
+    assert all(p["id"] != EMP_OTHER for p in d["people"])
+
+
 

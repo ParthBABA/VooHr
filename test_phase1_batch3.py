@@ -193,13 +193,17 @@ class TestDeleteEmployeeAuth:
         return "\n".join(func_lines)
 
     def test_delete_requires_auth(self):
+        # Deletion is now admin-gated: it must go through _require_admin()
+        # (which builds on _require_auth()) rather than plain _require_auth().
         source = self._get_delete_source()
-        assert "_require_auth()" in source
+        assert "_require_admin()" in source
 
     def test_delete_checks_not_authenticated(self):
+        # Admin-only deletion rejects non-admins with admin_required / 403 at
+        # the top of the route, before any _employee_accessible check runs.
         source = self._get_delete_source()
-        assert "not_authenticated" in source
-        assert "401" in source
+        assert "admin_required" in source
+        assert "403" in source
 
     def test_delete_validates_objectid(self):
         source = self._get_delete_source()

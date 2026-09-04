@@ -63,6 +63,7 @@ CSV_COLUMNS = [
     "employment_type",
     "work_mode",
     "joining_date",
+    "reports_to_email",
 ]
 
 
@@ -461,6 +462,13 @@ def import_employees_csv():
     db = get_db()
     created = 0
     failed = []
+    warnings = []
+    # email_hash -> inserted _id for every row that carried an email, including
+    # otherwise-valid rows, so pass 2 can resolve a `reports_to_email` manager
+    # that lives elsewhere in the same file (ahead of or behind its reports).
+    in_batch_ids: dict = {}
+    # inserted _id -> (row_no, reports_to_email) for rows needing a manager link.
+    pending_reports: dict = {}
 
     try:
         reader = csv.DictReader(io.StringIO(text))
@@ -480,6 +488,7 @@ def import_employees_csv():
             employment_type = (row.get("employment_type") or "").strip()
             work_mode = (row.get("work_mode") or "").strip()
             joining_date = (row.get("joining_date") or "").strip()
+            reports_to_email = (row.get("reports_to_email") or "").strip()
 
             err = _validate_import_row(
                 name, email, phone, department, position,
@@ -519,19 +528,77 @@ def import_employees_csv():
                 "created_at": datetime.now(timezone.utc),
                 "updated_at": datetime.now(timezone.utc),
             }
-            db.employees.insert_one(emp_doc)
+            result = db.employees.insert_one(emp_doc)
             created += 1
+
+            if email:
+                in_batch_ids[blind_index(email)] = result.inserted_id
+            if reports_to_email:
+                pending_reports[result.inserted_id] = (row_no, reports_to_email)
     except csv.Error:
         return jsonify({"error": "invalid_csv"}), 400
+
+    # Pass 2: resolve each `reports_to_email` to the manager's _id.  In-batch
+    # rows are matched first (covers a manager in the same file), then fall
+    # back to an employee already in the org.  Both lookups are org-scoped.
+    reports_to_resolved = 0
+    reports_to_unresolved = 0
+    for inserted_id, (row_no, reports_to_email) in pending_reports.items():
+        normalized = reports_to_email.strip().lower()
+        if not normalized:
+            continue
+        manager_id = in_batch_ids.get(blind_index(normalized))
+        if manager_id is None:
+            manager = db.employees.find_one({
+                "org_id": ObjectId(org_id),
+                "email_hash": blind_index(normalized),
+            })
+            manager_id = manager["_id"] if manager else None
+
+        if manager_id is None:
+            reports_to_unresolved += 1
+            warnings.append({
+                "row": row_no,
+                "warning": "reports_to_email_not_found",
+                "email": reports_to_email,
+            })
+            continue
+
+        # Guard against self-reference — a row can't manage itself.
+        if manager_id == inserted_id:
+            reports_to_unresolved += 1
+            warnings.append({
+                "row": row_no,
+                "warning": "reports_to_email_not_found",
+                "email": reports_to_email,
+            })
+            continue
+
+        db.employees.update_one(
+            {"_id": inserted_id},
+            {"$set": {"reports_to": manager_id, "updated_at": datetime.now(timezone.utc)}},
+        )
+        reports_to_resolved += 1
 
     log_audit_event(
         db, org_id, session.get("user_id"), session.get("user_name") or "",
         ACTION_EMPLOYEE_BULK_IMPORT,
         target_type="employee",
-        meta={"created": created, "failed": len(failed)},
+        meta={
+            "created": created,
+            "failed": len(failed),
+            "reports_to_resolved": reports_to_resolved,
+            "reports_to_unresolved": reports_to_unresolved,
+        },
     )
 
-    return jsonify({"created": created, "failed": failed})
+    return jsonify({
+        "created": created,
+        "failed": failed,
+        "warnings": warnings,
+        "reports_to_resolved": reports_to_resolved,
+        "reports_to_unresolved": reports_to_unresolved,
+    })
 
 
 @employees_bp.route("/employees/export-csv")
@@ -552,11 +619,27 @@ def export_employees_csv():
     cursor = db.employees.find(query).sort("created_at", -1)
     employees = list(cursor)
 
+    # _id -> decrypted email for every employee in org, so we can resolve each
+    # row's `reports_to_email` from the manager's email without extra queries.
+    # Any employee (even one who reports upward) may serve as another's
+    # manager, so index everyone's email up-front rather than just top-level
+    # managers.  Rows without an email on file simply aren't indexed; the
+    # corresponding export cell stays blank (same limitation as the dropdown).
+    manager_emails: dict = {}
+    for emp in employees:
+        pii = decrypt_fields(emp.get("encrypted"), emp.get("wrapped_dek", ""))
+        email = pii.get("email") or ""
+        if email:
+            manager_emails[emp["_id"]] = email
+
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=CSV_COLUMNS)
     writer.writeheader()
     for emp in employees:
         pii = decrypt_fields(emp.get("encrypted"), emp.get("wrapped_dek", ""))
+        reports_to_email = ""
+        if emp.get("reports_to") is not None:
+            reports_to_email = manager_emails.get(emp.get("reports_to"), "")
         writer.writerow({
             "name": pii.get("name", ""),
             "email": pii.get("email", ""),
@@ -566,6 +649,7 @@ def export_employees_csv():
             "employment_type": emp.get("employment_type", ""),
             "work_mode": emp.get("work_mode", ""),
             "joining_date": emp.get("joining_date", ""),
+            "reports_to_email": reports_to_email,
         })
 
     log_audit_event(
@@ -658,8 +742,12 @@ def update_employee(emp_id: str):
                 return jsonify({"error": f"{field}_too_long"}), 400
             set_fields[field] = val
 
-    # reports_to — nullable ObjectId referencing a manager employee in the same org
+    # reports_to — nullable ObjectId referencing a manager employee in the same org.
+    # Org-chart reassignment is an HR/admin decision; a manager may edit their
+    # report's other fields but never silently re-wire who reports to whom.
     if "reports_to" in data:
+        if not _require_admin():
+            return jsonify({"error": "admin_required_for_reports_to"}), 403
         reports_to = data.get("reports_to")
         if reports_to is not None and reports_to != "" and reports_to != "null":
             try:
@@ -758,9 +846,12 @@ def update_employee(emp_id: str):
 
 @employees_bp.route("/employees/<emp_id>", methods=["DELETE"])
 def delete_employee(emp_id: str):
-    org_id = _require_auth()
+    # Deletion is HR/admin-only — a manager may view/edit their own reports
+    # but must never be able to permanently delete them (which also cascades
+    # into that employee's sessions and notifications).
+    org_id = _require_admin()
     if not org_id:
-        return jsonify({"error": "not_authenticated"}), 401
+        return jsonify({"error": "admin_required"}), 403
 
     db = get_db()
     try:

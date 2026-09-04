@@ -8,6 +8,9 @@ from flask import Blueprint, jsonify, request, session
 
 from employees import _require_auth
 from employees import _employee_to_json
+from employees import _NEVER_MATCH
+from employees import _employee_scope_filter
+from employees import _employee_accessible
 from extensions import get_db
 from reminders import surface_items, ensure_reminder_notifications
 
@@ -42,6 +45,49 @@ def _lookup_employee(db, org_id, employee_id):
     return db.employees.find_one({"_id": oid, "org_id": ObjectId(org_id)})
 
 
+def _meeting_scope_employee_ids(db, org_id: str):
+    """Resolve the employee ObjectIds a manager may see meetings for.
+
+    Reuses ``employees._employee_scope_filter`` (the same fail-closed helper
+    the employee routes use) rather than inventing a parallel implementation.
+
+    Returns:
+        None  → admin / unscoped: no employee filter, full org (unchanged).
+        list  → manager's reachable employee ObjectIds (direct reports plus
+                their own record, matching ``_employee_accessible``).
+        []    → fail-closed: malformed/unknown scope matches nothing.
+    """
+    scope = _employee_scope_filter(db, org_id)
+    if scope == _NEVER_MATCH:
+        return []
+    if not scope:
+        return None  # admin
+    reports_to = scope.get("reports_to")
+    docs = db.employees.find(
+        {
+            "org_id": ObjectId(org_id),
+            "$or": [{"reports_to": reports_to}, {"_id": reports_to}],
+        },
+        {"_id": 1},
+    )
+    return [d["_id"] for d in docs]
+
+
+def _meeting_emp_denied(db, org_id: str, m) -> bool:
+    """True if the current session may not access a single meeting's employee.
+
+    Admin → always False (full org, unchanged).  Manager/fail-closed → False
+    only when the meeting's employee resolves and is within the manager's
+    team (via ``_employee_accessible``); otherwise True (fail closed).
+    """
+    if _employee_scope_filter(db, org_id) == {}:
+        return False  # admin
+    emp = db.employees.find_one({"_id": m.get("employee_id"), "org_id": ObjectId(org_id)})
+    if not emp or not _employee_accessible(db, org_id, emp):
+        return True
+    return False
+
+
 @meetings_bp.route("/meetings", methods=["POST"])
 def create_meeting():
     org_id = _require_auth()
@@ -72,6 +118,10 @@ def create_meeting():
     emp = _lookup_employee(db, org_id, employee_id)
     if not emp:
         return jsonify({"error": "employee_not_found"}), 404
+
+    # A manager must not schedule a meeting against another team's employee.
+    if not _employee_accessible(db, org_id, emp):
+        return jsonify({"error": "forbidden"}), 403
 
     session_oid = None
     if session_id:
@@ -112,13 +162,32 @@ def list_meetings():
     db = get_db()
     query = {"org_id": ObjectId(org_id)}
 
+    # Manager-role scoping: a manager only sees meetings for employees who
+    # report to them. Hands off to the same fail-closed helper the employee
+    # routes use. Admin sessions get None (no filter → unchanged behavior).
+    allowed_ids = _meeting_scope_employee_ids(db, org_id)
+    if allowed_ids == []:
+        # Fail-closed manager scope (malformed linked_employee_id, or no
+        # reports yet): nothing to show — never fall through to org-wide.
+        return jsonify({"meetings": [], "total": 0})
+    if allowed_ids is not None:
+        query["employee_id"] = {"$in": allowed_ids}
+
     emp_id = (request.args.get("employee_id") or "").strip()
     status = (request.args.get("status") or "").strip()
     if emp_id:
         try:
-            query["employee_id"] = ObjectId(emp_id)
+            emp_oid = ObjectId(emp_id)
         except InvalidId:
             return jsonify({"error": "invalid_employee_id"}), 400
+        if allowed_ids is not None:
+            # Targeting a specific employee must not bypass the manager's
+            # scope: if that employee isn't in the team, return nothing.
+            if emp_oid not in allowed_ids:
+                return jsonify({"meetings": [], "total": 0})
+            query["employee_id"] = emp_oid
+        else:
+            query["employee_id"] = emp_oid
     if status:
         query["status"] = status
 
@@ -158,14 +227,34 @@ def meetings_dashboard():
     org_oid = ObjectId(org_id)
     now = datetime.now(timezone.utc)
 
-    employees = list(db.employees.find({"org_id": org_oid, "status": "active"}).sort("created_at", 1))
+    # Manager-role scoping: the whole board is limited to the manager's own
+    # team. Admin gets None (no extra employee filter → unchanged behavior);
+    # a fail-closed manager scope returns [] and short-circuits to an empty
+    # board without querying org-wide data or firing reminder notifications.
+    allowed_ids = _meeting_scope_employee_ids(db, org_id)
+    if allowed_ids == []:
+        return jsonify({
+            "employees": [],
+            "people": [],
+            "counters": {"today": 0, "this_week": 0, "pending_followups": 0, "pending_commitments": 0},
+            "followup_employee_ids": [],
+            "overdue_employee_ids": [],
+        })
 
-    meetings = list(
-        db.meetings.find({"org_id": org_oid, "status": {"$in": ["scheduled", "completed"]}})
-        .sort("scheduled_at", 1)
-    )
+    emp_filter = {"org_id": org_oid, "status": "active"}
+    if allowed_ids is not None:
+        emp_filter["_id"] = {"$in": allowed_ids}
+    employees = list(db.employees.find(emp_filter).sort("created_at", 1))
 
-    sessions = list(db.sessions.find({"org_id": org_oid}).sort("created_at", -1))
+    meeting_filter = {"org_id": org_oid, "status": {"$in": ["scheduled", "completed"]}}
+    if allowed_ids is not None:
+        meeting_filter["employee_id"] = {"$in": allowed_ids}
+    meetings = list(db.meetings.find(meeting_filter).sort("scheduled_at", 1))
+
+    session_filter = {"org_id": org_oid}
+    if allowed_ids is not None:
+        session_filter["employee_id"] = {"$in": allowed_ids}
+    sessions = list(db.sessions.find(session_filter).sort("created_at", -1))
     latest_completed: dict = {}
     for s in sessions:
         if s.get("status") == "completed":
@@ -177,9 +266,10 @@ def meetings_dashboard():
     # (commitments/follow-ups; OVERDUE is derived at read time) and SAVED
     # (not-yet-used openers/questions/notes). Full histories are loaded on
     # demand by the detail views.
-    memory = list(db.conversation_memory.find(
-        {"org_id": org_oid, "status": {"$in": ["PENDING", "SAVED"]}}
-    ))
+    memory_filter = {"org_id": org_oid, "status": {"$in": ["PENDING", "SAVED"]}}
+    if allowed_ids is not None:
+        memory_filter["employee_id"] = {"$in": allowed_ids}
+    memory = list(db.conversation_memory.find(memory_filter))
     by_emp: dict = {}
     for m in memory:
         eid = str(m.get("employee_id"))
@@ -334,6 +424,10 @@ def get_meeting(meeting_id: str):
     if not m:
         return jsonify({"error": "not_found"}), 404
 
+    # IDOR guard: a manager must not view another team's meeting.
+    if _meeting_emp_denied(db, org_id, m):
+        return jsonify({"error": "forbidden"}), 403
+
     emp = db.employees.find_one({"_id": m["employee_id"], "org_id": ObjectId(org_id)})
     return jsonify(_meeting_to_json(m, emp))
 
@@ -351,6 +445,10 @@ def update_meeting(meeting_id: str):
         return jsonify({"error": "invalid_id"}), 400
     if not m:
         return jsonify({"error": "not_found"}), 404
+
+    # IDOR guard: a manager must not modify another team's meeting.
+    if _meeting_emp_denied(db, org_id, m):
+        return jsonify({"error": "forbidden"}), 403
 
     data = request.get_json(silent=True) or {}
     set_fields: dict = {}
@@ -415,7 +513,13 @@ def delete_meeting(meeting_id: str):
     except InvalidId:
         return jsonify({"error": "invalid_id"}), 400
 
-    result = db.meetings.delete_one({"_id": oid, "org_id": ObjectId(org_id)})
-    if not result.deleted_count:
+    m = db.meetings.find_one({"_id": oid, "org_id": ObjectId(org_id)})
+    if not m:
         return jsonify({"error": "not_found"}), 404
+
+    # IDOR guard: a manager must not delete another team's meeting.
+    if _meeting_emp_denied(db, org_id, m):
+        return jsonify({"error": "forbidden"}), 403
+
+    db.meetings.delete_one({"_id": oid, "org_id": ObjectId(org_id)})
     return jsonify({"ok": True})
