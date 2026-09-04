@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Tests (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11"]
+    env:
+      # Safe dummy values so the app and test suite can import and run without
+      # real credentials. The real values live in a gitignored `.env`, which is
+      # NOT present in CI. Never put real secrets here.
+      SECRET_KEY: ci-insecure-session-secret-do-not-use-in-prod
+      HASH_INDEX_SECRET: ci-insecure-hash-index-secret
+      JWT_SECRET: ci-insecure-jwt-secret
+      MONGODB_URI: mongodb://localhost:27017
+      MONGODB_DB: voohr_ci
+      GOOGLE_CLIENT_ID: ci-client-id.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: ci-client-secret
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: pytest -v
+
+  security:
+    name: Security scans
+    runs-on: ubuntu-latest
+    env:
+      # The test job's env is not shared here; supply the minimal stub env the
+      # app needs to import cleanly if any scanning tooling imports modules.
+      SECRET_KEY: ci-insecure-session-secret-do-not-use-in-prod
+      HASH_INDEX_SECRET: ci-insecure-hash-index-secret
+      JWT_SECRET: ci-insecure-jwt-secret
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
+
+      - name: Run bandit (report only)
+        # Static analysis of Python code for common security issues.
+        # Report-only for now: findings are uploaded as an artifact and must be
+        # reviewed before we switch this to fail the build.
+        run: bandit -r . -x '*/test_*.py,*/static/*,*/.ven*,*/venv*,*/node_modules/*,*/docs/*,*/marketing-video/*,*/templates/*' -f txt -o bandit-report.txt || true
+        continue-on-error: true
+
+      - name: Upload bandit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.txt
+          if-no-files-found: ignore
+
+      - name: Run pip-audit (report only)
+        # Audits the dependencies in requirements.txt against known
+        # vulnerability databases (OSV). Report-only for now.
+        run: pip-audit -r requirements.txt -f json -o pip-audit-report.json || true
+        continue-on-error: true
+
+      - name: Upload pip-audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report
+          path: pip-audit-report.json
+          if-no-files-found: ignore

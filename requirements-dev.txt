@@ -1,0 +1,10 @@
+# Development / CI tooling. Install alongside requirements.txt:
+#   python -m pip install -r requirements-dev.txt
+pytest>=8.0.0
+pytest-cov>=5.0.0
+
+# Security scanning (run in CI, not for runtime).
+# Static analysis of Python code for common security issues.
+bandit>=1.7.0
+# Audits installed dependencies against known vulnerability databases (OSV).
+pip-audit>=2.7.0

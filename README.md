@@ -77,6 +77,47 @@ Locally, either set `GOOGLE_CREDENTIALS_JSON` in `.env` or use
    Visit `http://localhost:5000/onboarding.html` to try the sign-up flow, or
    `http://localhost:5000/signin.html` to sign in.
 
+## Running tests
+
+Install the dev dependencies (includes pytest and the security scanners), then run the suite:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+pytest
+```
+
+Tests are `unittest`-style classes discovered via pytest (`test_*.py` in the
+repo root). They use an in-memory Mongo facade, so no real MongoDB, Google, or
+external network is required. Imports need a couple of environment variables —
+set them in `.env` (from `.env.example`) or export them, e.g. `SECRET_KEY`,
+`HASH_INDEX_SECRET`, and `JWT_SECRET`. CI runs the same suite on every push /
+pull request to `main`.
+
+## Security scanning
+
+Two report-only scanners run in CI (`.github/workflows/ci.yml`, `security` job)
+and can be run locally:
+
+- **bandit** — static analysis that flags common security issues in Python code
+  (hardcoded secrets, dangerous eval/exec, unsafe subprocess, bare `except`,
+  etc.).
+  ```bash
+  bandit -r . -x '*/test_*.py,*/static/*,*/.ven*,*/venv*,*/node_modules/*,*/docs/*,*/marketing-video/*,*/templates/*'
+  ```
+
+- **pip-audit** — audits the dependencies in `requirements.txt` against known
+  vulnerability databases (OSV) to catch CVEs in direct and transitive packages.
+  ```bash
+  pip-audit -r requirements.txt
+  ```
+
+Both are currently in **report-only** mode: they upload their output as a CI
+artifact but do not fail the build. Review the artifacts and address findings,
+then flip them to fail the build once the noise floor is acceptable.
+
 ## Notes / next steps
 
 - Only the register → verify → complete → dashboard flow (plus sign-in and
