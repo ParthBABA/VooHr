@@ -6,6 +6,9 @@ def get_stt_provider():
     if name == "openai":
         from providers.openai_stt import OpenAIWhisperSTT
         return OpenAIWhisperSTT()
+    if name == "deepgram":
+        from providers.deepgram_stt import DeepgramSTT
+        return DeepgramSTT()
     raise ValueError(f"Unknown STT provider: {name}")
 
 
