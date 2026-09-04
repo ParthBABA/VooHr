@@ -48,20 +48,35 @@
     var mrNav = document.querySelector('a.nav-item[data-manager-roles]');
     if (mrNav) mrNav.style.display = 'none';
 
-    // For managers the org-wide directory / attrition widgets are meaningless
-    // (their employee list is server-scoped by reports_to). Hide the directory
-    // card and show an empty-state card in its place.
-    var dirCard = document.getElementById('dashDirCard');
-    if (dirCard) dirCard.style.display = 'none';
-
-    var emptyCard = document.getElementById('dashManagerEmpty');
-    if (emptyCard) emptyCard.style.display = '';
+    // The directory card is always the manager's own team list (server-scoped
+    // by reports_to), so its title reads "My Team" regardless of how many
+    // reports they actually have. This relabeling is deliberately separate
+    // from the empty-state show/hide decision in applyManagerEmptyState().
+    var dirTitle = document.getElementById('dashDirTitle');
+    if (dirTitle) dirTitle.textContent = 'My Team';
+    var dirTitleHi = document.getElementById('dashDirTitleHi');
+    if (dirTitleHi) dirTitleHi.textContent = 'मेरी टीम';
 
     // Hide the Add Employee side panel for non-admins (belt-and-braces:
     // the add button is already hidden, this stops a stray open()).
     var addOverlay = document.getElementById('addEmpOverlay');
     if (addOverlay) addOverlay.style.display = 'none';
   }
+
+  // Decide whether a manager sees the directory card or the "No one reports
+  // to you yet" empty-state, based on the *actual* scoped report count rather
+  // than a hardcoded assumption. Only called once the employee-list fetch has
+  // resolved so we never flash the wrong state. Hidden panels inherit their
+  // prior default (directory shown, empty-state hidden) until then.
+  function applyManagerEmptyState(data, employeeCount){
+    if (data.role !== 'manager') return;
+    var dirCard = document.getElementById('dashDirCard');
+    var emptyCard = document.getElementById('dashManagerEmpty');
+    var hasReports = (employeeCount || 0) > 0;
+    if (dirCard) dirCard.style.display = hasReports ? '' : 'none';
+    if (emptyCard) emptyCard.style.display = hasReports ? 'none' : '';
+  }
+  window.applyManagerEmptyState = applyManagerEmptyState;
 
   // One-time "Welcome — you now have Manager access." banner for a freshly
   // accepted manager (?welcome=1). Dismissible; the query param is stripped so
@@ -100,6 +115,10 @@
   }
 
   function populate(data){
+    // Expose the session role so global helpers (e.g. loadEmployees) can make
+    // role-aware decisions without a second /api/me call.
+    window.__voovrRole = data.role;
+    window.__voovrMeData = data;
     var nameEl = document.getElementById('userName');
     var roleEl = document.getElementById('userRole');
     var avatarEl = document.getElementById('userAvatar');
@@ -1006,6 +1025,18 @@ function loadEmployees(opts) {
       var tbody = document.querySelector('#dashEmpTable tbody');
       if (!tbody) return;
       tbody.innerHTML = '';
+
+      // Part 5: a manager sees the directory or the "No one reports to you
+      // yet" empty-state based on their *actual* scoped report count, derived
+      // here from the single employee-list request (so the directory and the
+      // Active Employees stat card can never disagree). Admin sessions are
+      // unaffected — the directory always shows for them.
+      if (window.__voovrRole === 'manager' && typeof window.applyManagerEmptyState === 'function') {
+        window.applyManagerEmptyState(
+          window.__voovrMeData || { role: 'manager' },
+          data.total || (data.employees || []).length
+        );
+      }
 
       populateManagerDropdown(data.employees || []);
 
