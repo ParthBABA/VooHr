@@ -522,9 +522,8 @@ html[data-theme="light"]{
         el.style.display = '';
       });
       loadManagerRolesOverview();
+      loadBillingUsage();
     }
-
-    loadBillingUsage();
 
     revealPage();
   }
@@ -622,8 +621,8 @@ html[data-theme="light"]{
             Activity Log <span class="nav-ind"></span>
           </a>
 
-          <div class="settings-nav-group">Billing</div>
-          <a href="#billing" class="settings-nav-item" data-panel="billing" data-accent="violet">
+          <div class="settings-nav-group admin-only" style="display:none;">Billing</div>
+          <a href="#billing" class="settings-nav-item admin-only" data-panel="billing" data-accent="violet" style="display:none;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
             Plan &amp; Billing <span class="nav-ind"></span>
           </a>
@@ -996,8 +995,8 @@ html[data-theme="light"]{
           </div>
         </div>
 
-        <!-- ═══ BILLING (existing billing functionality preserved) ═══ -->
-        <div class="settings-panel" data-panel="billing">
+        <!-- ═══ BILLING (existing billing functionality preserved, admin-only) ═══ -->
+        <div class="settings-panel admin-only" data-panel="billing" style="display:none;">
           <div class="st-page">
             <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Billing</div>
             <h2 class="st-title">Plan &amp; Billing</h2>
@@ -2112,7 +2111,7 @@ window.addEventListener('load', function() {
   }
 
   function invitable(emp){
-    return emp.has_email && emp.access_status === 'no_account';
+    return emp.has_email && (emp.access_status === 'no_account' || emp.access_status === 'invite_pending');
   }
 
   function renderTable(){
@@ -2283,7 +2282,7 @@ window.addEventListener('load', function() {
       var emp = byEmail[e];
       if (!emp) { missing++; return; }
       if (!emp.has_email) { noEmail++; return; }
-      if (emp.access_status !== 'no_account') { alreadyAccess++; return; }
+      if (emp.access_status !== 'no_account' && emp.access_status !== 'invite_pending') { alreadyAccess++; return; }
       if (!selected[emp.id]) {
         selected[emp.id] = true;
         selectedFresh++;
