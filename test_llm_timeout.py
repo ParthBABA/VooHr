@@ -323,7 +323,7 @@ class TestAnalyzeEndpointTimeout:
         class _TimeoutLLM:
             model = "fake-model"
 
-            def analyze(self, transcript):
+            def analyze(self, transcript, language="en"):
                 raise LLMTimeoutError()
 
         monkeypatch.setattr(sessions_mod, "get_llm_provider", lambda: _TimeoutLLM())

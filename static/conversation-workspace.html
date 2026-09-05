@@ -43,6 +43,10 @@
 .wsx-narr .wsx-narr-btn.error{color:var(--red);border-color:rgba(232,69,69,0.5);background:var(--red-soft);}
 .wsx-narr-select{display:none;position:absolute;top:calc(100% + 6px);right:0;left:auto;min-width:150px;z-index:20;}
 .wsx-narr-select.open{display:block;}
+.ws-lang-control{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.ws-lang-label{font-size:12px;color:inherit;opacity:.65;}
+#wsAnalysisLang{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:transparent;color:inherit;outline:none;cursor:pointer;}
+#wsAnalysisLang:disabled{opacity:.55;cursor:default;}
 .wsx-mini-player{display:inline-flex;align-items:center;gap:6px;max-width:210px;padding:3px 6px;border:1px solid var(--border);border-radius:20px;background:var(--card-bg,transparent);}
 .wsx-mini-player .wsx-mp-play{width:26px;height:26px;}
 .wsx-mini-player .wsx-mp-play svg{width:12px;height:12px;}
@@ -219,6 +223,14 @@ withTimeout(fetch('/api/me').then(function(res){
 
         <!-- RIGHT: CONVERSATION INTELLIGENCE -->
         <section class="ws-coach">
+          <!-- Translate control: re-runs analysis with an output-language instruction -->
+          <div class="ws-lang-control">
+            <label class="ws-lang-label" for="wsAnalysisLang">Translate</label>
+            <select id="wsAnalysisLang" class="ws-tool-select" title="Analysis language">
+              <option value="en">English</option>
+              <option value="hinglish">Hinglish</option>
+            </select>
+          </div>
           <!-- LIVE CONVERSATION SCORE — primary intelligence hero -->
           <section class="card ws-hero" aria-label="Live Conversation Score">
             <div class="wsx-score-head">
@@ -1095,6 +1107,8 @@ window.voovrInitWorkspace = function() {
         fail('Could not load this session.');
         return;
       }
+      var wsLangSel = document.getElementById('wsAnalysisLang');
+      if (wsLangSel) wsLangSel.value = (state.session.analysis_language || 'en');
       var tr = state.session.transcript || {};
       state.transcriptText = tr.edited || tr.raw || '';
       state.duration = state.session.recording_duration || 0;
@@ -1222,6 +1236,38 @@ window.voovrInitWorkspace = function() {
     state.speaker = e.target.value;
     renderLines();
   });
+
+  // ── Translate control: re-run analysis with an output-language instruction ──
+  var wsLangSel = document.getElementById('wsAnalysisLang');
+  if (wsLangSel) {
+    wsLangSel.addEventListener('change', function() {
+      var storedLang = (state.session && state.session.analysis_language) || 'en';
+      var newLang = wsLangSel.value;
+      if (newLang === storedLang) return; // no redundant re-run
+      wsLangSel.disabled = true;
+      showToast('Translating analysis to ' + (newLang === 'hinglish' ? 'Hinglish' : 'English') + '\u2026');
+      fetch('/api/sessions/' + sessionId + '/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: newLang })
+      })
+      .then(function(r) {
+        if (!r.ok) return readErr(r).then(function(msg) { throw new Error(msg); });
+        return r.json();
+      })
+      .then(function(s) {
+        state.session = s;
+        renderAll();
+      })
+      .catch(function(err) {
+        wsLangSel.value = storedLang;
+        showToast('Analysis failed: ' + err.message);
+      })
+      .finally(function() {
+        wsLangSel.disabled = false;
+      });
+    });
+  }
 
   document.getElementById('wsFilterBtn').addEventListener('click', function(e) {
     e.stopPropagation();

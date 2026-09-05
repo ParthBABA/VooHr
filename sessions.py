@@ -128,6 +128,7 @@ def _session_to_json(s) -> dict:
         "audio": s.get("audio"),
         "transcript": s.get("transcript", {"raw": "", "edited": "", "word_count": 0}),
         "analysis": s.get("analysis"),
+        "analysis_language": s.get("analysis_language", "en"),
         "analysis_version": s.get("analysis_version", 0),
         "phrasing_analysis": s.get("phrasing_analysis"),
         "phrasing_analysis_version": s.get("phrasing_analysis_version", 0),
@@ -393,7 +394,16 @@ def analyze_session(session_id: str):
 
     try:
         llm = get_llm_provider()
-        analysis = llm.analyze(llm_transcript)
+
+        # Output-language for the analysis. Only Hinglish is supported for now;
+        # anything missing or unrecognized falls back to English so the default
+        # code path is unchanged.
+        language = "en"
+        raw_lang = (request.get_json(silent=True) or {}).get("language")
+        if isinstance(raw_lang, str) and raw_lang.strip().lower() == "hinglish":
+            language = "hinglish"
+
+        analysis = llm.analyze(llm_transcript, language=language)
 
         now = datetime.now(timezone.utc)
         db.sessions.update_one(
@@ -407,6 +417,7 @@ def analyze_session(session_id: str):
                         "approved": False,
                         "approved_at": None,
                     },
+                    "analysis_language": language,
                     "analysis_version": (s.get("analysis_version", 0) + 1),
                     "last_analyzed_at": now,
                     "updated_at": now,

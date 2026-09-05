@@ -902,6 +902,20 @@ Judge each field on its own: only set an individual string field to "Limited tra
 Return ONLY valid JSON, no markdown formatting."""
 
 
+_HINGLISH_INSTRUCTION = """\n\nOUTPUT LANGUAGE: Hinglish\n\nRender every human-readable text value in the response below (title, summary, behavioural interpretations, conversation coach notes, follow-up plans, psychological-safety statement, do/don't guidance, suggested scripts, suggested questions and HR replies, risk factors, topics to avoid, recommendations and manager notes) in Hinglish written in Latin script — casual Hindi-English code-mixing, the way Hindi-speaking professionals actually talk. For example: "Follow-up karna zaroori hai kyunki usne kaam ka load clearly share kiya tha." and "Agli baar pehle expectations set karna behtar rahega taaki confusion na ho."\n\nKeep every JSON key, id and the enumerated status/value labels (e.g. Strong Signal | Moderate Signal | Light Signal, Positive | Reflective | Anxious | Strained | Mixed, openness, trust_level, communication_style values) in English exactly as specified by the schema. Do NOT translate verbatim quotes from the transcript — reproduce them word-for-word as spoken."""
+
+
+def _language_instruction(language: str | None) -> str:
+    """Return an output-language suffix for the analysis system prompt.
+
+    Only "hinglish" produces a suffix; English / missing / unknown values
+    return "" so the default prompt stays byte-for-byte identical.
+    """
+    if (language or "").strip().lower() == "hinglish":
+        return _HINGLISH_INSTRUCTION
+    return ""
+
+
 def _build_drift_prompt(sessions) -> str:
     """Format multiple sync sessions as labeled transcript blocks.
 
@@ -1196,7 +1210,7 @@ def _call_and_parse(
 
 class BaseLLM(ABC):
     @abstractmethod
-    def analyze(self, transcript: str) -> dict:
+    def analyze(self, transcript: str, language: str = "en") -> dict:
         ...
 
     @abstractmethod
@@ -1229,7 +1243,7 @@ class OpenAILLM(BaseLLM):
         self.api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_KEY", "")
         self.model = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")
 
-    def analyze(self, transcript: str) -> dict:
+    def analyze(self, transcript: str, language: str = "en") -> dict:
         from openai import OpenAI
         from flask import current_app
 
@@ -1240,7 +1254,7 @@ class OpenAILLM(BaseLLM):
         except RuntimeError:
             use_v2 = os.environ.get("USE_V2_FRAMEWORK", "false").lower() == "true"
 
-        system_prompt = _build_v2_prompt() if use_v2 else _build_v1_prompt()
+        system_prompt = (_build_v2_prompt() if use_v2 else _build_v1_prompt()) + _language_instruction(language)
 
         return _call_and_parse(
             client, self.model, system_prompt, transcript,
@@ -1307,7 +1321,7 @@ class DeepSeekLLM(BaseLLM):
         self.base_url = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
         self.model = os.environ.get("DEEPSEEK_ANALYSIS_MODEL", "deepseek-chat")
 
-    def analyze(self, transcript: str) -> dict:
+    def analyze(self, transcript: str, language: str = "en") -> dict:
         from openai import OpenAI
 
         client = OpenAI(api_key=self.api_key, base_url=self.base_url)
@@ -1318,7 +1332,7 @@ class DeepSeekLLM(BaseLLM):
         except RuntimeError:
             use_v2 = os.environ.get("USE_V2_FRAMEWORK", "false").lower() == "true"
 
-        system_prompt = _build_v2_prompt() if use_v2 else _build_v1_prompt()
+        system_prompt = (_build_v2_prompt() if use_v2 else _build_v1_prompt()) + _language_instruction(language)
 
         return _call_and_parse(
             client, self.model, system_prompt, transcript,
