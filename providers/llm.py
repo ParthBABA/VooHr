@@ -32,6 +32,23 @@ def _llm_timeout_seconds() -> float:
     except (TypeError, ValueError):
         return 20.0
 
+
+def _llm_drift_timeout_seconds() -> float:
+    """Tighter per-request budget for the best-effort drift check.
+
+    explain_drift runs inside the SAME /analyze request as the main analysis
+    (which is already allowed up to LLM_REQUEST_TIMEOUT_SECONDS), so the two
+    calls share the platform worker's budget. A separate, shorter cap keeps
+    analyze + drift inside that budget instead of letting the pair exceed it
+    (which makes the platform kill the worker and serve raw HTML). Drift is
+    best-effort and never allowed to fail /analyze, so bounding it tighter is
+    always safe.
+    """
+    try:
+        return float(os.environ.get("LLM_DRIFT_TIMEOUT_SECONDS", "8"))
+    except (TypeError, ValueError):
+        return 8.0
+
 # ── Analysis output language codes (frontend sends these verbatim) ──────
 # "en" produces the default English output (no language directive is added
 # to the prompt). "hinglish" asks the model to write the analysis in
@@ -1188,6 +1205,7 @@ def _call_and_parse(
     temperature: float = 0.3,
     supports_json_mode: bool = True,
     log_label: str = "",
+    timeout: float | None = None,
 ) -> dict:
     """Shared call/parse/fallback logic for both OpenAI-compatible providers.
 
@@ -1200,6 +1218,11 @@ def _call_and_parse(
     (OpenAI). supports_json_mode=False (DeepSeek) instead strips markdown code
     fences defensively from the raw response before parsing, since DeepSeek
     doesn't reliably support response_format=json_object.
+
+    timeout overrides the per-call budget (default _llm_timeout_seconds, 20s).
+    Best-effort secondary calls such as drift detection pass their own tighter
+    cap so a request that chains several calls still fits inside the platform
+    worker timeout.
     """
     kwargs = dict(
         model=model,
@@ -1214,7 +1237,7 @@ def _call_and_parse(
     # platform worker timeout (~30s), which kills the worker BEFORE Flask's
     # own error handler can run — so the user sees the platform's raw HTML
     # error page instead of this app's JSON. 20s leaves headroom under that.
-    kwargs["timeout"] = _llm_timeout_seconds()
+    kwargs["timeout"] = timeout if timeout is not None else _llm_timeout_seconds()
     if supports_json_mode:
         kwargs["response_format"] = {"type": "json_object"}
     else:
@@ -1313,6 +1336,7 @@ class OpenAILLM(BaseLLM):
             client, self.model, _build_drift_system_prompt(), _build_drift_prompt(sessions),
             validator=validate_drift_explanation, fallback=FALLBACK_DRIFT_EXPLANATION,
             temperature=0.3, supports_json_mode=True,
+            timeout=_llm_drift_timeout_seconds(),
         )
 
     def analyze_phrasing(self, transcript: str) -> dict:
@@ -1390,6 +1414,7 @@ class DeepSeekLLM(BaseLLM):
             client, self.model, _build_drift_system_prompt(), _build_drift_prompt(sessions),
             validator=validate_drift_explanation, fallback=FALLBACK_DRIFT_EXPLANATION,
             temperature=0.3, supports_json_mode=False, log_label="DeepSeek explain_drift",
+            timeout=_llm_drift_timeout_seconds(),
         )
 
     def analyze_phrasing(self, transcript: str) -> dict:

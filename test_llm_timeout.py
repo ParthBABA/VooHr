@@ -132,7 +132,7 @@ class TestTranslateTimeout:
     def test_shared_helper_sets_timeout_kwarg(self, llm_mod):
         src = self._read_source(llm_mod)
         helper = src[src.find("def _call_and_parse"):src.find("class BaseLLM")]
-        assert 'kwargs["timeout"] = _llm_timeout_seconds()' in helper
+        assert 'kwargs["timeout"] = timeout if timeout is not None else _llm_timeout_seconds()' in helper
 
     def test_both_translate_calls_bind_request_duration(self, llm_mod):
         # translate() bypasses the shared helper (single user message), so it
@@ -140,3 +140,38 @@ class TestTranslateTimeout:
         # provider class.
         src = self._read_source(llm_mod)
         assert src.count("timeout=_llm_timeout_seconds(),") == 2
+
+    def test_drift_uses_tighter_default_cap(self, llm_mod):
+        # explain_drift runs inside the SAME /analyze request as the main
+        # analysis, so its budget must not stack the full 20s on top of the
+        # main call's 20s (analyze + drift would then exceed the platform's
+        # ~30s worker timeout and the platform would serve raw HTML).
+        assert llm_mod._llm_drift_timeout_seconds() == 8.0
+
+    def test_drift_cap_is_env_overridable(self, llm_mod, monkeypatch):
+        monkeypatch.setenv("LLM_DRIFT_TIMEOUT_SECONDS", "12")
+        assert llm_mod._llm_drift_timeout_seconds() == 12.0
+
+    def test_invalid_drift_env_falls_back_to_default(self, llm_mod, monkeypatch):
+        monkeypatch.setenv("LLM_DRIFT_TIMEOUT_SECONDS", "not-a-number")
+        assert llm_mod._llm_drift_timeout_seconds() == 8.0
+
+    def test_both_explain_drift_calls_bind_the_tighter_cap(self, llm_mod):
+        src = self._read_source(llm_mod)
+        assert src.count("timeout=_llm_drift_timeout_seconds(),") == 2
+
+    def test_call_and_parse_accepts_timeout_override(self, llm_mod):
+        client = _CapturingClient('{"ok": true}')
+        result = llm_mod._call_and_parse(
+            client,
+            model="model-x",
+            system_prompt="sys",
+            user_content="user",
+            validator=lambda parsed: parsed,
+            fallback={"summary": "fallback"},
+            supports_json_mode=True,
+            log_label="test",
+            timeout=5,
+        )
+        assert result == {"ok": True}
+        assert client.captured["timeout"] == 5

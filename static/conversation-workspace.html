@@ -401,6 +401,29 @@ window.voovrInitWorkspace = function() {
     }
   }
 
+  // Parse a failed fetch response defensively. In-app API errors come back
+  // as {"error": ...} JSON, but when the platform itself kills a slow request
+  // (worker timeout) it answers with its own raw-HTML error page instead —
+  // r.json() then throws "Unexpected token '<'" which tells the user nothing.
+  // Map the common gateway codes to an actionable message and always resolve
+  // to a string so callers can throw it directly.
+  function readErr(r) {
+    return r.json()
+      .then(function(b) {
+        return (b && typeof b.error === 'string' && b.error)
+          ? b.error : 'The server returned error ' + r.status + '.';
+      })
+      .catch(function() {
+        if (r.status === 502 || r.status === 504) {
+          return 'The server timed out. Please try again in a moment.';
+        }
+        if (r.status >= 500) {
+          return 'The server hit an unexpected error (' + r.status + '). Please try again.';
+        }
+        return 'The server returned an error (' + r.status + ').';
+      });
+  }
+
   function scoreBand(v) {
     if (v === null || v === undefined || isNaN(v)) return { label: 'Not measured', cls: '' };
     if (v >= 70) return { label: 'Strong signal', cls: 'high' };
@@ -1151,11 +1174,14 @@ window.voovrInitWorkspace = function() {
 
     fetch('/api/sessions/' + sessionId + '/analyze', { method: 'POST' })
       .then(function(r) {
-        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Analysis failed'); });
+        if (!r.ok) return readErr(r).then(function(msg) { throw new Error(msg); });
         return r.json();
       })
       .then(function() {
-        return fetch('/api/sessions/' + sessionId).then(function(r) { return r.json(); });
+        return fetch('/api/sessions/' + sessionId).then(function(r) {
+          if (!r.ok) return readErr(r).then(function(msg) { throw new Error(msg); });
+          return r.json();
+        });
       })
       .then(function(s) {
         stopMessageLoop();
@@ -1194,12 +1220,12 @@ window.voovrInitWorkspace = function() {
       body: JSON.stringify({ language: lang })
     })
       .then(function(r) {
-        if (!r.ok) return r.json().then(function(err) { throw new Error(err.error || 'Analysis failed'); });
+        if (!r.ok) return readErr(r).then(function(msg) { throw new Error(msg); });
         return r.json();
       })
       .then(function() {
         return fetch('/api/sessions/' + sessionId).then(function(r) {
-          if (!r.ok) throw new Error('Could not refresh the session.');
+          if (!r.ok) return readErr(r).then(function(msg) { throw new Error(msg); });
           return r.json();
         });
       })
