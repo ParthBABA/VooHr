@@ -39,6 +39,12 @@ ACTION_ACCOUNT_DELETE = "account.delete"
 ACTION_MANAGER_INVITE_SENT = "manager.invite_sent"
 ACTION_MANAGER_INVITE_ACCEPTED = "manager.invite_accepted"
 ACTION_MANAGER_INVITE_SUPERSEDED = "manager.invite_superseded"
+ACTION_SURVEY_TEMPLATE_CREATE = "survey.template_create"
+ACTION_SURVEY_TEMPLATE_UPDATE = "survey.template_update"
+ACTION_SURVEY_TEMPLATE_DELETE = "survey.template_delete"
+ACTION_SURVEY_RESPONSE_CREATE = "survey.response_create"
+ACTION_SURVEY_RESPONSE_UPDATE = "survey.response_update"
+ACTION_SURVEY_RESPONSE_DELETE = "survey.response_delete"
 
 # Pagination for the audit-log endpoint.
 DEFAULT_PAGE_LIMIT = 50

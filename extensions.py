@@ -193,6 +193,36 @@ def _init_indexes(db):
         background=True,
     )
 
+    # ── survey_templates ──────────────────────────────────────────────
+    # Query: find({org_id}).sort("created_at", -1) in list_survey_templates
+    db.survey_templates.create_index(
+        [("org_id", ASCENDING), ("created_at", DESCENDING)],
+        background=True,
+    )
+    # Query: find({org_id, status}) when filtering by status
+    db.survey_templates.create_index(
+        [("org_id", ASCENDING), ("status", ASCENDING)],
+        background=True,
+    )
+
+    # ── survey_responses ──────────────────────────────────────────────
+    # Query: find({org_id}).sort("created_at", -1) in list_survey_responses
+    db.survey_responses.create_index(
+        [("org_id", ASCENDING), ("created_at", DESCENDING)],
+        background=True,
+    )
+    # Query: find({org_id, template_id}) + response-count aggregation
+    db.survey_responses.create_index(
+        [("org_id", ASCENDING), ("template_id", ASCENDING), ("created_at", DESCENDING)],
+        background=True,
+    )
+    # Query: find({org_id, employee_id}) for the most-recent engagement sync
+    # in _sync_engagement_score and per-employee response lists
+    db.survey_responses.create_index(
+        [("org_id", ASCENDING), ("employee_id", ASCENDING), ("created_at", DESCENDING)],
+        background=True,
+    )
+
 
 # ── Atomic employee ID generation ────────────────────────────────────
 

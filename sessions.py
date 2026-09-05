@@ -620,6 +620,11 @@ def transcribe_audio():
     content_type = audio_file.content_type or "audio/webm"
     audio_bytes = audio_file.read()
 
+    # Optional provider language hint (e.g. "en", "hi", "hinglish", "auto").
+    # Forwarded as-is; each provider normalizes/validates it, falling back
+    # to its default rather than failing on an unrecognized value.
+    language = (request.form.get("language") or "").strip() or None
+
     if not audio_bytes:
         return jsonify({"error": "empty_audio"}), 400
 
@@ -635,7 +640,7 @@ def transcribe_audio():
 
     try:
         stt = get_stt_provider()
-        text = stt.transcribe(audio_bytes, content_type)
+        text = stt.transcribe(audio_bytes, content_type, language)
         return jsonify({"text": text})
     except Exception as e:
         logger.exception("Audio transcription failed")

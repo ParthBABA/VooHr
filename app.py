@@ -24,6 +24,7 @@ from reminders import reminders_bp
 from sessions import sessions_bp
 from totp_routes import totp_bp
 from tts import tts_bp
+from surveys import surveys_bp
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,7 @@ def create_app():
     app.register_blueprint(reminders_bp, url_prefix="/api")
     app.register_blueprint(meetings_bp, url_prefix="/api")
     app.register_blueprint(conversation_memory_bp, url_prefix="/api")
+    app.register_blueprint(surveys_bp, url_prefix="/api")
     app.register_blueprint(tts_bp, url_prefix="/api")
 
     @app.errorhandler(TOTPRequired)

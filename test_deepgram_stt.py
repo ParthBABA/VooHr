@@ -55,9 +55,97 @@ class TestDeepgramSTTParse:
         assert kwargs["data"] == b"FAKE-AUDIO-BYTES"
         assert kwargs["headers"]["Authorization"] == "Token fake-key"
         assert kwargs["headers"]["Content-Type"] == "audio/webm"
-        assert kwargs["params"]["model"] == "nova-2"
+        # Default language is English, which maps to nova-3 + language=en.
+        assert kwargs["params"]["model"] == "nova-3"
+        assert kwargs["params"]["language"] == "en"
         assert kwargs["params"]["smart_format"] == "true"
         assert kwargs["params"]["punctuate"] == "true"
+
+    def test_transcribe_hinglish_uses_nova2_hi_latn(self, monkeypatch):
+        """Hinglish maps to Deepgram hi-Latn which is only on nova-2."""
+        monkeypatch.delenv("DEEPGRAM_STT_MODEL", raising=False)
+        stt = DeepgramSTT()
+        stt.api_key = "fake-key"
+
+        resp = _fake_response(200, TRANSCRIPT_PAYLOAD)
+
+        with patch("providers.deepgram_stt.requests.post", return_value=resp) as m_post:
+            stt.transcribe(b"data", "audio/webm", "hinglish")
+
+        _, kwargs = m_post.call_args
+        assert kwargs["params"]["language"] == "hi-Latn"
+        assert kwargs["params"]["model"] == "nova-2"
+
+    def test_transcribe_language_is_case_insensitive(self, monkeypatch):
+        monkeypatch.delenv("DEEPGRAM_STT_MODEL", raising=False)
+        stt = DeepgramSTT()
+        stt.api_key = "fake-key"
+
+        resp = _fake_response(200, TRANSCRIPT_PAYLOAD)
+
+        with patch("providers.deepgram_stt.requests.post", return_value=resp) as m_post:
+            stt.transcribe(b"data", "audio/webm", "HINGLISH")
+
+        _, kwargs = m_post.call_args
+        assert kwargs["params"]["language"] == "hi-Latn"
+        assert kwargs["params"]["model"] == "nova-2"
+
+    def test_transcribe_hi_uses_devanagari_nova3(self, monkeypatch):
+        monkeypatch.delenv("DEEPGRAM_STT_MODEL", raising=False)
+        stt = DeepgramSTT()
+        stt.api_key = "fake-key"
+
+        resp = _fake_response(200, TRANSCRIPT_PAYLOAD)
+
+        with patch("providers.deepgram_stt.requests.post", return_value=resp) as m_post:
+            stt.transcribe(b"data", "audio/webm", "hi")
+
+        _, kwargs = m_post.call_args
+        assert kwargs["params"]["language"] == "hi"
+        assert kwargs["params"]["model"] == "nova-3"
+
+    def test_transcribe_auto_uses_multi_nova3(self, monkeypatch):
+        monkeypatch.delenv("DEEPGRAM_STT_MODEL", raising=False)
+        stt = DeepgramSTT()
+        stt.api_key = "fake-key"
+
+        resp = _fake_response(200, TRANSCRIPT_PAYLOAD)
+
+        with patch("providers.deepgram_stt.requests.post", return_value=resp) as m_post:
+            stt.transcribe(b"data", "audio/webm", "auto")
+
+        _, kwargs = m_post.call_args
+        assert kwargs["params"]["language"] == "multi"
+        assert kwargs["params"]["model"] == "nova-3"
+
+    def test_transcribe_region_code_maps_to_deepgram_region(self, monkeypatch):
+        monkeypatch.delenv("DEEPGRAM_STT_MODEL", raising=False)
+        stt = DeepgramSTT()
+        stt.api_key = "fake-key"
+
+        resp = _fake_response(200, TRANSCRIPT_PAYLOAD)
+
+        with patch("providers.deepgram_stt.requests.post", return_value=resp) as m_post:
+            stt.transcribe(b"data", "audio/webm", "en-in")
+
+        _, kwargs = m_post.call_args
+        assert kwargs["params"]["language"] == "en-IN"
+        assert kwargs["params"]["model"] == "nova-3"
+
+    def test_transcribe_unknown_language_falls_back_to_english(self, monkeypatch):
+        """An unrecognized language must never hard-fail the request."""
+        monkeypatch.delenv("DEEPGRAM_STT_MODEL", raising=False)
+        stt = DeepgramSTT()
+        stt.api_key = "fake-key"
+
+        resp = _fake_response(200, TRANSCRIPT_PAYLOAD)
+
+        with patch("providers.deepgram_stt.requests.post", return_value=resp) as m_post:
+            stt.transcribe(b"data", "audio/webm", "klingon")
+
+        _, kwargs = m_post.call_args
+        assert kwargs["params"]["language"] == "en"
+        assert kwargs["params"]["model"] == "nova-3"
 
     def test_transcribe_respects_deepgram_stt_model_env(self, monkeypatch):
         monkeypatch.setenv("DEEPGRAM_STT_MODEL", "nova-3")
