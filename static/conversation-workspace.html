@@ -47,6 +47,9 @@
 .ws-lang-label{font-size:12px;color:inherit;opacity:.65;}
 #wsAnalysisLang{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:transparent;color:inherit;outline:none;cursor:pointer;}
 #wsAnalysisLang:disabled{opacity:.55;cursor:default;}
+.ws-gate-lang{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+.ws-gate-lang .ws-lang-label{font-size:12px;color:inherit;opacity:.65;margin:0;}
+#wsGateLang{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:transparent;color:inherit;outline:none;cursor:pointer;}
 .wsx-mini-player{display:inline-flex;align-items:center;gap:6px;max-width:210px;padding:3px 6px;border:1px solid var(--border);border-radius:20px;background:var(--card-bg,transparent);}
 .wsx-mini-player .wsx-mp-play{width:26px;height:26px;}
 .wsx-mini-player .wsx-mp-play svg{width:12px;height:12px;}
@@ -171,6 +174,13 @@ withTimeout(fetch('/api/me').then(function(res){
       <div class="ws-gate card" id="wsGate" style="display:none;">
         <h3 class="ws-gate-title">This session hasn't been analyzed yet</h3>
         <p class="ws-gate-body">Run the AI analysis first so the Conversation Coach and score have evidence to work with.</p>
+        <div class="ws-gate-lang">
+          <label class="ws-lang-label" for="wsGateLang">Analyze in</label>
+          <select id="wsGateLang" class="ws-tool-select" title="Analysis language">
+            <option value="en" selected>English</option>
+            <option value="hinglish">Hinglish</option>
+          </select>
+        </div>
         <button class="btn btn-primary" id="runAnalysisBtn">
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           Run Analysis
@@ -1070,6 +1080,8 @@ window.voovrInitWorkspace = function() {
   // ── Main load ──
   function renderAll() {
     var a = state.session.analysis || {};
+    var wsLangSel = document.getElementById('wsAnalysisLang');
+    if (wsLangSel) wsLangSel.value = (state.session.analysis_language || 'en');
     parseTranscript();
     computeFlagMatches();
     loadingEl.style.display = 'none';
@@ -1168,7 +1180,13 @@ window.voovrInitWorkspace = function() {
       }
     }
 
-    fetch('/api/sessions/' + sessionId + '/analyze', { method: 'POST' })
+    var gateLangSel = document.getElementById('wsGateLang');
+    var lang = gateLangSel ? gateLangSel.value : 'en';
+    fetch('/api/sessions/' + sessionId + '/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: lang })
+    })
       .then(function(r) {
         if (!r.ok) return readErr(r).then(function(msg) { throw new Error(msg); });
         return r.json();
