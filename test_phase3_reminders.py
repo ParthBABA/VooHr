@@ -32,6 +32,7 @@ EMP_1 = "111111111111111111111111"
 EMP_B = "222222222222222222222222"
 SESSION_1 = "333333333333333333333333"
 MEET_A = "444444444444444444444444"
+ADMIN_USER = "999999999999999999999999"
 
 # Fixed "now" for deterministic generation/stage tests (UTC), a Wednesday.
 NOW = datetime(2026, 8, 30, 9, 0, tzinfo=timezone.utc)
@@ -53,7 +54,7 @@ class FakeCollection:
                 return False
         return True
 
-    def find_one(self, filt):
+    def find_one(self, filt, *args, **kw):
         for d in self._docs:
             if self._match(d, filt):
                 return dict(d)
@@ -112,6 +113,7 @@ class FakeDB:
         self.employees = FakeCollection()
         self.sessions = FakeCollection()
         self.notifications = FakeCollection()
+        self.users = FakeCollection()
 
 
 @pytest.fixture
@@ -128,6 +130,12 @@ def fake():
     db.sessions.insert_one({
         "_id": ObjectId(SESSION_1), "org_id": ObjectId(ORG_A), "employee_id": ObjectId(EMP_1),
         "status": "completed", "created_at": datetime(2026, 8, 29, tzinfo=timezone.utc),
+    })
+    # The test session acts as an org admin: the role-scoping helpers
+    # (_employee_scope_filter / _employee_accessible) treat admins as full-org
+    # (no filter), preserving the org-wide behavior these tests exercise.
+    db.users.insert_one({
+        "_id": ObjectId(ADMIN_USER), "role": "admin", "org_id": ObjectId(ORG_A),
     })
     return db
 
@@ -159,6 +167,8 @@ def client(monkeypatch, fake):
     app.config["TESTING"] = True
     app.secret_key = "test"
     with app.test_client() as c:
+        with c.session_transaction() as sess:
+            sess["user_id"] = ADMIN_USER
         yield c
 
 
@@ -307,10 +317,14 @@ def test_generate_org_isolation(fake):
     assert fake.notifications.count_documents({"type": "meeting_reminder"}) == 0
 
 
-def test_generate_notifications_in_bell(client, fake):
+def test_generate_notifications_in_bell(client, fake, monkeypatch):
     add_meeting(fake, scheduled_at="2026-08-30T15:00:00")
     add_memory(fake, "COMMITMENT", content="ship", status="PENDING",
                due_at="2026-09-05T10:00:00")
+    # The stage is derived from the meeting's scheduled_at vs. the
+    # generate-time clock, so pin it to NOW for a deterministic day_of
+    # assertion (the fixed fixture date stays valid regardless of real time).
+    monkeypatch.setattr(rm_mod, "_now", lambda: NOW)
     client.post("/api/reminders/generate")
     n = fake.notifications.find_one({"type": "meeting_reminder"})
     assert n is not None

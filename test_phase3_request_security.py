@@ -290,10 +290,10 @@ class TestEmployeePhotoSizeLimit:
 
     def test_create_employee_checks_photo_size(self):
         """create_employee must check photo size before storing."""
-        source = _read_source("sessions.py")  # just checking it exists
         source = _read_source("employees.py")
         func_start = source.find("def create_employee(")
-        func_body = source[func_start:func_start + 3000]
+        func_end = source.find("\ndef ", func_start + 1)
+        func_body = source[func_start:func_end if func_end > 0 else func_start + 9000]
         assert "MAX_PHOTO_BYTES" in func_body
         assert "photo_too_large" in func_body
 
@@ -301,7 +301,8 @@ class TestEmployeePhotoSizeLimit:
         """Oversized photo must return 413."""
         source = _read_source("employees.py")
         func_start = source.find("def create_employee(")
-        func_body = source[func_start:func_start + 3000]
+        func_end = source.find("\ndef ", func_start + 1)
+        func_body = source[func_start:func_end if func_end > 0 else func_start + 9000]
         check_pos = func_body.find("photo_too_large")
         assert check_pos > 0
         check_area = func_body[check_pos - 100:check_pos + 100]

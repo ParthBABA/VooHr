@@ -101,7 +101,12 @@ class TestGatePageSetupChaining:
 
     def test_response_and_error_handling_preserved(self):
         src = _read(_GATE_HTML)
-        assert "if(d.error){setErr(d.error);return;}" in src
+        # Any d.error on the setup POST must be shown via setErr() and stop
+        # the chain (return;) before the QR code is rendered.
+        pre_qr = src[:src.index("qrImg.src=d.qr")]
+        assert "if(d.error)" in pre_qr
+        assert "setErr(" in pre_qr
+        assert "return;" in pre_qr
         assert "qrImg.src=d.qr" in src
         assert "secretKey.textContent=d.secret" in src
         assert "Failed to load QR code. Please refresh the page." in src
