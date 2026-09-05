@@ -320,10 +320,12 @@ class TestLLMPromptPrivacy:
             return f.read()
 
     def test_analyze_method_only_receives_transcript(self):
-        """LLM.analyze() must accept only transcript text."""
+        """LLM.analyze() must take transcript text, never PII fields."""
         source = self._read_llm_source()
-        # Both OpenAI and DeepSeek analyze methods should take (self, transcript)
-        assert "def analyze(self, transcript: str)" in source
+        # analyze's first argument stays the transcript for all providers.
+        # The optional output-language parameter only re-targets human-readable
+        # text inside the system prompt — never employee PII.
+        assert source.count("def analyze(self, transcript: str") >= 2
 
     def test_drift_method_only_receives_sessions(self):
         """LLM.explain_drift() must accept only sessions list."""

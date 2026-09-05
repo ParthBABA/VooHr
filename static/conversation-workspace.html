@@ -50,6 +50,13 @@
 .wsx-mini-player .wsx-mp-cancel:hover{color:var(--red);border-color:rgba(232,69,69,0.5);background:var(--red-soft);}
 .wsx-mini-player .wsx-mp-range{flex:1;min-width:60px;max-width:110px;accent-color:var(--violet,#7b4fff);cursor:pointer;}
 .wsx-mini-player .wsx-mp-time{font-size:10px;color:var(--muted,#999);white-space:nowrap;}
+
+/* Analysis language toggle — re-run the analysis in English or Hinglish */
+.ws-lang-control{display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;padding:0.55rem 0.25rem 0.2rem;}
+.ws-lang-label{font-family:var(--font-m);font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ivory-dim);}
+.ws-lang-select{max-width:150px;}
+.ws-lang-select:disabled{opacity:0.55;cursor:progress;}
+.wsx-score-status--loading{opacity:0.55;}
 </style>
 </head>
 <body>
@@ -219,6 +226,14 @@ withTimeout(fetch('/api/me').then(function(res){
 
         <!-- RIGHT: CONVERSATION INTELLIGENCE -->
         <section class="ws-coach">
+          <!-- ANALYSIS LANGUAGE — re-run the analysis in English or Hinglish -->
+          <div class="ws-lang-control" aria-label="Analysis language">
+            <label for="wsAnalysisLang" class="ws-lang-label">Translate</label>
+            <select id="wsAnalysisLang" class="ws-tool-select ws-lang-select" title="Analysis language" aria-label="Analysis language">
+              <option value="en" selected>English</option>
+              <option value="hinglish">Hinglish</option>
+            </select>
+          </div>
           <!-- LIVE CONVERSATION SCORE — primary intelligence hero -->
           <section class="card ws-hero" aria-label="Live Conversation Score">
             <div class="wsx-score-head">
@@ -1072,6 +1087,9 @@ window.voovrInitWorkspace = function() {
         fail('Could not load this session.');
         return;
       }
+      // Restore the analysis-language toggle to what was last generated.
+      var langEl = document.getElementById('wsAnalysisLang');
+      if (langEl) langEl.value = state.session.analysis_language || 'en';
       var tr = state.session.transcript || {};
       state.transcriptText = tr.edited || tr.raw || '';
       state.duration = state.session.recording_duration || 0;
@@ -1152,6 +1170,52 @@ window.voovrInitWorkspace = function() {
         runBtn.innerHTML =
           '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Analysis';
         showToast('Analysis failed: ' + err.message);
+      });
+  });
+
+  // ── Analysis-language toggle: re-run the analysis in the chosen language ──
+  document.getElementById('wsAnalysisLang').addEventListener('change', function(e) {
+    var lang = e.target.value;
+    var current = (state.session && state.session.analysis_language) || 'en';
+    if (lang === current) return; // no-op: already generated in this language
+    var sel = e.target;
+    sel.disabled = true; // block a second change while one is in flight
+
+    var statusEl = document.getElementById('wsScoreStatus');
+    if (statusEl) {
+      statusEl.classList.add('wsx-score-status--loading');
+      statusEl.textContent = 'Re-analysing\u2026';
+      statusEl.style.display = '';
+    }
+
+    fetch('/api/sessions/' + sessionId + '/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: lang })
+    })
+      .then(function(r) {
+        if (!r.ok) return r.json().then(function(err) { throw new Error(err.error || 'Analysis failed'); });
+        return r.json();
+      })
+      .then(function() {
+        return fetch('/api/sessions/' + sessionId).then(function(r) {
+          if (!r.ok) throw new Error('Could not refresh the session.');
+          return r.json();
+        });
+      })
+      .then(function(s) {
+        state.session = s;
+        renderAll(); // re-renders score, coach, evidence and lines
+        showToast('Analysis re-run in ' + (lang === 'hinglish' ? 'Hinglish' : 'English') + '.');
+      })
+      .catch(function(err) {
+        sel.value = current; // revert to what is actually stored
+        renderAll();
+        showToast('Re-analysis failed: ' + err.message);
+      })
+      .finally(function() {
+        sel.disabled = false;
+        if (statusEl) statusEl.classList.remove('wsx-score-status--loading');
       });
   });
 

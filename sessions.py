@@ -121,6 +121,7 @@ def _session_to_json(s) -> dict:
         "audio": s.get("audio"),
         "transcript": s.get("transcript", {"raw": "", "edited": "", "word_count": 0}),
         "analysis": s.get("analysis"),
+        "analysis_language": s.get("analysis_language", "en"),
         "analysis_version": s.get("analysis_version", 0),
         "phrasing_analysis": s.get("phrasing_analysis"),
         "phrasing_analysis_version": s.get("phrasing_analysis_version", 0),
@@ -338,6 +339,14 @@ def analyze_session(session_id: str):
     if not s:
         return jsonify({"error": "not_found"}), 404
 
+    # Optional analysis output language from the request body (default "en").
+    # Only the human-readable fields are re-targeted; schema keys stay English.
+    body = request.get_json(silent=True) or {}
+    language = body.get("language")
+    if not isinstance(language, str):
+        language = "en"
+    language = (language.strip().lower() or "en")[:MAX_SESSION_LANGUAGE_LEN]
+
     transcript = (s.get("transcript") or {}).get("edited") or (s.get("transcript") or {}).get("raw", "")
     if not transcript:
         return jsonify({"error": "no_transcript_to_analyze"}), 400
@@ -356,7 +365,7 @@ def analyze_session(session_id: str):
 
     try:
         llm = get_llm_provider()
-        analysis = llm.analyze(llm_transcript)
+        analysis = llm.analyze(llm_transcript, language=language)
 
         now = datetime.now(timezone.utc)
         db.sessions.update_one(
@@ -370,6 +379,7 @@ def analyze_session(session_id: str):
                         "approved": False,
                         "approved_at": None,
                     },
+                    "analysis_language": language,
                     "analysis_version": (s.get("analysis_version", 0) + 1),
                     "last_analyzed_at": now,
                     "updated_at": now,
