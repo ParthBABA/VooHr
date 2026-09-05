@@ -10,6 +10,7 @@ from employee_scoring import _status_for
 from employees import _require_auth
 from extensions import get_db, check_rate_limit, record_rate_limit_event
 from providers import get_llm_provider, get_storage_provider, get_stt_provider, get_vision_provider
+from providers.llm import LLMTimeoutError
 
 sessions_bp = Blueprint("sessions", __name__)
 logger = logging.getLogger(__name__)
@@ -533,6 +534,19 @@ def analyze_session(session_id: str):
         result_json = _session_to_json(s)
         return jsonify(result_json)
 
+    except LLMTimeoutError:
+        # Retryable: the upstream LLM was slow/hung, not permanently broken.
+        # Do NOT store the fallback analysis here — writing a mostly-empty
+        # fallback would zero out the employee's wellness score as if it were
+        # a real reading. Surface a distinct message so the user knows a retry
+        # is likely to work.
+        logger.warning("Session analysis timed out (session=%s)", session_id)
+        db.sessions.update_one(
+            {"_id": ObjectId(session_id)},
+            {"$set": {"status": "failed", "updated_at": datetime.now(timezone.utc)}},
+        )
+        return jsonify({"error": "Analysis is taking longer than expected. Please try again."}), 500
+
     except Exception as e:
         logger.exception("Session analysis failed (session=%s)", session_id)
         db.sessions.update_one(
@@ -603,6 +617,10 @@ def analyze_phrasing(session_id: str):
         if not s:
             return jsonify({"error": "session_disappeared_after_analysis"}), 500
         return jsonify(_session_to_json(s))
+
+    except LLMTimeoutError:
+        logger.warning("Phrasing review timed out (session=%s)", session_id)
+        return jsonify({"error": "Phrasing review is taking longer than expected. Please try again."}), 500
 
     except Exception:
         logger.exception("Phrasing review failed (session=%s)", session_id)

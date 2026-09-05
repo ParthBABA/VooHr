@@ -4,8 +4,33 @@ import json
 import re
 from abc import ABC, abstractmethod
 from flask import current_app
+from openai import APITimeoutError
 
 logger = logging.getLogger(__name__)
+
+
+class LLMTimeoutError(Exception):
+    """Raised when an LLM request exceeds its configured timeout.
+
+    Distinct from JSON-parse failures: this means the upstream provider was
+    slow or hung for a single request. Callers can treat it as retryable —
+    the request's content is fine, the provider was just too slow.
+    """
+
+
+def _llm_timeout_seconds() -> float:
+    """Per-request timeout for chat.completions.create (seconds).
+
+    Default 20s keeps each call well under a typical ~30s platform worker
+    timeout (so the platform can't kill the worker and serve its own raw
+    HTML error page) while still being generous for a longer prompt such as
+    the Hinglish analysis. Env-configurable so it can be tuned against real
+    call-duration data without a code change.
+    """
+    try:
+        return float(os.environ.get("LLM_REQUEST_TIMEOUT_SECONDS", "20"))
+    except (TypeError, ValueError):
+        return 20.0
 
 # ── Analysis output language codes (frontend sends these verbatim) ──────
 # "en" produces the default English output (no language directive is added
@@ -1184,12 +1209,23 @@ def _call_and_parse(
         ],
         temperature=temperature,
     )
+    # Bound request duration. Without an explicit timeout the openai SDK
+    # waits indefinitely, and a slow/hung DeepSeek request then outlives the
+    # platform worker timeout (~30s), which kills the worker BEFORE Flask's
+    # own error handler can run — so the user sees the platform's raw HTML
+    # error page instead of this app's JSON. 20s leaves headroom under that.
+    kwargs["timeout"] = _llm_timeout_seconds()
     if supports_json_mode:
         kwargs["response_format"] = {"type": "json_object"}
     else:
         kwargs["stream"] = False
 
-    resp = client.chat.completions.create(**kwargs)
+    try:
+        resp = client.chat.completions.create(**kwargs)
+    except APITimeoutError:
+        if log_label:
+            logger.warning(f"{log_label}: LLM request timed out after {kwargs['timeout']}s")
+        raise LLMTimeoutError from None
     raw_content = resp.choices[0].message.content or ""
 
     if not supports_json_mode:
@@ -1302,6 +1338,7 @@ class OpenAILLM(BaseLLM):
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
+            timeout=_llm_timeout_seconds(),
         )
         return (resp.choices[0].message.content or "").strip()
 
@@ -1378,5 +1415,6 @@ class DeepSeekLLM(BaseLLM):
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
+            timeout=_llm_timeout_seconds(),
         )
         return (resp.choices[0].message.content or "").strip()

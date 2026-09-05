@@ -113,6 +113,22 @@ def create_app():
         os.environ.get("BREVO_SENDER_NAME") or "(default VooVr)",
     )
 
+    # Startup sanity check for the analysis provider's API key, mirroring the
+    # email check above. A missing key is loud at boot (warning in the logs)
+    # instead of only surfacing as a confusing runtime failure on the first
+    # real analysis request. Only presence is logged, never the key value.
+    _llm_provider = app.config.get("LLM_PROVIDER", "deepseek")
+    if _llm_provider == "deepseek":
+        _llm_key_set = bool((os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("DEEPSSEK_API") or "").strip())
+    elif _llm_provider == "openai":
+        _llm_key_set = bool((os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_KEY") or "").strip())
+    else:
+        _llm_key_set = False
+    if _llm_key_set:
+        logger.info("LLM config: provider=%s api key=set", _llm_provider)
+    else:
+        logger.warning("LLM config: provider=%s api key=MISSING — analysis requests will fail", _llm_provider)
+
     init_db(app)
     register_google_oauth(app)
 

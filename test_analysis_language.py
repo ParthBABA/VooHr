@@ -12,6 +12,7 @@ from types import SimpleNamespace
 
 import pytest
 from bson import ObjectId
+from providers.llm import LLMTimeoutError
 
 os.environ.setdefault("SECRET_KEY", "ci-test-secret")
 
@@ -301,3 +302,28 @@ class TestAnalyzeLanguageEndpoint:
         r = client.get("/api/sessions/" + str(doc["_id"]))
         assert r.status_code == 200
         assert r.get_json()["analysis_language"] == "hinglish"
+
+    def test_timeout_returns_retryable_message_and_stores_nothing(
+        self, client, fake_db, monkeypatch
+    ):
+        # A slow/hung upstream request must surface a retry-friendly message,
+        # NOT a stored fallback analysis (which would zero out the employee
+        # wellness score as if it were a real reading).
+        import sessions as sessions_mod
+
+        class _TimeoutLLM:
+            model = "fake-model"
+
+            def analyze(self, transcript, language="en"):
+                raise LLMTimeoutError()
+
+        monkeypatch.setattr(sessions_mod, "get_llm_provider", lambda: _TimeoutLLM())
+        _seed_session(fake_db)
+
+        r = client.post("/api/sessions/" + "5" * 24 + "/analyze", json={"language": "hinglish"})
+        assert r.status_code == 500
+        assert r.get_json()["error"] == "Analysis is taking longer than expected. Please try again."
+
+        stored = fake_db.sessions.find_one({"_id": ObjectId("5" * 24)})
+        assert stored["status"] == "failed"
+        assert stored["analysis"] is None
