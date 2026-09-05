@@ -174,4 +174,162 @@ class TestTranslateTimeout:
             timeout=5,
         )
         assert result == {"ok": True}
-        assert client.captured["timeout"] == 5
+        assert client.captured["timeout"] == 5
+
+from bson import ObjectId
+from datetime import datetime, timezone
+
+
+# ---------------------------------------------------------------------------
+# /sessions/<id>/analyze timeout behavior (regression: a slow/hung upstream
+# must NOT be stored as a fallback analysis, which would zero out the employee
+# wellness score as if it were a real reading).
+# ---------------------------------------------------------------------------
+
+def _dget(doc, path):
+    node = doc
+    for part in path.split("."):
+        if not isinstance(node, dict):
+            return None
+        node = node.get(part)
+    return node
+
+
+def _match(doc, filt):
+    for k, v in filt.items():
+        dv = _dget(doc, k)
+        if isinstance(v, dict):
+            for op, arg in v.items():
+                if op == "$ne" and dv == arg:
+                    return False
+                if op == "$in" and (dv not in arg):
+                    return False
+                if op == "$nin" and (dv in arg):
+                    return False
+                if op not in ("$ne", "$in", "$nin") and dv != arg:
+                    return False
+        elif dv != v:
+            return False
+    return True
+
+
+class _FakeCursor:
+    def __init__(self, docs, filt):
+        self._docs = [d for d in docs if _match(d, filt)]
+
+    def sort(self, *a, **k):
+        return self
+
+    def limit(self, n):
+        return self
+
+    def skip(self, n):
+        return self
+
+    def __iter__(self):
+        return iter(self._docs)
+
+
+class _FakeCollection:
+    def __init__(self, docs=None):
+        self._docs = list(docs or [])
+
+    def find_one(self, filt=None, *a, **kw):
+        matches = [d for d in self._docs if _match(d, filt or {})]
+        return dict(matches[0]) if matches else None
+
+    def find(self, filt=None, *a, **kw):
+        return _FakeCursor(self._docs, filt or {})
+
+    def insert_one(self, doc):
+        d = dict(doc)
+        self._docs.append(d)
+        return SimpleNamespace(inserted_id=d.get("_id"))
+
+    def update_one(self, filt, update):
+        for d in self._docs:
+            if _match(d, filt):
+                for op, fields in update.items():
+                    if op == "$set":
+                        d.update(fields)
+                return SimpleNamespace(matched_count=1)
+        return SimpleNamespace(matched_count=0)
+
+    def count_documents(self, filt=None):
+        return sum(1 for d in self._docs if _match(d, filt or {}))
+
+
+@pytest.fixture
+def _fake_sessions_db():
+    return SimpleNamespace(
+        sessions=_FakeCollection(),
+        employees=_FakeCollection(),
+        organizations=_FakeCollection(),
+        notifications=_FakeCollection(),
+    )
+
+
+def _seed_session(fake_db, transcript="Manager: How are you doing?"):
+    now = datetime.now(timezone.utc)
+    doc = {
+        "_id": ObjectId("5" * 24),
+        "org_id": ObjectId("a" * 24),
+        "employee_id": ObjectId("1" * 24),
+        "source": "voice_dictation",
+        "status": "transcribed",
+        "language": "en",
+        "recording_device": "browser",
+        "recording_duration": 0,
+        "recording_type": "webm",
+        "audio": None,
+        "transcript": {"raw": transcript, "edited": transcript, "word_count": 4},
+        "analysis": None,
+        "analysis_version": 0,
+        "last_transcript_update": now,
+        "last_analyzed_at": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+    fake_db.sessions.insert_one(doc)
+    return doc
+
+
+@pytest.fixture
+def _sessions_client(monkeypatch, _fake_sessions_db):
+    import sessions as sessions_mod
+    from flask import Flask
+
+    monkeypatch.setattr(sessions_mod, "get_db", lambda: _fake_sessions_db)
+    monkeypatch.setattr(sessions_mod, "check_rate_limit", lambda *a, **k: (True, 0))
+    monkeypatch.setattr(sessions_mod, "record_rate_limit_event", lambda *a, **k: None)
+    monkeypatch.setattr(sessions_mod, "_require_auth", lambda: "a" * 24)
+
+    app = Flask(__name__)
+    app.config.update(SECRET_KEY="x")
+    app.register_blueprint(sessions_mod.sessions_bp, url_prefix="/api")
+    return app.test_client()
+
+
+class TestAnalyzeEndpointTimeout:
+    def test_timeout_returns_retryable_message_and_stores_nothing(
+        self, monkeypatch, _sessions_client, _fake_sessions_db
+    ):
+        import sessions as sessions_mod
+        from providers.llm import LLMTimeoutError
+
+        class _TimeoutLLM:
+            model = "fake-model"
+
+            def analyze(self, transcript):
+                raise LLMTimeoutError()
+
+        monkeypatch.setattr(sessions_mod, "get_llm_provider", lambda: _TimeoutLLM())
+        _seed_session(_fake_sessions_db)
+
+        r = _sessions_client.post("/api/sessions/" + "5" * 24 + "/analyze")
+        assert r.status_code == 500
+        assert r.get_json()["error"] == "Analysis is taking longer than expected. Please try again."
+
+        stored = _fake_sessions_db.sessions.find_one({"_id": ObjectId("5" * 24)})
+        assert stored["status"] == "failed"
+        assert stored["analysis"] is None

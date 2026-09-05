@@ -24,7 +24,7 @@ def _llm_timeout_seconds() -> float:
     Default 20s keeps each call well under a typical ~30s platform worker
     timeout (so the platform can't kill the worker and serve its own raw
     HTML error page) while still being generous for a longer prompt such as
-    the Hinglish analysis. Env-configurable so it can be tuned against real
+    for a long transcript. Env-configurable so it can be tuned against real
     call-duration data without a code change.
     """
     try:
@@ -48,79 +48,6 @@ def _llm_drift_timeout_seconds() -> float:
         return float(os.environ.get("LLM_DRIFT_TIMEOUT_SECONDS", "8"))
     except (TypeError, ValueError):
         return 8.0
-
-# ── Analysis output language codes (frontend sends these verbatim) ──────
-# "en" produces the default English output (no language directive is added
-# to the prompt). "hinglish" asks the model to write the analysis in
-# romanized Hindi with natural English mixing.
-ANALYSIS_LANGUAGES = {
-    "en": "English",
-    "hinglish": "Hinglish",
-}
-
-
-# Concrete register definition for Hinglish. A bare label ("write in
-# Hinglish") reliably produces plain English with easier vocabulary, because
-# models default to "simple English" instead of real Hindi-English
-# code-switching. The example pairs below are load-bearing: they demonstrate
-# the actual grammatical pattern (Hindi function words/verb endings/particles
-# carrying the structure, English for nouns and business terms), and the
-# WRONG/CORRECT pair names the failure mode explicitly.
-_HINGLISH_INSTRUCTION = """
-RESPONSE LANGUAGE: Hinglish (Latin script: Hindi-English code-mixing) — read this section carefully, it is a specific linguistic register, not "simple English."
-
-STRICT RULE: Hindi must carry the GRAMMAR of the sentence (verb endings, particles like hai/tha/thi/nahi/kya/ko/ka/ki/ke/mein/se/pe), with English used for nouns, technical/business terms, and loanwords that Indian professionals naturally say in English. Do NOT simply write plain English with easier vocabulary — that is a different (and wrong) output.
-
-WRONG (this is just simplified English, not Hinglish):
-"The employee seemed stressed about the deadline and mentioned workload issues."
-
-CORRECT Hinglish for the same meaning:
-"Employee thoda stressed lag raha tha deadline ko lekar, aur usne workload ke issues bhi mention kiye."
-
-More examples of the pattern to follow:
-
-1. English: "He appears hesitant to discuss his performance review."
-   Hinglish: "Wo apne performance review pe baat karne mein thoda hesitant lag raha hai."
-
-2. English: "Consider scheduling a follow-up 1:1 this week to check in on his wellbeing."
-   Hinglish: "Is hafte ek follow-up 1:1 schedule karne pe consider karo uski wellbeing check karne ke liye."
-
-3. English: "The evidence suggests low engagement, possibly linked to recent team changes."
-   Hinglish: "Evidence se lagta hai engagement kam hai, shayad recent team changes ki wajah se."
-
-4. English: "Avoid dismissive language; acknowledge his concern before redirecting the conversation."
-   Hinglish: "Dismissive language avoid karo; conversation ko redirect karne se pehle uski concern ko acknowledge karo."
-
-Notice in every example: sentence structure, particles, and connecting words are Hindi; business/HR/technical terms (deadline, workload, performance review, 1:1, engagement, evidence, dismissive) stay in English exactly as a bilingual Indian professional would actually say them out loud — do not translate these into Hindi equivalents (e.g. never "समय-सीमा" for deadline, never "कार्यभार" for workload).
-
-Apply this to every human-readable text field in the output JSON (statements, labels, descriptions, suggested scripts, summaries, headlines, notes). Keep JSON keys, step/question ids, confidence labels, and any enumerated status values exactly as the schema specifies, in English, unchanged. Do not translate evidence quotes — reproduce them verbatim in their original language exactly as they appeared in the transcript.
-""".strip()
-
-
-def _language_instruction(language: str | None) -> str:
-    """Return a system-prompt suffix directing the model's output language.
-
-    Unknown / empty / English map to an empty string so existing behavior is
-    byte-for-byte unchanged for the default path. Only the human-readable
-    text fields are re-targeted: keys, ids, confidence labels, and other
-    enumerated schema values stay in English.
-    """
-    lang = (language or "").strip().lower()
-    target = ANALYSIS_LANGUAGES.get(lang)
-    if not target or target == "English":
-        return ""
-    if lang == "hinglish":
-        return "\n\n" + _HINGLISH_INSTRUCTION
-    return (
-        "\n\nRESPONSE LANGUAGE: Render every human-readable text field in the "
-        f"output JSON (statements, labels, descriptions, suggested scripts, "
-        f"summaries, headlines, and notes) in {target}, written in Latin "
-        "script. Keep JSON keys, step/question ids, confidence labels, and "
-        "any enumerated status values exactly as the schema specifies. Do not "
-        "translate evidence quotes; reproduce them verbatim in their original "
-        "language."
-    )
-
 
 # ── Canonical field names per step section (what the frontend expects) ──
 SECTION_FIELDS = {
@@ -1269,7 +1196,7 @@ def _call_and_parse(
 
 class BaseLLM(ABC):
     @abstractmethod
-    def analyze(self, transcript: str, language: str = "en") -> dict:
+    def analyze(self, transcript: str) -> dict:
         ...
 
     @abstractmethod
@@ -1302,7 +1229,7 @@ class OpenAILLM(BaseLLM):
         self.api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_KEY", "")
         self.model = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")
 
-    def analyze(self, transcript: str, language: str = "en") -> dict:
+    def analyze(self, transcript: str) -> dict:
         from openai import OpenAI
         from flask import current_app
 
@@ -1313,7 +1240,7 @@ class OpenAILLM(BaseLLM):
         except RuntimeError:
             use_v2 = os.environ.get("USE_V2_FRAMEWORK", "false").lower() == "true"
 
-        system_prompt = (_build_v2_prompt() if use_v2 else _build_v1_prompt()) + _language_instruction(language)
+        system_prompt = _build_v2_prompt() if use_v2 else _build_v1_prompt()
 
         return _call_and_parse(
             client, self.model, system_prompt, transcript,
@@ -1380,7 +1307,7 @@ class DeepSeekLLM(BaseLLM):
         self.base_url = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
         self.model = os.environ.get("DEEPSEEK_ANALYSIS_MODEL", "deepseek-chat")
 
-    def analyze(self, transcript: str, language: str = "en") -> dict:
+    def analyze(self, transcript: str) -> dict:
         from openai import OpenAI
 
         client = OpenAI(api_key=self.api_key, base_url=self.base_url)
@@ -1391,7 +1318,7 @@ class DeepSeekLLM(BaseLLM):
         except RuntimeError:
             use_v2 = os.environ.get("USE_V2_FRAMEWORK", "false").lower() == "true"
 
-        system_prompt = (_build_v2_prompt() if use_v2 else _build_v1_prompt()) + _language_instruction(language)
+        system_prompt = _build_v2_prompt() if use_v2 else _build_v1_prompt()
 
         return _call_and_parse(
             client, self.model, system_prompt, transcript,

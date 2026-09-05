@@ -113,11 +113,6 @@
   .step-title-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px;}
   .step-title-row .step-title{margin:0;}
 
-  /* ---------- Analysis-language toggle (above the step stepper) ---------- */
-  .ws-lang-control{display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;margin:0 0 1rem;}
-  .ws-lang-label{font-family:var(--step-body-font);font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--step-text-muted);}
-  .ws-lang-select{max-width:150px;}
-  .ws-lang-select:disabled{opacity:0.55;cursor:progress;}
   .wsx-narr{position:relative;display:inline-flex;align-items:center;flex-shrink:0;z-index:5;}
   .step-content .wsx-narr-btn{width:34px;height:34px;border:1px solid var(--step-border-strong);border-radius:50%;background:var(--step-surface-raised);color:var(--step-text-secondary);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;position:relative;}
   .step-content .wsx-narr-btn:hover{border-color:var(--step-primary);color:var(--step-primary);}
@@ -3139,14 +3134,6 @@
       <div class="sync-layout">
         <!-- LEFT: JOURNEY -->
         <div class="journey-main">
-          <!-- ANALYSIS LANGUAGE — re-run the analysis in English or Hinglish -->
-          <div class="ws-lang-control" aria-label="Analysis language">
-            <label for="syncAnalysisLang" class="ws-lang-label">Translate</label>
-            <select id="syncAnalysisLang" class="ws-tool-select ws-lang-select" title="Analysis language" aria-label="Analysis language">
-              <option value="en" selected>English</option>
-              <option value="hinglish">Hinglish</option>
-            </select>
-          </div>
           <!-- STEP PROGRESS -->
           <div class="journey-progress fade-in gsap-hidden" id="journeyProgress">
             <div class="step-node active" data-step="1" aria-current="step">
@@ -4300,8 +4287,6 @@ function calcTenure(joinDate) {
 
 // ── Global analysis data store ──
 var analysisData = null;
-// ── Last loaded session (for the analysis-language toggle guard) ──
-var curSession = null;
 
 // ── Step navigation ──
 var currentStep = 1;
@@ -5165,8 +5150,7 @@ var employeePromise = employeeId
   : Promise.resolve(null);
 
 // ── Apply a session's analysis: Step 1 personalization, the Conversation
-//    Coach, and the current Step 2-5 panel. Called on load and again after a
-//    language-based re-analysis (one /analyze call regenerates all steps). ──
+//    Coach, and the current Step 2-5 panel. Called on load. ──
 function applyAnalysis(session) {
   analysisData = session ? (session.analysis || null) : null;
   if (!analysisData) return;
@@ -5246,92 +5230,6 @@ function applyAnalysis(session) {
     populateStep(currentStep);
 }
 
-// ── Analysis-language toggle: re-run the analysis in the chosen language. ──
-function showToast(msg) {
-  var t = document.createElement('div');
-  t.className = 'toast-notification';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  if (window.gsap) {
-    gsap.set(t, { y: 60, opacity: 0 });
-    gsap.to(t, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
-    setTimeout(function() {
-      gsap.to(t, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { t.remove(); } });
-    }, 4000);
-  } else {
-    setTimeout(function() { t.remove(); }, 4000);
-  }
-}
-
-// Parse a failed fetch response defensively. In-app API errors come back
-// as {"error": ...} JSON, but when the platform itself kills a slow request
-// (worker timeout) it answers with its own raw-HTML error page instead —
-// r.json() then throws "Unexpected token '<'" which tells the user nothing.
-// Map the common gateway codes to an actionable message and always resolve
-// to a string so callers can throw it directly.
-function readErr(r) {
-  return r.json()
-    .then(function(b) {
-      return (b && typeof b.error === 'string' && b.error)
-        ? b.error : 'The server returned error ' + r.status + '.';
-    })
-    .catch(function() {
-      if (r.status === 502 || r.status === 504) {
-        return 'The server timed out. Please try again in a moment.';
-      }
-      if (r.status >= 500) {
-        return 'The server hit an unexpected error (' + r.status + '). Please try again.';
-      }
-      return 'The server returned an error (' + r.status + ').';
-    });
-}
-
-(function() {
-  var langSel = document.getElementById('syncAnalysisLang');
-  if (!langSel) return;
-
-  langSel.addEventListener('change', function(e) {
-    var lang = e.target.value;
-    var current = (curSession && curSession.analysis_language) || 'en';
-    if (lang === current) return; // no-op: already generated in this language
-    if (!sessionId) {
-      showToast('No session is open to re-analyse.');
-      langSel.value = current;
-      return;
-    }
-    var sel = e.target;
-    sel.disabled = true; // block a second change while one is in flight
-
-    fetch('/api/sessions/' + sessionId + '/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ language: lang })
-    })
-      .then(function(r) {
-        if (!r.ok) return readErr(r).then(function(msg) { throw new Error(msg); });
-        return r.json();
-      })
-      .then(function() {
-        return fetch('/api/sessions/' + sessionId).then(function(r) {
-          if (!r.ok) return readErr(r).then(function(msg) { throw new Error(msg); });
-          return r.json();
-        });
-      })
-      .then(function(s) {
-        curSession = s;
-        applyAnalysis(s); // regenerates Steps 1-5 from the single analysis object
-        showToast('Analysis re-run in ' + (lang === 'hinglish' ? 'Hinglish' : 'English') + '.');
-      })
-      .catch(function(err) {
-        langSel.value = current; // revert to what is actually stored
-        showToast('Re-analysis failed: ' + err.message);
-      })
-      .finally(function() {
-        sel.disabled = false;
-      });
-  });
-})();
-
 var sessionPromise = sessionId
   ? fetch('/api/sessions/' + sessionId).then(function(r) { return r.ok ? r.json() : null; })
   : Promise.resolve(null);
@@ -5352,11 +5250,6 @@ sessionPromise.then(function(s) {
 }).then(function(results) {
   var emp = results[0];
   var session = results[1];
-  curSession = session;
-
-  // ── Sync the analysis-language toggle with what is actually stored ──
-  var langSel = document.getElementById('syncAnalysisLang');
-  if (langSel) langSel.value = (session && session.analysis_language) || 'en';
 
   // ── Page Title ──
   if (emp && emp.name) {
