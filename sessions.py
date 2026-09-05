@@ -71,6 +71,12 @@ MAX_SESSION_AUDIO_BYTES = 2 * 1024 * 1024  # 2 MB  (base64 audio in JSON)
 MAX_SESSION_SOURCE_LEN = 100          # characters
 MAX_SESSION_LANGUAGE_LEN = 20         # characters
 
+# A session stuck in "processing" past this long (seconds) is an orphan: the
+# /analyze request that owned it died (platform worker killed, deploy, network
+# drop) before writing a terminal status. There is no other recovery path, so
+# read routes demote such sessions to "failed" so the UI can offer a retry.
+SESSION_PROCESSING_STALE_SECONDS = 180
+
 # ── LLM transcript truncation ──────────────────────────────────────────
 # DeepSeek / OpenAI models accept large context windows, but sending
 # unbounded transcripts wastes tokens and can hit rate-limit / cost
@@ -131,6 +137,32 @@ def _session_to_json(s) -> dict:
         "created_at": s["created_at"].isoformat() if s.get("created_at") else None,
         "updated_at": s["updated_at"].isoformat() if s.get("updated_at") else None,
     }
+
+
+def _demote_stale_processing(db, s: dict) -> dict:
+    """Recover a session orphaned in "processing".
+
+    /analyze flips a session to "processing" up front and only writes a
+    terminal status when the SAME request finishes. If that request is killed
+    mid-flight (platform worker timeout, deploy, network drop) the row stays
+    "processing" forever and the UI renders it as permanently "Analyzing" with
+    a disabled Open button. A "processing" session that has not been touched
+    in SESSION_PROCESSING_STALE_SECONDS can only have been orphaned, so demote
+    it to "failed" (read paths only — a genuinely in-flight analysis has a
+    fresh updated_at and is left alone).
+    """
+    if s.get("status") != "processing" or not s.get("updated_at"):
+        return s
+    age = (datetime.now(timezone.utc) - s["updated_at"]).total_seconds()
+    if age <= SESSION_PROCESSING_STALE_SECONDS:
+        return s
+    db.sessions.update_one(
+        {"_id": s["_id"]},
+        {"$set": {"status": "failed", "updated_at": datetime.now(timezone.utc)}},
+    )
+    s["status"] = "failed"
+    s["updated_at"] = datetime.now(timezone.utc)
+    return s
 
 
 @sessions_bp.route("/sessions", methods=["POST"])
@@ -228,7 +260,7 @@ def list_sessions():
         query["status"] = status_filter
 
     cursor = db.sessions.find(query).sort("created_at", -1)
-    sessions_list = [_session_to_json(s) for s in cursor]
+    sessions_list = [_session_to_json(_demote_stale_processing(db, s)) for s in cursor]
 
     return jsonify({"sessions": sessions_list, "total": len(sessions_list)})
 
@@ -248,6 +280,7 @@ def get_session(session_id: str):
     if not s:
         return jsonify({"error": "not_found"}), 404
 
+    s = _demote_stale_processing(db, s)
     return jsonify(_session_to_json(s))
 
 

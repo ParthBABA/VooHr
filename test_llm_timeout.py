@@ -9,6 +9,7 @@ upstream request outlive the platform worker timeout (whose generic raw-HTML
 
 import importlib
 import os
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -174,8 +175,10 @@ class TestTranslateTimeout:
             timeout=5,
         )
         assert result == {"ok": True}
-        assert client.captured["timeout"] == 5
-
+        assert client.captured["timeout"] == 5
+
+
+
 from bson import ObjectId
 from datetime import datetime, timezone
 
@@ -332,4 +335,66 @@ class TestAnalyzeEndpointTimeout:
 
         stored = _fake_sessions_db.sessions.find_one({"_id": ObjectId("5" * 24)})
         assert stored["status"] == "failed"
-        assert stored["analysis"] is None
+        assert stored["analysis"] is None
+
+
+
+class TestStaleProcessingRecovery:
+    """Sessions orphaned in "processing" (the /analyze request died before
+    writing a terminal status) must be demoted to "failed" on read so the UI
+    can offer a retry instead of a permanently disabled "Analyzing" button."""
+
+    @staticmethod
+    def _set_status(fake_db, status, updated_at):
+        fake_db.sessions.update_one(
+            {"_id": ObjectId("5" * 24)},
+            {"$set": {"status": status, "updated_at": updated_at}},
+        )
+
+    def test_stale_processing_session_demoted_to_failed(self, _sessions_client, _fake_sessions_db):
+        _seed_session(_fake_sessions_db)
+        self._set_status(
+            _fake_sessions_db,
+            "processing",
+            datetime.now(timezone.utc) - timedelta(minutes=10),
+        )
+
+        r = _sessions_client.get("/api/sessions/" + "5" * 24)
+        assert r.status_code == 200
+        assert r.get_json()["status"] == "failed"
+
+        stored = _fake_sessions_db.sessions.find_one({"_id": ObjectId("5" * 24)})
+        assert stored["status"] == "failed"
+
+    def test_fresh_processing_session_left_untouched(self, _sessions_client, _fake_sessions_db):
+        _seed_session(_fake_sessions_db)
+        self._set_status(_fake_sessions_db, "processing", datetime.now(timezone.utc))
+
+        r = _sessions_client.get("/api/sessions/" + "5" * 24)
+        assert r.status_code == 200
+        assert r.get_json()["status"] == "processing"
+
+    def test_list_demotes_stale_processing(self, _sessions_client, _fake_sessions_db):
+        _seed_session(_fake_sessions_db)
+        self._set_status(
+            _fake_sessions_db,
+            "processing",
+            datetime.now(timezone.utc) - timedelta(minutes=10),
+        )
+
+        r = _sessions_client.get("/api/sessions")
+        assert r.status_code == 200
+        body = r.get_json()
+        assert body["sessions"][0]["status"] == "failed"
+
+    def test_recently_touched_processing_stays(self, _sessions_client, _fake_sessions_db):
+        _seed_session(_fake_sessions_db)
+        self._set_status(
+            _fake_sessions_db,
+            "processing",
+            datetime.now(timezone.utc) - timedelta(seconds=30),
+        )
+
+        r = _sessions_client.get("/api/sessions/" + "5" * 24)
+        assert r.status_code == 200
+        assert r.get_json()["status"] == "processing"
