@@ -218,7 +218,21 @@ class TestLanguageInstruction:
         directive = llm._language_instruction("hinglish")
         assert "Hinglish" in directive
         assert "Latin script" in directive
-        assert "employee" not in directive.lower()
+        # Schema/key-preservation rule must still be present.
+        assert "JSON keys" in directive
+
+    def test_hinglish_instruction_contains_concrete_examples(self):
+        """The Hinglish instruction must show example sentences, not just name
+        the language — a bare label reliably produces plain English with the
+        model defaulting to 'simple vocabulary' instead of real code-switching."""
+        llm = self._read_llm()
+        instruction = llm._language_instruction("hinglish")
+        # Must contain actual Devanagari-free Hindi function words in example
+        # sentences, proving concrete examples are present, not just the label.
+        assert "hai" in instruction or "Hai" in instruction
+        assert "example" in instruction.lower() or "wrong" in instruction.lower()
+        # Must explicitly warn against the failure mode we just saw in production.
+        assert "simple" in instruction.lower() or "simplified" in instruction.lower()
 
     def test_analyze_signature_accepts_language(self):
         llm = self._read_llm()

@@ -17,6 +17,44 @@ ANALYSIS_LANGUAGES = {
 }
 
 
+# Concrete register definition for Hinglish. A bare label ("write in
+# Hinglish") reliably produces plain English with easier vocabulary, because
+# models default to "simple English" instead of real Hindi-English
+# code-switching. The example pairs below are load-bearing: they demonstrate
+# the actual grammatical pattern (Hindi function words/verb endings/particles
+# carrying the structure, English for nouns and business terms), and the
+# WRONG/CORRECT pair names the failure mode explicitly.
+_HINGLISH_INSTRUCTION = """
+RESPONSE LANGUAGE: Hinglish (Latin script: Hindi-English code-mixing) — read this section carefully, it is a specific linguistic register, not "simple English."
+
+STRICT RULE: Hindi must carry the GRAMMAR of the sentence (verb endings, particles like hai/tha/thi/nahi/kya/ko/ka/ki/ke/mein/se/pe), with English used for nouns, technical/business terms, and loanwords that Indian professionals naturally say in English. Do NOT simply write plain English with easier vocabulary — that is a different (and wrong) output.
+
+WRONG (this is just simplified English, not Hinglish):
+"The employee seemed stressed about the deadline and mentioned workload issues."
+
+CORRECT Hinglish for the same meaning:
+"Employee thoda stressed lag raha tha deadline ko lekar, aur usne workload ke issues bhi mention kiye."
+
+More examples of the pattern to follow:
+
+1. English: "He appears hesitant to discuss his performance review."
+   Hinglish: "Wo apne performance review pe baat karne mein thoda hesitant lag raha hai."
+
+2. English: "Consider scheduling a follow-up 1:1 this week to check in on his wellbeing."
+   Hinglish: "Is hafte ek follow-up 1:1 schedule karne pe consider karo uski wellbeing check karne ke liye."
+
+3. English: "The evidence suggests low engagement, possibly linked to recent team changes."
+   Hinglish: "Evidence se lagta hai engagement kam hai, shayad recent team changes ki wajah se."
+
+4. English: "Avoid dismissive language; acknowledge his concern before redirecting the conversation."
+   Hinglish: "Dismissive language avoid karo; conversation ko redirect karne se pehle uski concern ko acknowledge karo."
+
+Notice in every example: sentence structure, particles, and connecting words are Hindi; business/HR/technical terms (deadline, workload, performance review, 1:1, engagement, evidence, dismissive) stay in English exactly as a bilingual Indian professional would actually say them out loud — do not translate these into Hindi equivalents (e.g. never "समय-सीमा" for deadline, never "कार्यभार" for workload).
+
+Apply this to every human-readable text field in the output JSON (statements, labels, descriptions, suggested scripts, summaries, headlines, notes). Keep JSON keys, step/question ids, confidence labels, and any enumerated status values exactly as the schema specifies, in English, unchanged. Do not translate evidence quotes — reproduce them verbatim in their original language exactly as they appeared in the transcript.
+""".strip()
+
+
 def _language_instruction(language: str | None) -> str:
     """Return a system-prompt suffix directing the model's output language.
 
@@ -25,9 +63,12 @@ def _language_instruction(language: str | None) -> str:
     text fields are re-targeted: keys, ids, confidence labels, and other
     enumerated schema values stay in English.
     """
-    target = ANALYSIS_LANGUAGES.get((language or "").strip().lower())
+    lang = (language or "").strip().lower()
+    target = ANALYSIS_LANGUAGES.get(lang)
     if not target or target == "English":
         return ""
+    if lang == "hinglish":
+        return "\n\n" + _HINGLISH_INSTRUCTION
     return (
         "\n\nRESPONSE LANGUAGE: Render every human-readable text field in the "
         f"output JSON (statements, labels, descriptions, suggested scripts, "
