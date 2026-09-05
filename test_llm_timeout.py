@@ -397,4 +397,29 @@ class TestStaleProcessingRecovery:
 
         r = _sessions_client.get("/api/sessions/" + "5" * 24)
         assert r.status_code == 200
+        assert r.get_json()["status"] == "processing"
+
+    def test_stale_processing_naive_utc_datetime(self, _sessions_client, _fake_sessions_db):
+        # PyMongo returns naive (UTC) datetimes; subtraction must not raise.
+        _seed_session(_fake_sessions_db)
+        self._set_status(
+            _fake_sessions_db,
+            "processing",
+            datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=10),
+        )
+
+        r = _sessions_client.get("/api/sessions/" + "5" * 24)
+        assert r.status_code == 200
+        assert r.get_json()["status"] == "failed"
+
+    def test_fresh_processing_naive_utc_datetime(self, _sessions_client, _fake_sessions_db):
+        _seed_session(_fake_sessions_db)
+        self._set_status(
+            _fake_sessions_db,
+            "processing",
+            datetime.now(timezone.utc).replace(tzinfo=None),
+        )
+
+        r = _sessions_client.get("/api/sessions/" + "5" * 24)
+        assert r.status_code == 200
         assert r.get_json()["status"] == "processing"

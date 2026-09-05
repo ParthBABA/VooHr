@@ -153,7 +153,10 @@ def _demote_stale_processing(db, s: dict) -> dict:
     """
     if s.get("status") != "processing" or not s.get("updated_at"):
         return s
-    age = (datetime.now(timezone.utc) - s["updated_at"]).total_seconds()
+    updated_at = s["updated_at"]
+    if updated_at.tzinfo is None:
+        updated_at = updated_at.replace(tzinfo=timezone.utc)
+    age = (datetime.now(timezone.utc) - updated_at).total_seconds()
     if age <= SESSION_PROCESSING_STALE_SECONDS:
         return s
     db.sessions.update_one(
