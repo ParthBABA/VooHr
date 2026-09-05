@@ -78,11 +78,11 @@ def _call(llm_mod, client):
 
 
 class TestCallAndParseTimeout:
-    def test_timeout_kwarg_defaults_to_twenty_seconds(self, llm_mod):
+    def test_timeout_kwarg_defaults_to_fifteen_seconds(self, llm_mod):
         client = _CapturingClient('{"ok": true}')
         result = _call(llm_mod, client)
         assert result == {"ok": True}
-        assert client.captured["timeout"] == 20.0
+        assert client.captured["timeout"] == 15.0
 
     def test_timeout_is_env_configurable(self, llm_mod, monkeypatch):
         monkeypatch.setenv("LLM_REQUEST_TIMEOUT_SECONDS", "7")
@@ -90,7 +90,7 @@ class TestCallAndParseTimeout:
 
     def test_invalid_timeout_env_falls_back_to_default(self, llm_mod, monkeypatch):
         monkeypatch.setenv("LLM_REQUEST_TIMEOUT_SECONDS", "not-a-number")
-        assert llm_mod._llm_timeout_seconds() == 20.0
+        assert llm_mod._llm_timeout_seconds() == 15.0
 
     def test_timeout_applies_to_non_json_mode_too(self, llm_mod):
         client = _CapturingClient("```json\n{\"ok\": true}\n```")
@@ -105,19 +105,19 @@ class TestCallAndParseTimeout:
             log_label="test",
         )
         assert result == {"ok": True}
-        assert client.captured["timeout"] == 20.0
+        assert client.captured["timeout"] == 15.0
 
     def test_json_parse_failure_still_returns_fallback(self, llm_mod):
         client = _CapturingClient("not json at all")
         result = _call(llm_mod, client)
         assert result == {"summary": "fallback"}
-        assert client.captured["timeout"] == 20.0
+        assert client.captured["timeout"] == 15.0
 
     def test_api_timeout_raises_llm_timeout_error(self, llm_mod):
         client = _RaisingClient(APITimeoutError("timed out"))
         with pytest.raises(llm_mod.LLMTimeoutError):
             _call(llm_mod, client)
-        assert client.captured["timeout"] == 20.0
+        assert client.captured["timeout"] == 15.0
 
     def test_llm_timeout_error_is_importable_from_sessions(self):
         # sessions.py must be able to catch it distinctly from the generic
@@ -144,9 +144,9 @@ class TestTranslateTimeout:
 
     def test_drift_uses_tighter_default_cap(self, llm_mod):
         # explain_drift runs inside the SAME /analyze request as the main
-        # analysis, so its budget must not stack the full 20s on top of the
-        # main call's 20s (analyze + drift would then exceed the platform's
-        # ~30s worker timeout and the platform would serve raw HTML).
+        # analysis, so its budget must not stack on top of the main call's
+        # (analyze + drift would then exceed the platform's ~30s worker
+        # timeout and the platform would serve raw HTML).
         assert llm_mod._llm_drift_timeout_seconds() == 8.0
 
     def test_drift_cap_is_env_overridable(self, llm_mod, monkeypatch):

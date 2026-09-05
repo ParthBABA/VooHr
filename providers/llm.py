@@ -21,16 +21,18 @@ class LLMTimeoutError(Exception):
 def _llm_timeout_seconds() -> float:
     """Per-request timeout for chat.completions.create (seconds).
 
-    Default 20s keeps each call well under a typical ~30s platform worker
-    timeout (so the platform can't kill the worker and serve its own raw
-    HTML error page) while still being generous for a longer prompt such as
-    for a long transcript. Env-configurable so it can be tuned against real
-    call-duration data without a code change.
+    With SDK-level retries disabled everywhere (max_retries=0), a call is
+    exactly one attempt limited by this budget, so the total wall-clock time
+    stays bounded. Default 15s keeps each call well under a typical ~30s
+    platform worker timeout (so the platform can't kill the worker and serve
+    its own raw HTML error page) while still being generous for a longer
+    prompt such as for a long transcript. Env-configurable so it can be tuned
+    against real call-duration data without a code change.
     """
     try:
-        return float(os.environ.get("LLM_REQUEST_TIMEOUT_SECONDS", "20"))
+        return float(os.environ.get("LLM_REQUEST_TIMEOUT_SECONDS", "15"))
     except (TypeError, ValueError):
-        return 20.0
+        return 15.0
 
 
 def _llm_drift_timeout_seconds() -> float:
@@ -1160,7 +1162,7 @@ def _call_and_parse(
     fences defensively from the raw response before parsing, since DeepSeek
     doesn't reliably support response_format=json_object.
 
-    timeout overrides the per-call budget (default _llm_timeout_seconds, 20s).
+    timeout overrides the per-call budget (default _llm_timeout_seconds, 15s).
     Best-effort secondary calls such as drift detection pass their own tighter
     cap so a request that chains several calls still fits inside the platform
     worker timeout.
@@ -1177,7 +1179,8 @@ def _call_and_parse(
     # waits indefinitely, and a slow/hung DeepSeek request then outlives the
     # platform worker timeout (~30s), which kills the worker BEFORE Flask's
     # own error handler can run — so the user sees the platform's raw HTML
-    # error page instead of this app's JSON. 20s leaves headroom under that.
+    # error page instead of this app's JSON. 15s (and max_retries=0) leaves
+    # headroom under that.
     kwargs["timeout"] = timeout if timeout is not None else _llm_timeout_seconds()
     if supports_json_mode:
         kwargs["response_format"] = {"type": "json_object"}
@@ -1247,7 +1250,7 @@ class OpenAILLM(BaseLLM):
         from openai import OpenAI
         from flask import current_app
 
-        client = OpenAI(api_key=self.api_key)
+        client = OpenAI(api_key=self.api_key, max_retries=0)
         use_v2 = False
         try:
             use_v2 = current_app.config.get("USE_V2_FRAMEWORK", False)
@@ -1271,7 +1274,7 @@ class OpenAILLM(BaseLLM):
         """
         from openai import OpenAI
 
-        client = OpenAI(api_key=self.api_key)
+        client = OpenAI(api_key=self.api_key, max_retries=0)
 
         return _call_and_parse(
             client, self.model, _build_drift_system_prompt(), _build_drift_prompt(sessions),
@@ -1283,7 +1286,7 @@ class OpenAILLM(BaseLLM):
     def analyze_phrasing(self, transcript: str) -> dict:
         from openai import OpenAI
 
-        client = OpenAI(api_key=self.api_key)
+        client = OpenAI(api_key=self.api_key, max_retries=0)
 
         return _call_and_parse(
             client, self.model, _build_phrasing_prompt(), transcript,
@@ -1294,7 +1297,7 @@ class OpenAILLM(BaseLLM):
     def translate(self, text: str, target_language: str) -> str:
         from openai import OpenAI
 
-        client = OpenAI(api_key=self.api_key)
+        client = OpenAI(api_key=self.api_key, max_retries=0)
         prompt = (
             f"Translate the following text into {target_language}. "
             f"Return ONLY the translated text, no preamble, no quotes, no explanation:\n\n{text}"
@@ -1324,7 +1327,7 @@ class DeepSeekLLM(BaseLLM):
     def analyze(self, transcript: str, language: str = "en") -> dict:
         from openai import OpenAI
 
-        client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        client = OpenAI(api_key=self.api_key, base_url=self.base_url, max_retries=0)
 
         use_v2 = False
         try:
@@ -1349,7 +1352,7 @@ class DeepSeekLLM(BaseLLM):
         """
         from openai import OpenAI
 
-        client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        client = OpenAI(api_key=self.api_key, base_url=self.base_url, max_retries=0)
 
         return _call_and_parse(
             client, self.model, _build_drift_system_prompt(), _build_drift_prompt(sessions),
@@ -1361,7 +1364,7 @@ class DeepSeekLLM(BaseLLM):
     def analyze_phrasing(self, transcript: str) -> dict:
         from openai import OpenAI
 
-        client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        client = OpenAI(api_key=self.api_key, base_url=self.base_url, max_retries=0)
 
         return _call_and_parse(
             client, self.model, _build_phrasing_prompt(), transcript,
@@ -1372,7 +1375,7 @@ class DeepSeekLLM(BaseLLM):
     def translate(self, text: str, target_language: str) -> str:
         from openai import OpenAI
 
-        client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        client = OpenAI(api_key=self.api_key, base_url=self.base_url, max_retries=0)
         prompt = (
             f"Translate the following text into {target_language}. "
             f"Return ONLY the translated text, no preamble, no quotes, no explanation:\n\n{text}"
