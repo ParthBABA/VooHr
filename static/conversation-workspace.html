@@ -1124,6 +1124,75 @@ window.voovrInitWorkspace = function() {
     showToast('Workspace link copied');
   }
 
+  // ── Analysis-View nudge (shown once, only for first-time prep) ──
+  function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+  function lsSet(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+  function ssGet(k){ try { return sessionStorage.getItem(k); } catch(e){ return null; } }
+  function ssSet(k, v){ try { sessionStorage.setItem(k, v); } catch(e){} }
+
+  function analysisToastUrl() {
+    return 'sync_room.html?session_id=' + encodeURIComponent(sessionId) + '&employee_id=' + encodeURIComponent(employeeId);
+  }
+
+  function showAnalysisToast() {
+    var t = document.createElement('div');
+    t.className = 'toast-notification';
+    t.innerHTML = 'Before you go &mdash; <a href="' + analysisToastUrl() + '" style="color:inherit;font-weight:700;text-decoration:underline;white-space:nowrap;">open the Analysis View</a> for a deeper breakdown.';
+    document.body.appendChild(t);
+    if (window.gsap) {
+      gsap.set(t, { y: 60, opacity: 0 });
+      gsap.to(t, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
+      setTimeout(function() {
+        gsap.to(t, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { t.remove(); } });
+      }, 4000);
+    } else {
+      setTimeout(function() { t.remove(); }, 4000);
+    }
+  }
+
+  function wireAnalysisNudge() {
+    var VISITED = 'voovr-analysis-visited';
+    var NUDGED = 'voovr-analysis-nudged';
+    var PENDING = 'voovr-analysis-pending';
+
+    if (lsGet(VISITED) || lsGet(NUDGED)) return;
+
+    function markVisited() { lsSet(VISITED, '1'); }
+    function markNudged() { lsSet(NUDGED, '1'); }
+
+    var tab = document.getElementById('analysisTab');
+    if (tab) tab.addEventListener('click', markVisited);
+    var viewAll = document.getElementById('wsViewAll');
+    if (viewAll) viewAll.addEventListener('click', markVisited);
+
+    if (ssGet(PENDING) === '1') {
+      ssSet(PENDING, '');
+      markNudged();
+      setTimeout(showAnalysisToast, 700);
+      return;
+    }
+
+    var nudged = false;
+    window.addEventListener('pagehide', function() {
+      if (!nudged) ssSet(PENDING, '1');
+    });
+
+    document.addEventListener('click', function(e) {
+      var a = e.target && e.target.closest ? e.target.closest('a') : null;
+      if (!a) return;
+      var href = (a.getAttribute('href') || '').trim();
+      if (!href || href === '#') return;
+      if (href.indexOf('sync_room.html') !== -1) { markVisited(); return; }
+      if (nudged || e.defaultPrevented) return;
+      e.preventDefault();
+      e.stopPropagation();
+      nudged = true;
+      markNudged();
+      showAnalysisToast();
+      setTimeout(function() { window.location.href = a.href; }, 2000);
+    }, true);
+  }
+
   // ── Main load ──
   function renderAll() {
     var a = state.session.analysis || {};
@@ -1140,6 +1209,7 @@ window.voovrInitWorkspace = function() {
     renderLines();
     renderScore(a);
     renderIntel(a);
+    wireAnalysisNudge();
 
     if (window.gsap) {
       var el = document.getElementById('wsLines');
