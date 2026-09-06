@@ -102,6 +102,9 @@
 .wsx-ask-q{font-size:0.98rem;}
 .wsx-ask .wsx-body{font-size:0.88rem;}
 .wsx-footer a{font-size:0.68rem;}
+#analysisTab{position:relative;overflow:hidden;}
+#analysisTab::after{content:'';position:absolute;top:0;left:-80%;width:46%;height:100%;transform:skewX(-20deg);background:linear-gradient(105deg,transparent,rgba(255,255,255,0.30) 50%,transparent);animation:analysisTabShine 2.8s ease-in-out infinite;pointer-events:none;}
+@keyframes analysisTabShine{0%{left:-80%;}55%{left:130%;}100%{left:130%;}}
 </style>
 </head>
 <body>
