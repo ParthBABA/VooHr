@@ -15,6 +15,7 @@ category and the Brevo HTTP status + response body so the root cause is
 identifiable in the logs. The API key is never logged.
 """
 
+import base64
 import logging
 import os
 import re
@@ -28,6 +29,27 @@ OTP_SUBJECT = "Your VooVr verification code"
 
 # Bare-address check (rejects formats like "Name<email@example.com>").
 _SENDER_RE = re.compile(r"^[^<>\s]+@[^<>\s]+\.[^<>\s]+$")
+
+
+def _profile_avatar_headers() -> dict:
+    """Best-effort sender-avatar header for Gmail-style clients.
+
+    There is no SMTP standard for sender avatars; this ships the VooVr icon as
+    a small base64 data-URI header so clients/plug-ins that honour it can
+    render it. Returns {} when the asset is unavailable so sends never fail.
+    """
+    try:
+        path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "static",
+            "voovr-icon-64.png",
+        )
+        with open(path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("ascii")
+        data_uri = f"data:image/png;base64,{b64}"
+        return {"X-VooVr-Profile-Image": data_uri} if len(data_uri) < 8000 else {}
+    except Exception:
+        return {}
 
 
 def _site_base_url() -> str:
@@ -116,6 +138,7 @@ def _send_via_brevo(to_email: str, otp: str) -> bool:
         "to": [{"email": to_email}],
         "subject": OTP_SUBJECT,
         "htmlContent": _otp_html(otp),
+        "headers": _profile_avatar_headers(),
     }
 
     try:
@@ -260,6 +283,7 @@ def send_manager_invite_email(to_email: str, org_name: str, invite_link: str) ->
         "to": [{"email": to_email}],
         "subject": "You've been invited to HR Copilot as a Manager",
         "htmlContent": _manager_invite_html(org_name, invite_link),
+        "headers": _profile_avatar_headers(),
     }
 
     try:
