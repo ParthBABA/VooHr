@@ -30,13 +30,34 @@ OTP_SUBJECT = "Your VooVr verification code"
 _SENDER_RE = re.compile(r"^[^<>\s]+@[^<>\s]+\.[^<>\s]+$")
 
 
+def _site_base_url() -> str:
+    """Base URL for site links in email templates.
+
+    Prefers CLIENT_URL (the app's real frontend base — set in .env / prod env),
+    falls back to SITE_URL, then to the request host when we're inside a Flask
+    request. Returns "" if none is available.
+    """
+    base = (os.environ.get("CLIENT_URL") or os.environ.get("SITE_URL") or "").strip()
+    if not base:
+        try:
+            from flask import request
+
+            base = request.host_url.rstrip("/")
+        except Exception:
+            base = ""
+    return base.rstrip("/")
+
+
 def _email_footer() -> str:
+    base = _site_base_url()
+    policy_url = f"{base}/privacy-policy" if base else "/privacy-policy"
+    terms_url = f"{base}/terms-of-service" if base else "/terms-of-service"
     return (
         "<hr style=\"border:none;border-top:1px solid #333;margin:24px 0;\">"
         "<p style=\"font-size:0.75rem;color:#888;\">"
         "This email was sent because you have an account with HR Copilot. "
-        "<a href=\"https://voovrhr.com/privacy-policy\" style=\"color:#aaa;\">View our Privacy Policy</a> | "
-        "<a href=\"https://voovrhr.com/terms-of-service\" style=\"color:#aaa;\">Terms of Service</a>"
+        f"<a href=\"{policy_url}\" style=\"color:#aaa;\">View our Privacy Policy</a> | "
+        f"<a href=\"{terms_url}\" style=\"color:#aaa;\">Terms of Service</a>"
         "</p>"
         "<p style=\"font-size:0.75rem;color:#888;\">"
         "Questions? Contact us at <a href=\"mailto:voovrhr@gmail.com\" style=\"color:#aaa;\">voovrhr@gmail.com</a>"
