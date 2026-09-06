@@ -44,6 +44,7 @@
 .wsx-narr-select{display:none;position:absolute;top:calc(100% + 6px);right:0;left:auto;min-width:150px;z-index:20;}
 .wsx-narr-select.open{display:block;}
 .ws-lang-control{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.top-bar .ws-lang-control{margin-bottom:0;}
 .ws-lang-label{font-size:12px;color:inherit;opacity:.65;}
 #wsAnalysisLang{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:transparent;color:inherit;outline:none;cursor:pointer;}
 #wsAnalysisLang:disabled{opacity:.55;cursor:default;}
@@ -149,6 +150,13 @@ withTimeout(fetch('/api/me').then(function(res){
         <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle light/dark theme">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
         </button>
+        <span class="ws-lang-control" title="Translate the workspace into another language">
+          <label class="ws-lang-label" for="wsAnalysisLang">Translate</label>
+          <select id="wsAnalysisLang" class="ws-tool-select" title="Analysis language">
+            <option value="en">English</option>
+            <option value="hinglish">Hinglish</option>
+          </select>
+        </span>
       </div>
     </div>
 
@@ -233,14 +241,6 @@ withTimeout(fetch('/api/me').then(function(res){
 
         <!-- RIGHT: CONVERSATION INTELLIGENCE -->
         <section class="ws-coach">
-          <!-- Translate control: re-runs analysis with an output-language instruction -->
-          <div class="ws-lang-control">
-            <label class="ws-lang-label" for="wsAnalysisLang">Translate</label>
-            <select id="wsAnalysisLang" class="ws-tool-select" title="Analysis language">
-              <option value="en">English</option>
-              <option value="hinglish">Hinglish</option>
-            </select>
-          </div>
           <!-- LIVE CONVERSATION SCORE — primary intelligence hero -->
           <section class="card ws-hero" aria-label="Live Conversation Score">
             <div class="wsx-score-head">
