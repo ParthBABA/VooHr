@@ -135,6 +135,7 @@ def _send_via_brevo(to_email: str, otp: str) -> bool:
 
     payload = {
         "sender": {"email": sender_email, "name": sender_name},
+        "replyTo": {"email": "voovrhr@gmail.com", "name": "VooVr"},
         "to": [{"email": to_email}],
         "subject": OTP_SUBJECT,
         "htmlContent": _otp_html(otp),
@@ -280,6 +281,7 @@ def send_manager_invite_email(to_email: str, org_name: str, invite_link: str) ->
             "email": sender_email,
             "name": os.environ.get("BREVO_SENDER_NAME", "VooVr"),
         },
+        "replyTo": {"email": "voovrhr@gmail.com", "name": "VooVr"},
         "to": [{"email": to_email}],
         "subject": "You've been invited to HR Copilot as a Manager",
         "htmlContent": _manager_invite_html(org_name, invite_link),
