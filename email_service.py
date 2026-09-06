@@ -42,7 +42,7 @@ def _profile_avatar_headers() -> dict:
         path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "static",
-            "voovr-icon-64.png",
+            "voovr-icon-sm.png",
         )
         with open(path, "rb") as f:
             b64 = base64.b64encode(f.read()).decode("ascii")
