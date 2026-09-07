@@ -478,4 +478,10 @@ app = create_app()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(debug=os.environ.get("FLASK_DEBUG", "false").lower() == "true", port=port)
+    # Bind 0.0.0.0 so Render's external health check / port scan can reach us.
+    # (127.0.0.1 loopback is unreachable from outside the container.)
+    app.run(
+        debug=os.environ.get("FLASK_DEBUG", "false").lower() == "true",
+        host="0.0.0.0",
+        port=port,
+    )
