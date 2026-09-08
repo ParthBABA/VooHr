@@ -864,68 +864,89 @@
      Reuses the --step-* tokens. No existing content removed;
      dynamic analysis surfaces are re-composed via CSS only.
      ========================================================= */
-  #stepContent2{ padding: 3rem 3.25rem 2.75rem; }
+  #stepContent2{
+    padding: 2.5rem clamp(1.4rem, 4vw, 3.5rem) 3rem;
+    max-width: 1240px;
+    margin: 0 auto;
+  }
 
-  /* ---------- Section labels ---------- */
+  /* ---------- Step header (compact & aligned) ---------- */
+  #stepContent2 .step-header{
+    padding-bottom: 1.4rem;
+    border-bottom: 1px solid var(--step-border);
+    margin-bottom: 0.5rem;
+  }
+  #stepContent2 .step-number{ color: var(--step-primary-soft); }
+  #stepContent2 .step-title{ font-size: clamp(25px, 2.5vw, 31px); }
+  #stepContent2 .step-desc{ max-width: 66ch; }
+  #stepContent2 .step-title-row{ margin-top: 6px; }
+
+  /* ---------- Section labels (unified) ---------- */
   #stepContent2 .step2-label{
-    display: flex; align-items: center; gap: 0.55rem;
+    display: flex; align-items: center; gap: 0.6rem;
     font-family: var(--step-heading-font);
-    font-size: 10px; font-weight: 600;
-    letter-spacing: 0.22em; text-transform: uppercase;
-    color: var(--step-text-muted);
-    margin-bottom: 0.95rem;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-text-secondary);
+    margin: 0 0 1rem;
   }
   #stepContent2 .step2-label::before{
-    content: ''; width: 7px; height: 7px; border-radius: 2px;
+    content: ''; width: 8px; height: 8px; border-radius: 2.5px; flex: 0 0 auto;
     background: linear-gradient(135deg, var(--step-primary), rgba(139,92,246,0.4));
-    box-shadow: 0 0 10px rgba(139,92,246,0.45);
+    box-shadow: 0 0 10px rgba(139,92,246,0.35);
   }
   #stepContent2 .step2-label--teal::before{
     background: linear-gradient(135deg, var(--step-success), rgba(52,211,153,0.35));
-    box-shadow: 0 0 10px rgba(52,211,153,0.40);
+    box-shadow: 0 0 10px rgba(52,211,153,0.30);
   }
   #stepContent2 .step2-label--red::before{
     background: linear-gradient(135deg, var(--step-danger), rgba(248,113,113,0.35));
-    box-shadow: 0 0 10px rgba(248,113,113,0.40);
+    box-shadow: 0 0 10px rgba(248,113,113,0.30);
   }
 
-  /* ---------- 1. AI interpretation insight strip ---------- */
+  /* ---------- Section scaffolding (shared rhythm) ---------- */
+  #stepContent2 .step2-map,
+  #stepContent2 .step2-split,
+  #stepContent2 .step2-probes,
+  #stepContent2 .step2-actions,
+  #stepContent2 .step2-manager-note{ margin-top: 3rem; }
+
+  /* ---------- 1. AI interpretation summary strip ---------- */
   #stepContent2 .step2-insight{
     display: grid;
     grid-template-columns: auto minmax(0,1fr);
-    gap: 1.2rem;
+    gap: 1.1rem;
     align-items: start;
-    margin-top: 1.4rem;
-    padding: 1.4rem 1.6rem;
+    margin-top: 1.6rem;
+    padding: 1.5rem 1.7rem;
     background:
-      radial-gradient(120% 150% at 0% 0%, rgba(139,92,246,0.14), transparent 55%),
-      linear-gradient(135deg, rgba(139,92,246,0.06), rgba(139,92,246,0.02)),
+      radial-gradient(120% 150% at 0% 0%, rgba(139,92,246,0.12), transparent 55%),
+      linear-gradient(135deg, rgba(139,92,246,0.05), rgba(139,92,246,0.02)),
       var(--step-surface-raised);
-    border: 1px solid rgba(139,92,246,0.25);
-    border-radius: 12px;
+    border: 1px solid rgba(139,92,246,0.22);
+    border-radius: 14px;
     box-shadow:
       0 0 0 1px rgba(139,92,246,0.05),
-      0 12px 34px rgba(0,0,0,0.16),
-      0 0 30px rgba(139,92,246,0.08);
+      0 14px 34px rgba(0,0,0,0.14);
   }
   #stepContent2 .step2-insight-icon{
     width: 46px; height: 46px; border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
     color: var(--step-primary-soft);
-    background: radial-gradient(75% 75% at 50% 30%, rgba(139,92,246,0.32), rgba(139,92,246,0.06));
+    background: radial-gradient(75% 75% at 50% 30%, rgba(139,92,246,0.30), rgba(139,92,246,0.06));
     border: 1px solid rgba(139,92,246,0.28);
-    box-shadow: 0 0 18px rgba(139,92,246,0.18), inset 0 0 14px rgba(139,92,246,0.08);
+    box-shadow: 0 0 18px rgba(139,92,246,0.14), inset 0 0 14px rgba(139,92,246,0.06);
   }
   #stepContent2 .step2-insight-icon svg{ width: 24px; height: 24px; }
   #stepContent2 .step2-insight-body{ min-width: 0; }
   #stepContent2 .step2-insight-eyebrow{
     font-family: var(--step-heading-font);
     font-size: 10px; font-weight: 600;
-    letter-spacing: 0.2em; text-transform: uppercase;
+    letter-spacing: 0.18em; text-transform: uppercase;
     color: var(--step-primary-soft);
   }
   #stepContent2 .step2-insight .script-block{
-    margin: 0.55rem 0 0;
+    margin: 0.5rem 0 0;
     padding: 0;
     background: none;
     border: none;
@@ -950,77 +971,87 @@
     color: var(--step-text-muted);
   }
 
-  /* ---------- 2. Current signal map ---------- */
-  #stepContent2 .step2-map{ margin-top: 2.5rem; }
+  /* ---------- 2. Analysis Summary — current signal map ---------- */
   #stepContent2 .step2-signals{
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 0.8rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
   }
   #stepContent2 .step2-signal{
-    padding: 1.05rem 1.05rem 1.1rem;
+    position: relative;
+    display: flex; flex-direction: column; gap: 0.85rem;
+    min-width: 0;
+    padding: 1.25rem 1.25rem 1.3rem;
     border: 1px solid var(--step-border);
-    border-radius: 12px;
+    border-radius: 14px;
     background: var(--step-card-bg);
+    box-shadow: var(--step-shadow);
     transition: transform 0.15s ease, border-color 0.15s ease;
   }
-  #stepContent2 .step2-signal:hover{ transform: translateY(-1px); }
+  #stepContent2 .step2-signal:hover{ transform: translateY(-2px); border-color: var(--step-border-strong); }
   #stepContent2 .step2-signal--amber{
-    border-color: rgba(251,191,36,0.22);
-    background: linear-gradient(160deg, rgba(251,191,36,0.05), transparent 62%), var(--step-card-bg);
+    border-left: 3px solid var(--step-warning);
+    background: linear-gradient(160deg, rgba(251,191,36,0.05), transparent 60%), var(--step-card-bg);
   }
   #stepContent2 .step2-signal--red{
-    border-color: rgba(248,113,113,0.20);
-    background: linear-gradient(160deg, rgba(248,113,113,0.05), transparent 62%), var(--step-card-bg);
+    border-left: 3px solid var(--step-danger);
+    background: linear-gradient(160deg, rgba(248,113,113,0.05), transparent 60%), var(--step-card-bg);
   }
   #stepContent2 .step2-signal--teal{
-    border-color: rgba(52,211,153,0.20);
-    background: linear-gradient(160deg, rgba(52,211,153,0.05), transparent 62%), var(--step-card-bg);
+    border-left: 3px solid var(--step-success);
+    background: linear-gradient(160deg, rgba(52,211,153,0.05), transparent 60%), var(--step-card-bg);
   }
-  #stepContent2 .step2-signal-top{ display: flex; align-items: center; gap: 0.7rem; }
+  #stepContent2 .step2-signal-top{ display: flex; align-items: center; gap: 0.75rem; }
   #stepContent2 .step2-signal-icon{
-    width: 34px; height: 34px; border-radius: 9px;
+    width: 36px; height: 36px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
-  #stepContent2 .step2-signal-icon svg{ width: 17px; height: 17px; }
+  #stepContent2 .step2-signal-icon svg{ width: 18px; height: 18px; }
   #stepContent2 .step2-signal--amber .step2-signal-icon{
     color: var(--step-warning);
     background: rgba(251,191,36,0.12);
-    box-shadow: 0 0 14px rgba(251,191,36,0.12);
   }
   #stepContent2 .step2-signal--red .step2-signal-icon{
     color: var(--step-danger);
     background: rgba(248,113,113,0.10);
-    box-shadow: 0 0 14px rgba(248,113,113,0.12);
   }
   #stepContent2 .step2-signal--teal .step2-signal-icon{
     color: var(--step-success);
     background: rgba(52,211,153,0.10);
-    box-shadow: 0 0 14px rgba(52,211,153,0.12);
   }
+  #stepContent2 .step2-signal-top > div:not(.step2-signal-icon){ min-width: 0; }
   #stepContent2 .step2-signal-name{
     font-family: var(--step-body-font);
     font-size: 10.5px; font-weight: 600;
     letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--step-text-muted);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   #stepContent2 .step2-signal-value{
     font-family: var(--step-heading-font);
-    font-size: 15px; font-weight: 700; letter-spacing: 0.02em;
-    margin-top: 2px;
+    font-size: 17px; font-weight: 700; letter-spacing: 0.01em;
+    margin-top: 3px;
+    line-height: 1.2;
   }
   #stepContent2 .step2-signal--amber .step2-signal-value{ color: var(--step-warning); }
   #stepContent2 .step2-signal--red .step2-signal-value{ color: var(--step-danger); }
   #stepContent2 .step2-signal--teal .step2-signal-value{ color: var(--step-success); }
+  #stepContent2 .step2-signal-desc{
+    font-family: var(--step-body-font);
+    font-size: 12.5px; line-height: 1.6;
+    color: var(--step-text-secondary);
+    margin: 0;
+  }
   #stepContent2 .step2-signal-meter{
     display: flex; align-items: flex-end; gap: 3px; height: 12px;
-    margin: 0 auto 0 0;
+    margin-left: auto; flex: 0 0 auto; align-self: center;
   }
   #stepContent2 .step2-signal-meter i{
-    width: 5px; border-radius: 2px;
-    background: var(--step-row-bg-hover);
+    width: 4px; border-radius: 2px;
+    background: var(--step-border-strong);
   }
   #stepContent2 .step2-signal-meter i:nth-child(1){ height: 4px; }
   #stepContent2 .step2-signal-meter i:nth-child(2){ height: 6px; }
@@ -1029,62 +1060,67 @@
   #stepContent2 .step2-signal-meter i:nth-child(5){ height: 12px; }
   #stepContent2 .step2-signal--amber .step2-signal-meter i.on{
     background: var(--step-warning);
-    box-shadow: 0 0 6px rgba(251,191,36,0.5);
+    box-shadow: 0 0 6px rgba(251,191,36,0.45);
   }
   #stepContent2 .step2-signal--red .step2-signal-meter i.on{
     background: var(--step-danger);
-    box-shadow: 0 0 6px rgba(248,113,113,0.5);
+    box-shadow: 0 0 6px rgba(248,113,113,0.45);
   }
   #stepContent2 .step2-signal--teal .step2-signal-meter i.on{
     background: var(--step-success);
-    box-shadow: 0 0 6px rgba(52,211,153,0.5);
-  }
-  #stepContent2 .step2-signal-desc{
-    font-family: var(--step-body-font);
-    font-size: 12.5px; line-height: 1.6;
-    color: var(--step-text-secondary);
-    margin: 0.45rem 0 0;
+    box-shadow: 0 0 6px rgba(52,211,153,0.45);
   }
 
-  /* ---------- 3. Patterns | What this could mean ---------- */
+  /* ---------- 3. Behavioral Analysis: Patterns | What this could mean ---------- */
   #stepContent2 .step2-split{
     display: grid;
     grid-template-columns: minmax(0,1.15fr) minmax(0,1fr);
-    gap: 1.5rem;
-    margin-top: 2.5rem;
+    gap: 1.25rem;
+    align-items: stretch;
   }
   #stepContent2 .step2-pane{
     min-width: 0;
+    display: flex; flex-direction: column;
     border: 1px solid var(--step-border);
-    border-radius: 14px;
-    padding: 1.6rem 1.7rem 1.4rem;
+    border-radius: 16px;
+    padding: 1.6rem 1.6rem 1.5rem;
     background: var(--step-surface);
     box-shadow: var(--step-shadow);
   }
   #stepContent2 .step2-pane--meaning{
     background:
-      radial-gradient(120% 130% at 100% 0%, rgba(139,92,246,0.08), transparent 55%),
+      radial-gradient(120% 130% at 100% 0%, rgba(139,92,246,0.07), transparent 55%),
       var(--step-surface);
   }
-  /* Evidence feed — dynamic #step2Cards re-composed as compact rows */
+  /* Evidence feed — dynamic #step2Cards composed as standardized cards */
   #stepContent2 #step2Cards{
-    display: flex; flex-direction: column;
+    display: flex; flex-direction: column; gap: 0.85rem;
     margin: 0;
   }
   #stepContent2 .analysis-card{
     display: grid;
-    grid-template-columns: 158px minmax(0,1fr);
-    gap: 0.55rem 1.2rem;
+    grid-template-columns: 148px minmax(0,1fr);
+    gap: 0.35rem 1.1rem;
     align-items: baseline;
-    background: none;
-    border: none;
-    border-bottom: 1px solid var(--step-border);
-    border-radius: 0;
-    padding: 0.9rem 0;
+    padding: 1rem 1.1rem;
+    background: var(--step-card-bg);
+    border: 1px solid var(--step-border);
+    border-left: 3px solid var(--step-border-strong);
+    border-radius: 12px;
     box-shadow: none;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
   }
-  #stepContent2 .analysis-card:hover{ transform: none; border-color: var(--step-border); }
-  #stepContent2 .analysis-card:last-child{ border-bottom: none; }
+  #stepContent2 .analysis-card:hover{
+    transform: translateY(-1px);
+    border-color: var(--step-border-strong);
+    background: var(--step-row-bg-hover);
+  }
+  #stepContent2 .analysis-card--amber{ border-left-color: var(--step-warning); }
+  #stepContent2 .analysis-card--teal{ border-left-color: var(--step-success); }
+  #stepContent2 .analysis-card--red{ border-left-color: var(--step-danger); }
+  #stepContent2 .analysis-card--faint,
+  #stepContent2 .analysis-card--muted{ border-left-color: var(--step-border); }
+  #stepContent2 .analysis-list-card .analysis-card-label{ align-self: flex-start; }
   #stepContent2 .analysis-card .analysis-card-label{
     margin: 0;
     color: var(--step-primary-soft);
@@ -1097,53 +1133,59 @@
   #stepContent2 .analysis-card .analysis-card-value{
     font-size: 13.5px; line-height: 1.65;
     color: var(--step-text);
+    min-width: 0;
   }
   #stepContent2 .analysis-card--dim-value .analysis-card-value{ color: var(--step-text-secondary); }
+  #stepContent2 #step2Cards .analysis-list-card{ align-items: flex-start; }
+  #stepContent2 #step2Cards .analysis-list-body{ min-width: 0; }
+  #stepContent2 #step2Cards .analysis-list-item{
+    font-size: 13px; line-height: 1.6;
+    padding: 0.15rem 0;
+  }
   #stepContent2 #step2Cards .analysis-quote{
     font-size: 14.5px; font-weight: 500;
-    padding: 0.4rem 0 1rem 1rem;
-    margin-bottom: 0.15rem;
+    padding: 0.5rem 0 0.75rem 1rem;
+    margin: 0 0 0.25rem;
   }
   #stepContent2 #step2Cards .analysis-confidence{
     justify-content: space-between;
-    margin-top: 1rem;
-    background: var(--step-row-bg);
+    margin-top: 0.4rem;
+    background: var(--step-surface-raised);
     border: 1px solid var(--step-border);
-    border-radius: 8px;
-    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    padding: 0.75rem 1.1rem;
   }
   #stepContent2 #step2Cards .analysis-takeaway{
-    margin-top: 1rem;
+    margin-top: 0.4rem;
     background: var(--step-accent-tint);
     border: 1px solid var(--step-accent-line);
-    border-left: 2px solid var(--step-primary);
-    border-radius: 10px;
-    padding: 0.9rem 1.1rem;
+    border-left: 3px solid var(--step-primary);
+    border-radius: 12px;
+    padding: 0.95rem 1.15rem;
   }
   #stepContent2 #step2Cards.step2-feed-expanded .analysis-card{
     grid-template-columns: 1fr;
-    gap: 0.3rem;
-    padding: 1.05rem 0;
+    gap: 0.35rem;
   }
   #stepContent2 #step2Cards.step2-feed-expanded .analysis-card .analysis-card-value{ font-size: 14px; }
   /* Expandable footer action */
   #stepContent2 .step2-timeline{
-    display: flex; align-items: center; gap: 0.45rem;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
     width: 100%;
-    margin-top: 1.1rem;
-    padding: 0.7rem 0 0;
+    margin-top: 0.9rem;
+    padding: 0.85rem 0 0;
     border: none;
     border-top: 1px dashed var(--step-border-strong);
     background: none;
     font-family: var(--step-body-font);
-    font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
     color: var(--step-text-muted);
     cursor: pointer;
     transition: color 0.15s ease;
   }
   #stepContent2 .step2-timeline:hover{ color: var(--step-primary-soft); }
   #stepContent2 .step2-timeline svg{
-    width: 12px; height: 12px;
+    width: 13px; height: 13px;
     transition: transform 0.2s ease;
   }
   #stepContent2 #step2Cards.step2-feed-expanded ~ .step2-timeline svg{ transform: rotate(90deg); }
@@ -1152,13 +1194,14 @@
     font-family: var(--step-body-font);
     font-size: 13px; line-height: 1.7;
     color: var(--step-text-muted);
-    margin: -0.2rem 0 1.2rem;
+    margin: 0 0 0.75rem;
   }
   #stepContent2 .step2-radar-wrap{
     position: relative;
     display: flex; justify-content: center; align-items: center;
     width: 100%;
-    padding: 0.35rem 0.5rem 1rem;
+    margin-top: auto;
+    padding: 0.35rem 0.5rem 0.5rem;
   }
   #stepContent2 .step2-radar{
     width: 66%;
@@ -1290,26 +1333,27 @@
   }
 
   /* ---------- 4. Deeper probe suggestions ---------- */
-  #stepContent2 .step2-probes{ margin-top: 2.5rem; }
   #stepContent2 .step2-probe-row{
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
-    gap: 0.8rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem;
   }
   #stepContent2 .step2-probe{
-    display: flex; flex-direction: column; align-items: stretch; gap: 0.75rem;
+    display: flex; flex-direction: column; align-items: stretch; gap: 0.85rem;
+    min-width: 0;
     text-align: left;
     background: var(--step-card-bg);
     border: 1px solid var(--step-border);
     border-radius: 12px;
-    padding: 0.95rem 1.05rem;
+    padding: 1.05rem 1.1rem 0.95rem;
     cursor: pointer;
     font-family: inherit;
+    box-shadow: var(--step-shadow);
     transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
   }
   #stepContent2 .step2-probe:hover{
     transform: translateY(-1px);
-    border-color: rgba(139,92,246,0.5);
+    border-color: rgba(139,92,246,0.45);
     background: var(--step-row-bg-hover);
   }
   #stepContent2 .step2-probe-q{
@@ -1320,7 +1364,9 @@
   }
   #stepContent2 .step2-probe-use{
     display: inline-flex; align-items: center; gap: 0.35rem;
-    align-self: flex-end;
+    align-self: flex-start;
+    margin-top: auto;
+    padding-top: 0.35rem;
     font-family: var(--step-body-font);
     font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
     color: var(--step-primary-soft);
@@ -1332,33 +1378,47 @@
   #stepContent2 .step2-actions{
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-top: 2.5rem;
+    gap: 1.25rem;
+    align-items: stretch;
   }
+  #stepContent2 .step2-actions > div{
+    display: flex; flex-direction: column;
+    padding: 1.25rem 1.3rem 1.3rem;
+    border: 1px solid var(--step-border);
+    border-radius: 16px;
+    background: var(--step-card-bg);
+  }
+  #stepContent2 .step2-actions > div .step2-label{ margin-bottom: 0.9rem; }
   #stepContent2 .step2-actions .guidelines{
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 0.6rem;
     margin: 0;
   }
   #stepContent2 .step2-actions .guideline{
-    flex: 1 1 42%;
-    padding: 0.55rem 0.75rem;
-    font-size: 12.5px; line-height: 1.55;
+    flex: none; width: 100%;
+    padding: 0.7rem 0.9rem;
+    font-size: 13px; line-height: 1.6;
+    background: var(--step-surface);
   }
-  #stepContent2 .step2-actions .guideline .g-icon{ width: 18px; height: 18px; }
-  #stepContent2 .step2-actions .guideline span{ font-size: 12.5px; line-height: 1.55; }
+  #stepContent2 .step2-actions .guideline .g-icon{ width: 20px; height: 20px; }
+  #stepContent2 .step2-actions .guideline span{ font-size: 13px; line-height: 1.6; }
 
   /* ---------- 6. Manager notes / notes / bottom bar ---------- */
-  #stepContent2 .step2-manager-note{ margin-top: 2.5rem; padding: 1.05rem 1.25rem; }
-  #stepContent2 .step2-notes{ margin-top: 1.5rem; }
+  #stepContent2 .step2-manager-note{
+    margin-top: 3rem;
+    padding: 1.1rem 1.3rem;
+    border-radius: 12px;
+  }
+  #stepContent2 .step2-notes{ margin-top: 2rem; }
   #stepContent2 .step2-notes .note-area{ min-height: 96px; }
   #stepContent2 .step-nav{
     display: grid;
     grid-template-columns: auto minmax(0,1fr) auto;
     align-items: center;
     gap: 1.5rem;
-    margin-top: 2rem;
+    margin-top: 2.25rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--step-border);
   }
   #stepContent2 .step2-progress{
     display: flex; align-items: center; justify-content: center;
@@ -1372,7 +1432,7 @@
     white-space: nowrap;
   }
   #stepContent2 .step2-progress-track{
-    flex: 0 1 170px; height: 5px; border-radius: 4px;
+    flex: 0 1 180px; height: 6px; border-radius: 4px;
     background: var(--step-row-bg-hover);
     overflow: hidden;
   }
@@ -1393,10 +1453,17 @@
     background: var(--step-success);
     box-shadow: 0 0 6px var(--step-success);
   }
-
-  /* Sparse-data note: shown above a card grid when only a couple of cards
-     could be populated from the transcript (Steps 2 and 5). */
-  #stepContent2 .sparse-note,
+  #stepContent2 .sparse-note{
+    margin: 0 0 0.9rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px dashed var(--step-border-strong);
+    border-radius: 10px;
+    font-family: var(--step-body-font);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--step-text-muted);
+    background: var(--step-card-bg);
+  }
   #stepContent5 .sparse-note{
     margin: 0.35rem 0 1rem;
     padding: 0.55rem 0.8rem;
@@ -1409,12 +1476,16 @@
 
   /* ---------- Responsive (main content only) ---------- */
   @media (max-width: 1180px){
-    #stepContent2{ padding: 2.6rem 2rem; }
+    #stepContent2{ padding: 2.4rem 2rem; }
     #stepContent2 .step2-split{ grid-template-columns: 1fr; }
+    #stepContent2 .step2-signals{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #stepContent2 .step2-probe-row{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 760px){
-    #stepContent2 .step2-actions{ grid-template-columns: 1fr; gap: 1.4rem; }
-    #stepContent2 .analysis-card{ grid-template-columns: 1fr; gap: 0.25rem; }
+    #stepContent2 .step2-actions{ grid-template-columns: 1fr; gap: 1.1rem; }
+    #stepContent2 .analysis-card{ grid-template-columns: 1fr; gap: 0.3rem; }
+    #stepContent2 .step2-signals{ grid-template-columns: 1fr; }
+    #stepContent2 .step2-probe-row{ grid-template-columns: 1fr; }
     #stepContent2 .step-nav{ grid-template-columns: auto minmax(0,1fr) auto; gap: 0.8rem; }
     #stepContent2 .step2-progress{ justify-content: flex-end; }
     #stepContent2 .step2-progress-label,
@@ -1422,7 +1493,7 @@
     #stepContent2 .step2-progress-track{ flex: 1 1 auto; }
   }
   @media (max-width: 560px){
-    #stepContent2{ padding: 1.9rem 1.25rem; }
+    #stepContent2{ padding: 1.7rem 1.15rem; }
     #stepContent2 .step2-insight{ grid-template-columns: 1fr; gap: 0.8rem; }
     #stepContent2 .step2-progress-label{ display: none; }
   }
