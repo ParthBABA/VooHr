@@ -2578,161 +2578,551 @@
 </style>
 <style>
   /* =========================================================
-     STEP 5 — NEXT STEPS & FOLLOW-UP — journey closure workspace.
+     STEP 5 — CONVERSATION STRATEGY — compact two-column workspace.
      Scoped strictly to #stepContent5 (the main content area).
-     Reuses the --step-* tokens. No existing content removed;
-     the dynamic analysis cards are re-composed via CSS only
-     into a follow-up planning layout (Summary → Schedule →
-     Focus → Progress → Learnings → Complete).
+     Reuses the --step-* tokens. Pure front-end recomposition:
+     all existing IDs, classes, JS hooks, data and functionality
+     are preserved — only the layout/CSS is restructured.
      ========================================================= */
-  #stepContent5{ padding: 3rem 3.25rem 2.75rem; }
+  #stepContent5{ padding: 2.5rem clamp(1.4rem, 3.5vw, 3rem) 2.75rem; }
 
-  /* ---------- Master grid ---------- */
+  /* ---------- Compact step header ---------- */
+  #stepContent5 .step-header{
+    padding-bottom: 1.3rem;
+    border-bottom: 1px solid var(--step-border);
+    margin-bottom: 1.4rem;
+  }
+  #stepContent5 .step-title-row{ margin-top: 6px; }
+  #stepContent5 .step-title{ font-size: clamp(24px, 2.4vw, 30px); }
+  #stepContent5 .step-desc{ max-width: 62ch; }
+
+  /* ---------- Master workspace grid (left ~68% / right ~32%) ---------- */
   #stepContent5 .fs-grid{
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    grid-auto-flow: dense;
-    gap: 1.3rem 1rem;
-    margin-top: 1.75rem;
+    grid-template-columns: minmax(0, 2.05fr) minmax(0, 1fr);
+    gap: 1.15rem 1.25rem;
+    align-items: start;
   }
-  #stepContent5 .fs-dynamic{ display: contents; }
+  /* Full-width bands (summary, plan cards, script, nav) */
+  #stepContent5 .fs-eyebrow--summary{ grid-column: 1 / 3; }
+  #stepContent5 .fs-dynamic{ grid-column: 1 / 3; }
+  #stepContent5 .fs-script{ grid-column: 1 / 3; }
+  #stepContent5 .step-nav{ grid-column: 1 / 3; }
 
-  /* ---------- Section eyebrows ---------- */
-  #stepContent5 .fs-eyebrow{
-    display: flex; align-items: center; gap: 0.55rem;
-    min-width: 0;
-    font-family: var(--step-heading-font);
-    font-size: 10px; font-weight: 600;
-    letter-spacing: 0.22em; text-transform: uppercase;
-    color: var(--step-text-muted);
+  /* ---------- Left / Right columns ---------- */
+  #stepContent5 .cs-main{
+    grid-column: 1;
+    display: flex; flex-direction: column;
+    gap: 1.1rem; min-width: 0;
   }
-  #stepContent5 .fs-eyebrow svg{ color: var(--step-primary-soft); flex: 0 0 auto; }
-  #stepContent5 .fs-eyebrow-title{ white-space: nowrap; }
-  #stepContent5 .fs-eyebrow--summary{ grid-row: 1; grid-column: 1 / 7; }
-  #stepContent5 .sparse-note{ grid-row: 2; grid-column: 1 / 7; }
-  #stepContent5 .fs-eyebrow--follow{ grid-row: 6; grid-column: 1 / 7; }
-  #stepContent5 .fs-eyebrow--focus{ grid-row: 8; grid-column: 1 / 7; }
-  #stepContent5 .fs-eyebrow--learn{ grid-row: 15; grid-column: 1 / 7; }
-
-  /* journey stage chips (shared with eyebrow right side) */
-  #stepContent5 .fs-journ{
-    margin-left: auto;
-    display: inline-flex; align-items: center; gap: 0.5rem;
-  }
-  #stepContent5 .fs-stage{
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--step-text-muted);
-    opacity: 0.45;
-  }
-  #stepContent5 .fs-stage.is-done{ color: var(--step-success); opacity: 0.85; }
-  #stepContent5 .fs-stage.is-active{ color: var(--step-primary-soft); opacity: 1; }
-  #stepContent5 .fs-stage.is-done::before{
-    content: '';
-    width: 7px; height: 7px; border-radius: 99px;
-    background: var(--step-success);
-  }
-  #stepContent5 .fs-stage.is-active::before{
-    content: '';
-    width: 7px; height: 7px; border-radius: 99px;
-    background: var(--step-primary);
-    box-shadow: 0 0 10px rgba(139,92,246,0.5);
-  }
-  #stepContent5 .fs-stage-arrow{ color: var(--step-border-strong); opacity: 0.9; }
-  #stepContent5 .fs-ready{
-    margin-left: 1rem;
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.3rem 0.7rem;
-    border: 1px solid rgba(52,211,153,0.35);
-    border-radius: 99px;
-    font-family: var(--step-body-font);
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--step-success);
-    background: rgba(52,211,153,0.07);
-    white-space: nowrap;
+  #stepContent5 .cs-side{
+    grid-column: 2;
+    display: flex; flex-direction: column;
+    gap: 1.1rem; min-width: 0;
   }
 
-  /* ---------- 1. Conversation summary banner ---------- */
-  #stepContent5 #step5Cards > .analysis-quote{
-    grid-row: 2; grid-column: 1 / 7;
-    margin: 0; padding: 0.4rem 1.4rem 0;
-    border: 0; border-left: 3px solid var(--step-primary);
-    border-radius: 0;
-    background: transparent;
-    font-size: 12.5px; font-style: italic; line-height: 1.6;
-    color: var(--step-text-muted);
+  /* ---------- Journey / status strip (full width, compact) ---------- */
+  #stepContent5 .fs-eyebrow--summary{
+    display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-card-bg);
   }
-  #stepContent5 #step5Cards > .analysis-takeaway{
-    grid-row: 3; grid-column: 1 / 7;
-    margin: 0; padding: 0.9rem 1.4rem 0.55rem;
-    border: 0; border-left: 3px solid var(--step-primary);
-    border-radius: 0;
-    background: transparent;
-  }
-  #stepContent5 #step5Cards > .analysis-takeaway .analysis-takeaway-label{
+  #stepContent5 .fs-eyebrow-title{
     font-family: var(--step-heading-font);
     font-size: 9px; font-weight: 600;
     letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--step-primary-soft);
-    margin-bottom: 0.45rem;
+    color: var(--step-text-secondary);
   }
-  #stepContent5 #step5Cards > .analysis-takeaway .analysis-takeaway-value{
+  #stepContent5 .fs-eyebrow--summary svg{ color: var(--step-primary-soft); flex: 0 0 auto; }
+  #stepContent5 .fs-journ{
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;
+  }
+  #stepContent5 .fs-stage{
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-family: var(--step-heading-font);
+    font-size: 8px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--step-text-muted); opacity: 0.5;
+  }
+  #stepContent5 .fs-stage.is-done{ color: var(--step-success); opacity: 0.9; }
+  #stepContent5 .fs-stage.is-active{ color: var(--step-primary-soft); opacity: 1; }
+  #stepContent5 .fs-stage.is-done::before,
+  #stepContent5 .fs-stage.is-active::before{
+    content: ''; width: 7px; height: 7px; border-radius: 99px;
+  }
+  #stepContent5 .fs-stage.is-done::before{ background: var(--step-success); }
+  #stepContent5 .fs-stage.is-active::before{
+    background: var(--step-primary); box-shadow: 0 0 10px rgba(139,92,246,0.5);
+  }
+  #stepContent5 .fs-stage-arrow{ color: var(--step-border-strong); }
+  #stepContent5 .fs-ready{
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid rgba(52,211,153,0.35);
+    border-radius: 99px;
     font-family: var(--step-body-font);
-    font-size: 15px; font-weight: 500; line-height: 1.65;
+    font-size: 8px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--step-success); background: rgba(52,211,153,0.07);
+    white-space: nowrap;
+  }
+
+  /* ---------- Concrete section labels (left/right) ---------- */
+  #stepContent5 .cs-side .fs-eyebrow,
+  #stepContent5 .cs-main .fs-eyebrow{
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0 0.15rem;
+  }
+  #stepContent5 .cs-side .fs-eyebrow svg,
+  #stepContent5 .cs-main .fs-eyebrow svg{ color: var(--step-primary-soft); flex: 0 0 auto; }
+
+  /* ---------- Conversation plan cards (#step5Cards) ---------- */
+  #stepContent5 .fs-dynamic{
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  /* Conversation Goal — compact horizontal card, full width */
+  #stepContent5 #step5Cards > .analysis-card.fs-card-goal{
+    grid-column: 1 / 4;
+    display: flex; align-items: center; gap: 1rem;
+    margin: 0;
+    padding: 1rem 1.2rem;
+    border: 1px solid var(--step-border);
+    border-left: 3px solid var(--step-primary);
+    border-radius: 12px;
+    background:
+      radial-gradient(120% 150% at 0% 0%, rgba(139,92,246,0.08), transparent 55%),
+      var(--step-surface-raised);
+    box-shadow: var(--step-shadow);
+  }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-goal .analysis-card-label{
+    flex: 0 0 118px;
+    font-family: var(--step-heading-font);
+    font-size: 8.5px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+    margin: 0;
+  }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-goal .analysis-card-value{
+    flex: 1 1 auto; min-width: 0;
+    font-size: 13.5px; line-height: 1.55;
     color: var(--step-text);
   }
-  #stepContent5 .fs-script{
-    grid-row: 4; grid-column: 1 / 7;
-    margin: 0;
-    padding: 0.9rem 1.4rem;
+  #stepContent5 #step5Cards > .analysis-card.fs-card-goal .fs-prio{
+    flex: 0 0 auto; align-self: center;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--step-accent-line);
+    border-radius: 99px;
+    font-family: var(--step-heading-font);
+    font-size: 8px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+    background: var(--step-accent-tint);
+    white-space: nowrap;
+  }
+
+  /* The three plan cards: Focus / Opening / Follow-up (3 across, compact) */
+  #stepContent5 #step5Cards > .analysis-card.fs-card-focus{ grid-column: 1; }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-opening{ grid-column: 2; }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-followup{ grid-column: 3; }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-focus,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-opening,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-followup{
+    display: flex; flex-direction: column; gap: 0.4rem;
+    margin: 0; padding: 0.85rem 0.95rem;
+    border: 1px solid var(--step-border);
+    border-radius: 10px;
+    background: var(--step-card-bg);
+    box-shadow: none;
+  }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-focus .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-opening .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-followup .analysis-card-label{
+    font-family: var(--step-heading-font);
+    font-size: 8px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-focus .analysis-card-label{ color: var(--step-warning); }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-opening .analysis-card-label{ color: var(--step-info); }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-followup .analysis-card-label{ color: var(--step-warning); }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-focus .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-opening .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-followup .analysis-card-value{
+    font-size: 12px; line-height: 1.5; color: var(--step-text-secondary);
+    min-width: 0;
+  }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-focus .fs-prio,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-opening .fs-prio,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-followup .fs-prio{
+    align-self: flex-start;
+    margin-top: auto;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--step-accent-line);
+    border-radius: 99px;
+    font-family: var(--step-heading-font);
+    font-size: 7.5px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--step-primary-soft); background: var(--step-accent-tint);
+    white-space: nowrap;
+  }
+
+  /* Expected exchange: response / reply / listen (3 across) + success */
+  #stepContent5 #step5Cards > .analysis-card.fs-card-response{ grid-column: 1; }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-reply{ grid-column: 2; }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-listen{ grid-column: 3; }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-success,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-response,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-reply,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-listen{
+    display: flex; flex-direction: column; gap: 0.3rem;
+    margin: 0; padding: 0.8rem 0.95rem;
+    border: 1px solid var(--step-border);
+    border-radius: 10px;
+    background: var(--step-card-bg);
+  }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-success{ grid-column: 1 / 4; }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-success{
+    border-left: 3px solid var(--step-success);
+    background: linear-gradient(120deg, rgba(52,211,153,0.07), transparent 70%), var(--step-card-bg);
+  }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-response .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-reply .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-listen .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-success .analysis-card-label{
+    font-family: var(--step-heading-font);
+    font-size: 8px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-success .analysis-card-label{ color: var(--step-success); }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-response .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-reply .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-listen .analysis-list-item,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-success .analysis-card-value{
+    font-size: 11.5px; line-height: 1.5; color: var(--step-text-secondary);
+  }
+  #stepContent5 #step5Cards > .analysis-card.fs-card-listen .analysis-list-item{ padding: 0.15rem 0; }
+
+  /* Quote + takeaway (full width, slim) */
+  #stepContent5 #step5Cards > .analysis-quote{
+    grid-column: 1 / 4;
+    margin: 0; padding: 0.4rem 1rem 0;
+    border: 0; border-left: 3px solid var(--step-primary);
+    font-size: 12px; font-style: italic; line-height: 1.6;
+    color: var(--step-text-muted); background: transparent;
+  }
+  #stepContent5 #step5Cards > .analysis-takeaway{
+    grid-column: 1 / 4;
+    margin: 0; padding: 0.85rem 1.05rem;
+    border: 1px solid var(--step-border);
+    border-left: 3px solid var(--step-primary);
+    border-radius: 12px;
+    background: var(--step-surface-raised);
+  }
+  #stepContent5 #step5Cards > .analysis-takeaway .analysis-takeaway-label{
+    font-family: var(--step-heading-font);
+    font-size: 8px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-primary-soft); margin-bottom: 0.3rem;
+  }
+  #stepContent5 #step5Cards > .analysis-takeaway .analysis-takeaway-value{
+    font-size: 12.5px; font-weight: 500; line-height: 1.55; color: var(--step-text);
+  }
+  #stepContent5 #step5Cards > .sparse-note{
+    grid-column: 1 / 4;
+    margin: 0; padding: 0.5rem 0.85rem;
     border: 1px dashed var(--step-border-strong);
-    border-radius: 0 12px 12px 0;
+    border-radius: 10px;
+    font-family: var(--step-body-font);
+    font-size: 11px; line-height: 1.5; color: var(--step-text-muted);
+    background: var(--step-card-bg);
+  }
+
+  /* ---------- HOW TO FRAME (script) — full width ---------- */
+  #stepContent5 .fs-script{
+    margin: 0; padding: 0.9rem 1.15rem;
+    border: 1px dashed var(--step-border-strong);
+    border-radius: 12px;
     background: var(--step-card-bg);
   }
   #stepContent5 .fs-script::before{
     content: 'HOW TO FRAME THE FOLLOW-UP —';
     display: block;
     font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--step-primary-soft);
-    margin-bottom: 0.45rem;
+    font-size: 8px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--step-primary-soft); margin-bottom: 0.4rem;
   }
   #stepContent5 .fs-script .script-text{
-    font-size: 13px; line-height: 1.7;
-    color: var(--step-text-secondary);
+    font-size: 12.5px; line-height: 1.7; color: var(--step-text-secondary);
   }
-  #stepContent5 .fs-stats{
-    grid-row: 5; grid-column: 1 / 7;
-    margin: 0 1.4rem;
-    padding-top: 0.8rem;
-    border-top: 1px solid var(--step-border);
-    display: flex; align-items: stretch; gap: 0.8rem;
-  }
-  #stepContent5 .fs-stat{
-    flex: 1 1 0; min-width: 0;
-    display: flex; flex-direction: column; gap: 0.25rem;
-    padding: 0.65rem 0.8rem;
+
+  /* ==================== LEFT COLUMN ==================== */
+  /* ---------- Capture conversation items (3 compact cards) ---------- */
+  #stepContent5 .cap-panel{
+    margin: 0;
+    padding: 1rem 1.1rem;
     border: 1px solid var(--step-border);
-    border-radius: 10px;
+    border-radius: 14px;
     background: var(--step-card-bg);
   }
-  #stepContent5 .fs-stat-label{
+  #stepContent5 .cap-head{
+    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+    margin-bottom: 0.8rem;
+  }
+  #stepContent5 .cap-title{
     font-family: var(--step-heading-font);
-    font-size: 8.5px; font-weight: 600;
+    font-size: 9px; font-weight: 600;
     letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-text-secondary);
+  }
+  #stepContent5 .cap-hint{
+    font-family: var(--step-body-font);
+    font-size: 10px; color: var(--step-text-muted);
+  }
+  #stepContent5 #capPanel .cap-grid{
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+  #stepContent5 #capPanel .cap-col{
+    display: flex; flex-direction: column; gap: 0.55rem;
+    min-width: 0;
+    padding: 0.8rem 0.85rem;
+    background: var(--step-surface);
+    border: 1px solid var(--step-border);
+    border-radius: 10px;
+  }
+  #stepContent5 #capPanel .cap-colhead{
+    display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
+    font-family: var(--step-heading-font);
+    font-size: 8px; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
     color: var(--step-text-muted);
   }
-  #stepContent5 .fs-stat-value{
+  #stepContent5 #capPanel .cap-colhead .cap-count{ color: var(--step-primary-soft); font-size: 9px; }
+  #stepContent5 #capPanel .cap-opener{ display: flex; align-items: flex-start; gap: 0.45rem; }
+  #stepContent5 #capPanel .cap-opener input{ flex-shrink: 0; margin-top: 2px; accent-color: var(--step-primary); }
+  #stepContent5 #capPanel .cap-opener .cap-opener-txt{
+    font-size: 10.5px; color: var(--step-text-muted); line-height: 1.5;
+  }
+  #stepContent5 #capPanel .cap-list{ display: flex; flex-direction: column; gap: 0.35rem; }
+  #stepContent5 #capPanel .cap-empty{
+    font-family: var(--step-body-font); font-size: 10.5px;
+    color: var(--step-text-muted); font-style: italic;
+  }
+  #stepContent5 #capPanel .cap-item{
+    display: flex; gap: 0.4rem; align-items: center;
+    padding: 0.38rem 0.5rem;
+    background: var(--step-row-bg);
+    border: 1px solid var(--step-border);
+    border-radius: 7px;
+    font-family: var(--step-body-font); font-size: 11px; color: var(--step-text);
+  }
+  #stepContent5 #capPanel .cap-item .cap-itxt{ flex: 1; min-width: 0; word-break: break-word; }
+  #stepContent5 #capPanel .cap-item .cap-idue{ font-size: 9.5px; color: var(--step-warning); white-space: nowrap; }
+  #stepContent5 #capPanel .cap-item .cap-x{
+    flex-shrink: 0; background: none; border: none;
+    color: var(--step-text-muted); cursor: pointer; font-size: 0.9rem; line-height: 1;
+  }
+  #stepContent5 #capPanel .cap-item .cap-x:hover{ color: var(--step-danger); }
+  #stepContent5 #capPanel .cap-add{ display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: auto; }
+  #stepContent5 #capPanel .cap-add input[type=text]{
+    flex: 1; min-width: 80px;
+    background: var(--step-bg);
+    border: 1px solid var(--step-border-strong);
+    border-radius: 8px;
+    padding: 0.42rem 0.5rem;
+    color: var(--step-text); font-family: var(--step-body-font); font-size: 11px;
+    outline: none;
+  }
+  #stepContent5 #capPanel .cap-add input[type=text]:focus{
+    border-color: var(--step-primary); box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
+  }
+  #stepContent5 #capPanel .cap-add input[type=date]{
+    background: var(--step-bg);
+    border: 1px solid var(--step-border-strong);
+    border-radius: 8px;
+    padding: 0.38rem 0.4rem;
+    color: var(--step-text-secondary); font-family: var(--step-body-font); font-size: 10px;
+    color-scheme: dark;
+  }
+  #stepContent5 #capPanel .cap-add button{ white-space: nowrap; }
+
+  /* ---------- Quick notes ---------- */
+  #stepContent5 .fs-learn{
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 1rem;
+    align-items: stretch;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--step-border);
+    border-radius: 14px;
+    background: var(--step-card-bg);
+  }
+  #stepContent5 .fs-learn-left{ display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+  #stepContent5 .fs-learn-panel-label{
+    font-family: var(--step-heading-font);
+    font-size: 8px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+  }
+  #stepContent5 .fs-learn #step5ManagerNotesContainer{
+    margin: 0; padding: 0.6rem 0.75rem;
+    border-left: 3px solid var(--step-primary);
+    background: var(--step-accent-tint);
+    border-radius: 8px;
+    font-size: 11.5px; line-height: 1.55; color: var(--step-text-secondary);
+  }
+  #stepContent5 .fs-learn .form-label{
+    font-family: var(--step-heading-font);
+    font-size: 8px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-text-muted);
+    margin-bottom: 0.35rem; display: block;
+  }
+  #stepContent5 .fs-learn .note-area{
+    margin: 0; width: 100%;
+    min-height: 78px; resize: vertical;
+    background: var(--step-bg);
+    border: 1px solid var(--step-border-strong);
+    border-radius: 9px;
+    padding: 0.55rem 0.65rem;
+    color: var(--step-text); font-family: var(--step-body-font);
+    font-size: 11.5px; line-height: 1.5; outline: none;
+  }
+  #stepContent5 .fs-learn .note-area:focus{
+    border-color: var(--step-primary); box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
+  }
+
+  /* ---------- Guardrails ---------- */
+  #stepContent5 .fs-guard{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+  }
+  #stepContent5 .fs-guard-panel{
+    display: flex; flex-direction: column; gap: 0.5rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--step-border);
+    border-radius: 12px;
+    background: var(--step-card-bg);
+  }
+  #stepContent5 .fs-guard-panel .fs-panel-label{
+    font-family: var(--step-heading-font);
+    font-size: 8px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+  }
+  #stepContent5 .fs-guard-panel .fs-panel-label--teal{ color: var(--step-success); }
+  #stepContent5 .fs-guard-panel .fs-panel-label--red{ color: var(--step-danger); }
+  #stepContent5 .fs-guard-panel .guidelines{ display: flex; flex-direction: column; gap: 0.4rem; }
+  #stepContent5 .fs-guard-panel .guideline{
+    margin: 0; padding: 0.55rem 0.7rem; font-size: 11.5px; line-height: 1.5;
+  }
+
+  /* ==================== RIGHT COLUMN ==================== */
+  /* ---------- Progress (compact vertical timeline) ---------- */
+  #stepContent5 .fs-progress{
+    display: flex; flex-direction: column; gap: 0.7rem;
+    padding: 1rem 1.05rem;
+    border: 1px solid var(--step-border);
+    border-radius: 14px;
+    background: var(--step-surface-raised);
+  }
+  #stepContent5 .fs-progress-head{
+    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+  }
+  #stepContent5 .fs-progress-title{
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+  }
+  #stepContent5 .fs-progress-meta{
     font-family: var(--step-body-font);
-    font-size: 12.5px; font-weight: 500; line-height: 1.4;
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--step-text-muted); white-space: nowrap;
+  }
+  #stepContent5 .fs-track{ display: flex; flex-direction: column; }
+  #stepContent5 .fs-track-stage{
+    position: relative;
+    display: flex; align-items: center; gap: 0.65rem;
+    padding: 0.42rem 0;
+    font-family: var(--step-body-font); font-size: 11.5px; font-weight: 500;
+    color: var(--step-text-muted);
+  }
+  #stepContent5 .fs-track-stage .fs-dot{
+    flex: 0 0 auto;
+    width: 11px; height: 11px; border-radius: 99px;
+    border: 2px solid var(--step-border-strong);
+    background: var(--step-surface); z-index: 1;
+  }
+  #stepContent5 .fs-track-stage:not(:last-child)::before{
+    content: '';
+    position: absolute; left: 4.5px; top: 26px; bottom: -5px;
+    width: 2px; background: var(--step-border-strong);
+  }
+  #stepContent5 .fs-track-stage.is-done{ color: var(--step-text-secondary); }
+  #stepContent5 .fs-track-stage.is-done .fs-dot{
+    border-color: var(--step-success); background: var(--step-success);
+    box-shadow: 0 0 8px rgba(52,211,153,0.35);
+  }
+  #stepContent5 .fs-track-stage.is-active{ color: var(--step-text); }
+  #stepContent5 .fs-track-stage.is-active .fs-dot{
+    border-color: var(--step-primary); background: var(--step-primary);
+    box-shadow: 0 0 10px rgba(139,92,246,0.55);
+  }
+  #stepContent5 .fs-track-stage .fs-stage-tag{
+    margin-left: auto;
+    font-family: var(--step-heading-font);
+    font-size: 7px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--step-text-muted);
+  }
+  #stepContent5 .fs-track-stage.is-done .fs-stage-tag{ color: var(--step-success); }
+  #stepContent5 .fs-track-stage.is-active .fs-stage-tag{ color: var(--step-primary-soft); }
+  #stepContent5 .fs-progress-note{
+    margin-top: auto; padding-top: 0.55rem;
+    border-top: 1px solid var(--step-border);
+    font-family: var(--step-body-font); font-size: 10px; line-height: 1.5; color: var(--step-text-muted);
+  }
+
+  /* ---------- Conversation Summary counts ---------- */
+  #stepContent5 .fs-stats{
+    margin: 0; padding: 0.9rem 1rem;
+    border: 1px solid var(--step-border);
+    border-radius: 14px;
+    background: var(--step-card-bg);
+    display: flex; flex-direction: column; gap: 0.25rem;
+  }
+  #stepContent5 .fs-stats::before{
+    content: 'Conversation Summary';
+    font-family: var(--step-heading-font);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
     color: var(--step-text-secondary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    margin-bottom: 0.25rem;
+  }
+  #stepContent5 .fs-stat{
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.34rem 0;
+    border-bottom: 1px dashed var(--step-border);
+  }
+  #stepContent5 .fs-stat:last-child{ border-bottom: 0; }
+  #stepContent5 .fs-stat-label{
+    font-family: var(--step-body-font); font-size: 11.5px; color: var(--step-text-secondary);
+  }
+  #stepContent5 .fs-stat-value{
+    margin-left: auto;
+    font-family: var(--step-heading-font);
+    font-size: 12px; font-weight: 700; color: var(--step-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%;
   }
   #stepContent5 .fs-stat--signals .fs-stat-value{ color: var(--step-success); }
   #stepContent5 .fs-stat--root .fs-stat-value{ color: var(--step-warning); }
@@ -2741,346 +3131,85 @@
   #stepContent5 .fs-stat--conf.is-moderate .fs-stat-value{ color: var(--step-warning); }
   #stepContent5 .fs-stat--conf.is-light .fs-stat-value{ color: var(--step-danger); }
 
-  /* ---------- 2. Schedule follow-up workspace ---------- */
+  /* ---------- Follow-up plan (schedule) ---------- */
   #stepContent5 .fs-schedule{
-    grid-row: 7; grid-column: 1 / 7;
-    display: flex; align-items: center; gap: 1.1rem;
-    padding: 1.25rem 1.4rem;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem 0.9rem;
+    padding: 0.95rem 1rem;
     border: 1px solid var(--step-border);
     border-radius: 14px;
-    background:
-      linear-gradient(90deg, rgba(139,92,246,0.07), rgba(34,211,238,0.05), transparent 75%),
-      var(--step-surface-raised);
-    box-shadow: var(--step-shadow);
+    background: var(--step-card-bg);
   }
   #stepContent5 .fs-flow-id{
-    display: inline-flex; align-items: center; gap: 0.5rem;
-    font-family: var(--step-heading-font);
-    font-size: 10px; font-weight: 600;
-    letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--step-primary-soft);
-    white-space: nowrap;
-  }
-  #stepContent5 .fs-flow-sep{
-    display: inline-flex; align-items: center;
-    color: var(--step-border-strong);
-  }
-  #stepContent5 .fs-flow-sep svg{ width: 16px; height: 16px; }
-  #stepContent5 .fs-field{
-    display: flex; flex-direction: column; gap: 0.35rem;
-  }
-  #stepContent5 .fs-field-label{
+    display: inline-flex; align-items: center; gap: 0.4rem;
     font-family: var(--step-heading-font);
     font-size: 8.5px; font-weight: 600;
     letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--step-primary-soft);
+  }
+  #stepContent5 .fs-flow-id svg{ width: 13px; height: 13px; color: var(--step-primary-soft); }
+  #stepContent5 .fs-flow-sep{ display: inline-flex; color: var(--step-border-strong); }
+  #stepContent5 .fs-flow-sep svg{ width: 14px; height: 14px; }
+  #stepContent5 .fs-field{ display: flex; align-items: center; gap: 0.4rem; }
+  #stepContent5 .fs-field-label{
+    font-family: var(--step-heading-font);
+    font-size: 7.5px; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
     color: var(--step-text-muted);
   }
   #stepContent5 .fs-field input{
-    font-family: var(--step-body-font);
-    font-size: 13px; font-weight: 500;
+    font-family: var(--step-body-font); font-size: 11.5px; font-weight: 500;
     color: var(--step-text);
     background: var(--step-bg);
     border: 1px solid var(--step-border-strong);
-    border-radius: 10px;
-    padding: 0.55rem 0.8rem;
-    min-width: 150px;
-    outline: none;
-    color-scheme: dark;
+    border-radius: 8px;
+    padding: 0.4rem 0.5rem;
+    min-width: 0; width: 100%;
+    outline: none; color-scheme: dark;
   }
   #stepContent5 .fs-field input:focus{
-    border-color: var(--step-primary);
-    box-shadow: 0 0 0 3px rgba(139,92,246,0.15), var(--step-glow);
+    border-color: var(--step-primary); box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
   }
   #stepContent5 .fs-reco{
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.4rem 0.75rem;
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.28rem 0.55rem;
     border: 1px dashed rgba(34,211,238,0.35);
     border-radius: 99px;
-    font-family: var(--step-body-font);
-    font-size: 10px; font-weight: 500;
-    color: var(--step-text-secondary);
-    background: rgba(34,211,238,0.05);
-    white-space: nowrap;
+    font-family: var(--step-body-font); font-size: 9px; font-weight: 500;
+    color: var(--step-text-secondary); background: rgba(34,211,238,0.05);
   }
-  #stepContent5 .fs-reco svg{ color: var(--step-info); }
+  #stepContent5 .fs-reco svg{ color: var(--step-info); width: 11px; height: 11px; }
   #stepContent5 .fs-reminder{
-    margin-left: auto;
-    display: flex; align-items: center; gap: 0.7rem;
+    display: inline-flex; align-items: center; gap: 0.6rem;
   }
   #stepContent5 .fs-reminder .btn{
-    display: inline-flex; align-items: center; gap: 0.45rem;
-    font-size: 11px; font-weight: 600;
-    letter-spacing: 0.08em;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
   }
   #stepContent5 .fs-reminder .btn.is-set{
-    border-color: rgba(52,211,153,0.5);
-    color: var(--step-success);
+    border-color: rgba(52,211,153,0.5); color: var(--step-success);
     background: rgba(52,211,153,0.08);
   }
   #stepContent5 .fs-hint{
-    font-family: var(--step-body-font);
-    font-size: 11px; color: var(--step-text-muted);
-    white-space: nowrap;
+    font-family: var(--step-body-font); font-size: 9.5px; color: var(--step-text-muted);
   }
 
-  /* ---------- 3a. Key focus rows (goal, focus, opening, follow-up) ---------- */
-  #stepContent5 #step5Cards > .analysis-card.fs-card-goal{ grid-row: 9; grid-column: 1 / 4; }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-focus{ grid-row: 10; grid-column: 1 / 4; }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-opening{ grid-row: 11; grid-column: 1 / 4; }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-followup{ grid-row: 12; grid-column: 1 / 4; }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-goal,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-focus,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-opening,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-followup{
-    display: flex; align-items: flex-start; gap: 0.9rem;
-    margin: 0;
-    padding: 10px 14px;
-    border-radius: 12px;
-    background: var(--step-card-bg);
-    box-shadow: none;
-  }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-goal:hover,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-focus:hover,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-opening:hover,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-followup:hover{
-    border-color: var(--step-border-strong);
-    background: var(--step-row-bg-hover);
-  }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-goal .analysis-card-label,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-focus .analysis-card-label,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-opening .analysis-card-label,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-followup .analysis-card-label{
-    flex: 0 0 104px;
-    padding-top: 2px;
-    font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.16em; text-transform: uppercase;
-    color: var(--step-text-muted);
-    margin-bottom: 0;
-  }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-goal .analysis-card-label{ color: var(--step-primary-soft); }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-focus .analysis-card-label{ color: var(--step-warning); }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-opening .analysis-card-label{ color: var(--step-info); }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-followup .analysis-card-label{ color: var(--step-warning); }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-goal .analysis-card-value,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-focus .analysis-card-value,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-opening .analysis-card-value,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-followup .analysis-card-value{
-    flex: 1 1 auto;
-    min-width: 0;
-    font-size: 13px; line-height: 1.5;
-    color: var(--step-text-secondary);
-  }
-  #stepContent5 .fs-prio{
-    flex: 0 0 auto;
-    align-self: center;
-    padding: 0.28rem 0.6rem;
-    border: 1px solid var(--step-accent-line);
-    border-radius: 99px;
-    font-family: var(--step-heading-font);
-    font-size: 8.5px; font-weight: 600;
-    letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--step-primary-soft);
-    background: var(--step-accent-tint);
-    white-space: nowrap;
-  }
-
-  /* ---------- 3b. Progress tracking (right column) ---------- */
-  #stepContent5 .fs-progress{
-    grid-row: 9 / 13; grid-column: 5 / 7;
-    display: flex; flex-direction: column; gap: 0.9rem;
-    padding: 1.1rem 1.15rem;
-    border: 1px solid var(--step-border);
-    border-radius: 12px;
-    background: var(--step-surface-raised);
-  }
-  #stepContent5 .fs-progress-head{
-    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
-  }
-  #stepContent5 .fs-progress-title{
-    font-family: var(--step-heading-font);
-    font-size: 10px; font-weight: 600;
-    letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--step-text-secondary);
-  }
-  #stepContent5 .fs-progress-meta{
-    font-family: var(--step-body-font);
-    font-size: 10px; font-weight: 600;
-    color: var(--step-primary-soft);
-  }
-  #stepContent5 .fs-track{
-    display: flex; flex-direction: column; gap: 0;
-    position: relative;
-  }
-  #stepContent5 .fs-track-stage{
-    position: relative;
-    display: flex; align-items: center; gap: 0.7rem;
-    padding: 0.55rem 0;
-    font-family: var(--step-body-font);
-    font-size: 12px; font-weight: 500;
-    color: var(--step-text-muted);
-  }
-  #stepContent5 .fs-track-stage .fs-dot{
-    flex: 0 0 auto;
-    width: 12px; height: 12px; border-radius: 99px;
-    border: 2px solid var(--step-border-strong);
-    background: var(--step-surface);
-    z-index: 1;
-  }
-  #stepContent5 .fs-track-stage:not(:last-child)::before{
-    content: '';
-    position: absolute; left: 5px; top: 26px; bottom: -4px;
-    width: 2px;
-    background: var(--step-border-strong);
-  }
-  #stepContent5 .fs-track-stage.is-done .fs-dot{
-    border-color: var(--step-success);
-    background: var(--step-success);
-    box-shadow: 0 0 8px rgba(52,211,153,0.35);
-  }
-  #stepContent5 .fs-track-stage.is-active{ color: var(--step-text); }
-  #stepContent5 .fs-track-stage.is-active .fs-dot{
-    border-color: var(--step-primary);
-    background: var(--step-primary);
-    box-shadow: 0 0 10px rgba(139,92,246,0.55);
-  }
-  #stepContent5 .fs-track-stage .fs-stage-tag{
-    margin-left: auto;
-    font-family: var(--step-heading-font);
-    font-size: 8px; font-weight: 600;
-    letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--step-text-muted);
-  }
-  #stepContent5 .fs-track-stage.is-done .fs-stage-tag{ color: var(--step-success); }
-  #stepContent5 .fs-track-stage.is-active .fs-stage-tag{ color: var(--step-primary-soft); }
-  #stepContent5 .fs-progress-note{
-    margin-top: auto;
-    padding-top: 0.7rem;
+  /* ---------- Bottom navigation ---------- */
+  #stepContent5 .step-nav{
+    margin: 0; padding-top: 1.2rem;
     border-top: 1px solid var(--step-border);
-    font-family: var(--step-body-font);
-    font-size: 10.5px; line-height: 1.5;
-    color: var(--step-text-muted);
-  }
-
-  /* ---------- Expected exchange (response, reply, listen) ---------- */
-  #stepContent5 #step5Cards > .analysis-card.fs-card-response{ grid-row: 13; grid-column: 1 / 3; }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-reply{ grid-row: 13; grid-column: 3 / 5; }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-listen{ grid-row: 13; grid-column: 5 / 7; }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-response,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-reply,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-listen{
-    margin: 0;
-    padding: 1rem 1.05rem;
-    border-radius: 12px;
-    background: var(--step-card-bg);
-  }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-response .analysis-card-label,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-reply .analysis-card-label,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-listen .analysis-card-label{
-    margin-bottom: 0.5rem;
-    font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--step-text-muted);
-  }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-response .analysis-card-value,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-reply .analysis-card-value,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-listen .analysis-list-item{
-    font-size: 12.5px; line-height: 1.55;
-    color: var(--step-text-secondary);
-  }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-listen .analysis-list-item{
-    padding: 0.25rem 0;
-    color: var(--step-text-secondary);
-  }
-
-  /* ---------- Success indicator (fs-card-success) ---------- */
-  #stepContent5 #step5Cards > .analysis-card.fs-card-success{
-    grid-row: 14; grid-column: 3 / 5;
-    margin: 0; padding: 1.05rem 1.2rem;
-    border-radius: 12px;
-    border-left-color: var(--step-success);
-    background: linear-gradient(120deg, rgba(52,211,153,0.08), transparent 70%), var(--step-surface-raised);
-  }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-success .analysis-card-label{
-    margin-bottom: 0.5rem;
-    font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--step-success);
-  }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-success .analysis-card-value{
-    font-size: 13px; line-height: 1.6;
-    color: var(--step-text);
-  }
-
-  /* ---------- 4. Learnings & notes band ---------- */
-  #stepContent5 .fs-learn{
-    grid-row: 16; grid-column: 1 / 7;
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
-    gap: 1rem;
-    align-items: stretch;
-    padding: 1.15rem 1.25rem;
-    border: 1px solid var(--step-border);
-    border-radius: 12px;
-    background: var(--step-card-bg);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center; gap: 1.25rem;
   }
-  #stepContent5 .fs-learn-left{ display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
-  #stepContent5 .fs-learn-panel-label{
-    font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--step-primary-soft);
-  }
-  #stepContent5 .fs-learn #step5ManagerNotesContainer{
-    margin: 0;
-    border-left-color: var(--step-primary);
-  }
-  #stepContent5 .fs-learn .form-label{ margin-bottom: 0.4rem; }
-  #stepContent5 .fs-learn .note-area{
-    margin: 0;
-    min-height: 96px;
-    resize: vertical;
-  }
-
-  /* ---------- Keep-in-mind guardrails (recommended + avoid) ---------- */
-  #stepContent5 .fs-guard{
-    grid-row: 17; grid-column: 1 / 7;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-  #stepContent5 .fs-guard-panel{
-    display: flex; flex-direction: column; gap: 0.55rem;
-    padding: 1.05rem 1.2rem;
-    border: 1px solid var(--step-border);
-    border-radius: 12px;
-    background: var(--step-card-bg);
-  }
-  #stepContent5 .fs-guard-panel .fs-panel-label--teal{ color: var(--step-success); }
-  #stepContent5 .fs-guard-panel .fs-panel-label--red{ color: var(--step-danger); }
-  #stepContent5 .fs-guard-panel .fs-panel-label{
-    font-family: var(--step-heading-font);
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.18em; text-transform: uppercase;
-  }
-  #stepContent5 .fs-guard-panel .guidelines{ display: flex; flex-direction: column; gap: 0.5rem; }
-  #stepContent5 .fs-guard-panel .guideline{ margin: 0; }
-
-  /* ---------- 5. Final completion area ---------- */
-  #stepContent5 .step-nav{ grid-row: 18; grid-column: 1 / 7; margin: 0; }
   #stepContent5 .fs-progress-meter{
-    display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
+    display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
   }
   #stepContent5 .fs-meter-label{
-    font-family: var(--step-heading-font);
-    font-size: 10px; font-weight: 600;
-    letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--step-text-muted);
+    font-family: var(--step-heading-font); font-size: 9px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--step-text-muted);
   }
   #stepContent5 .fs-meter-track{
-    width: 190px; height: 6px; border-radius: 99px;
+    width: 180px; height: 5px; border-radius: 99px;
     background: var(--step-border); overflow: hidden;
   }
   #stepContent5 .fs-meter-fill{
@@ -3089,55 +3218,60 @@
     box-shadow: 0 0 10px rgba(52,211,153,0.35);
   }
   #stepContent5 .fs-meter-note{
-    font-family: var(--step-body-font);
-    font-size: 10px; color: var(--step-text-muted);
+    font-family: var(--step-body-font); font-size: 10px; color: var(--step-text-muted);
   }
   #stepContent5 #completeSyncBtn{
-    padding: 0.72rem 1.7rem;
-    font-size: 13px; font-weight: 700;
-    letter-spacing: 0.06em;
+    padding: 0.7rem 1.6rem;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.06em;
   }
 
-  /* When the sparse-data note (grid-row 2) is present it takes the row
-     directly below the Conversation Summary eyebrow, so everything that
-     follows shifts down by one row to avoid overlapping it. */
-  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-quote{ grid-row: 3; }
-  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-takeaway{ grid-row: 4; }
-  #stepContent5 .fs-grid:has(.sparse-note) .fs-script{ grid-row: 5; }
-  #stepContent5 .fs-grid:has(.sparse-note) .fs-stats{ grid-row: 6; }
-  #stepContent5 .fs-grid:has(.sparse-note) .fs-eyebrow--follow{ grid-row: 7; }
-  #stepContent5 .fs-grid:has(.sparse-note) .fs-schedule{ grid-row: 8; }
-  #stepContent5 .fs-grid:has(.sparse-note) .fs-eyebrow--focus{ grid-row: 9; }
-  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-goal{ grid-row: 10; }
-  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-focus{ grid-row: 11; }
-  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-opening{ grid-row: 12; }
-  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-followup{ grid-row: 13; }
-  #stepContent5 .fs-grid:has(.sparse-note) .fs-progress{ grid-row: 10 / 14; }
-  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-response{ grid-row: 14; }
-  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-reply{ grid-row: 14; }
-  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-listen{ grid-row: 14; }
-  #stepContent5 .fs-grid:has(.sparse-note) #step5Cards > .analysis-card.fs-card-success{ grid-row: 15; }
-  #stepContent5 .fs-grid:has(.sparse-note) .fs-eyebrow--learn{ grid-row: 16; }
-  #stepContent5 .fs-grid:has(.sparse-note) .fs-learn{ grid-row: 17; }
-  #stepContent5 .fs-grid:has(.sparse-note) .fs-guard{ grid-row: 18; }
-  #stepContent5 .fs-grid:has(.sparse-note) .step-nav{ grid-row: 19; }
-
+  /* ---------- Responsive: tablet (stack into two neat columns) ---------- */
   @media (max-width: 1040px){
-    #stepContent5 .fs-grid{ grid-template-columns: 1fr; }
-    #stepContent5 .fs-grid > *,
-    #stepContent5 .fs-grid > .fs-dynamic > *{
-      grid-row: auto !important;
-      grid-column: 1 / 2 !important;
+    #stepContent5 .fs-grid{
+      grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
     }
-    #stepContent5 .fs-eyebrow-title{ white-space: normal; }
-    #stepContent5 .fs-journ{ margin-left: 0; flex-wrap: wrap; }
-    #stepContent5 .fs-stats{ flex-direction: column; }
-    #stepContent5 .fs-schedule{ flex-wrap: wrap; }
-    #stepContent5 .fs-reminder{ margin-left: 0; }
-    #stepContent5 .fs-progress{ grid-row: auto !important; }
-    #stepContent5 .fs-track{ flex-direction: row; flex-wrap: wrap; }
+    #stepContent5 .fs-dynamic{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #stepContent5 .fs-dynamic > .analysis-card.fs-card-goal,
+    #stepContent5 .fs-dynamic > .analysis-quote,
+    #stepContent5 .fs-dynamic > .analysis-takeaway,
+    #stepContent5 .fs-dynamic > .analysis-card.fs-card-success,
+    #stepContent5 .fs-dynamic > .sparse-note{ grid-column: 1 / 3; }
+    #stepContent5 .fs-dynamic > .analysis-card.fs-card-focus{ grid-column: 1; }
+    #stepContent5 .fs-dynamic > .analysis-card.fs-card-opening{ grid-column: 2; }
+    #stepContent5 .fs-dynamic > .analysis-card.fs-card-followup{ grid-column: 1; }
+    #stepContent5 .fs-dynamic > .analysis-card.fs-card-response{ grid-column: 2; }
+    #stepContent5 .fs-dynamic > .analysis-card.fs-card-reply{ grid-column: 1; }
+    #stepContent5 .fs-dynamic > .analysis-card.fs-card-listen{ grid-column: 2; }
+    #stepContent5 #capPanel .cap-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+  }
+
+  /* ---------- Responsive: mobile (single column, no horizontal overflow) ---------- */
+  @media (max-width: 760px){
+    #stepContent5 .fs-grid{ grid-template-columns: 1fr; }
+    #stepContent5 .fs-dynamic,
+    #stepContent5 .fs-eyebrow--summary,
+    #stepContent5 .fs-script,
+    #stepContent5 .step-nav,
+    #stepContent5 .cs-main,
+    #stepContent5 .cs-side{ grid-column: 1 / 2; }
+    #stepContent5 .fs-dynamic{ grid-template-columns: 1fr; }
+    #stepContent5 .fs-dynamic > .analysis-card{ grid-column: 1 / 2 !important; }
+    #stepContent5 .fs-dynamic > .analysis-quote,
+    #stepContent5 .fs-dynamic > .analysis-takeaway,
+    #stepContent5 .fs-dynamic > .sparse-note{ grid-column: 1 / 2 !important; }
+    #stepContent5 #capPanel .cap-grid{ grid-template-columns: 1fr; }
     #stepContent5 .fs-guard{ grid-template-columns: 1fr; }
     #stepContent5 .fs-learn{ grid-template-columns: 1fr; }
+    #stepContent5 .fs-schedule{ flex-direction: column; align-items: stretch; }
+    #stepContent5 .fs-field{ justify-content: space-between; }
+    #stepContent5 .step-nav{ grid-template-columns: 1fr; text-align: center; }
+    #stepContent5 .step-nav > div,
+    #stepContent5 .step-nav > button{ justify-content: center; }
+  }
+  @media (max-width: 560px){
+    #stepContent5{ padding: 1.6rem 1.1rem; }
+    #stepContent5 #step5Cards > .analysis-card.fs-card-goal{ flex-wrap: wrap; }
+    #stepContent5 #step5Cards > .analysis-card.fs-card-goal .fs-prio{ margin-left: auto; }
   }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -4017,172 +4151,182 @@
                 <div class="script-text" id="step5Script">Loading analysis...</div>
               </div>
 
-              <div class="fs-stats">
-                <div class="fs-stat fs-stat--signals" id="fsStatSignals" style="display:none;">
-                  <span class="fs-stat-label">Signals Analyzed</span>
-                  <span class="fs-stat-value">—</span>
-                </div>
-                <div class="fs-stat fs-stat--root" id="fsStatRoot" style="display:none;">
-                  <span class="fs-stat-label">Root Cause</span>
-                  <span class="fs-stat-value">—</span>
-                </div>
-                <div class="fs-stat fs-stat--acts" id="fsStatActs" style="display:none;">
-                  <span class="fs-stat-label">Actions Planned</span>
-                  <span class="fs-stat-value">—</span>
-                </div>
-                <div class="fs-stat fs-stat--conf" id="fsStatConf" style="display:none;">
-                  <span class="fs-stat-label">Confidence</span>
-                  <span class="fs-stat-value">—</span>
-                </div>
-              </div>
+              <!-- LEFT / PRIMARY WORKSPACE -->
+              <div class="cs-main">
 
-              <div class="fs-eyebrow fs-eyebrow--follow">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                <span class="fs-eyebrow-title">Schedule Follow-up</span>
-              </div>
+                <!-- ── Capture conversation items (factual, user-confirmed) ── -->
+                <div class="cap-panel" id="capPanel">
+                  <style>
+                    .cap-panel{margin-top:1.2rem;}
+                    .cap-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:0.6rem;}
+                    .cap-title{font-family:var(--font-m,.ui-monospace);font-size:0.68rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--mt-cyan,#60A5FA);}
+                    .cap-hint{font-family:var(--font-m,.ui-monospace);font-size:0.62rem;color:var(--ivory-faint,#9aa3b2);}
+                    .cap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0.8rem;}
+                    .cap-col{background:var(--ink,#13171F);border:1px solid var(--border,#2a3042);border-radius:10px;padding:0.9rem;min-width:0;}
+                    .cap-colhead{font-family:var(--font-m,.ui-monospace);font-size:0.6rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--ivory-dim,#aeb6c8);margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;}
+                    .cap-colhead .cap-count{color:var(--mt-violet,#8B5CF6);}
+                    .cap-opener{display:flex;align-items:flex-start;gap:0.6rem;}
+                    .cap-opener input{flex-shrink:0;margin-top:2px;}
+                    .cap-opener .cap-opener-txt{font-size:0.74rem;color:var(--ivory-dim,#aeb6c8);line-height:1.45;}
+                    .cap-list{display:flex;flex-direction:column;gap:0.45rem;margin-bottom:0.6rem;}
+                    .cap-item{display:flex;gap:0.5rem;align-items:center;background:var(--elevated,#222A3A);border:1px solid var(--border,#2a3042);border-radius:6px;padding:0.4rem 0.55rem;font-family:var(--font-m,.ui-monospace);font-size:0.72rem;color:var(--ivory,#E8ECF4);}
+                    .cap-item .cap-itxt{flex:1;min-width:0;word-break:break-word;}
+                    .cap-item .cap-idue{font-size:0.62rem;color:var(--mt-amber,#FBBF24);white-space:nowrap;}
+                    .cap-item .cap-x{flex-shrink:0;background:none;border:none;color:var(--ivory-faint,#9aa3b2);cursor:pointer;font-size:0.85rem;line-height:1;}
+                    .cap-item .cap-x:hover{color:var(--mt-red,#F87171);}
+                    .cap-add{display:flex;gap:0.4rem;flex-wrap:wrap;}
+                    .cap-add input[type=text]{flex:1;min-width:120px;background:var(--surface,#1A2030);border:1px solid var(--border,#2a3042);border-radius:6px;padding:0.45rem 0.6rem;color:var(--ivory,#E8ECF4);font-family:var(--font-m,.ui-monospace);font-size:0.72rem;}
+                    .cap-add input[type=date]{background:var(--surface,#1A2030);border:1px solid var(--border,#2a3042);border-radius:6px;padding:0.45rem 0.5rem;color:var(--ivory-dim,#aeb6c8);font-family:var(--font-m,.ui-monospace);font-size:0.68rem;color-scheme:dark;}
+                    .cap-add button{white-space:nowrap;}
+                    .cap-empty{font-family:var(--font-m,.ui-monospace);font-size:0.66rem;color:var(--ivory-faint,#9aa3b2);font-style:italic;}
+                  </style>
 
-              <div class="fs-schedule">
-                <span class="fs-flow-id">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-8.5 8.5 8.5 8.5 0 01-3.6-.81L3 21l1.81-5.9A8.5 8.5 0 1112.5 3a8.38 8.38 0 018.5 8.5z"/></svg>
-                  Follow-up
-                </span>
-                <span class="fs-flow-sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                <div class="fs-field">
-                  <span class="fs-field-label">Date</span>
-                  <input type="date" id="fsScheduleDate">
-                </div>
-                <span class="fs-flow-sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                <div class="fs-field">
-                  <span class="fs-field-label">Time</span>
-                  <input type="time" id="fsScheduleTime">
-                </div>
-                <span class="fs-reco">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                  Recommended &middot; 7&ndash;10 days
-                </span>
-                <div class="fs-reminder">
-                  <button class="btn btn-sm" id="fsReminderBtn" type="button" aria-pressed="false">
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-                    Set reminder
-                  </button>
-                  <span class="fs-hint" id="fsScheduleHint"></span>
-                </div>
-              </div>
-
-              <div class="fs-eyebrow fs-eyebrow--focus">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <span class="fs-eyebrow-title">Key Focus Areas &amp; Progress</span>
-              </div>
-
-              <div class="fs-progress">
-                <div class="fs-progress-head">
-                  <span class="fs-progress-title">Progress Tracking</span>
-                  <span class="fs-progress-meta">Stage 1 of 4</span>
-                </div>
-                <div class="fs-track">
-                  <div class="fs-track-stage is-done"><span class="fs-dot"></span>Action Planned<span class="fs-stage-tag">Done</span></div>
-                  <div class="fs-track-stage is-active"><span class="fs-dot"></span>In Progress<span class="fs-stage-tag">Now</span></div>
-                  <div class="fs-track-stage"><span class="fs-dot"></span>Review Impact<span class="fs-stage-tag">Next</span></div>
-                  <div class="fs-track-stage"><span class="fs-dot"></span>Outcome Achieved<span class="fs-stage-tag">Target</span></div>
-                </div>
-                <div class="fs-progress-note">Review impact after the follow-up sync. The full journey is mapped &mdash; ready to close this conversation.</div>
-              </div>
-
-              <div class="fs-eyebrow fs-eyebrow--learn">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-                <span class="fs-eyebrow-title">Learnings &amp; Notes</span>
-              </div>
-
-              <div class="fs-learn">
-                <div class="fs-learn-left">
-                  <div class="fs-learn-panel-label">What This Conversation Taught</div>
-                  <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step5ManagerNotesContainer">
-                    <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-                    <div id="step5ManagerNotes"></div>
+                  <div class="cap-head">
+                    <div class="cap-title">Capture Conversation Items</div>
+                    <div class="cap-hint">Saved only when you confirm them.</div>
                   </div>
-                </div>
-                <div>
-                  <label class="form-label">Add Note</label>
-                  <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_5"></textarea>
-                </div>
-              </div>
-
-              <div class="fs-guard">
-                <div class="fs-guard-panel">
-                  <div class="fs-panel-label fs-panel-label--teal">Best Practices &middot; Keep in Mind</div>
-                  <div class="guidelines" id="step5Recommended"></div>
-                </div>
-                <div class="fs-guard-panel">
-                  <div class="fs-panel-label fs-panel-label--red">Avoid</div>
-                  <div class="guidelines" id="step5Avoid"></div>
-                </div>
-              </div>
-
-              <!-- ── Capture conversation items (factual, user-confirmed) ── -->
-              <div class="cap-panel" id="capPanel">
-                <style>
-                  .cap-panel{margin-top:1.2rem;}
-                  .cap-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:0.6rem;}
-                  .cap-title{font-family:var(--font-m,.ui-monospace);font-size:0.68rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--mt-cyan,#60A5FA);}
-                  .cap-hint{font-family:var(--font-m,.ui-monospace);font-size:0.62rem;color:var(--ivory-faint,#9aa3b2);}
-                  .cap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0.8rem;}
-                  .cap-col{background:var(--ink,#13171F);border:1px solid var(--border,#2a3042);border-radius:10px;padding:0.9rem;min-width:0;}
-                  .cap-colhead{font-family:var(--font-m,.ui-monospace);font-size:0.6rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--ivory-dim,#aeb6c8);margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;}
-                  .cap-colhead .cap-count{color:var(--mt-violet,#8B5CF6);}
-                  .cap-opener{display:flex;align-items:flex-start;gap:0.6rem;}
-                  .cap-opener input{flex-shrink:0;margin-top:2px;}
-                  .cap-opener .cap-opener-txt{font-size:0.74rem;color:var(--ivory-dim,#aeb6c8);line-height:1.45;}
-                  .cap-list{display:flex;flex-direction:column;gap:0.45rem;margin-bottom:0.6rem;}
-                  .cap-item{display:flex;gap:0.5rem;align-items:center;background:var(--elevated,#222A3A);border:1px solid var(--border,#2a3042);border-radius:6px;padding:0.4rem 0.55rem;font-family:var(--font-m,.ui-monospace);font-size:0.72rem;color:var(--ivory,#E8ECF4);}
-                  .cap-item .cap-itxt{flex:1;min-width:0;word-break:break-word;}
-                  .cap-item .cap-idue{font-size:0.62rem;color:var(--mt-amber,#FBBF24);white-space:nowrap;}
-                  .cap-item .cap-x{flex-shrink:0;background:none;border:none;color:var(--ivory-faint,#9aa3b2);cursor:pointer;font-size:0.85rem;line-height:1;}
-                  .cap-item .cap-x:hover{color:var(--mt-red,#F87171);}
-                  .cap-add{display:flex;gap:0.4rem;flex-wrap:wrap;}
-                  .cap-add input[type=text]{flex:1;min-width:120px;background:var(--surface,#1A2030);border:1px solid var(--border,#2a3042);border-radius:6px;padding:0.45rem 0.6rem;color:var(--ivory,#E8ECF4);font-family:var(--font-m,.ui-monospace);font-size:0.72rem;}
-                  .cap-add input[type=date]{background:var(--surface,#1A2030);border:1px solid var(--border,#2a3042);border-radius:6px;padding:0.45rem 0.5rem;color:var(--ivory-dim,#aeb6c8);font-family:var(--font-m,.ui-monospace);font-size:0.68rem;color-scheme:dark;}
-                  .cap-add button{white-space:nowrap;}
-                  .cap-empty{font-family:var(--font-m,.ui-monospace);font-size:0.66rem;color:var(--ivory-faint,#9aa3b2);font-style:italic;}
-                </style>
-
-                <div class="cap-head">
-                  <div class="cap-title">Capture Factual Conversation Items</div>
-                  <div class="cap-hint">These are saved only when you confirm them — nothing is auto-generated.</div>
-                </div>
-                <div class="cap-grid">
-                  <!-- Opener -->
-                  <div class="cap-col">
-                    <label class="cap-colhead"><span>Opener USED</span></label>
-                    <div class="cap-opener">
-                      <input type="checkbox" id="capOpenerUsed">
-                      <div>
-                        <span class="cap-opener-txt">I actually used the suggested opener in this conversation. (Records exact opener as <strong>USED</strong>; leave unchecked if you saved but did not use it.)</span>
+                  <div class="cap-grid">
+                    <!-- Opener -->
+                    <div class="cap-col">
+                      <label class="cap-colhead"><span>Opener</span></label>
+                      <div class="cap-opener">
+                        <input type="checkbox" id="capOpenerUsed">
+                        <div>
+                          <span class="cap-opener-txt">I actually used the suggested opener in this conversation. (Records exact opener as <strong>USED</strong>; leave unchecked if you saved but did not use it.)</span>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Commitments -->
+                    <div class="cap-col">
+                      <label class="cap-colhead"><span>Commitments</span><span class="cap-count" id="capCommitCount">0</span></label>
+                      <div class="cap-list" id="capCommitList"></div>
+                      <div class="cap-empty" id="capCommitEmpty">No commitments captured.</div>
+                      <div class="cap-add">
+                        <input type="text" id="capCommitTxt" placeholder="e.g. Review workload priorities">
+                        <input type="date" id="capCommitDue" title="Due date (optional)">
+                        <button class="btn btn-sm btn-outline" id="capCommitAdd">Add</button>
+                      </div>
+                    </div>
+                    <!-- Follow-ups -->
+                    <div class="cap-col">
+                      <label class="cap-colhead"><span>Follow-ups</span><span class="cap-count" id="capFollowCount">0</span></label>
+                      <div class="cap-list" id="capFollowList"></div>
+                      <div class="cap-empty" id="capFollowEmpty">No follow-ups captured.</div>
+                      <div class="cap-add">
+                        <input type="text" id="capFollowTxt" placeholder="e.g. Review workload priorities next meeting">
+                        <input type="date" id="capFollowDue" title="Due date (optional)">
+                        <button class="btn btn-sm btn-outline" id="capFollowAdd">Add</button>
                       </div>
                     </div>
                   </div>
-                  <!-- Commitments -->
-                  <div class="cap-col">
-                    <label class="cap-colhead"><span>Commitments</span><span class="cap-count" id="capCommitCount">0</span></label>
-                    <div class="cap-list" id="capCommitList"></div>
-                    <div class="cap-empty" id="capCommitEmpty">No commitments captured.</div>
-                    <div class="cap-add">
-                      <input type="text" id="capCommitTxt" placeholder="e.g. Review workload priorities">
-                      <input type="date" id="capCommitDue" title="Due date (optional)">
-                      <button class="btn btn-sm btn-outline" id="capCommitAdd">Add</button>
+                </div>
+
+                <div class="fs-eyebrow fs-eyebrow--learn">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                  <span class="fs-eyebrow-title">Quick Notes</span>
+                </div>
+
+                <div class="fs-learn">
+                  <div class="fs-learn-left">
+                    <div class="fs-learn-panel-label">What This Conversation Taught</div>
+                    <div class="guideline tip" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step5ManagerNotesContainer">
+                      <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+                      <div id="step5ManagerNotes"></div>
                     </div>
                   </div>
-                  <!-- Follow-ups -->
-                  <div class="cap-col">
-                    <label class="cap-colhead"><span>Follow-ups</span><span class="cap-count" id="capFollowCount">0</span></label>
-                    <div class="cap-list" id="capFollowList"></div>
-                    <div class="cap-empty" id="capFollowEmpty">No follow-ups captured.</div>
-                    <div class="cap-add">
-                      <input type="text" id="capFollowTxt" placeholder="e.g. Review workload priorities next meeting">
-                      <input type="date" id="capFollowDue" title="Due date (optional)">
-                      <button class="btn btn-sm btn-outline" id="capFollowAdd">Add</button>
-                    </div>
+                  <div>
+                    <label class="form-label">Add Note</label>
+                    <textarea class="note-area" placeholder="Capture key observations, employee responses, and any follow-up items..." id="stepNotes_5"></textarea>
                   </div>
                 </div>
+
+                <div class="fs-guard">
+                  <div class="fs-guard-panel">
+                    <div class="fs-panel-label fs-panel-label--teal">Best Practices &middot; Keep in Mind</div>
+                    <div class="guidelines" id="step5Recommended"></div>
+                  </div>
+                  <div class="fs-guard-panel">
+                    <div class="fs-panel-label fs-panel-label--red">Avoid</div>
+                    <div class="guidelines" id="step5Avoid"></div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- RIGHT / SIDEBAR -->
+              <div class="cs-side">
+
+                <div class="fs-eyebrow fs-eyebrow--focus">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span class="fs-eyebrow-title">Progress</span>
+                </div>
+
+                <div class="fs-progress">
+                  <div class="fs-progress-head">
+                    <span class="fs-progress-title">Stage 1 of 4</span>
+                    <span class="fs-progress-meta">Status</span>
+                  </div>
+                  <div class="fs-track">
+                    <div class="fs-track-stage is-done"><span class="fs-dot"></span>Action Planned<span class="fs-stage-tag">Done</span></div>
+                    <div class="fs-track-stage is-active"><span class="fs-dot"></span>In Progress<span class="fs-stage-tag">Now</span></div>
+                    <div class="fs-track-stage"><span class="fs-dot"></span>Review Impact<span class="fs-stage-tag">Next</span></div>
+                    <div class="fs-track-stage"><span class="fs-dot"></span>Outcome Achieved<span class="fs-stage-tag">Target</span></div>
+                  </div>
+                  <div class="fs-progress-note">Review impact after the follow-up sync. The full journey is mapped &mdash; ready to close this conversation.</div>
+                </div>
+
+                <div class="fs-stats">
+                  <div class="fs-stat fs-stat--signals" id="fsStatSignals" style="display:none;">
+                    <span class="fs-stat-label">Signals Analyzed</span>
+                    <span class="fs-stat-value">—</span>
+                  </div>
+                  <div class="fs-stat fs-stat--root" id="fsStatRoot" style="display:none;">
+                    <span class="fs-stat-label">Root Cause</span>
+                    <span class="fs-stat-value">—</span>
+                  </div>
+                  <div class="fs-stat fs-stat--acts" id="fsStatActs" style="display:none;">
+                    <span class="fs-stat-label">Actions Planned</span>
+                    <span class="fs-stat-value">—</span>
+                  </div>
+                  <div class="fs-stat fs-stat--conf" id="fsStatConf" style="display:none;">
+                    <span class="fs-stat-label">Confidence</span>
+                    <span class="fs-stat-value">—</span>
+                  </div>
+                </div>
+
+                <div class="fs-eyebrow fs-eyebrow--follow">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span class="fs-eyebrow-title">Follow-up Plan</span>
+                </div>
+
+                <div class="fs-schedule">
+                  <span class="fs-flow-id">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-8.5 8.5 8.5 8.5 0 01-3.6-.81L3 21l1.81-5.9A8.5 8.5 0 1112.5 3a8.38 8.38 0 018.5 8.5z"/></svg>
+                    Follow-up
+                  </span>
+                  <span class="fs-flow-sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                  <div class="fs-field">
+                    <span class="fs-field-label">Date</span>
+                    <input type="date" id="fsScheduleDate">
+                  </div>
+                  <span class="fs-flow-sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+                  <div class="fs-field">
+                    <span class="fs-field-label">Time</span>
+                    <input type="time" id="fsScheduleTime">
+                  </div>
+                  <span class="fs-reco">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    Recommended &middot; 7&ndash;10 days
+                  </span>
+                  <div class="fs-reminder">
+                    <button class="btn btn-sm" id="fsReminderBtn" type="button" aria-pressed="false">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                      Set reminder
+                    </button>
+                    <span class="fs-hint" id="fsScheduleHint"></span>
+                  </div>
+                </div>
+
               </div>
 
               <div class="step-nav">
