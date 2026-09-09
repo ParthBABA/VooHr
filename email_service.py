@@ -72,12 +72,12 @@ def _site_base_url() -> str:
 
 def _email_footer() -> str:
     base = _site_base_url()
-    policy_url = f"{base}/privacy-policy" if base else "/privacy-policy"
-    terms_url = f"{base}/terms-of-service" if base else "/terms-of-service"
+    policy_url = f"{base}/privacy" if base else "/privacy"
+    terms_url = f"{base}/terms" if base else "/terms"
     return (
         "<hr style=\"border:none;border-top:1px solid #333;margin:24px 0;\">"
         "<p style=\"font-size:0.75rem;color:#888;\">"
-        "This email was sent because you have an account with HR Copilot. "
+        "This email was sent because you have an account with VooVr. "
         f"<a href=\"{policy_url}\" style=\"color:#aaa;\">View our Privacy Policy</a> | "
         f"<a href=\"{terms_url}\" style=\"color:#aaa;\">Terms of Service</a>"
         "</p>"
@@ -234,7 +234,7 @@ def _manager_invite_html(org_name: str, invite_link: str) -> str:
     return (
         "<p>You've been invited by an admin to join <strong>"
         + _escape_html(org_name)
-        + "</strong> on HR Copilot as a <strong>Manager</strong>.</p>"
+        + "</strong> on VooVr as a <strong>Manager</strong>.</p>"
         "<p>Click the button below to accept your invitation and set up your "
         "account:</p>"
         f"<p style=\"margin:24px 0;\"><a href=\"{invite_link}\" "
@@ -283,7 +283,7 @@ def send_manager_invite_email(to_email: str, org_name: str, invite_link: str) ->
         },
         "replyTo": {"email": "voovrhr@gmail.com", "name": "VooVr"},
         "to": [{"email": to_email}],
-        "subject": "You've been invited to HR Copilot as a Manager",
+        "subject": "You've been invited to VooVr as a Manager",
         "htmlContent": _manager_invite_html(org_name, invite_link),
         "headers": _profile_avatar_headers(),
     }

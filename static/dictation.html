@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HR Copilot - New Session</title>
+<title>VooVr - New Session</title>
+<!-- shared-head -->
+<script src="/ui-feedback.js"></script>
 <script>
 (function(){
   try {
@@ -14,7 +16,6 @@
   } catch (e) {}
 })();
 </script>
-<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
@@ -282,7 +283,7 @@ function startRecording() {
     document.getElementById('recordIcon').style.display = 'none';
     document.getElementById('stopIcon').style.display = '';
   }).catch(function(err) {
-    alert('Microphone access denied. Please allow microphone permissions.');
+    VooVrUI.show('Microphone access denied. Please allow microphone permissions.');
   });
 }
 
@@ -359,10 +360,10 @@ function copyTranscript() {
   area.setSelectionRange(0, 0);
 }
 
-function clearTranscript() {
+async function clearTranscript() {
   var area = document.getElementById('transcriptArea');
   if (!area) return;
-  if (area.value.trim() && !confirm('Clear the transcript?')) return;
+  if (area.value.trim() && !await VooVrUI.ask('This will remove the transcript text.', {title: 'Clear transcript?', accept: 'Clear transcript'})) return;
   area.value = '';
   updateWordCount();
   document.getElementById('saveBtn').disabled = true;
@@ -371,7 +372,7 @@ function clearTranscript() {
 function saveSession() {
   var text = document.getElementById('transcriptArea').value.trim();
   if (!text) {
-    alert('Transcript is empty. Record, upload, or type something first.');
+    VooVrUI.show('Transcript is empty. Record, upload, or type something first.');
     return;
   }
   document.getElementById('saveBtn').disabled = true;
@@ -399,13 +400,13 @@ function saveSession() {
   }).catch(function(err) {
     document.getElementById('saveBtn').disabled = false;
     document.getElementById('saveBtn').textContent = 'Save Session';
-    alert('Failed to save: ' + err.message);
+    VooVrUI.show('Failed to save: ' + err.message);
   });
 }
 
-function discardSession() {
+async function discardSession() {
   if (document.getElementById('transcriptArea').value.trim()) {
-    if (!confirm('Discard this recording?')) return;
+    if (!await VooVrUI.ask('Your unsaved recording and transcript will be discarded.', {title: 'Discard recording?', accept: 'Discard recording'})) return;
   }
   window.location.href = '/dashboard';
 }
@@ -732,7 +733,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="sidebar-header">
       <div class="sidebar-logo">
         <div class="logo-mark">HR</div>
-        HR Copilot
+        VooVr
       </div>
     </div>
     <div class="sidebar-nav">

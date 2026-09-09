@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HR Copilot - Settings</title>
-<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
+<title>VooVr - Settings</title>
+<!-- shared-head -->
+<script src="/ui-feedback.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
@@ -198,7 +199,7 @@
 @media(max-width:1024px){
   .settings-layout{gap:clamp(1.25rem,3vw,1.75rem);}
 }
-@media(max-width:900px){
+@media(max-width:1024px){
   .settings-layout{flex-direction:column;}
   .settings-rail{position:static;width:100%;top:auto;margin:0 0 0.5rem;border-right:none;border-bottom:1px solid var(--border);padding:0.25rem 0 0.5rem;}
   .settings-rail-head{display:none;}
@@ -208,7 +209,7 @@
   .settings-nav-item .nav-ind{display:none;}
   .settings-content{max-width:none;}
 }
-@media(max-width:600px){
+@media(max-width:768px){
   .st-title{font-size:1.5rem;}
   .st-row{flex-direction:column;align-items:flex-start;gap:0.8rem;}
   .st-row-actions{width:100%;}
@@ -316,7 +317,7 @@
 .st-current-device{font-family:var(--font-lato);font-weight:700;font-size:0.9rem;color:var(--ivory);display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;}
 .st-current-meta{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-dim);margin-top:0.3rem;}
 
-@media(max-width:600px){
+@media(max-width:768px){
   .st-row{flex-direction:column;align-items:flex-start;gap:0.8rem;}
   .st-row-actions{width:100%;}
   .st-row-actions .btn{flex:1;}
@@ -324,11 +325,11 @@
 }
 
 /* ── Responsive ── */
-@media(max-width:1000px){
+@media(max-width:1280px){
   .settings-layout{gap:1.45rem;}
   .settings-rail{width:268px;}
 }
-@media(max-width:860px){
+@media(max-width:1024px){
   .settings-layout{flex-direction:column;gap:0.8rem;}
   .settings-rail{position:static;width:100%;top:auto;padding:0.5rem;border-radius:12px;}
   .settings-rail-head{display:none;}
@@ -338,7 +339,7 @@
   .settings-nav-item .nav-ind{display:none;}
   .settings-nav-item.active::before{top:0.4rem;bottom:0.4rem;}
 }
-@media(max-width:600px){
+@media(max-width:768px){
   .st-title{font-size:1.3rem;}
   .settings-content{max-width:none;}
   .st-confirm-fields{grid-template-columns:1fr !important;}
@@ -384,8 +385,8 @@ html[data-theme="light"]{
 
 /* Settings rail lining + sidebar group structure */
 .settings-rail{border-right-color:var(--settings-divider);}
-@media(max-width:900px){.settings-rail{border-bottom-color:var(--settings-divider);}}
-@media(min-width:901px){
+@media(max-width:1024px){.settings-rail{border-bottom-color:var(--settings-divider);}}
+@media(min-width:1025px){
   .settings-nav-group{border-top:1px solid var(--settings-divider);margin-top:1.35rem;padding-top:0.9rem;}
   .settings-nav-group:first-child{border-top:none;margin-top:0.35rem;padding-top:0;}
 }
@@ -750,24 +751,24 @@ html[data-theme="light"]{
             <p class="st-desc">Send manager invites to employees who need read-only, scoped access to their team's data.</p>
           </div>
 
-          <div class="st-section" id="mrLoading" style="padding:1.5rem;">
+          <div class="st-section p-lg" id="mrLoading">
             <div class="st-muted">Loading roster…</div>
           </div>
 
           <div class="st-section" id="mrTableWrap" style="display:none;">
-            <div class="mr-actions" style="display:flex;align-items:center;gap:0.75rem;padding:0 1.5rem 1rem;flex-wrap:wrap;">
+            <div class="mr-actions manager-actions">
               <button class="btn btn-sm btn-primary" id="mrBulkInviteBtn" type="button" disabled>Send Invites</button>
               <span class="st-muted" id="mrSelectedInfo">0 selected</span>
-              <span style="flex:1;"></span>
+              <span class="flex-spacer"></span>
               <button class="btn btn-sm btn-outline" id="mrCsvImportBtn" type="button">Import via CSV</button>
               <input type="file" id="mrCsvInput" accept=".csv,text/csv" style="display:none;">
             </div>
 
-            <div style="overflow-x:auto;">
+            <div class="table-wrap">
               <table class="st-table" id="mrTable">
                 <thead>
                   <tr>
-                    <th style="width:2.5rem;"><input type="checkbox" id="mrSelectAll" title="Select all"></th>
+                    <th class="selection-column"><input type="checkbox" id="mrSelectAll" title="Select all"></th>
                     <th>Name</th>
                     <th>Department</th>
                     <th>Reports</th>
@@ -778,10 +779,10 @@ html[data-theme="light"]{
               </table>
             </div>
 
-            <div class="st-section" style="padding:1.5rem;">
+            <div class="st-section p-lg">
               <div class="field-group">
                 <label class="field-label">How manager invites work</label>
-                <p class="st-muted" style="font-size:0.82rem;line-height:1.55;">Employees with no account and a valid email receive an invite link. Invites expire after 7 days. Clicking the link creates a manager account scoped to their direct reports — no admin access, no code-deploy access.</p>
+                <p class="st-muted text-help">Employees with no account and a valid email receive an invite link. Invites expire after 7 days. Clicking the link creates a manager account scoped to their direct reports — no admin access, no code-deploy access.</p>
               </div>
             </div>
           </div>
@@ -1522,7 +1523,7 @@ function clearFieldError(input){
   function renderSessions(sessions){
     listEl.innerHTML = '';
     if (!sessions || !sessions.length) {
-      listEl.innerHTML = '<div style="font-family:var(--font-rc);font-size:0.7rem;letter-spacing:0.06em;color:var(--ivory-faint);">No active sessions found.</div>';
+      listEl.innerHTML = '<div class="text-caption">No active sessions found.</div>';
       renderCurrentSession(null);
       return;
     }
@@ -1593,7 +1594,7 @@ function clearFieldError(input){
     }).then(function(){
       row.remove();
       if (!listEl.children.length) {
-        listEl.innerHTML = '<div style="font-family:var(--font-rc);font-size:0.7rem;letter-spacing:0.06em;color:var(--ivory-faint);">No active sessions found.</div>';
+        listEl.innerHTML = '<div class="text-caption">No active sessions found.</div>';
       }
       showToast('Session signed out');
     }).catch(function(err){
@@ -1942,8 +1943,8 @@ function clearFieldError(input){
   }
 
   if(regenBtn){
-    regenBtn.addEventListener('click',function(){
-      if(!confirm('Regenerate backup codes? Your old codes will stop working immediately.')) return;
+    regenBtn.addEventListener('click',async function(){
+      if(!await VooVrUI.ask('Your old codes will stop working immediately.', {title: 'Regenerate backup codes?', accept: 'Regenerate codes'})) return;
       regenBtn.disabled=true;
       regenBtn.textContent='Generating\u2026';
       fetch('/auth/totp/regenerate-backup-codes',{method:'POST',headers:{'Content-Type':'application/json'}})
@@ -1957,41 +1958,45 @@ function clearFieldError(input){
         }
         // Show the new codes in a modal/overlay.
         var codes=d.backup_codes;
-        var overlay=document.createElement('div');
-        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+        var overlay=document.createElement('dialog');
+        overlay.className='ui-confirm recovery-dialog';
+        overlay.setAttribute('aria-labelledby','recoveryTitle');
         var modal=document.createElement('div');
-        modal.style.cssText='background:var(--ink);border:1px solid var(--border);border-radius:16px;padding:2rem;max-width:440px;width:100%;max-height:80vh;overflow-y:auto;';
-        modal.innerHTML='<div style="text-align:center;margin-bottom:1rem;"><div style="font-size:.85rem;font-weight:600;color:var(--amber);margin-bottom:.35rem;">New recovery codes</div><div style="font-size:.78rem;color:var(--ivory-dim);line-height:1.55;">Save these codes. Each code can only be used once. Old codes are now invalid.</div></div>';
+        modal.innerHTML='<h2 id="recoveryTitle">New recovery codes</h2><p class="recovery-description">Save these codes. Each code can only be used once. Old codes are now invalid.</p><div id="recoveryFeedback" hidden></div>';
         var grid=document.createElement('div');
-        grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-bottom:1rem;';
+        grid.className='recovery-grid';
         codes.forEach(function(c){
           var el=document.createElement('div');
-          el.style.cssText='font-family:"Space Mono",monospace;font-size:.82rem;font-weight:600;color:var(--ivory);letter-spacing:.08em;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.45rem .6rem;text-align:center;';
+          el.className='recovery-code';
           el.textContent=c;
           grid.appendChild(el);
         });
         modal.appendChild(grid);
         var btnRow=document.createElement('div');
-        btnRow.style.cssText='display:flex;gap:.5rem;';
+        btnRow.className='ui-confirm-actions';
         var copyBtn=document.createElement('button');
         copyBtn.textContent='Copy all';
-        copyBtn.style.cssText='flex:1;padding:.5rem;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--amber);';
-        copyBtn.onclick=function(){navigator.clipboard.writeText(codes.join('\n')).then(function(){copyBtn.textContent='Copied!';setTimeout(function(){copyBtn.textContent='Copy all';},1500);});};
+        copyBtn.className='btn btn-outline';
+        copyBtn.onclick=async function(){
+          try { await navigator.clipboard.writeText(codes.join('\n')); copyBtn.textContent='Copied!'; }
+          catch(error) { VooVrUI.show('Could not copy the codes. Use Download .txt instead.', {target:'#recoveryFeedback'}); }
+        };
         var dlBtn=document.createElement('button');
         dlBtn.textContent='Download .txt';
-        dlBtn.style.cssText='flex:1;padding:.5rem;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--teal);';
+        dlBtn.className='btn btn-outline';
         dlBtn.onclick=function(){var blob=new Blob([codes.join('\n')],{type:'text/plain'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='voovr-backup-codes.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);};
         var closeBtn=document.createElement('button');
         closeBtn.textContent='Done';
-        closeBtn.style.cssText='flex:1;padding:.5rem;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;border:none;background:var(--violet);color:#fff;';
-        closeBtn.onclick=function(){overlay.remove();};
+        closeBtn.className='btn btn-primary';
+        closeBtn.onclick=function(){overlay.close();};
+        overlay.addEventListener('close',function(){overlay.remove();regenBtn.focus();});
         btnRow.appendChild(copyBtn);
         btnRow.appendChild(dlBtn);
         btnRow.appendChild(closeBtn);
         modal.appendChild(btnRow);
         overlay.appendChild(modal);
-        overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
         document.body.appendChild(overlay);
+        overlay.showModal();
         showToast('New backup codes generated');
         regenBtn.disabled=false;
         regenBtn.textContent='Regenerate codes';

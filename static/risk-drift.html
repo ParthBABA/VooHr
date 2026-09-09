@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HR Copilot - Risk Drift Insights</title>
+<title>VooVr - Risk Drift Insights</title>
+<!-- shared-head -->
 <script>
 // Set theme before first paint to avoid a flash of the wrong theme.
 (function(){
@@ -15,7 +16,6 @@
   } catch (e) {}
 })();
 </script>
-<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css">
@@ -40,6 +40,8 @@
     if (nameEl) nameEl.textContent = data.name;
     if (roleEl) roleEl.textContent = data.role === 'admin' ? 'HR Admin' : data.role;
     if (avatarEl) avatarEl.textContent = (data.name || 'U').trim().charAt(0).toUpperCase();
+    var orgEl = document.getElementById('riskOrgName');
+    if (orgEl) orgEl.textContent = (data.organization && data.organization.name) || 'Your workspace';
     revealPage();
   }
 
@@ -84,8 +86,7 @@
     <div class="sidebar-header">
       <div class="sidebar-logo">
         <div class="logo-mark">HR</div>
-        <!-- TODO: replace with org name from backend -->
-        VooVr
+        <span id="riskOrgName">Your workspace</span>
       </div>
     </div>
     <div class="sidebar-nav">

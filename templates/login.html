@@ -4,15 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VooVr — The AI operating system for modern HR teams</title>
-<meta name="description" content="VooVr is the AI-powered employee intelligence platform. Predict attrition, gain workforce psychology insights, and automate smart follow-ups — all in one place for modern HR teams.">
-<meta name="theme-color" content="#09090B">
-<link rel="canonical" href="https://voovr.com/">
-<meta name="og:title" content="VooVr — The AI operating system for modern HR teams">
-<meta name="og:description" content="One platform for employee records, AI insights, psychological analysis, follow-ups and workforce intelligence.">
-<meta name="og:type" content="website">
-<meta name="og:site_name" content="VooVr">
-<meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236E56FF'/%3E%3Cstop offset='1' stop-color='%234D9FFF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M10 8v18M10 8l12 18' stroke='%2309090B' stroke-width='5' stroke-linecap='square'/%3E%3C/svg%3E">
+{% include 'shared-head.html' %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -364,10 +356,11 @@ h1,h2,h3,h4{
   z-index:55;
   display:flex; flex-direction:column; gap:6px;
   transform:translateX(100%);
-  transition:transform var(--transition-slow);
+  visibility:hidden;
+  transition:transform var(--transition-slow),visibility var(--transition-slow);
   box-shadow:var(--shadow-xl);
 }
-.mobile-menu.open{ transform:translateX(0); }
+.mobile-menu.open{ transform:translateX(0); visibility:visible; }
 .mobile-menu a{
   font-family:var(--font-head);
   font-size:24px; font-weight:600; color:var(--muted);
@@ -2010,7 +2003,7 @@ h1,h2,h3,h4{
 .aud-note{ margin-top:12px; font-size:11.5px; color:var(--muted); opacity:0; }
 .insp-panel.is-playing .aud-note{ animation:ecRowIn .4s ease forwards; animation-delay:7.8s; }
 
-@media (max-width:640px){
+@media (max-width:768px){
   .flow-inspector{ padding:20px 18px 18px; }
 }
 @media (prefers-reduced-motion:reduce){
@@ -2019,7 +2012,7 @@ h1,h2,h3,h4{
   .insp-panel.is-playing .enc-fchip em{ opacity:0 !important; }
 }
 
-@media (max-width:720px){
+@media (max-width:768px){
   .flow-svg{ display:none; }
   .flow-diagram::before{ display:none; }
   .flow-steps{
@@ -2176,12 +2169,12 @@ h1,h2,h3,h4{
 /* ============================================================
    RESPONSIVE
 ============================================================ */
-@media (max-width:1100px){
+@media (max-width:1280px){
   .hero-grid{ gap:60px; }
   .showcase-row{ gap:60px; }
   .bento{ gap:20px; }
 }
-@media (max-width:980px){
+@media (max-width:1024px){
   .hero-grid{ grid-template-columns:1fr; gap:70px; }
   .hero-inner{ max-width:100%; text-align:center; margin:0 auto; }
   .hero-inner p{ margin-left:auto; margin-right:auto; }
@@ -2200,7 +2193,7 @@ h1,h2,h3,h4{
   .section{ padding:120px 0; }
   .section-tight{ padding:90px 0; }
 }
-@media (max-width:720px){
+@media (max-width:768px){
   .nav-links{ display:none; }
   .nav-burger{ display:flex; }
   .nav-cta a.sign-in{ display:none; }

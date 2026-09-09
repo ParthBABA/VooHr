@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HR Copilot - Dashboard</title>
+<title>VooVr - Dashboard</title>
+<!-- shared-head -->
+<script src="/ui-feedback.js"></script>
 <script>
 // Set theme before first paint to avoid a flash of the wrong theme.
 (function(){
@@ -15,7 +17,6 @@
   } catch (e) {}
 })();
 </script>
-<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;1,400&display=swap" rel="stylesheet"/>
@@ -416,8 +417,8 @@
       <!-- DASHBOARD GRID -->
       <div class="dash-grid">
         <!-- UNIFIED EMPLOYEE DIRECTORY (replaces separate Alerts + Directory cards) -->
-        <div class="card fade-in fade-in-d1 full-width" id="dashDirCard" style="padding:0;overflow:hidden;">
-          <div class="card-header" style="padding:1.5rem 1.5rem 0;flex-wrap:wrap;gap:0.8rem;">
+        <div class="card fade-in fade-in-d1 full-width card-flush" id="dashDirCard">
+          <div class="card-header directory-header">
             <div class="card-header-left">
               <div>
                 <div class="eyebrow" data-lang="en">Workforce</div>
@@ -450,7 +451,7 @@
           </div>
 
           <!-- TOOLBAR -->
-          <div class="dir-toolbar" style="padding:1.2rem 1.5rem;">
+          <div class="dir-toolbar directory-toolbar">
             <div class="dir-search">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
               <input type="text" id="dashDirSearch" class="dir-search-input" placeholder="Search employees by name, department, email...">
@@ -473,7 +474,7 @@
                 <option value="healthy">Healthy</option>
               </select>
               <button class="dir-clear-btn" id="dashClearFilters" type="button">Clear</button>
-              <a href="/api/employees/csv-template" class="dir-select" style="text-decoration:none;display:inline-flex;align-items:center;gap:.35rem;cursor:pointer;" title="Download a CSV template with the expected column headers">Template</a>
+              <a href="/api/employees/csv-template" class="dir-select inline-action" title="Download a CSV template with the expected column headers">Template</a>
             </div>
           </div>
 
@@ -493,11 +494,11 @@
             <tbody></tbody>
           </table>
           <div class="pagination-bar" id="dashEmpFooter">
-            <span id="dashEmpFooterText">Showing 1 to 8 of 8 employees</span>
+            <span id="dashEmpFooterText">Loading employees…</span>
             <div class="pagination-pages">
-              <button class="page-btn" disabled aria-label="Previous page">&lsaquo;</button>
-              <button class="page-btn active">1</button>
-              <button class="page-btn" disabled aria-label="Next page">&rsaquo;</button>
+              <button class="page-btn" id="dashPrevPage" disabled aria-label="Previous page">&lsaquo;</button>
+              <span class="page-btn active" id="dashPageNumber" aria-live="polite">1</span>
+              <button class="page-btn" id="dashNextPage" disabled aria-label="Next page">&rsaquo;</button>
             </div>
           </div>
         </div>
@@ -505,9 +506,9 @@
         <!-- MANAGER EMPTY-STATE — shown instead of the org-wide directory
              for manager roles (their team list is server-scoped and, until
              employees are assigned, empty). -->
-        <div class="card fade-in full-width" id="dashManagerEmpty" style="display:none;padding:3.5rem 1.5rem;text-align:center;">
-          <div style="font-family:var(--font-serif);font-size:1.15rem;font-weight:700;line-height:1.3;color:var(--ivory);margin-bottom:0.7rem;">No one reports to you yet</div>
-          <div style="font-family:var(--font-m);font-size:0.82rem;line-height:1.66;color:var(--ivory-dim);max-width:26rem;margin:0 auto;">Once employees are assigned to you, they&rsquo;ll show up here.</div>
+        <div class="card fade-in full-width directory-empty" id="dashManagerEmpty" style="display:none;">
+          <div class="directory-empty-title">No one reports to you yet</div>
+          <div class="directory-empty-description">Once employees are assigned to you, they&rsquo;ll show up here.</div>
         </div>
 
       </div>
@@ -607,8 +608,9 @@
             <select class="form-input" id="empManager">
               <option value="">No manager / Top of hierarchy</option>
             </select>
-            <div id="managerInvitePrompt" style="display:none;margin-top:10px;padding:12px;border:1px solid var(--amber-soft, #f5b30155);border-radius:10px;background:var(--amber-soft, #f5b30114);">
-              <div style="font-size:0.85rem;color:var(--ivory-faint);margin-bottom:8px;" id="managerInviteText"></div>
+            <div id="managerInvitePrompt" class="invite-prompt" style="display:none;">
+              <div class="invite-description" id="managerInviteText"></div>
+              <div id="inviteFeedback" data-feedback hidden></div>
               <button type="button" class="btn btn-sm btn-gradient" id="managerInviteBtn">Send Invite</button>
             </div>
           </div>
@@ -634,7 +636,7 @@
             </div>
             <div class="finish-row">
               <span class="finish-label">AI Profile</span>
-              <span class="finish-value" style="font-size:0.7rem;color:var(--ivory-faint);">Will be initialized after creation</span>
+              <span class="finish-value text-caption">Will be initialized after creation</span>
             </div>
           </div>
           <div class="ai-consent">
@@ -673,15 +675,20 @@
   var table = document.getElementById('dashEmpTable');
   var countBadge = document.getElementById('dashEmpCount');
   var footerText = document.getElementById('dashEmpFooterText');
+  var currentPage = 1;
+  var pageSize = 20;
+  var previous = document.getElementById('dashPrevPage');
+  var next = document.getElementById('dashNextPage');
   if (!table) return;
 
-  window.dashApplyFilters = function() {
+  window.dashApplyFilters = function(keepPage) {
+    if (keepPage !== true) currentPage = 1;
     var allRows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
     var total = allRows.length;
     var q = (search && search.value || '').trim().toLowerCase();
     var dept = deptFilter && deptFilter.value || '';
     var status = statusFilter && statusFilter.value || '';
-    var visible = 0;
+    var matches = [];
 
     allRows.forEach(function(row) {
       var name = (row.querySelector('.emp-name') || {}).textContent || '';
@@ -693,15 +700,24 @@
       var matchesStatus = !status || rowStatus === status;
       var show = matchesQuery && matchesDept && matchesStatus;
 
-      row.style.display = show ? '' : 'none';
-      if (show) visible++;
+      row.style.display = 'none';
+      if (show) matches.push(row);
     });
 
-    if (footerText) footerText.textContent = 'Showing ' + (visible ? 1 : 0) + ' to ' + visible + ' of ' + total + ' employees';
+    var pages = Math.max(1, Math.ceil(matches.length / pageSize));
+    currentPage = Math.min(currentPage, pages);
+    var start = (currentPage - 1) * pageSize;
+    matches.slice(start, start + pageSize).forEach(function(row) { row.style.display = ''; });
+    previous.disabled = currentPage === 1;
+    next.disabled = currentPage === pages;
+    document.getElementById('dashPageNumber').textContent = currentPage + ' / ' + pages;
+    if (footerText) footerText.textContent = 'Showing ' + (matches.length ? start + 1 : 0) + ' to ' + Math.min(start + pageSize, matches.length) + ' of ' + matches.length + ' employees';
     if (countBadge) { var lbl = countBadge.querySelector('span'); if (lbl) lbl.textContent = total + ' Employees'; }
   };
 
   if (search) search.addEventListener('input', window.dashApplyFilters);
+  previous.addEventListener('click', function() { currentPage--; window.dashApplyFilters(true); });
+  next.addEventListener('click', function() { currentPage++; window.dashApplyFilters(true); });
   if (deptFilter) deptFilter.addEventListener('change', window.dashApplyFilters);
   if (statusFilter) statusFilter.addEventListener('change', window.dashApplyFilters);
   if (clearBtn) clearBtn.addEventListener('click', function() {
@@ -728,13 +744,26 @@ function animateStat(el, target, suffix) {
 }
 
 // Wire the four stat cards to real API data (no fabricated numbers).
+var rosterRequest = null;
+function fetchEmployeeRoster() {
+  if (rosterRequest) return rosterRequest;
+  var employees = [];
+  function loadPage(page) {
+    return fetch('/api/employees?limit=200&page=' + page).then(function(response) {
+      if (!response.ok) throw new Error('Could not load employees');
+      return response.json();
+    }).then(function(data) {
+      employees = employees.concat(data.employees || []);
+      if (data.has_more) return loadPage(page + 1);
+      return {employees: employees, total: employees.length};
+    });
+  }
+  rosterRequest = loadPage(1).finally(function() { rosterRequest = null; });
+  return rosterRequest;
+}
 function loadDashboardStats() {
   Promise.all([
-    // TODO(pagination): stats need the full org roster; with the new
-    // /api/employees pagination (max 200) a very large org (>200 employees)
-    // would undercount here. Fetching all pages / a dedicated count
-    // endpoint is out of scope for now.
-    fetch('/api/employees?limit=200').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+    fetchEmployeeRoster().catch(function() { return null; }),
     fetch('/api/sessions').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
   ]).then(function(res) {
     var employees = (res[0] && res[0].employees) || [];
@@ -975,7 +1004,7 @@ function sendManagerInvite(empId) {
   }).then(function(res) {
     if (btn) { btn.disabled = false; btn.textContent = original; }
     if (!res.ok) {
-      alert((res.body && res.body.error) === 'email_send_failed' ? 'The invite could not be emailed. Please try again.' : 'Invite failed. Please try again.');
+      VooVrUI.show((res.body && res.body.error) === 'email_send_failed' ? 'The invite could not be emailed. Please try again.' : 'Invite failed. Please try again.', {target: '#inviteFeedback'});
       return;
     }
     if (managerResendMode) {
@@ -1003,24 +1032,14 @@ function sendManagerInvite(empId) {
     }
   }).catch(function() {
     if (btn) { btn.disabled = false; btn.textContent = original; }
-    alert('Network error while sending invite.');
+    VooVrUI.show('Network error while sending invite.', {target: '#inviteFeedback'});
   });
 }
 
 // Load employees from API and render table
 function loadEmployees(opts) {
   opts = opts || {};
-  // TODO(pagination): the backend now paginates /api/employees with
-  // page/limit (default 50, max 200) and returns {total, page, has_more}.
-  // Full client-side pager controls (page buttons, has_more-driven "next")
-  // are out of scope here — for now fetch the largest allowed page so the
-  // table matches the previous all-rows behaviour. Wire up page/limit +
-  // the pagination bar (id="dashEmpFooter") whenever the directory grows.
-  fetch('/api/employees?limit=200')
-    .then(function(r) {
-      if (!r.ok) throw new Error('Failed to load');
-      return r.json();
-    })
+  fetchEmployeeRoster()
     .then(function(data) {
       var tbody = document.querySelector('#dashEmpTable tbody');
       if (!tbody) return;
@@ -1080,7 +1099,7 @@ function loadEmployees(opts) {
       }
     })
     .catch(function(err) {
-      console.error('Failed to load employees:', err);
+      VooVrUI.show('Could not load the employee directory. Please refresh to try again.');
     });
 }
 
@@ -1375,7 +1394,7 @@ function escHtml(str) {
       }).catch(function(err) {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Add Employee';
-        alert('Failed: ' + err.message);
+        VooVrUI.show('Failed: ' + err.message);
       });
     });
   }

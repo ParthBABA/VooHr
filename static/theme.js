@@ -11,16 +11,17 @@
 
   // Runs immediately (this script tag is placed early, before CSS paints)
   // so there is no flash of the wrong theme on page load.
-  var saved = localStorage.getItem(STORAGE_KEY) || 'dark';
+  var saved = 'dark';
+  try { saved = localStorage.getItem(STORAGE_KEY) || 'dark'; } catch (error) {}
   applyTheme(saved);
 
   // Exposed so settings.html's toggle buttons can call this directly.
   window.voovrSetTheme = function (theme) {
-    localStorage.setItem(STORAGE_KEY, theme);
+    try { localStorage.setItem(STORAGE_KEY, theme); } catch (error) {}
     applyTheme(theme);
   };
 
   window.voovrGetTheme = function () {
-    return localStorage.getItem(STORAGE_KEY) || 'dark';
+    return document.documentElement.getAttribute('data-theme') || 'dark';
   };
 })();

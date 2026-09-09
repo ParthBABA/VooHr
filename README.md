@@ -1,4 +1,4 @@
-# VooHR Backend (Flask + MongoDB + Google OAuth)
+# VooVr (Flask + MongoDB + Google OAuth)
 
 Powers the "get started" flow for the VooVr frontend: creating an organization,
 verifying identity with Google, and signing back in.
@@ -118,18 +118,39 @@ Both are currently in **report-only** mode: they upload their output as a CI
 artifact but do not fail the build. Review the artifacts and address findings,
 then flip them to fail the build once the noise floor is acceptable.
 
-## Notes / next steps
+## Frontend presentation
 
-- Only the register → verify → complete → dashboard flow (plus sign-in and
-  sign-out) is wired to the backend right now, per your request. `directory.html`
-  and `sync.html` are still static/mock data — happy to wire those up next.
-- The dashboard's stats, alerts, and employee table are still hardcoded
-  placeholders; only the sidebar user info (name/role/avatar) and sign-out are
-  live.
-- Sessions are Flask's signed cookie sessions (no server-side session store
-  needed). Fine for this scale; swap for `Flask-Session` + Mongo if you want
-  server-side session revocation later.
-- I also fixed a pre-existing bug in the original files: `dashboard.html`,
-  `directory.html`, and `sync.html` linked to `css/style.css`, but the actual
-  file is `style.css` — so those pages were rendering unstyled. Fixed to point
-  at `style.css` directly.
+- **Brand:** VooVr across pages and transactional emails.
+- **Typography:** `static/style.css` loads Inter and Lato for the shared heading
+  and body tokens. Auth/legal components use the same light/dark surface tokens.
+- **Shared head:** `templates/shared-head.html` provides favicon, description,
+  Open Graph, and Twitter metadata. `page_rendering.py` inserts it into the
+  `<!-- shared-head -->` slot when Flask serves a static HTML page, including
+  legacy HTML URLs. The landing template includes it directly. Share URLs omit
+  query parameters; account/workspace pages are marked `noindex`.
+- **Feedback:** `static/ui-feedback.js` exposes `VooVrUI.show`, `clear`, and
+  async `ask`. Confirmations use a styled dialog with keyboard focus management;
+  error and success banners use accessible live regions and plain text.
+- **Responsive scale:** 480 / 768 / 1024 / 1280px. Mobile workspace navigation
+  uses a compact icon rail with accessible labels. Wide tables scroll locally.
+- **Inline styles:** shared auth/legal markup uses CSS classes. Runtime styles
+  for chart values, animations, and visibility are still used where needed.
+- **Registration:** `/signup` collects organization details and calls the
+  existing `/api/onboarding/org` → `/auth/email/start` → `/verify-otp` flow.
+- **Password recovery:** reset email delivery is not implemented. The endpoint
+  returns an explicit unavailable response instead of claiming an email was sent.
+
+### Presentation checks
+
+```bash
+python -m pytest test_frontend_presentation.py -q
+```
+
+For the browser audit, install Playwright in your development environment and
+run `node scripts/check_ui.cjs` with it on Node's module search path (`NODE_PATH`
+can point to an external installation). The audit uses installed Microsoft Edge,
+starts a local presentation-only server, mocks API responses, and checks all 24
+pages at the four breakpoints, auth feedback, confirmation cancellation/acceptance,
+theme changes, and directory pagination beyond 200 employees. It does not connect
+to the production database. `scripts/preview_ui.py` can also be run directly to
+inspect `/preview/<filename>.html` locally.

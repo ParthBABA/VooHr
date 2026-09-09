@@ -434,9 +434,9 @@ def email_signin():
 
 @auth_email_bp.route("/forgot-password", methods=["POST"])
 def forgot_password():
-    """Placeholder for password reset request. Always returns success to avoid email enumeration."""
-    data = request.get_json(silent=True) or {}
-    email = (data.get("email") or "").strip()
-    # In a real implementation, you would send a reset email if the account exists.
-    # For now, we just acknowledge the request.
-    return jsonify({"ok": True, "message": "If the email exists, a reset link has been sent."}), 200
+    """Report availability honestly without revealing whether an account exists."""
+    return jsonify({
+        "ok": False,
+        "error": "reset_unavailable",
+        "message": "Password reset emails are not available yet. Contact voovrhr@gmail.com for help accessing your account.",
+    }), 503

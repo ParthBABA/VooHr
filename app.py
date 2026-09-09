@@ -6,7 +6,7 @@ import secrets
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from bson import ObjectId
-from flask import Flask, jsonify, request, send_from_directory, redirect, render_template, session
+from flask import Flask, jsonify, request, redirect, render_template, session
 
 from api import api_bp
 from audit_log import audit_bp
@@ -25,6 +25,7 @@ from sessions import sessions_bp
 from totp_routes import totp_bp
 from tts import tts_bp
 from surveys import surveys_bp
+from page_rendering import metadata, render_page
 
 logger = logging.getLogger(__name__)
 
@@ -244,117 +245,129 @@ def create_app():
         return None
 
     # Clean URL routes for static pages
+    @app.before_request
+    def _render_legacy_html():
+        # Flask's static endpoint also serves unredirected legacy HTML URLs.
+        # Give those the same shared head as their clean-URL counterparts.
+        if request.endpoint == "static":
+            filename = (request.view_args or {}).get("filename", "")
+            if "/" not in filename and "\\" not in filename and filename.endswith(".html"):
+                from pathlib import Path
+                if (Path(app.static_folder) / filename).is_file():
+                    return render_page(filename)
+
     @app.route("/")
     def index():
         user_id = session.get("user_id")
         session_token = session.get("session_token")
         is_logged_in = bool(user_id and session_token and _session_is_active(user_id, session_token))
         app.logger.info("Root route: is_logged_in=%s", is_logged_in)
-        return render_template("login.html", is_logged_in=is_logged_in)
+        return render_template("login.html", is_logged_in=is_logged_in, **metadata(
+            "VooVr — The AI operating system for modern HR teams", public=True))
 
     @app.route("/login")
     def login():
-        return send_from_directory(app.static_folder, "login2.html")
+        return render_page("login2.html")
 
     @app.route("/signin")
     def signin():
-        return send_from_directory(app.static_folder, "signin.html")
+        return render_page("signin.html")
 
     @app.route("/signup")
     def signup():
-        return send_from_directory(app.static_folder, "signup.html")
+        return render_page("signup.html")
 
     @app.route("/verify-email")
     def verify_email():
-        return send_from_directory(app.static_folder, "email-verify.html")
+        return render_page("email-verify.html")
 
     @app.route("/verify-otp")
     def verify_otp():
-        return send_from_directory(app.static_folder, "otp-verify.html")
+        return render_page("otp-verify.html")
 
     @app.route("/onboarding")
     def onboarding():
-        return send_from_directory(app.static_folder, "onboarding.html")
+        return render_page("onboarding.html")
 
     @app.route("/welcome")
     def welcome():
-        return send_from_directory(app.static_folder, "onboarding-complete.html")
+        return render_page("onboarding-complete.html")
 
     @app.route("/dashboard")
     def dashboard():
         guard = _require_page_login()
         if guard: return guard
-        return send_from_directory(app.static_folder, "dashboard.html")
+        return render_page("dashboard.html")
 
     @app.route("/dictation")
     def dictation():
         guard = _require_page_login()
         if guard: return guard
-        return send_from_directory(app.static_folder, "dictation.html")
+        return render_page("dictation.html")
 
     @app.route("/workspace")
     def workspace():
         guard = _require_page_login()
         if guard: return guard
-        return send_from_directory(app.static_folder, "conversation-workspace.html")
+        return render_page("conversation-workspace.html")
 
     @app.route("/settings")
     def settings():
         guard = _require_page_login()
         if guard: return guard
-        return send_from_directory(app.static_folder, "settings.html")
+        return render_page("settings.html")
 
     @app.route("/settings/security/setup-totp")
     def setup_totp():
         guard = _require_page_login()
         if guard: return guard
-        return send_from_directory(app.static_folder, "verify-totp-gate.html")
+        return render_page("verify-totp-gate.html")
 
     @app.route("/auth/totp/verify-login")
     def totp_verify_login_page():
         guard = _require_page_login()
         if guard: return guard
-        return send_from_directory(app.static_folder, "verify-totp-login.html")
+        return render_page("verify-totp-login.html")
 
     @app.route("/risk-drift")
     def risk_drift():
         guard = _require_page_login()
         if guard: return guard
-        return send_from_directory(app.static_folder, "risk-drift.html")
+        return render_page("risk-drift.html")
 
     @app.route("/sync")
     def sync():
         guard = _require_page_login()
         if guard: return guard
-        return send_from_directory(app.static_folder, "sync.html")
+        return render_page("sync.html")
 
     @app.route("/sync/room")
     def sync_room():
         guard = _require_page_login()
         if guard: return guard
-        return send_from_directory(app.static_folder, "sync_room.html")
+        return render_page("sync_room.html")
 
     @app.route("/meeting-tracker")
     def meeting_tracker():
         guard = _require_page_login()
         if guard: return guard
-        return send_from_directory(app.static_folder, "meeting_tracker.html")
+        return render_page("meeting_tracker.html")
 
     @app.route("/invite-error")
     def invite_error():
-        return send_from_directory(app.static_folder, "invite-error.html")
+        return render_page("invite-error.html")
 
     @app.route("/privacy")
     def privacy():
-        return send_from_directory(app.static_folder, "privacy-policy.html")
+        return render_page("privacy-policy.html")
 
     @app.route("/terms")
     def terms():
-        return send_from_directory(app.static_folder, "terms-of-service.html")
+        return render_page("terms-of-service.html")
 
     @app.route("/forgot-password")
     def forgot_password():
-        return send_from_directory(app.static_folder, "forgot-password.html")
+        return render_page("forgot-password.html")
 
     # Redirect legacy .html paths to clean URLs, preserving any query string
     # so backend redirects like /signin.html?error=no_account work end-to-end.
@@ -431,7 +444,7 @@ def create_app():
     def handle_404(e):
         if request.path.startswith("/api"):
             return jsonify({"error": "not_found"}), 404
-        return send_from_directory(app.static_folder, "404.html"), 404
+        return render_page("404.html"), 404
 
     # ── User-Agent Client Hints opt-in ──────────────────────────────────
     # Chromium only sends high-entropy hints such as
