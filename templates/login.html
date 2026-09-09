@@ -2343,7 +2343,15 @@ h1,h2,h3,h4{
           {% else %}
             <a href="onboarding.html" class="btn btn-primary magnetic">Get Started</a>
           {% endif %}
-          <a href="#" class="btn btn-ghost magnetic">Book Demo</a>
+          <!-- BOOK DEMO — 3 alternatives; toggle whichever you like.
+               CURRENT: OPTION 1 (disabled/hidden until a booking flow exists).
+            ── OPTION 1 (ACTIVE): disable/hide — don't link to "#".
+            <a href="#" class="btn btn-ghost magnetic">Book Demo</a>
+            ── OPTION 2: route to scheduling tool when available.
+            <a href="https://cal.com/your-org/demo" class="btn btn-ghost magnetic">Book Demo</a>
+            ── OPTION 3: temporarily route to the onboarding / Get Started flow.
+            <a href="onboarding.html" class="btn btn-ghost magnetic">Book Demo</a>
+          -->
         </div>
       </div>
     </div>
@@ -2354,20 +2362,61 @@ h1,h2,h3,h4{
   </div>
 </section>
 
-<!-- TRUSTED BY -->
-<section class="trusted">
-  <div class="container">
-    <p>Trusted by people teams at fast-growing companies</p>
-    <div class="logo-row">
-      <span class="logo-ph">Northwind</span>
-      <span class="logo-ph"> 目 Kaida</span>
-      <span class="logo-ph">Fernhall</span>
-      <span class="logo-ph">Orbital</span>
-      <span class="logo-ph">Halcyon</span>
-      <span class="logo-ph">Rivet</span>
+<!-- TRUSTED BY (SOCIAL PROOF)
+     ────────────────────────────────────────────────────────────
+     Three commented options are provided below. Toggle the option
+     you want by uncommenting its block and commenting out the others.
+     CURRENT ACTIVE OPTION: A (remove the section entirely).
+
+     ── OPTION A (ACTIVE): REMOVE the misleading "Trusted by" section
+        entirely until real client logos exist. No markup rendered.
+     ──
+
+
+
+
+
+     ── OPTION B: HONEST, ASPIRATIONAL framing (no fake customer names).
+        To activate: uncomment this block and comment out Option A/C.
+  <section class="trusted">
+    <div class="container">
+      <p>Built for teams at fast-growing companies</p>
+      <div class="logo-row">
+        <span class="logo-ph">Your Team</span>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
+  <script>
+    gsap.from('.logo-ph', {
+      opacity:0, y:10, stagger:.08, duration:.7, ease:'power2.out',
+      scrollTrigger:{ trigger:'.trusted', start:'top 85%' }
+    });
+  </script>
+     ──
+
+     ── OPTION C: REAL client logo grid (requires actual logo assets/URLs).
+        To activate: uncomment this block, supply real img src/alt values,
+        and comment out Option A/B.
+  <section class="trusted">
+    <div class="container">
+      <p>Trusted by people teams at fast-growing companies</p>
+      <div class="logo-row">
+        <img src="PATH/TO/client-1.svg" alt="Client 1" class="logo-img">
+        <img src="PATH/TO/client-2.svg" alt="Client 2" class="logo-img">
+        <img src="PATH/TO/client-3.svg" alt="Client 3" class="logo-img">
+        <img src="PATH/TO/client-4.svg" alt="Client 4" class="logo-img">
+      </div>
+    </div>
+  </section>
+  <script>
+    gsap.from('.logo-row > *', {
+      opacity:0, y:10, stagger:.08, duration:.7, ease:'power2.out',
+      scrollTrigger:{ trigger:'.trusted', start:'top 85%' }
+    });
+  </script>
+     ──
+     ────── END OF TRUSTED-BANNER OPTIONS ──────
+  -->
 
 <!-- PRODUCT SHOWCASE -->
 <section class="section" id="features">
@@ -2821,7 +2870,15 @@ h1,h2,h3,h4{
       <p data-reveal>Set up VooVr in an afternoon. See the difference in a week.</p>
       <div class="hero-cta" data-reveal>
         <a href="onboarding.html" class="btn btn-primary magnetic">Get Started</a>
-        <a href="#" class="btn btn-ghost magnetic">Book Demo</a>
+        <!-- BOOK DEMO — 3 alternatives; toggle whichever you like.
+             CURRENT: OPTION 1 (disabled/hidden until a booking flow exists).
+          ── OPTION 1 (ACTIVE): disable/hide — don't link to "#".
+          <a href="#" class="btn btn-ghost magnetic">Book Demo</a>
+          ── OPTION 2: route to scheduling tool when available.
+          <a href="https://cal.com/your-org/demo" class="btn btn-ghost magnetic">Book Demo</a>
+          ── OPTION 3: temporarily route to the onboarding / Get Started flow.
+          <a href="onboarding.html" class="btn btn-ghost magnetic">Book Demo</a>
+        -->
       </div>
     </div>
   </div>
@@ -2862,9 +2919,14 @@ h1,h2,h3,h4{
     </div>
     <div class="footer-bottom">
       <span>© 2026 VooVr, Inc. All rights reserved.</span>
+      <!-- FOOTER SOCIAL ICONS — removed until real VooVr profiles exist.
+           When real profile URLs are provided, uncomment and fill in:
       <div class="footer-socials">
-        <a href="#">X</a><a href="#">LinkedIn</a><a href="#">GitHub</a>
+        <a href="https://x.com/VooVr">X</a>
+        <a href="https://www.linkedin.com/company/VooVr">LinkedIn</a>
+        <a href="https://github.com/VooVr">GitHub</a>
       </div>
+      -->
     </div>
   </div>
 </footer>
@@ -3113,10 +3175,14 @@ gsap.from('[data-bento] .bento-item', {
   scrollTrigger:{ trigger:'[data-bento]', start:'top 85%', once:true }
 });
 
+/*
+  TRUSTED-BANNER reveal animation moved into the Option B/C blocks above
+  (Option A removes the section, so there is nothing to animate).
 gsap.from('.logo-ph', {
   opacity:0, y:10, stagger:.08, duration:.7, ease:'power2.out',
   scrollTrigger:{ trigger:'.trusted', start:'top 85%' }
 });
+*/
 
 /* ============================================================
    NAVIGATION — mobile menu, smooth scroll, scrollspy, progress
