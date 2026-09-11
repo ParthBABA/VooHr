@@ -1,0 +1,4 @@
+{
+  "buildCommand": "uv python install 3.11 && uv sync --active --no-dev --link-mode hardlink --locked --no-editable && gunicorn app:app",
+  "installCommand": "uv python install 3.11 && uv sync --active --no-dev --link-mode hardlink --locked --no-editable"
+}
