@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+
+UV_PYTHON_DOWNLOADS=automatic uv python install 3.11
+UV_PYTHON_DOWNLOADS=automatic uv sync --active --no-dev --link-mode hardlink --locked --no-editable
+
+exec gunicorn app:app
