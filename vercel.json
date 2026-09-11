@@ -1,5 +1,0 @@
-{
-  "devCommand": "gunicorn app:app",
-  "installCommand": "bash scripts/vercel-install.sh",
-  "buildCommand": "bash scripts/vercel-build.sh"
-}
