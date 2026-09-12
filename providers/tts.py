@@ -2,6 +2,11 @@ from abc import ABC, abstractmethod
 
 
 class BaseTTS(ABC):
+    # MIME type of the audio bytes returned by synthesize(). Providers that
+    # produce MP3 (Google TTS, Gemini TTS) override this to "audio/mpeg";
+    # providers that return a WAV container keep the default.
+    content_type = "audio/wav"
+
     @abstractmethod
     def synthesize(self, text: str, language_code: str, voice_name: str = None, voice_tier: str = None) -> bytes:
         """Synthesize the given text into raw MP3 audio bytes.

@@ -1,10 +1,12 @@
 import base64
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 from google import genai
 
 from providers.tts import BaseTTS
+from providers.tts_cache import TTSCache
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,8 @@ class GeminiTTS(BaseTTS):
     "Kore").
     """
 
+    content_type = "audio/mpeg"
+
     def __init__(self):
         api_key = (
             os.environ.get("GEMINI_TTS_API_KEY")
@@ -42,6 +46,7 @@ class GeminiTTS(BaseTTS):
         self.default_voice = os.environ.get("GEMINI_TTS_VOICE", _DEFAULT_VOICE)
         self.model_name = _MODEL_NAME
         self._client = genai.Client(api_key=api_key or None) if api_key else genai.Client()
+        self._tts_cache = TTSCache("gemini")
 
     def _split_chunks(self, text: str) -> list:
         """Split text into byte-safe chunks at sentence boundaries.
@@ -114,6 +119,16 @@ class GeminiTTS(BaseTTS):
 
         voice = voice_name or self.default_voice
 
+        cache_key = self._tts_cache.build_key(
+            text, language_code, voice, voice_tier
+        )
+        cached = self._tts_cache.get(cache_key)
+        if cached is not None:
+            logger.debug(
+                "Gemini-TTS cache hit: voice=%s", voice,
+            )
+            return cached
+
         chunks = self._split_chunks(text)
         logger.debug(
             "Gemini-TTS synthesize: voice=%s chunks=%d bytes=%d",
@@ -121,7 +136,20 @@ class GeminiTTS(BaseTTS):
         )
 
         parts = []
-        for chunk in chunks:
-            parts.append(self._synthesize_chunk(chunk, voice))
+        worker_count = min(len(chunks), 8)
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
+            futures = [
+                executor.submit(self._synthesize_chunk, chunk, voice)
+                for chunk in chunks
+            ]
+            for future in futures:
+                try:
+                    parts.append(future.result())
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"Gemini-TTS chunk synthesis failed: {exc}"
+                    ) from exc
 
-        return b"".join(parts)
+        audio = b"".join(parts)
+        self._tts_cache.set(cache_key, audio)
+        return audio

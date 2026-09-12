@@ -41,14 +41,34 @@ def synthesize():
 
         tts = get_tts_provider()
 
-        # Return ONE complete WAV file (whole text synthesized/concatenated
-        # on the server). The frontend decodes this single buffer once and
-        # plays it as one contiguous source — no per-chunk re-wrapping, so
-        # there are no seam/header artifacts and playback is clean.
-        audio = tts.synthesize(
+        # Stream audio as soon as each chunk is ready instead of buffering the
+        # whole response. Providers that only support whole-response synthesis
+        # keep the base fallback (yield the complete result in one chunk) so
+        # nothing breaks for them.
+        stream = tts.synthesize_stream(
             text, language_code, voice_name=voice_name, voice_tier=voice_tier
         )
-        return Response(audio, mimetype="audio/wav")
+
+        # Prime the generator so provider-side failures (missing API key, HTTP
+        # errors, empty output) surface as a clean JSON 500 before a single
+        # byte is sent. Streaming-capable providers hand back their first
+        # chunk here — the client can start playback as soon as it is
+        # delivered.
+        _SENTINEL = object()
+        first = next(stream, _SENTINEL)
+
+        def generate():
+            if first is not _SENTINEL and first:
+                yield first
+            for chunk in stream:
+                if chunk:
+                    yield chunk
+
+        return Response(
+            generate(),
+            mimetype=tts.content_type,
+            direct_passthrough=True,
+        )
     except Exception as e:
         logger.exception("TTS synthesize failed")
         if current_app.debug:

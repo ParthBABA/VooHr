@@ -1,10 +1,12 @@
 import base64
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
 from providers.tts import BaseTTS
+from providers.tts_cache import TTSCache
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,8 @@ class GoogleNeural2TTS(BaseTTS):
     entirely.
     """
 
+    content_type = "audio/mpeg"
+
     def __init__(self):
         self.api_key = (
             os.environ.get("GOOGLE_TTS_API_KEY") or os.environ.get("GOOGLE_TTS", "")
@@ -47,6 +51,7 @@ class GoogleNeural2TTS(BaseTTS):
         self.default_tier = tier
         self.default_variant = os.environ.get("GOOGLE_TTS_VOICE_VARIANT", "A")
         self.endpoint = _TTS_ENDPOINT
+        self._tts_cache = TTSCache("google")
 
     def _ensure_api_key(self) -> str:
         if not self.api_key:
@@ -143,14 +148,44 @@ class GoogleNeural2TTS(BaseTTS):
                 )
             voice_name = f"{language_code}-{tier}-{self.default_variant}"
 
+        # Repeated text/voice combos skip the API entirely and return the
+        # cached audio (keyed on the resolved voice name, language, and tier).
+        cache_key = self._tts_cache.build_key(
+            text, language_code, voice_name, voice_tier
+        )
+        cached = self._tts_cache.get(cache_key)
+        if cached is not None:
+            logger.debug(
+                "Google TTS cache hit: language=%s voice=%s",
+                language_code, voice_name,
+            )
+            return cached
+
         chunks = self._split_chunks(text)
         logger.debug(
             "Google TTS synthesize: language=%s voice=%s chunks=%d bytes=%d",
             language_code, voice_name, len(chunks), len(text.encode("utf-8")),
         )
 
+        # Synthesize all chunks in parallel (network-bound API calls), then
+        # rejoin in the original order so the output is byte-identical to the
+        # sequential path. If any single chunk fails we surface a clear error
+        # rather than returning a silently-truncated/partial audio file.
         parts = []
-        for chunk in chunks:
-            parts.append(self._synthesize_chunk(chunk, language_code, voice_name))
+        worker_count = min(len(chunks), 8)
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
+            futures = [
+                executor.submit(self._synthesize_chunk, chunk, language_code, voice_name)
+                for chunk in chunks
+            ]
+            for future in futures:
+                try:
+                    parts.append(future.result())
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"Google TTS chunk synthesis failed: {exc}"
+                    ) from exc
 
-        return b"".join(parts)
+        audio = b"".join(parts)
+        self._tts_cache.set(cache_key, audio)
+        return audio

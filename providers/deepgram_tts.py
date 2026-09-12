@@ -12,6 +12,7 @@ import websockets
 
 from providers.tts import BaseTTS
 from providers.text_normalize import prepare_text_for_speech
+from providers.tts_cache import TTSCache
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ class DeepgramTTS(BaseTTS):
         self.default_model = os.environ.get("DEEPGRAM_TTS_MODEL", _DEFAULT_MODEL)
         self.endpoint = _TTS_ENDPOINT
         self.ws_endpoint = _TTS_WS_ENDPOINT
+        self._tts_cache = TTSCache("deepgram")
 
     def _ensure_api_key(self) -> str:
         if not self.api_key:
@@ -202,6 +204,16 @@ class DeepgramTTS(BaseTTS):
 
         model = voice_name or self.default_model
 
+        cache_key = self._tts_cache.build_key(
+            text, language_code, model, voice_tier
+        )
+        cached = self._tts_cache.get(cache_key)
+        if cached is not None:
+            logger.debug(
+                "Deepgram TTS cache hit: model=%s", model,
+            )
+            return cached
+
         text = self._normalize_text(text, language_code)
         chunks = self._split_chunks(text)
         logger.debug(
@@ -215,9 +227,12 @@ class DeepgramTTS(BaseTTS):
         # concatenated sample-for-sample; raw PCM splices cleanly with no
         # clicks/pops (unlike splicing independent mp3 streams).
         if len(chunks) == 1:
-            return self._synthesize_chunk_wav(chunks[0], model)
-        parts = [self._synthesize_chunk_wav(chunk, model) for chunk in chunks]
-        return self._concat_wav_chunks(parts)
+            audio = self._synthesize_chunk_wav(chunks[0], model)
+        else:
+            parts = [self._synthesize_chunk_wav(chunk, model) for chunk in chunks]
+            audio = self._concat_wav_chunks(parts)
+        self._tts_cache.set(cache_key, audio)
+        return audio
 
     def synthesize_stream(self, text: str, language_code: str, voice_name: str = None, voice_tier: str = None):
         """Synthesize text and yield raw linear16 PCM audio chunks as they arrive.
@@ -235,6 +250,20 @@ class DeepgramTTS(BaseTTS):
             return
 
         model = voice_name or self.default_model
+
+        # Repeated text/voice combos skip the API entirely: serve the cached
+        # complete WAV as a single chunk.
+        cache_key = self._tts_cache.build_key(
+            text, language_code, model, voice_tier
+        )
+        cached = self._tts_cache.get(cache_key)
+        if cached is not None:
+            logger.debug(
+                "Deepgram TTS stream cache hit: model=%s", model,
+            )
+            yield cached
+            return
+
         api_key = self._ensure_api_key()
         text = self._normalize_text(text, language_code)
         chunks = self._split_chunks(text)
