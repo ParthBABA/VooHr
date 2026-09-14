@@ -904,18 +904,77 @@ Judge each field on its own: only set an individual string field to "Limited tra
 Return ONLY valid JSON, no markdown formatting."""
 
 
-_HINGLISH_INSTRUCTION = """\n\nOUTPUT LANGUAGE: Hinglish\n\nRender every human-readable text value in the response below (title, summary, behavioural interpretations, conversation coach notes, follow-up plans, psychological-safety statement, do/don't guidance, suggested scripts, suggested questions and HR replies, risk factors, topics to avoid, recommendations and manager notes) in Hinglish written in Latin script — casual Hindi-English code-mixing, the way Hindi-speaking professionals actually talk. For example: "Follow-up karna zaroori hai kyunki usne kaam ka load clearly share kiya tha." and "Agli baar pehle expectations set karna behtar rahega taaki confusion na ho."\n\nKeep every JSON key, id and the enumerated status/value labels (e.g. Strong Signal | Moderate Signal | Light Signal, Positive | Reflective | Anxious | Strained | Mixed, openness, trust_level, communication_style values) in English exactly as specified by the schema. Do NOT translate verbatim quotes from the transcript — reproduce them word-for-word as spoken."""
+# Shared closing note appended to every non-English instruction: keeps JSON
+# structure/schema values in English and preserves verbatim transcript quotes
+# untranslated, regardless of which output language was requested.
+_LANGUAGE_FIELD_NOTE = (
+    "Keep every JSON key, id and the enumerated status/value labels (e.g. "
+    "Strong Signal | Moderate Signal | Light Signal, Positive | Reflective | "
+    "Anxious | Strained | Mixed, openness, trust_level, communication_style "
+    "values) in English exactly as specified by the schema. Do NOT translate "
+    "verbatim quotes from the transcript — reproduce them word-for-word as "
+    "spoken."
+)
+
+# Fields translated in the analysis response, shared across every language.
+_TRANSLATABLE_FIELDS = (
+    "title, summary, behavioural interpretations, conversation coach notes, "
+    "follow-up plans, psychological-safety statement, do/don't guidance, "
+    "suggested scripts, suggested questions and HR replies, risk factors, "
+    "topics to avoid, recommendations and manager notes"
+)
+
+_HINGLISH_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Hinglish\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in Hinglish written in Latin script — casual Hindi-English code-mixing, the way "
+    "Hindi-speaking professionals actually talk. For example: \"Follow-up karna zaroori "
+    "hai kyunki usne kaam ka load clearly share kiya tha.\" and \"Agli baar pehle "
+    "expectations set karna behtar rahega taaki confusion na ho.\"\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+_HINDI_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Hindi\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional Hindi written in Devanagari script.\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+_SPANISH_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Spanish\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional Spanish.\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+_FRENCH_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: French\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional French.\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+# Language keys accepted by the "Analyze in" / "Translate" controls. Keep in
+# sync with the <select> options in conversation-workspace.html.
+_LANGUAGE_INSTRUCTIONS = {
+    "hinglish": _HINGLISH_INSTRUCTION,
+    "hindi": _HINDI_INSTRUCTION,
+    "spanish": _SPANISH_INSTRUCTION,
+    "french": _FRENCH_INSTRUCTION,
+}
+
+SUPPORTED_ANALYSIS_LANGUAGES = frozenset(_LANGUAGE_INSTRUCTIONS.keys())
 
 
 def _language_instruction(language: str | None) -> str:
     """Return an output-language suffix for the analysis system prompt.
 
-    Only "hinglish" produces a suffix; English / missing / unknown values
-    return "" so the default prompt stays byte-for-byte identical.
+    Only a recognized non-English language key produces a suffix; English /
+    missing / unknown values return "" so the default prompt stays
+    byte-for-byte identical.
     """
-    if (language or "").strip().lower() == "hinglish":
-        return _HINGLISH_INSTRUCTION
-    return ""
+    return _LANGUAGE_INSTRUCTIONS.get((language or "").strip().lower(), "")
 
 
 def _build_drift_prompt(sessions) -> str:

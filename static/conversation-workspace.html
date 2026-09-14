@@ -202,6 +202,9 @@ withTimeout(fetch('/api/me').then(function(res){
           <select id="wsAnalysisLang" class="ws-tool-select" title="Analysis language">
             <option value="en">English</option>
             <option value="hinglish">Hinglish</option>
+            <option value="hindi">Hindi</option>
+            <option value="spanish">Spanish</option>
+            <option value="french">French</option>
           </select>
         </span>
       </div>
@@ -234,6 +237,9 @@ withTimeout(fetch('/api/me').then(function(res){
           <select id="wsGateLang" class="ws-tool-select" title="Analysis language">
             <option value="en" selected>English</option>
             <option value="hinglish">Hinglish</option>
+            <option value="hindi">Hindi</option>
+            <option value="spanish">Spanish</option>
+            <option value="french">French</option>
           </select>
         </div>
         <button class="btn btn-primary" id="runAnalysisBtn">
@@ -1380,7 +1386,8 @@ window.voovrInitWorkspace = function() {
       var newLang = wsLangSel.value;
       if (newLang === storedLang) return; // no redundant re-run
       wsLangSel.disabled = true;
-      showToast('Translating analysis to ' + (newLang === 'hinglish' ? 'Hinglish' : 'English') + '\u2026');
+      var LANG_LABELS = { en: 'English', hinglish: 'Hinglish', hindi: 'Hindi', spanish: 'Spanish', french: 'French' };
+      showToast('Translating analysis to ' + (LANG_LABELS[newLang] || newLang) + '\u2026');
       fetch('/api/sessions/' + sessionId + '/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1460,7 +1467,6 @@ window.voovrInitWorkspace = function() {
   var NARRATION_LANGUAGES = [
     { label: 'English', languageCode: 'en-US', translate: false },
     { label: 'Hindi', languageCode: 'hi-IN', translate: true },
-    { label: 'Hinglish', languageCode: 'en-US', translate: false },
     { label: 'Spanish', languageCode: 'es-ES', translate: true },
     { label: 'French', languageCode: 'fr-FR', translate: true }
   ];

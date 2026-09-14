@@ -10,7 +10,7 @@ from employee_scoring import _status_for
 from employees import _require_auth
 from extensions import get_db, check_rate_limit, record_rate_limit_event
 from providers import get_llm_provider, get_storage_provider, get_stt_provider, get_vision_provider
-from providers.llm import LLMTimeoutError
+from providers.llm import LLMTimeoutError, SUPPORTED_ANALYSIS_LANGUAGES
 
 sessions_bp = Blueprint("sessions", __name__)
 logger = logging.getLogger(__name__)
@@ -395,13 +395,12 @@ def analyze_session(session_id: str):
     try:
         llm = get_llm_provider()
 
-        # Output-language for the analysis. Only Hinglish is supported for now;
-        # anything missing or unrecognized falls back to English so the default
-        # code path is unchanged.
+        # Output-language for the analysis. Anything missing or unrecognized
+        # falls back to English so the default code path is unchanged.
         language = "en"
         raw_lang = (request.get_json(silent=True) or {}).get("language")
-        if isinstance(raw_lang, str) and raw_lang.strip().lower() == "hinglish":
-            language = "hinglish"
+        if isinstance(raw_lang, str) and raw_lang.strip().lower() in SUPPORTED_ANALYSIS_LANGUAGES:
+            language = raw_lang.strip().lower()
 
         analysis = llm.analyze(llm_transcript, language=language)
 
