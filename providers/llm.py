@@ -23,16 +23,16 @@ def _llm_timeout_seconds() -> float:
 
     With SDK-level retries disabled everywhere (max_retries=0), a call is
     exactly one attempt limited by this budget, so the total wall-clock time
-    stays bounded. Default 15s keeps each call well under a typical ~30s
+    stays bounded. Default 20s keeps each call well under a typical ~30s
     platform worker timeout (so the platform can't kill the worker and serve
     its own raw HTML error page) while still being generous for a longer
     prompt such as for a long transcript. Env-configurable so it can be tuned
     against real call-duration data without a code change.
     """
     try:
-        return float(os.environ.get("LLM_REQUEST_TIMEOUT_SECONDS", "15"))
+        return float(os.environ.get("LLM_REQUEST_TIMEOUT_SECONDS", "20"))
     except (TypeError, ValueError):
-        return 15.0
+        return 20.0
 
 
 def _llm_drift_timeout_seconds() -> float:
@@ -1221,7 +1221,7 @@ def _call_and_parse(
     fences defensively from the raw response before parsing, since DeepSeek
     doesn't reliably support response_format=json_object.
 
-    timeout overrides the per-call budget (default _llm_timeout_seconds, 15s).
+    timeout overrides the per-call budget (default _llm_timeout_seconds, 20s).
     Best-effort secondary calls such as drift detection pass their own tighter
     cap so a request that chains several calls still fits inside the platform
     worker timeout.
@@ -1238,7 +1238,7 @@ def _call_and_parse(
     # waits indefinitely, and a slow/hung DeepSeek request then outlives the
     # platform worker timeout (~30s), which kills the worker BEFORE Flask's
     # own error handler can run — so the user sees the platform's raw HTML
-    # error page instead of this app's JSON. 15s (and max_retries=0) leaves
+    # error page instead of this app's JSON. 20s (and max_retries=0) leaves
     # headroom under that.
     kwargs["timeout"] = timeout if timeout is not None else _llm_timeout_seconds()
     if supports_json_mode:
