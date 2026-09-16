@@ -457,3 +457,87 @@ def test_route_keeps_request_contract(monkeypatch):
     assert received["language_code"] == "es-ES"
     assert received["voice_name"] == "kv-es-ES"
     assert received["voice_tier"] == "Standard"
+
+
+# ── Route: translation handoff to the LLM provider ───────────────────────
+
+
+@pytest.mark.parametrize(
+    "language_code,expected_language_name",
+    [
+        ("hi-IN", "Hindi"),
+        ("es-ES", "Spanish"),
+        ("fr-FR", "French"),
+    ],
+)
+def test_route_passes_human_readable_language_name_to_translate(
+    monkeypatch, language_code, expected_language_name
+):
+    """translate=true must hand llm.translate() a human-readable language name
+    (e.g. "Hindi"), never the raw BCP-47 code, and synthesize the translated
+    text."""
+    received = {}
+
+    class _CaptureTTS(BaseTTS):
+        content_type = "audio/mpeg"
+
+        def synthesize(self, text, language_code, voice_name=None, voice_tier=None):
+            received["text"] = text
+            return b"ok"
+
+    class _FakeLLM:
+        def translate(self, text, target_language):
+            received["target_language"] = target_language
+            return "TRANSLATED-" + target_language
+
+    monkeypatch.setattr(tts_mod, "_require_auth", lambda: _ORG)
+    monkeypatch.setattr(tts_mod, "get_tts_provider", lambda: _CaptureTTS())
+    monkeypatch.setattr(tts_mod, "get_llm_provider", lambda: _FakeLLM())
+
+    app = Flask(__name__)
+    app.config["TESTING"] = True
+    app.secret_key = "test"
+    app.register_blueprint(tts_mod.tts_bp, url_prefix="/api")
+    with app.test_client() as c:
+        r = c.post(
+            "/api/tts/synthesize",
+            json={"text": "Hello", "language_code": language_code, "translate": True},
+        )
+
+    assert r.status_code == 200
+    assert r.data == b"ok"
+    assert received["target_language"] == expected_language_name
+    assert received["text"] == "TRANSLATED-" + expected_language_name
+
+
+def test_route_translation_failure_returns_translation_failed(monkeypatch):
+    """A failing llm.translate() must surface as 'translation_failed', not the
+    generic 'internal_server_error', and TTS must never run."""
+
+    class _FakeLLM:
+        def translate(self, text, target_language):
+            received["target_language"] = target_language
+            raise RuntimeError("upstream translation exploded")
+
+    class _NeverCalledTTS(BaseTTS):
+        def synthesize(self, text, language_code, voice_name=None, voice_tier=None):
+            raise AssertionError("TTS must not be called when translation fails")
+
+    received = {}
+    monkeypatch.setattr(tts_mod, "_require_auth", lambda: _ORG)
+    monkeypatch.setattr(tts_mod, "get_llm_provider", lambda: _FakeLLM())
+    monkeypatch.setattr(tts_mod, "get_tts_provider", lambda: _NeverCalledTTS())
+
+    app = Flask(__name__)
+    app.config["TESTING"] = True
+    app.secret_key = "test"
+    app.register_blueprint(tts_mod.tts_bp, url_prefix="/api")
+    with app.test_client() as c:
+        r = c.post(
+            "/api/tts/synthesize",
+            json={"text": "Hello", "language_code": "hi-IN", "translate": True},
+        )
+
+    assert r.status_code == 500
+    assert r.get_json() == {"error": "translation_failed"}
+    assert received["target_language"] == "Hindi"

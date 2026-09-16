@@ -1379,7 +1379,12 @@ class DeepSeekLLM(BaseLLM):
     """
 
     def __init__(self):
-        self.api_key = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("DEEPSSEK_API", "")
+        self.api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+        if not self.api_key:
+            raise RuntimeError(
+                "DeepSeek API key is not configured: set the DEEPSEEK_API_KEY "
+                "environment variable before using the DeepSeek LLM provider."
+            )
         self.base_url = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
         self.model = os.environ.get("DEEPSEEK_ANALYSIS_MODEL", "deepseek-chat")
 

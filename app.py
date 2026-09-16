@@ -120,7 +120,7 @@ def create_app():
     # real analysis request. Only presence is logged, never the key value.
     _llm_provider = app.config.get("LLM_PROVIDER", "deepseek")
     if _llm_provider == "deepseek":
-        _llm_key_set = bool((os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("DEEPSSEK_API") or "").strip())
+        _llm_key_set = bool(os.environ.get("DEEPSEEK_API_KEY", "").strip())
     elif _llm_provider == "openai":
         _llm_key_set = bool((os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_KEY") or "").strip())
     else:

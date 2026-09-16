@@ -10,6 +10,28 @@ logger = logging.getLogger(__name__)
 
 _MAX_TEXT_CHARS = 50000
 
+# BCP-47 base language subtag -> human-readable language name. The LLM
+# translation prompt is built as "Translate the following text into <name>.",
+# so it expects "Hindi", "Spanish", etc. — not a code like "hi-IN". Keys are
+# base subtags so both "hi-IN" and "hi" resolve.
+_BCP47_LANGUAGE_NAMES = {
+    "hi": "Hindi",
+    "es": "Spanish",
+    "fr": "French",
+}
+
+
+def _language_name_for_code(language_code):
+    """Map a BCP-47 code (e.g. "hi-IN") to a human-readable language name
+    (e.g. "Hindi"), falling back to the raw code when it isn't known."""
+    code = (language_code or "").strip()
+    if code in _BCP47_LANGUAGE_NAMES:
+        return _BCP47_LANGUAGE_NAMES[code]
+    base = code.split("-")[0].lower()
+    if base in _BCP47_LANGUAGE_NAMES:
+        return _BCP47_LANGUAGE_NAMES[base]
+    return language_code
+
 
 @tts_bp.route("/tts/synthesize", methods=["POST"])
 def synthesize():
@@ -37,7 +59,13 @@ def synthesize():
         # Optional translation before synthesis when the target isn't English.
         if translate_flag and language_code.split("-")[0].lower() != "en":
             llm = get_llm_provider()
-            text = llm.translate(text, language_code)
+            try:
+                text = llm.translate(text, _language_name_for_code(language_code))
+            except Exception as e:
+                logger.exception("Translation failed for language_code=%r", language_code)
+                if current_app.debug:
+                    return jsonify({"error": "translation_failed", "detail": str(e)}), 500
+                return jsonify({"error": "translation_failed"}), 500
 
         tts = get_tts_provider()
 

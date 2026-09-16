@@ -64,7 +64,7 @@ class Config:
     OPENAI_VISION_MODEL = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
 
     # DeepSeek (used for transcript analysis)
-    DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("DEEPSSEK_API", "")
+    DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
     DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
     DEEPSEEK_ANALYSIS_MODEL = os.environ.get("DEEPSEEK_ANALYSIS_MODEL", "deepseek-chat")
 
