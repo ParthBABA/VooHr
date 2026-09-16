@@ -1,0 +1,54 @@
+services:
+  - type: web
+    name: voovr
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 2
+    healthCheckPath: /signin
+    envVars:
+      - key: SECRET_KEY
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: voohr
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://voovr.sbs/auth/google/callback
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: HASH_INDEX_SECRET
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: STT_PROVIDER
+        value: openai
+      - key: LLM_PROVIDER
+        value: deepseek
+      - key: STORAGE_PROVIDER
+        value: local
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: GOOGLE_TTS_API_KEY
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        sync: false
+      - key: PASSWORD_PEPPER
+        sync: false
+      - key: GOOGLE_CREDENTIALS_JSON
+        sync: false
+      - key: GCP_PROJECT_ID
+        sync: false
+      - key: GCP_KMS_LOCATION
+        value: asia-south1
+      - key: GCP_KMS_KEY_RING
+        value: voovr-asia
+      - key: GCP_KMS_KEY
+        value: voovr-field-encryption-key
