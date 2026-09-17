@@ -439,12 +439,31 @@ def create_app():
     def forgot_password_html_redirect():
         return _html_redirect("/forgot-password")
 
-    # Custom 404 page for non-API routes
+    # Custom error pages for non-API routes
     @app.errorhandler(404)
     def handle_404(e):
         if request.path.startswith("/api"):
             return jsonify({"error": "not_found"}), 404
         return render_page("404.html"), 404
+
+    @app.errorhandler(403)
+    def handle_403(e):
+        if request.path.startswith("/api"):
+            return jsonify({"error": "forbidden"}), 403
+        return render_page("403.html"), 403
+
+    @app.errorhandler(429)
+    def handle_429(e):
+        if request.path.startswith("/api"):
+            return jsonify({"error": "too_many_requests"}), 429
+        return render_page("429.html"), 429
+
+    @app.errorhandler(500)
+    def handle_500(e):
+        app.logger.exception("Unhandled 500 on %s", request.path)
+        if request.path.startswith("/api"):
+            return jsonify({"error": "internal_server_error"}), 500
+        return render_page("500.html"), 500
 
     # ── User-Agent Client Hints opt-in ──────────────────────────────────
     # Chromium only sends high-entropy hints such as
