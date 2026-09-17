@@ -230,6 +230,99 @@ def send_otp_email(to_email: str, otp: str) -> bool:
         return False
 
 
+def _password_reset_html(reset_link: str) -> str:
+    return (
+        "<p>We received a request to reset your password for your VooVr account.</p>"
+        "<p>Click the button below to choose a new password:</p>"
+        f"<p style=\"margin:24px 0;\"><a href=\"{reset_link}\" "
+        "style=\"background:#f5b301;color:#121212;text-decoration:none;"
+        "padding:12px 22px;border-radius:8px;font-weight:600;display:inline-block;\">"
+        "Reset Password</a></p>"
+        "<p>This link expires in 15 minutes. If you didn't request a password "
+        "reset, you can safely ignore this email.</p>"
+        + _email_footer()
+    )
+
+
+def send_password_reset_email(to_email: str, reset_link: str) -> bool:
+    """Send a password-reset email via Brevo (mirrors send_manager_invite_email).
+
+    Returns True on success, False on any failure.  Failures are logged
+    server-side with the same `email_failed=` categories as the other senders;
+    the caller decides how much to surface to the user.
+    """
+    api_key = os.environ.get("BREVO_API_KEY", "")
+    sender_email = os.environ.get("BREVO_SENDER_EMAIL", "")
+    if not api_key or not sender_email:
+        logger.error(
+            "email_failed=missing_config recipient=%s api_key_set=%s sender_email_set=%s",
+            to_email,
+            bool(api_key),
+            bool(sender_email),
+        )
+        return False
+    if not _SENDER_RE.match(sender_email):
+        logger.error(
+            "email_failed=invalid_sender_format recipient=%s sender=%s",
+            to_email,
+            sender_email,
+        )
+        return False
+
+    payload = {
+        "sender": {
+            "email": sender_email,
+            "name": os.environ.get("BREVO_SENDER_NAME", "VooVr"),
+        },
+        "replyTo": {"email": "voovrhr@gmail.com", "name": "VooVr"},
+        "to": [{"email": to_email}],
+        "subject": "Reset your VooVr password",
+        "htmlContent": _password_reset_html(reset_link),
+        "headers": _profile_avatar_headers(),
+    }
+
+    try:
+        resp = requests.post(
+            BREVO_API_URL,
+            headers={
+                "api-key": api_key,
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=15,
+        )
+    except requests.Timeout:
+        logger.error(
+            "email_failed=timeout recipient=%s url=%s", to_email, BREVO_API_URL
+        )
+        return False
+    except requests.RequestException as exc:
+        logger.error(
+            "email_failed=network recipient=%s url=%s error=%s",
+            to_email,
+            BREVO_API_URL,
+            exc,
+        )
+        return False
+
+    if not resp.ok:
+        logger.error(
+            "email_failed=api_error status=%s recipient=%s body=%s",
+            resp.status_code,
+            to_email,
+            _brevo_error_message(resp),
+        )
+        return False
+
+    logger.info(
+        "email_sent provider=brevo status=%s recipient=%s kind=password_reset",
+        resp.status_code,
+        to_email,
+    )
+    return True
+
+
 def _manager_invite_html(org_name: str, invite_link: str) -> str:
     return (
         "<p>You've been invited by an admin to join <strong>"

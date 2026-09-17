@@ -369,6 +369,10 @@ def create_app():
     def forgot_password():
         return render_page("forgot-password.html")
 
+    @app.route("/reset-password")
+    def reset_password():
+        return render_page("reset-password.html")
+
     # Redirect legacy .html paths to clean URLs, preserving any query string
     # so backend redirects like /signin.html?error=no_account work end-to-end.
     def _html_redirect(target):
@@ -438,6 +442,10 @@ def create_app():
     @app.route("/forgot-password.html")
     def forgot_password_html_redirect():
         return _html_redirect("/forgot-password")
+
+    @app.route("/reset-password.html")
+    def reset_password_html_redirect():
+        return _html_redirect("/reset-password")
 
     # Custom 404 page for non-API routes
     @app.errorhandler(404)

@@ -177,6 +177,10 @@ def _init_indexes(db):
     # Query: find_one({email_hash}) in auth_email.py
     db.otp_verifications.create_index("email_hash", background=True)
 
+    # ── password_resets ────────────────────────────────────────────────
+    # Query: find_one({token_hash}) in auth_email.py reset flow
+    db.password_resets.create_index("token_hash", background=True)
+
     # ── audit_log ──────────────────────────────────────────────────────
     # Query: find({org_id}).sort("created_at", -1) in the /api/audit-log route
     db.audit_log.create_index(

@@ -23,7 +23,7 @@ from flask import Blueprint, jsonify, request, session
 
 from login_flow import _login_result_for_user, _record_active_session
 from blind_index import blind_index
-from email_service import send_otp_email
+from email_service import send_otp_email, send_password_reset_email, _site_base_url
 from extensions import get_db, check_rate_limit, record_rate_limit_event
 from field_encryption import decrypt_fields, encrypt_fields
 from password_utils import hash_password, password_strength_ok, verify_password
@@ -47,6 +47,14 @@ _LOCKOUT_TTL = timedelta(minutes=15)
 _OTP_MAX_PER_EMAIL = 5       # max OTP sends per email per window
 _OTP_MAX_PER_IP = 20         # max OTP sends per IP per window
 _OTP_RATE_WINDOW = 900       # 15-minute sliding window in seconds
+
+# Password-reset token constants.
+_PASSWORD_RESET_TTL = timedelta(minutes=15)
+_MAX_TOKEN_LENGTH = 512      # secrets.token_urlsafe(32) is 43 chars; generous cap
+
+# Rate-limit constants for password-reset emails.
+_RESET_MAX_PER_EMAIL = 5     # max reset emails per email per window
+_RESET_MAX_PER_IP = 20       # max reset emails per IP per window
 
 
 def _now() -> datetime:
@@ -93,6 +101,31 @@ def _check_otp_send_rate_limit(db, email, ip):
     allowed, retry_after = check_rate_limit(db, ip_key, _OTP_MAX_PER_IP, _OTP_RATE_WINDOW)
     if not allowed:
         msg = "Too many OTP requests. Please wait a few minutes before requesting another code."
+        return jsonify({"error": msg, "retry_after": retry_after}), 429
+
+    record_rate_limit_event(db, email_key, ttl_seconds=_OTP_RATE_WINDOW)
+    record_rate_limit_event(db, ip_key, ttl_seconds=_OTP_RATE_WINDOW)
+    return None
+
+
+def _check_reset_send_rate_limit(db, email, ip):
+    """Per-email and per-IP rate limits for password-reset emails.
+
+    Same shape as _check_otp_send_rate_limit — returns None on success, or a
+    (response, status_code) tuple on 429.  Uses its own keys so reset sends
+    never consume the OTP budget (or vice versa).
+    """
+    email_key = f"reset_email:{email.lower().strip()}"
+    ip_key = f"reset_ip:{ip}"
+
+    allowed, retry_after = check_rate_limit(db, email_key, _RESET_MAX_PER_EMAIL, _OTP_RATE_WINDOW)
+    if not allowed:
+        msg = "Too many requests. Please wait a few minutes before trying again."
+        return jsonify({"error": msg, "retry_after": retry_after}), 429
+
+    allowed, retry_after = check_rate_limit(db, ip_key, _RESET_MAX_PER_IP, _OTP_RATE_WINDOW)
+    if not allowed:
+        msg = "Too many requests. Please wait a few minutes before trying again."
         return jsonify({"error": msg, "retry_after": retry_after}), 429
 
     record_rate_limit_event(db, email_key, ttl_seconds=_OTP_RATE_WINDOW)
@@ -434,9 +467,116 @@ def email_signin():
 
 @auth_email_bp.route("/forgot-password", methods=["POST"])
 def forgot_password():
-    """Report availability honestly without revealing whether an account exists."""
-    return jsonify({
-        "ok": False,
-        "error": "reset_unavailable",
-        "message": "Password reset emails are not available yet. Contact voovrhr@gmail.com for help accessing your account.",
-    }), 503
+    """Email a one-time password-reset link when the account exists.
+
+    Always answers 200 with the same generic message so a caller cannot tell
+    whether an email is registered (the rate-limit check runs BEFORE the user
+    lookup, so a 429 does not reveal it either).
+    """
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    generic_message = "If an account exists for that email, we've sent a reset link."
+    generic_response = {"ok": True, "message": generic_message}
+
+    if not email or len(email) > _MAX_EMAIL_LENGTH:
+        return jsonify(generic_response), 200
+
+    db = get_db()
+
+    rate_limit_resp = _check_reset_send_rate_limit(db, email, _client_ip())
+    if rate_limit_resp:
+        return rate_limit_resp
+
+    email_hash = blind_index(email)
+    user = db.users.find_one({"email_hash": email_hash})
+    if not user or not user.get("password_hash"):
+        # Same response for "no such user" and "Google-only account" so we
+        # never reveal which one it is.
+        return jsonify(generic_response), 200
+
+    token = secrets.token_urlsafe(32)
+    now = _now()
+
+    db.password_resets.update_one(
+        {"user_id": user["_id"]},
+        {
+            "$set": {
+                "token_hash": hashlib.sha256(token.encode("utf-8")).hexdigest(),
+                "created_at": now,
+                "expires_at": now + _PASSWORD_RESET_TTL,
+                "used": False,
+            }
+        },
+        upsert=True,
+    )
+
+    try:
+        pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
+        to_email = pii.get("email") or email
+    except Exception:
+        to_email = email
+
+    reset_link = f"{_site_base_url()}/reset-password?token={token}"
+    if not send_password_reset_email(to_email, reset_link):
+        # The send failure is logged inside email_service; keep the generic
+        # response so a 200/500 difference never reveals account existence.
+        return jsonify(generic_response), 200
+
+    return jsonify(generic_response), 200
+
+
+@auth_email_bp.route("/reset-password", methods=["POST"])
+def reset_password():
+    """Validate a one-time reset token and set a new password.
+
+    On success the token is marked used (single-use) and every active session
+    for the user is revoked so stale sign-ins can't ride the old password.
+    """
+    data = request.get_json(silent=True) or {}
+    token = (data.get("token") or "").strip()
+    password = data.get("password") or ""
+
+    if not token or not password:
+        return jsonify({"error": "missing_fields"}), 400
+    if len(token) > _MAX_TOKEN_LENGTH:
+        return jsonify({"error": "invalid_token"}), 400
+    if len(password) > MAX_PASSWORD_LENGTH:
+        return jsonify({"error": "password_too_long"}), 400
+    if not password_strength_ok(password):
+        return jsonify({"error": "weak_password"}), 400
+
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    db = get_db()
+    doc = db.password_resets.find_one({"token_hash": token_hash})
+    if not doc or doc.get("used"):
+        return jsonify({"error": "invalid_token"}), 400
+
+    expires_at = _aware(doc.get("expires_at"))
+    if expires_at is None or expires_at < _now():
+        return jsonify({"error": "expired"}), 400
+
+    user_id = doc.get("user_id")
+    if not db.users.find_one({"_id": user_id}):
+        return jsonify({"error": "invalid_token"}), 400
+
+    now = _now()
+    db.users.update_one(
+        {"_id": user_id},
+        {
+            "$set": {
+                "password_hash": hash_password(password),
+                "failed_login_attempts": 0,
+                "password_changed_at": now,
+            },
+            "$unset": {"lockout_until": ""},
+        },
+    )
+
+    db.active_sessions.delete_many({"user_id": user_id})
+
+    db.password_resets.update_one(
+        {"_id": doc["_id"]},
+        {"$set": {"used": True, "used_at": now}},
+    )
+
+    return jsonify({"ok": True}), 200
