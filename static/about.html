@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Us - VooVr</title>
+  <!-- shared-head -->
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .bg-banding{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;}
+    .about-team{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;margin-top:1rem;}
+    .about-member{background:var(--surface-1, #151823);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center;}
+    .about-photo{width:72px;height:72px;border-radius:50%;margin:0 auto 1rem;background:linear-gradient(135deg,var(--violet),var(--amber));color:var(--void);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:1.5rem;font-weight:700;}
+    .about-member h3{margin:0 0 .25rem;font-family:var(--font-d);}
+    .about-member p{margin:0;color:var(--ivory-dim);}
+    .about-values{display:flex;flex-direction:column;gap:1rem;margin-top:1rem;}
+    .about-value p{margin:0;}
+    @media (max-width:640px){.about-team{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body class="legal-page">
+  <img class="bg-banding" src="Banding - Copy@1-1536x730.webp" alt="" aria-hidden="true" width="1536" height="730">
+  <main class="legal-card">
+    <a href="/login" class="legal-back">← Back to sign in</a>
+    <h1>About Us</h1>
+    <p class="legal-updated">The team behind VooVr</p>
+
+    <section>
+      <h2>What VooVr Does</h2>
+      <p>VooVr is an AI operating system built for modern HR teams. We connect the entire employee lifecycle in one place — from the meeting to the record to the insight.</p>
+      <p>Managers use VooVr to track meetings, capture dictation and follow-ups, and surface employee risk-drift signals before small issues become big problems. Behind the scenes, our AI monitors satisfaction, engagement and behavioural trends so HR understands people, not just paperwork.</p>
+    </section>
+
+    <section>
+      <h2>Team</h2>
+      <p>We're a small, focused team of builders, researchers and designers who care deeply about how work feels for real people.</p>
+      <div class="about-team">
+        <div class="about-member">
+          <div class="about-photo" aria-hidden="true">AH</div>
+          <h3>Alex Morgan</h3>
+          <p>Founder &amp; CEO</p>
+        </div>
+        <div class="about-member">
+          <div class="about-photo" aria-hidden="true">PS</div>
+          <h3>Priya Shah</h3>
+          <p>Head of Product</p>
+        </div>
+        <div class="about-member">
+          <div class="about-photo" aria-hidden="true">MO</div>
+          <h3>Marcus Okafor</h3>
+          <p>Head of Engineering</p>
+        </div>
+        <div class="about-member">
+          <div class="about-photo" aria-hidden="true">KR</div>
+          <h3>Kevin Rivera</h3>
+          <p>Head of Design</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Values</h2>
+      <div class="about-values">
+        <div class="about-value">
+          <p><strong>People first.</strong> Every feature starts with a real employee or manager need — never the other way around.</p>
+        </div>
+        <div class="about-value">
+          <p><strong>Privacy by default.</strong> Sensitive HR data is encrypted, access-controlled and audited at every layer.</p>
+        </div>
+        <div class="about-value">
+          <p><strong>Understanding over paperwork.</strong> We turn scattered signals into clarity that helps teams act early.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>© 2026 VooVr. All rights reserved.</span>
+    <nav aria-label="Legal"><a href="/about">About</a><a href="/careers">Careers</a><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
+  </footer>
+
+
+</body>
+</html>

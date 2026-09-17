@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Status - VooVr</title>
+  <!-- shared-head -->
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .status-page{min-height:100vh;background:var(--void);color:var(--ivory);font-family:var(--font-b);font-size:15px;line-height:1.6;overflow-x:hidden;padding:48px 20px 24px;}
+    .status-wrap{max-width:640px;margin:0 auto;}
+    .status-head{display:flex;align-items:center;gap:14px;margin-bottom:6px;}
+    .status-head img{height:28px;width:auto;}
+    .status-title{font-family:var(--font-d);font-size:1.5rem;font-weight:700;letter-spacing:-0.01em;color:var(--ivory);margin:6px 0 2px;}
+    .status-lede{color:var(--ivory-dim);font-size:.85rem;margin:0 0 18px;max-width:56ch;}
+    .status-list{border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-md);background:var(--ink);overflow:hidden;}
+    .status-row{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border);}
+    .status-row:last-child{border-bottom:0;}
+    .status-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;background:var(--ivory-faint);}
+    .status-dot.ok{background:var(--teal);box-shadow:0 0 8px var(--teal-glow);}
+    .status-dot.warn{background:var(--amber);box-shadow:0 0 8px var(--amber-glow);}
+    .status-dot.err{background:var(--red);box-shadow:0 0 8px var(--red-glow);}
+    .status-name{font-family:var(--font-lato);font-weight:700;color:var(--ivory);}
+    .status-state{margin-left:auto;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ivory-dim);text-align:right;}
+    .badge{display:inline-block;padding:4px 10px;border-radius:100px;border:1px solid var(--border);}
+    .status-meta{display:flex;align-items:center;gap:14px;margin-top:16px;font-size:.7rem;color:var(--ivory-faint);text-transform:uppercase;letter-spacing:.08em;flex-wrap:wrap;}
+    .status-refresh{margin-left:auto;font-family:var(--font-rc);font-weight:600;font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;color:var(--amber);background:transparent;border:1px solid var(--amber);border-radius:8px;padding:8px 14px;cursor:pointer;transition:all .3s;}
+    .status-refresh:hover{background:var(--amber);color:var(--void);}
+    .status-refresh:disabled{opacity:.5;cursor:wait;}
+    .status-note{margin-top:18px;font-size:.72rem;color:var(--ivory-faint);line-height:1.7;}
+    .status-footer{margin-top:40px;text-align:center;font-size:.7rem;color:var(--ivory-faint);}
+    .status-footer a{color:var(--amber);text-transform:uppercase;letter-spacing:.05em;}
+  </style>
+</head>
+<body class="status-page">
+  <main class="status-wrap">
+    <div class="status-head">
+      <img src="/voovr-logo-full.webp" alt="VooVr">
+    </div>
+    <h1 class="status-title">System Status</h1>
+    <p class="status-lede" id="statusLede">Checking our services…</p>
+    <div class="status-list" id="statusList">
+      <div class="status-row" data-component="api">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="status-name">API</span>
+        <span class="status-state"><span class="badge">Checking…</span></span>
+      </div>
+      <div class="status-row" data-component="database">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="status-name">Database</span>
+        <span class="status-state"><span class="badge">Checking…</span></span>
+      </div>
+      <div class="status-row" data-component="email">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="status-name">Email delivery</span>
+        <span class="status-state"><span class="badge">Checking…</span></span>
+      </div>
+    </div>
+    <div class="status-meta">
+      <span id="statusTime">Last checked —</span>
+      <button class="status-refresh" id="statusRefresh" type="button">Refresh</button>
+    </div>
+    <p class="status-note">
+      This page shows current, self-reported health from the VooVr application
+      itself. Historical uptime percentages and an incident history are future
+      enhancements and are not tracked yet.
+    </p>
+  </main>
+  <footer class="status-footer">
+    <span>© 2026 VooVr. All rights reserved.</span>
+    <span style="margin-left:16px;">|</span>
+    <a href="/privacy">Privacy Policy</a>
+    <span style="margin-left:16px;">|</span>
+    <a href="/terms">Terms of Service</a>
+    <span style="margin-left:16px;">|</span>
+    <a href="mailto:voovrhr@gmail.com">Contact</a>
+  </footer>
+
+  <script>
+    (function () {
+      /* Historical uptime / incident history is a FUTURE ENHANCEMENT — this
+         MVP page only renders current, self-reported component health from
+         GET /api/health/status. Missing or unknown statuses fall back to
+         "Unknown" so a partial response never breaks the layout. */
+      var ROW_ORDER = ['api', 'database', 'email'];
+      var LABELS = {
+        api: 'API',
+        database: 'Database',
+        email: 'Email delivery'
+      };
+      var STATES = {
+        operational: {cls: 'ok', text: 'Operational'},
+        degraded: {cls: 'warn', text: 'Degraded'},
+        down: {cls: 'err', text: 'Down'},
+        monitoring_not_available: {cls: 'warn', text: 'Not monitored'}
+      };
+      var UNKNOWN = {cls: '', text: 'Unknown'};
+
+      function timeText(iso) {
+        if (!iso) return 'Last checked just now';
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return 'Last checked just now';
+        return 'Last checked ' + d.toLocaleString();
+      }
+
+      function applyFailure() {
+        document.getElementById('statusLede').textContent =
+          'Could not reach the status service right now — please try again in a moment.';
+        document.getElementById('statusTime').textContent = 'Status check failed';
+        ROW_ORDER.forEach(function (key) {
+          var row = document.querySelector('[data-component="' + key + '"]');
+          if (!row) return;
+          row.querySelector('.status-dot').className = 'status-dot';
+          row.querySelector('.badge').textContent = 'Unavailable';
+        });
+      }
+
+      function renderStatus() {
+        fetch('/api/health/status', {cache: 'no-store'})
+          .then(function (res) {
+            if (!res.ok) throw new Error('status request failed');
+            return res.json();
+          })
+          .then(function (data) {
+            data = data || {};
+            ROW_ORDER.forEach(function (key) {
+              var state = STATES[data[key]] || UNKNOWN;
+              var row = document.querySelector('[data-component="' + key + '"]');
+              if (!row) return;
+              row.querySelector('.status-dot').className = 'status-dot ' + state.cls;
+              row.querySelector('.badge').textContent = state.text;
+            });
+            document.getElementById('statusLede').textContent = 'Current status of VooVr services.';
+            document.getElementById('statusTime').textContent = timeText(data.timestamp);
+          })
+          .catch(applyFailure);
+      }
+
+      renderStatus();
+      var refresh = document.getElementById('statusRefresh');
+      if (refresh) {
+        refresh.addEventListener('click', function () {
+          refresh.disabled = true;
+          renderStatus();
+          window.setTimeout(function () { refresh.disabled = false; }, 500);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

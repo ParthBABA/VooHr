@@ -2,6 +2,7 @@ import hmac
 import logging
 import os
 import secrets
+from datetime import datetime, timezone
 
 from werkzeug.exceptions import RequestEntityTooLarge
 
@@ -85,6 +86,43 @@ def create_app():
         Used by load balancers and Render health checks.
         """
         return jsonify({"status": "ok"}), 200
+
+    @app.route("/api/health/status")
+    def _system_status():
+        """Cheap, read-only component status for the public /status page.
+
+        Unlike /api/health (liveness-only), this reports self-reported health
+        from our own point of view: the API process itself and a one-liner
+        MongoDB ping, plus Brevo (email) config presence. It never leaks
+        secrets, never sends mail, and never blocks on slow connections.
+
+        Historical uptime / incident history is NOT tracked here — that is a
+        future enhancement and out of scope for this MVP; this endpoint only
+        reports current, self-reported component health.
+        """
+        # API: this handler responding is our signal that the web process is up.
+        api_status = "operational"
+
+        # Database: cheap ping — a Mongo outage must never crash the health check.
+        db_status = "operational"
+        try:
+            get_db().command("ping")
+        except Exception:
+            db_status = "down"
+
+        # Brevo email: no cheap non-sending sanity check exists in email_service
+        # (it never raises; all send failures are reported via logs), so we only
+        # report config presence. Delivery itself is "monitoring not available".
+        email_status = "monitoring_not_available"
+        if not (os.environ.get("BREVO_API_KEY") and os.environ.get("BREVO_SENDER_EMAIL")):
+            email_status = "degraded"
+
+        return jsonify({
+            "api": api_status,
+            "database": db_status,
+            "email": email_status,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }), 200
 
     @app.before_request
     def _csrf_protect():
@@ -365,6 +403,22 @@ def create_app():
     def terms():
         return render_page("terms-of-service.html")
 
+    @app.route("/about")
+    def about():
+        return render_page("about.html")
+
+    @app.route("/careers")
+    def careers():
+        return render_page("careers.html")
+
+    @app.route("/cookies")
+    def cookies():
+        return render_page("cookie-policy.html")
+
+    @app.route("/status")
+    def status():
+        return render_page("status.html")
+
     @app.route("/forgot-password")
     def forgot_password():
         return render_page("forgot-password.html")
@@ -434,6 +488,22 @@ def create_app():
     @app.route("/terms-of-service.html")
     def terms_html_redirect():
         return _html_redirect("/terms")
+
+    @app.route("/about.html")
+    def about_html_redirect():
+        return _html_redirect("/about")
+
+    @app.route("/careers.html")
+    def careers_html_redirect():
+        return _html_redirect("/careers")
+
+    @app.route("/cookie-policy.html")
+    def cookie_policy_html_redirect():
+        return _html_redirect("/cookies")
+
+    @app.route("/status.html")
+    def status_html_redirect():
+        return _html_redirect("/status")
 
     @app.route("/forgot-password.html")
     def forgot_password_html_redirect():

@@ -60,7 +60,11 @@ def render_page(filename):
     source = _read_page(str(path), path.stat().st_mtime_ns)
     title = re.search(r"<title>(.*?)</title>", source, re.S).group(1)
     head = render_template("shared-head.html", **metadata(
-        title, public=filename in {"privacy-policy.html", "terms-of-service.html"}
+        title, public=filename in {
+            "privacy-policy.html", "terms-of-service.html",
+            "about.html", "careers.html", "cookie-policy.html",
+            "status.html"
+        }
     ))
     # Clean routes can be nested (/sync/room). Local assets and page links
     # were authored relative to the static root, not the current URL folder.

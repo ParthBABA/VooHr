@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Careers - VooVr</title>
+  <!-- shared-head -->
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .bg-banding{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;}
+    .careers-list{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;margin-top:1rem;}
+    .career-card{background:var(--surface-1, #151823);border:1px solid var(--border);border-radius:12px;padding:1.5rem;display:flex;flex-direction:column;gap:.75rem;}
+    .career-card h3{margin:0;font-family:var(--font-d);font-size:1.15rem;}
+    .career-tags{display:flex;gap:.5rem;flex-wrap:wrap;}
+    .career-tags span{font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;padding:.3rem .65rem;border:1px solid var(--border);border-radius:999px;color:var(--ivory-dim);background:var(--void);}
+    .career-apply{align-self:flex-start;margin-top:.25rem;background:linear-gradient(135deg,var(--violet),var(--amber));color:var(--void);font-family:var(--font-lato);font-weight:700;font-size:.8rem;letter-spacing:.04em;text-transform:uppercase;padding:.7rem 1.25rem;border-radius:8px;border:none;text-decoration:none;text-underline-offset:0;}
+    .career-empty{margin-top:1rem;color:var(--ivory-dim);line-height:1.8;}
+    .career-empty a{color:var(--amber);}
+    @media (max-width:640px){.careers-list{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body class="legal-page">
+  <img class="bg-banding" src="Banding - Copy@1-1536x730.webp" alt="" aria-hidden="true" width="1536" height="730">
+  <main class="legal-card">
+    <a href="/login" class="legal-back">← Back to sign in</a>
+    <h1>Careers</h1>
+    <p class="legal-updated">Join the team building VooVr</p>
+
+    <section>
+      <h2>Working at VooVr</h2>
+      <p>VooVr is building the AI operating system for modern HR teams — a small, focused team of builders, researchers and designers who care about making work feel better for real people.</p>
+      <p>We work remotely, move fast, and ship features that genuinely help managers understand people, not just paperwork. If you enjoy owning problems end-to-end and building things people actually use, you'll fit right in.</p>
+    </section>
+
+    <section>
+      <h2>Open Positions</h2>
+      <div class="careers-list" id="careersList"></div>
+      <p class="career-empty" id="careersEmpty" hidden>No open positions right now — check back soon, or send us your resume at <a href="mailto:voovrhr@gmail.com">voovrhr@gmail.com</a>.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>© 2026 VooVr. All rights reserved.</span>
+    <nav aria-label="Legal"><a href="/careers">Careers</a><a href="/about">About</a><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
+  </footer>
+
+  <script>
+    // Data-driven role list. Swap this for a future GET /api/careers/openings
+    // response without changing the markup below: the same array shape
+    // ({title, department, location}) renders the cards in the same way.
+    const OPEN_ROLES = [
+      { title: "Full-Stack Engineer", department: "Engineering", location: "Remote" },
+      { title: "AI / ML Engineer", department: "Engineering", location: "Remote" },
+      { title: "Product Designer", department: "Design", location: "Remote" },
+      { title: "Customer Success Manager", department: "Grow", location: "Remote" },
+    ];
+
+    (function () {
+      const list = document.getElementById("careersList");
+      const empty = document.getElementById("careersEmpty");
+      if (!list) return;
+      if (!OPEN_ROLES.length) {
+        if (empty) empty.hidden = false;
+        return;
+      }
+      for (const role of OPEN_ROLES) {
+        const subject = encodeURIComponent("Application for " + role.title);
+        const card = document.createElement("div");
+        card.className = "career-card";
+
+        const title = document.createElement("h3");
+        title.textContent = role.title;
+
+        const tags = document.createElement("div");
+        tags.className = "career-tags";
+        [role.department, role.location].forEach(function (label) {
+          const tag = document.createElement("span");
+          tag.textContent = label;
+          tags.appendChild(tag);
+        });
+
+        const apply = document.createElement("a");
+        apply.className = "career-apply";
+        apply.href = "mailto:voovrhr@gmail.com?subject=" + subject;
+        apply.textContent = "Apply";
+
+        card.appendChild(title);
+        card.appendChild(tags);
+        card.appendChild(apply);
+        list.appendChild(card);
+      }
+    })();
+  </script>
+
+</body>
+</html>
