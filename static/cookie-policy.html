@@ -8,9 +8,16 @@
   <link rel="stylesheet" href="/style.css">
   <style>
     .bg-banding{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;}
-    .legal-card table{margin:.5rem 0 1.5rem;width:100%;border-collapse:collapse;}
-    .legal-card th,.legal-card td{border:1px solid var(--border);padding:.6rem .75rem;text-align:left;vertical-align:top;}
-    .legal-card th{color:var(--ivory);}
+    .table-scroll{overflow-x:auto;}
+    .legal-card table{margin:.5rem 0 1.5rem;width:100%;border-collapse:collapse;table-layout:fixed;}
+    .cookie-table th,.cookie-table td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top;}
+    .cookie-table th{font-family:var(--font-d);color:var(--ivory);font-size:0.85rem;text-transform:uppercase;letter-spacing:0.03em;}
+    .cookie-table td{color:var(--ivory-dim, var(--ivory));font-size:0.9rem;line-height:1.5;}
+    .cookie-table th:nth-child(1),.cookie-table td:nth-child(1){width:14%;}
+    .cookie-table th:nth-child(2),.cookie-table td:nth-child(2){width:12%;}
+    .cookie-table th:nth-child(3),.cookie-table td:nth-child(3){width:54%;}
+    .cookie-table th:nth-child(4),.cookie-table td:nth-child(4){width:20%;}
+    @media (max-width:640px){.cookie-table{min-width:560px;}}
   </style>
 </head>
 <body class="legal-page">
@@ -28,20 +35,22 @@
     <section>
       <h2>2. Cookies We Use</h2>
       <p>VooVr sets only strictly necessary cookies for authentication and security. We do not use advertising or analytics cookies, and we never sell data derived from cookies.</p>
-      <table>
-        <tr>
-          <th>Cookie</th>
-          <th>Type</th>
-          <th>What it does</th>
-          <th>Lifetime</th>
-        </tr>
-        <tr>
-          <td><strong>session</strong></td>
-          <td>Essential</td>
-          <td>Keeps you signed in across pages and browser restarts. It stores your sign-in state and session token, and a CSRF token that protects state-changing requests against cross-site request forgery.</td>
-          <td>Up to 30 days from your last sign-in (or until you sign out)</td>
-        </tr>
-      </table>
+      <div class="table-scroll">
+        <table class="cookie-table">
+          <tr>
+            <th>Cookie</th>
+            <th>Type</th>
+            <th>What it does</th>
+            <th>Lifetime</th>
+          </tr>
+          <tr>
+            <td><strong>session</strong></td>
+            <td>Essential</td>
+            <td>Keeps you signed in across pages and browser restarts. It stores your sign-in state and session token, and a CSRF token that protects state-changing requests against cross-site request forgery.</td>
+            <td>Up to 30 days from your last sign-in (or until you sign out)</td>
+          </tr>
+        </table>
+      </div>
       <p>This cookie is created with the safety attributes <strong>HttpOnly</strong> (inaccessible to browser scripts) and <strong>SameSite=Lax</strong> (not sent on cross-site requests). When VooVr is served over HTTPS in production, it is also marked <strong>Secure</strong>. Because the cookie is signed by the server, it cannot be read or tampered with by third parties.</p>
     </section>
 
