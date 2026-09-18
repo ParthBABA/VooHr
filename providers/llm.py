@@ -5,6 +5,7 @@ import re
 from abc import ABC, abstractmethod
 from flask import current_app
 from openai import APITimeoutError
+from providers.translation_cache import TranslationCache
 
 logger = logging.getLogger(__name__)
 
@@ -1354,20 +1355,30 @@ class OpenAILLM(BaseLLM):
         )
 
     def translate(self, text: str, target_language: str) -> str:
+        if not text:
+            return ""
+
+        # Full-text cache: a hit returns a complete, previously-validated
+        # translation with zero API calls.
+        cache = TranslationCache()
+        key = cache.build_key(text, target_language)
+        cached = cache.get(key)
+        if cached is not None:
+            return cached
+
         from openai import OpenAI
 
         client = OpenAI(api_key=self.api_key, max_retries=0)
-        prompt = (
-            f"Translate the following text into {target_language}. "
-            f"Return ONLY the translated text, no preamble, no quotes, no explanation:\n\n{text}"
-        )
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
+        result = _translate_document(
+            client,
+            self.model,
+            text,
+            target_language,
             timeout=_llm_timeout_seconds(),
+            log_label="OpenAI translate",
         )
-        return (resp.choices[0].message.content or "").strip()
+        cache.set(key, result)
+        return result
 
 
 class DeepSeekLLM(BaseLLM):
@@ -1432,17 +1443,246 @@ class DeepSeekLLM(BaseLLM):
         )
 
     def translate(self, text: str, target_language: str) -> str:
+        if not text:
+            return ""
+
+        # Full-text cache: a hit returns a complete, previously-validated
+        # translation with zero API calls.
+        cache = TranslationCache()
+        key = cache.build_key(text, target_language)
+        cached = cache.get(key)
+        if cached is not None:
+            return cached
+
         from openai import OpenAI
 
         client = OpenAI(api_key=self.api_key, base_url=self.base_url, max_retries=0)
-        prompt = (
-            f"Translate the following text into {target_language}. "
-            f"Return ONLY the translated text, no preamble, no quotes, no explanation:\n\n{text}"
-        )
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
+        result = _translate_document(
+            client,
+            self.model,
+            text,
+            target_language,
             timeout=_llm_timeout_seconds(),
+            log_label="DeepSeek translate",
         )
-        return (resp.choices[0].message.content or "").strip()
+        cache.set(key, result)
+        return result
+
+
+# ── Translation: chunking, output budgeting, retry ─────────────────────────
+# translate() bypasses the JSON helper (it returns plain text), but it must
+# still guarantee two things the single-shot call below cannot: (1) long
+# text is split into chunks small enough that a single completion translates
+# every chunk in full (otherwise a long request silently cuts off at the
+# provider's default output cap, producing a "80% translated" result), and
+# (2) every completion carries an explicit max_tokens budget sized with
+# margin so the output is never truncated, plus a retry-and-keep-original
+# policy per chunk instead of dropping content on a transient failure.
+
+_TRANSLATE_CHUNK_MAX_CHARS = 3000
+# Output-token ceiling for one translation completion. gpt-4o supports up to
+# 16,384 output tokens and deepseek-chat up to 8,192, so 8,192 is a cap every
+# configured model can honour.
+_MAX_TRANSLATION_OUTPUT_TOKENS = 8192
+
+_SENTENCE_BREAK_RE = re.compile(r"(?<=[.!?。！？])([ \t\n]+)")
+
+
+def _translation_max_tokens(source_chars: int) -> int:
+    """Output-token budget for translating *source_chars* characters.
+
+    Translations routinely run longer than the source (e.g. into a more
+    verbose target language), so budget with margin: assume ~1 token per 4
+    source chars and allow up to 4x that many output tokens, clamped to a
+    ceiling every provider/model supports and floored so even a tiny input
+    gets a sane budget.
+    """
+    est_source_tokens = max(1, source_chars // 4)
+    return min(max(256, est_source_tokens * 4), _MAX_TRANSLATION_OUTPUT_TOKENS)
+
+
+def _split_long_unit(text: str, max_chars: int) -> list[str]:
+    """Hard-split a single over-long sentence at word boundaries."""
+    pieces: list[str] = []
+    current = ""
+    for word in text.split():
+        while len(word) > max_chars:  # a single giant word — unavoidable cut
+            if current:
+                pieces.append(current)
+                current = ""
+            pieces.append(word[:max_chars])
+            word = word[max_chars:]
+        if current and len(current) + 1 + len(word) > max_chars:
+            pieces.append(current)
+            current = ""
+        current = word if not current else f"{current} {word}"
+    if current:
+        pieces.append(current)
+    return pieces
+
+
+def _split_paragraph(paragraph: str, max_chars: int) -> list[tuple[str, str]]:
+    """Split one paragraph into ``(content, trailing_separator)`` units.
+
+    A paragraph at most *max_chars* is a single unit. A larger paragraph is
+    split at sentence boundaries (whitespace following sentence punctuation),
+    and a single sentence still longer than *max_chars* is hard-split at word
+    boundaries — never mid-word except for a single word longer than the chunk
+    limit.
+    """
+    if not paragraph:
+        return []
+    if len(paragraph) <= max_chars:
+        return [(paragraph, "")]
+
+    parts = _SENTENCE_BREAK_RE.split(paragraph)
+    units: list[tuple[str, str]] = []
+    for i in range(0, len(parts), 2):
+        sentence = parts[i]
+        if not sentence.strip():
+            continue
+        sep = parts[i + 1] if i + 1 < len(parts) else ""
+        if len(sentence) <= max_chars:
+            units.append((sentence, sep))
+        else:
+            pieces = _split_long_unit(sentence, max_chars)
+            for j, piece in enumerate(pieces):
+                units.append((piece, sep if j == len(pieces) - 1 else " "))
+    return units
+
+
+def _split_translation_text(
+    text: str, max_chars: int = _TRANSLATE_CHUNK_MAX_CHARS
+) -> list[tuple[str, str]]:
+    """Split *text* into ``(chunk, separator)`` pairs for translation.
+
+    Concatenating ``chunk + separator`` across every returned pair reproduces
+    *text* exactly, so the translated chunks can be joined back with the same
+    separators to preserve paragraph breaks. Splits are made at paragraph
+    (blank-line) boundaries first, then at sentence boundaries, and never
+    mid-word; each chunk is at most *max_chars* characters.
+    """
+    if not text:
+        return [("", "")]
+    if len(text) <= max_chars:
+        return [(text, "")]
+
+    # Flatten the text into atomic units. A blank-line separator becomes the
+    # trailing separator of the last content before it, so joins re-insert the
+    # paragraph break in the right place.
+    units: list[tuple[str, str]] = []
+    for i, part in enumerate(re.split(r"(\n[ \t]*\n)", text)):
+        if i % 2 == 1:
+            if units:
+                prev_text, _ = units[-1]
+                units[-1] = (prev_text, part)
+            continue
+        if part:
+            units.extend(_split_paragraph(part, max_chars))
+    if not units:
+        return [(text, "")]
+
+    # Greedily merge consecutive units into chunks, each <= max_chars, so
+    # consecutive short paragraphs travel in the same completion.
+    chunks: list[tuple[str, str]] = []
+    buf: list[str] = []
+    buf_len = 0
+    prev_sep = ""
+    for content, sep in units:
+        if buf and buf_len + len(prev_sep) + len(content) > max_chars:
+            chunks.append(("".join(buf), prev_sep))
+            buf = []
+            buf_len = 0
+        if buf:
+            buf.append(prev_sep)
+            buf.append(content)
+            buf_len += len(prev_sep) + len(content)
+        else:
+            buf.append(content)
+            buf_len = len(content)
+        prev_sep = sep
+    chunks.append(("".join(buf), prev_sep))
+    return chunks
+
+
+def _translate_prompt(text: str, target_language: str) -> str:
+    return (
+        f"Translate the following text into {target_language}. "
+        f"Return ONLY the translated text, no preamble, no quotes, no explanation:\n\n{text}"
+    )
+
+
+def _translate_call(
+    client,
+    model: str,
+    text: str,
+    target_language: str,
+    timeout: float,
+) -> str:
+    """One completion call translating *text*; returns "" on any failure."""
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": _translate_prompt(text, target_language)}],
+            temperature=0.2,
+            timeout=timeout,
+            max_tokens=_translation_max_tokens(len(text)),
+        )
+    except Exception:
+        return ""
+    return (resp.choices[0].message.content or "").strip()
+
+
+def _translate_with_retry(
+    client,
+    model: str,
+    text: str,
+    target_language: str,
+    timeout: float,
+    chunk_index=None,
+    log_label: str = "",
+) -> str:
+    """Translate *text*, retrying once, keeping the original text if both fail."""
+    for _retry in range(2):
+        translated = _translate_call(client, model, text, target_language, timeout)
+        if translated:
+            return translated
+    logger.warning(
+        "%s translation failed for chunk %s — keeping original (untranslated) text",
+        log_label or "LLM",
+        chunk_index if chunk_index is not None else "single",
+    )
+    return text
+
+
+def _translate_document(
+    client,
+    model: str,
+    text: str,
+    target_language: str,
+    timeout: float,
+    log_label: str = "",
+) -> str:
+    """Translate the full *text*, chunking when it is long.
+
+    Short text (≤ _TRANSLATE_CHUNK_MAX_CHARS) is a single completion. Longer
+    text is split at paragraph then sentence boundaries, each chunk translated
+    in its own completion with an explicit max_tokens budget, and the results
+    rejoined with the original separators so paragraph breaks survive. A chunk
+    that still fails after one retry keeps its original untranslated text
+    (never silently dropped) and logs a warning with the chunk index.
+    """
+    parts = _split_translation_text(text)
+    out: list[str] = []
+    for index, (chunk, separator) in enumerate(parts):
+        translated = _translate_with_retry(
+            client,
+            model,
+            chunk,
+            target_language,
+            timeout=timeout,
+            chunk_index=index,
+            log_label=log_label,
+        )
+        out.append(translated + separator)
+    return "".join(out)
