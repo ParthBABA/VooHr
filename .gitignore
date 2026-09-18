@@ -13,6 +13,12 @@ app_stdout.txt
 app_stderr.txt
 *.log
 
+# Generated audio artifacts — session/TTS audio must NEVER be committed.
+# Audio no longer lives under static/ (see providers/storage.py), but both
+# locations are ignored so nothing slips back in.
+static/audio/
+audio_storage/
+
 # Ad-hoc patch/diff files — should never be committed
 *.patch
 *.diff

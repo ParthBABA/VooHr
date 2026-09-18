@@ -71,8 +71,11 @@ class Config:
     # V2 Behavioural Intelligence Framework toggle
     USE_V2_FRAMEWORK = os.environ.get("USE_V2_FRAMEWORK", "false").lower() == "true"
 
-    # Audio storage
-    AUDIO_STORAGE_PATH = os.environ.get("AUDIO_STORAGE_PATH", "static/audio/sessions")
+    # Audio storage. Lives OUTSIDE static/ on purpose: everything under
+    # static/ is mounted at the site root and served as a public file with no
+    # auth check, so storing real session audio there would expose it at a
+    # guessable public URL. Defaults to a repo-ignored, non-public directory.
+    AUDIO_STORAGE_PATH = os.environ.get("AUDIO_STORAGE_PATH", "audio_storage")
 
     # Maximum request body size (50 MB).
     # OpenAI Whisper accepts audio up to 25 MB; images are capped at 10 MB
