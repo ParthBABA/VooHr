@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VooVr - Risk Drift Insights</title>
+<title>VooVr - Notifications</title>
 <!-- shared-head -->
 <script>
 // Set theme before first paint to avoid a flash of the wrong theme.
@@ -20,13 +20,32 @@
 <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
 <script src="/csrf.js" defer></script>
 <style>
 .page-skeleton{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--void);transition:opacity .3s var(--ease-out);}
 .page-skeleton-spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--ink);border-top-color:var(--amber);animation:page-skeleton-spin .8s linear infinite;}
 @keyframes page-skeleton-spin{to{transform:rotate(360deg);}}
 .page-skeleton.is-hidden{opacity:0;pointer-events:none;}
+
+/* ── Notification hub ── */
+.hub-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1.2rem;flex-wrap:wrap;margin-bottom:1.8rem;}
+.hub-markall{font-family:var(--font-m);font-weight:600;font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);padding:0.55rem 1rem;border:1px solid rgba(212,136,74,0.3);background:var(--amber-soft);border-radius:6px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.hub-markall:hover{background:var(--amber);color:var(--void);}
+
+.hub-tabs{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.4rem;border-bottom:1px solid var(--border);padding-bottom:0.2rem;}
+.hub-tab{display:inline-flex;align-items:center;gap:0.5rem;font-family:var(--font-m);font-weight:600;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ivory-dim);padding:0.6rem 1rem;border:1px solid transparent;background:transparent;cursor:pointer;border-radius:6px 6px 0 0;transition:all 0.2s;border-bottom:2px solid transparent;}
+.hub-tab svg{width:14px;height:14px;opacity:0.7;flex-shrink:0;}
+.hub-tab:hover{color:var(--ivory);}
+.hub-tab.active{color:var(--ivory);border-color:var(--border);border-bottom-color:var(--amber);background:var(--ivory-ghost);}
+.hub-count{font-family:var(--font-m);font-size:0.6rem;color:var(--ivory-faint);padding:0.15rem 0.5rem;border:1px solid var(--border);border-radius:20px;min-width:1.4rem;text-align:center;}
+.hub-tab.active .hub-count{color:var(--amber);border-color:rgba(212,136,74,0.35);}
+.hub-count.has-unread{color:var(--amber);border-color:rgba(212,136,74,0.45);}
+
+.hub-panel{display:none;}
+.hub-panel.active{display:block;}
+.hub-list{display:flex;flex-direction:column;gap:0.6rem;}
+.hub-list-empty{font-family:var(--font-m);font-size:0.78rem;line-height:1.6;color:var(--ivory-faint);text-align:center;padding:3rem 1.5rem;border:1px dashed var(--border);border-radius:10px;}
+@media (prefers-reduced-motion: reduce){ .hub-tab,.hub-markall{transition:none;} }
 </style>
 </head>
 <body>
@@ -40,7 +59,7 @@
     if (nameEl) nameEl.textContent = data.name;
     if (roleEl) roleEl.textContent = data.role === 'admin' ? 'HR Admin' : data.role;
     if (avatarEl) avatarEl.textContent = (data.name || 'U').trim().charAt(0).toUpperCase();
-    var orgEl = document.getElementById('riskOrgName');
+    var orgEl = document.getElementById('hubOrgName');
     if (orgEl) orgEl.textContent = (data.organization && data.organization.name) || 'Your workspace';
     revealPage();
   }
@@ -65,11 +84,11 @@
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function(){
         populate(data);
-        window.voovrInitRiskDrift && window.voovrInitRiskDrift();
+        window.voovrInitNotifications && window.voovrInitNotifications();
       });
     } else {
       populate(data);
-      window.voovrInitRiskDrift && window.voovrInitRiskDrift();
+      window.voovrInitNotifications && window.voovrInitNotifications();
     }
   }).catch(function(){
     window.location.href = '/signin';
@@ -86,7 +105,7 @@
     <div class="sidebar-header">
       <div class="sidebar-logo">
         <div class="logo-mark">HR</div>
-        <span id="riskOrgName">Your workspace</span>
+        <span id="hubOrgName">Your workspace</span>
       </div>
     </div>
     <div class="sidebar-nav">
@@ -118,8 +137,8 @@
     <div class="top-bar">
       <div class="top-bar-left">
         <div>
-          <div class="page-title">Risk Drift Insights</div>
-          <div class="breadcrumb"><span>Dashboard</span> / Risk Drift</div>
+          <div class="page-title">Notifications</div>
+          <div class="breadcrumb"><span>Dashboard</span> / Notifications</div>
         </div>
       </div>
       <div class="top-bar-right">
@@ -150,64 +169,47 @@
     </div>
 
     <div class="content-area">
-      <div class="drift-loading" id="driftLoading">Loading insight&hellip;</div>
-
-      <!-- DETAIL VIEW -->
-      <div id="driftDetail" style="display:none;">
-        <div class="drift-back-row">
-          <a href="/notifications" class="drift-back">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-            All notifications
-          </a>
+      <div class="hub-head">
+        <div>
+          <div class="eyebrow">Notification Center</div>
+          <h2 class="drift-page-title">Notifications</h2>
+          <p class="dir-subtitle">Background job completions live under Activities; risk signals flagged across syncs live under Risk Signals.</p>
         </div>
-        <div class="card drift-hero-card">
-          <div class="drift-hero">
-            <div class="drift-avatar" id="driftAvatar">?</div>
-            <div class="drift-hero-main">
-              <div class="drift-eyebrow">Risk Drift Detection</div>
-              <h2 class="drift-headline" id="driftHeadline"></h2>
-              <div class="drift-hero-meta">
-                <span class="drift-conf" id="driftConf"></span>
-                <span class="drift-employee" id="driftEmployee"></span>
-                <span class="drift-time" id="driftTime"></span>
-              </div>
-            </div>
-          </div>
-          <p class="drift-summary" id="driftSummary"></p>
-        </div>
+        <button class="hub-markall" id="hubMarkAll" type="button">Mark all read</button>
+      </div>
 
-        <div class="card drift-flow">
-          <div class="drift-flow-title">Session Window &mdash; Sync Timeline</div>
-          <div class="drift-flow-track" id="driftFlowTrack"></div>
-        </div>
+      <div class="hub-tabs" id="hubTabs">
+        <button class="hub-tab active" id="tabActivities" data-tab="activities" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Activities <span class="hub-count" id="activityCount">0</span>
+        </button>
+        <button class="hub-tab" id="tabRisk" data-tab="risk" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 8h8M8 12h8M8 16h4"/><path d="M4 4h16v13H8l-4 4z"/></svg>
+          Risk Signals <span class="hub-count" id="riskCount">0</span>
+        </button>
+      </div>
 
-        <div class="card drift-evidence-card" id="driftEvidenceCard" style="display:none;">
-          <div class="drift-section-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            Escalation Evidence
-          </div>
-          <div id="driftEvidence"></div>
-        </div>
-
-        <div class="drift-grid" id="driftGrid"></div>
-
-        <div class="card drift-script-card" id="driftScriptCard" style="display:none;">
-          <div class="drift-section-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            Suggested Opening for Next Sync
-          </div>
-          <blockquote class="drift-script" id="driftScript"></blockquote>
+      <div class="hub-panel active" id="panelActivities">
+        <div class="hub-list" id="activityList"></div>
+        <div class="hub-list-empty" id="activityEmpty" style="display:none;">
+          <b>No activity yet.</b><br>Completed translations and audio narrations will collect here.
         </div>
       </div>
 
-      <!-- NO-SELECTION STATE (the list/hub moved to /notifications) -->
-      <div id="driftNone" class="drift-empty drift-empty-page" style="display:none;">
+      <div class="hub-panel" id="panelRisk">
+        <div class="hub-list" id="riskList"></div>
+        <div class="hub-list-empty" id="riskEmpty" style="display:none;">
+          <b>No risk signals to review.</b><br>Genuine multi-session risk patterns flagged across the workforce will appear here.
+        </div>
+      </div>
+
+      <div class="drift-empty drift-empty-page" id="hubNothing" style="display:none;">
         <div class="drift-empty-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
         </div>
-        <h3 class="drift-empty-title" id="driftNoneTitle">No risk signal selected</h3>
-        <p class="drift-empty-body" id="driftNoneBody">Open a flagged risk signal from the Notifications hub to see its full analysis &mdash; the sync-by-sync session window, escalation evidence, and a suggested opening for your next sync.</p>
-        <a class="notif-dropdown-footer" href="/notifications" style="display:inline-block;border:none;margin-top:1.5rem;">Open Notifications</a>
+        <h3 class="drift-empty-title">Nothing to review yet</h3>
+        <p class="drift-empty-body">Background job results and risk signals will both appear here automatically — there&rsquo;s nothing to configure or check back on.</p>
+        <span class="drift-empty-meta">updates automatically</span>
       </div>
     </div>
   </main>
@@ -280,6 +282,21 @@
     }
   }
 
+  function openNotification(n) {
+    if (!n) return;
+    // Fire-and-forget: optimistically mark read, then route.
+    fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
+    closeDropdown();
+    if (n.type === 'translation_ready' || n.type === 'audio_ready') {
+      var q = [];
+      if (n.source_session_id) q.push('session_id=' + encodeURIComponent(n.source_session_id));
+      if (n.employee_id) q.push('employee_id=' + encodeURIComponent(n.employee_id));
+      window.location.href = '/workspace' + (q.length ? '?' + q.join('&') : '');
+      return;
+    }
+    window.location.href = '/risk-drift?notification=' + n.id;
+  }
+
   function renderList(items) {
     if (!list) return;
     list.innerHTML = '';
@@ -329,7 +346,6 @@
         time.textContent = relTime(n.created_at);
         body.appendChild(name);
         body.appendChild(desc);
-        // Job notifications carry a genuinely descriptive summary line.
         if (n.summary) {
           var summaryEl = document.createElement('span');
           summaryEl.className = 'alert-summary';
@@ -349,20 +365,6 @@
       row.addEventListener('click', function() { openNotification(n); });
       list.appendChild(row);
     });
-  }
-
-  function openNotification(n) {
-    if (!n) return;
-    fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
-    closeDropdown();
-    if (n.type === 'translation_ready' || n.type === 'audio_ready') {
-      var q = [];
-      if (n.source_session_id) q.push('session_id=' + encodeURIComponent(n.source_session_id));
-      if (n.employee_id) q.push('employee_id=' + encodeURIComponent(n.employee_id));
-      window.location.href = '/workspace' + (q.length ? '?' + q.join('&') : '');
-      return;
-    }
-    window.location.href = '/risk-drift?notification=' + n.id;
   }
 
   function openDropdown() {
@@ -426,19 +428,27 @@
 })();
 </script>
 
-<!-- ── RISK DRIFT PAGE LOGIC ── -->
+<!-- ── NOTIFICATIONS HUB LOGIC ── -->
 <script>
-window.voovrInitRiskDrift = function() {
-  var params = new URLSearchParams(window.location.search);
-  var nid = params.get('notification');
+window.voovrInitNotifications = function() {
+  var pageMarkAll = document.getElementById('hubMarkAll');
+  var tabs = document.getElementById('hubTabs');
+  var tabActivities = document.getElementById('tabActivities');
+  var tabRisk = document.getElementById('tabRisk');
+  var panelActivities = document.getElementById('panelActivities');
+  var panelRisk = document.getElementById('panelRisk');
+  var activityList = document.getElementById('activityList');
+  var riskList = document.getElementById('riskList');
+  var activityEmpty = document.getElementById('activityEmpty');
+  var riskEmpty = document.getElementById('riskEmpty');
+  var hubNothing = document.getElementById('hubNothing');
+  var activityCount = document.getElementById('activityCount');
+  var riskCount = document.getElementById('riskCount');
 
-  var loadingEl = document.getElementById('driftLoading');
-  var detailEl = document.getElementById('driftDetail');
-  var noneEl = document.getElementById('driftNone');
-  var noneTitle = document.getElementById('driftNoneTitle');
-  var noneBody = document.getElementById('driftNoneBody');
-
-  if (nid) loadDetail(nid); else showNone();
+  var activities = [];
+  var risks = [];
+  var allUnread = 0;
+  var currentTab = 'activities';
 
   function esc(s) {
     if (s === null || s === undefined) return '';
@@ -459,181 +469,192 @@ window.voovrInitRiskDrift = function() {
     return t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 
-  function initials(name) {
-    if (!name) return '?';
-    return name.trim().split(/\s+/).map(function(s) { return s.charAt(0); }).join('').toUpperCase().slice(0, 2);
+  function isActivity(n) {
+    return n.type === 'translation_ready' || n.type === 'audio_ready';
   }
 
-  function confClass(c) {
-    return c >= 70 ? 'high' : (c >= 40 ? 'medium' : 'low');
-  }
-
-  function riskColor(v) {
-    if (v === null || v === undefined) return 'var(--ivory-faint)';
-    if (v >= 70) return 'var(--red)';
-    if (v >= 40) return 'var(--amber)';
-    return 'var(--teal)';
-  }
-
-  function formatDate(iso) {
-    if (!iso) return '—';
-    var t = new Date(iso);
-    if (isNaN(t.getTime())) return esc(iso);
-    return t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }
-
-  function findTriggerIndex(text, len) {
-    if (!text || !len) return len - 1;
-    var m = String(text).match(/sync\s*#?\s*(\d+)/i);
-    if (m) {
-      var idx = parseInt(m[1], 10) - 1;
-      if (idx >= 0 && idx < len) return idx;
-    }
-    return len - 1;
-  }
-
-  function fail(msg) {
-    // The list/hub moved to /notifications; errors and the no-selection
-    // case share this single empty state, which points back to the hub.
-    loadingEl.style.display = 'none';
-    if (noneEl) {
-      noneEl.style.display = '';
-      if (noneTitle) noneTitle.textContent = 'Risk signal unavailable';
-      if (noneBody) noneBody.textContent = msg || 'This risk signal could not be loaded. It may have been removed.';
-    }
-  }
-
-  function showNone() {
-    loadingEl.style.display = 'none';
-    if (noneEl) noneEl.style.display = '';
-  }
-
-  // ── Detail view ──
-  function loadDetail(id) {
-    fetch('/api/notifications/' + id)
-      .then(function(r) { if (!r.ok) throw new Error('not_found'); return r.json(); })
-      .then(function(n) {
-        // If opened via a direct link, mark it read in the background.
-        fetch('/api/notifications/' + id + '/read', { method: 'PUT' }).catch(function() {});
-        loadingEl.style.display = 'none';
-        detailEl.style.display = '';
-        renderDetail(n);
-        animateDetail();
-      })
-      .catch(function() { fail('Notification not found.'); });
-  }
-
-  function renderDetail(n) {
-    var name = n.employee_name || 'Employee';
-    document.getElementById('driftAvatar').textContent = initials(name);
-    document.getElementById('driftHeadline').textContent = n.headline || '';
-    var conf = document.getElementById('driftConf');
-    var c = n.confidence || 0;
-    conf.className = 'drift-conf ' + confClass(c);
-    conf.textContent = c != null ? c + '% confidence' : '';
-    document.getElementById('driftEmployee').textContent = name;
-    document.getElementById('driftTime').textContent = 'Detected ' + relTime(n.created_at);
-    document.getElementById('driftSummary').textContent = n.summary || '';
-
-    renderFlow(n);
-    renderEvidence(n);
-    renderGrid(n);
-    renderScript(n);
-  }
-
-  function renderFlow(n) {
-    var track = document.getElementById('driftFlowTrack');
-    var windowData = n.sessions_window || [];
-    if (!windowData.length) {
-      track.innerHTML = '<div class="drift-empty">No session window data available.</div>';
+  // Verbatim dashboard.html openNotification behavior.
+  function openNotification(n) {
+    if (!n) return;
+    fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
+    if (isActivity(n)) {
+      var q = [];
+      if (n.source_session_id) q.push('session_id=' + encodeURIComponent(n.source_session_id));
+      if (n.employee_id) q.push('employee_id=' + encodeURIComponent(n.employee_id));
+      window.location.href = '/workspace' + (q.length ? '?' + q.join('&') : '');
       return;
     }
-    var triggerIdx = findTriggerIndex(n.drift_explanation && n.drift_explanation.trigger_point, windowData.length);
+    window.location.href = '/risk-drift?notification=' + n.id;
+  }
 
-    var html = '';
-    windowData.forEach(function(sw, idx) {
-      if (idx > 0) {
-        html += '<div class="drift-connector"><span class="drift-connector-line"></span></div>';
+  function severityClass(n) {
+    if (n.read) return 'alert-severity read';
+    if (n.type === 'audio_ready') return 'alert-severity audio';
+    if (n.type === 'translation_ready') return 'alert-severity translation';
+    if (n.type === 'risk_drift') return 'alert-severity critical';
+    return 'alert-severity warning';
+  }
+
+  function buildRow(n) {
+    var row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'alert-item';
+
+    var sev = document.createElement('span');
+    sev.className = severityClass(n);
+
+    var body = document.createElement('span');
+    body.className = 'alert-body';
+
+    if (isActivity(n)) {
+      var top = document.createElement('span');
+      top.className = 'alert-top';
+      var punch = document.createElement('span');
+      punch.className = 'alert-summary';
+      punch.textContent = n.summary || n.headline || 'Ready';
+      var time = document.createElement('span');
+      time.className = 'alert-time';
+      time.textContent = relTime(n.created_at);
+      top.appendChild(punch);
+      top.appendChild(time);
+      body.appendChild(top);
+    } else {
+      var name = document.createElement('span');
+      name.className = 'alert-name';
+      name.textContent = n.employee_name || 'Employee';
+      var desc = document.createElement('span');
+      desc.className = 'alert-desc';
+      desc.textContent = n.headline || '';
+      var time = document.createElement('span');
+      time.className = 'alert-time';
+      time.textContent = relTime(n.created_at);
+      body.appendChild(name);
+      body.appendChild(desc);
+      if (n.summary) {
+        var summaryEl = document.createElement('span');
+        summaryEl.className = 'alert-summary';
+        summaryEl.textContent = n.summary;
+        body.appendChild(summaryEl);
       }
-      var risk = Math.max(sw.attrition_risk_pct || 0, sw.burnout_index || 0);
-      var barColor = risk >= 70 ? 'var(--red)' : (risk >= 40 ? 'var(--amber)' : 'var(--teal)');
-      var flagged = idx === triggerIdx;
-      html +=
-        '<div class="drift-node' + (flagged ? ' trigger' : '') + '">' +
-          (flagged
-            ? '<span class="drift-flag"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Trigger</span>'
-            : '') +
-          '<div class="drift-node-num">Sync ' + (idx + 1) + '</div>' +
-          '<div class="drift-node-date">' + formatDate(sw.date) + '</div>' +
-          '<div class="drift-node-metrics">' +
-            '<div class="drift-metric"><span class="drift-metric-val" style="color:' + riskColor(sw.attrition_risk_pct) + '">' + (sw.attrition_risk_pct != null ? sw.attrition_risk_pct + '%' : '--') + '</span><span class="drift-metric-label">Risk</span></div>' +
-            '<div class="drift-metric"><span class="drift-metric-val" style="color:' + riskColor(sw.burnout_index) + '">' + (sw.burnout_index != null ? sw.burnout_index : '--') + '</span><span class="drift-metric-label">Burnout</span></div>' +
-          '</div>' +
-          '<div class="drift-node-bar"><div class="fill" style="background:' + barColor + ';width:' + Math.min(100, risk) + '%;"></div></div>' +
-        '</div>';
-    });
-    track.innerHTML = html;
+      body.appendChild(time);
+    }
+
+    row.appendChild(sev);
+    row.appendChild(body);
+
+    if (!isActivity(n) && n.confidence != null) {
+      var conf = document.createElement('span');
+      var level = n.confidence >= 70 ? 'high' : (n.confidence >= 40 ? 'medium' : 'low');
+      conf.className = 'drift-conf ' + level;
+      conf.textContent = n.confidence + '%';
+      row.appendChild(conf);
+    }
+
+    var action = document.createElement('span');
+    action.className = 'alert-action';
+    action.textContent = 'View';
+    row.appendChild(action);
+
+    row.addEventListener('click', function() { openNotification(n); });
+    return row;
   }
 
-  function renderEvidence(n) {
-    var card = document.getElementById('driftEvidenceCard');
-    var list = document.getElementById('driftEvidence');
-    var items = (n.drift_explanation && n.drift_explanation.escalation_evidence) || [];
-    if (!items.length) { card.style.display = 'none'; return; }
-    card.style.display = '';
-    var html = items.map(function(item, i) {
-      return '<div class="drift-evidence-item"><span class="drift-evidence-pin">' + (i + 1) + '</span><p>' + esc(item) + '</p></div>';
-    }).join('');
-    list.innerHTML = html;
+  function renderTab(tab) {
+    var listEl = tab === 'activities' ? activityList : riskList;
+    var emptyEl = tab === 'activities' ? activityEmpty : riskEmpty;
+    var items = tab === 'activities' ? activities : risks;
+    listEl.innerHTML = '';
+    if (!items.length) { emptyEl.style.display = ''; return; }
+    emptyEl.style.display = 'none';
+    items.forEach(function(n) { listEl.appendChild(buildRow(n)); });
+    if (window.gsap) {
+      gsap.fromTo('.hub-panel.active .alert-item', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.35, stagger: 0.03, ease: 'power3.out' });
+    }
   }
 
-  function renderGrid(n) {
-    var grid = document.getElementById('driftGrid');
-    var ex = n.drift_explanation || {};
-    var ICONS = {
-      target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
-      chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
-      trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
-      rotate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>'
-    };
-    var cards = [
-      { key: 'root_cause_thread', title: 'Root Cause Thread', icon: ICONS.target },
-      { key: 'tone_shift', title: 'Tone Shift', icon: ICONS.chat },
-      { key: 'trajectory', title: 'Trajectory', icon: ICONS.trend },
-      { key: 'reversibility', title: 'Reversibility', icon: ICONS.rotate }
-    ];
-    var html = '';
-    cards.forEach(function(c) {
-      var val = ex[c.key];
-      if (val === null || val === undefined || !String(val).trim()) return;
-      html +=
-        '<div class="card drift-card">' +
-          '<div class="drift-card-head">' + c.icon + '<h3 class="card-title">' + c.title + '</h3></div>' +
-          '<p class="drift-card-text">' + esc(val) + '</p>' +
-        '</div>';
-    });
-    grid.innerHTML = html;
+  function setTab(tab) {
+    currentTab = tab;
+    tabActivities.classList.toggle('active', tab === 'activities');
+    tabRisk.classList.toggle('active', tab === 'risk');
+    panelActivities.classList.toggle('active', tab === 'activities');
+    panelRisk.classList.toggle('active', tab === 'risk');
+    renderTab(tab);
   }
 
-  function renderScript(n) {
-    var card = document.getElementById('driftScriptCard');
-    var el = document.getElementById('driftScript');
-    var val = n.drift_explanation && n.drift_explanation.suggested_opening_script;
-    if (val === null || val === undefined || !String(val).trim()) { card.style.display = 'none'; return; }
-    card.style.display = '';
-    el.textContent = val;
+  function initHub(data) {
+    activities = (data.notifications || []).filter(isActivity);
+    risks = (data.notifications || []).filter(function(n) { return !isActivity(n); });
+
+    activityCount.textContent = String(activities.length);
+    riskCount.textContent = String(risks.length);
+    activityCount.classList.toggle('has-unread', activities.some(function(n) { return !n.read; }));
+    riskCount.classList.toggle('has-unread', risks.some(function(n) { return !n.read; }));
+
+    if (!activities.length && !risks.length) {
+      tabs.style.display = 'none';
+      activityEmpty.style.display = 'none';
+      riskEmpty.style.display = 'none';
+      hubNothing.style.display = '';
+      return;
+    }
+
+    // Default lens: unread activities first, else risk signals. Never default
+    // risk-drift as the primary view.
+    if (activities.some(function(n) { return !n.read; })) {
+      setTab('activities');
+    } else if (risks.length) {
+      setTab('risk');
+    } else {
+      setTab('activities');
+    }
   }
 
-  function animateDetail() {
-    if (!window.gsap) return;
-    var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-    var sections = [].slice.call(document.querySelectorAll('#driftDetail .card'));
-    gsap.set(sections, { opacity: 0, y: 30 });
-    tl.to(sections, { opacity: 1, y: 0, duration: 0.55, stagger: 0.08 });
-    gsap.fromTo('.drift-node', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power3.out', delay: 0.4 });
-    gsap.fromTo('.drift-connector-line', { opacity: 0 }, { opacity: 1, duration: 0.5, stagger: 0.12, delay: 0.5 });
-    gsap.fromTo('.drift-evidence-item', { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out', delay: 0.3 });
+  // The read-all endpoint has no type filter; it marks everything read. One
+  // global "Mark all read" is the honest fit for that semantics.
+  if (pageMarkAll) pageMarkAll.addEventListener('click', function() {
+    pageMarkAll.disabled = true;
+    fetch('/api/notifications/read-all', { method: 'PUT' })
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
+      .then(function() {
+        activities.forEach(function(n) { n.read = true; });
+        risks.forEach(function(n) { n.read = true; });
+        activityCount.classList.remove('has-unread');
+        riskCount.classList.remove('has-unread');
+        renderTab(currentTab);
+      })
+      .catch(function() {})
+      .then(function() { pageMarkAll.disabled = false; });
+  });
+
+  function activateTabs() {
+    tabActivities.addEventListener('click', function() { setTab('activities'); });
+    tabRisk.addEventListener('click', function() { setTab('risk'); });
   }
+
+  // Gather up to 4 pages of 50 so the hub is a real "view all".
+  (function loadAll() {
+    var out = [];
+    var limit = 50;
+    var maxPages = 4;
+    var page = 1;
+    (function next() {
+      fetch('/api/notifications?limit=' + limit + '&page=' + page)
+        .then(function(r) { if (!r.ok) throw new Error('failed'); return r.json(); })
+        .then(function(data) {
+          var items = data.notifications || [];
+          out = out.concat(items);
+          var total = data.total || out.length;
+          activateTabs();
+          if (items.length && out.length < total && page < maxPages) {
+            page += 1;
+            next();
+            return;
+          }
+          initHub({ notifications: out, total: total, unread_count: data.unread_count || 0 });
+        })
+        .catch(function() { activateTabs(); initHub({ notifications: out, total: out.length, unread_count: 0 }); });
+    })();
+  })();
 };
 </script>
 </body>

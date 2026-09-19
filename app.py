@@ -181,6 +181,7 @@ def create_app():
         "/workspace",
         "/settings",
         "/risk-drift",
+        "/notifications",
         "/sync",
         "/sync/room",
     })
@@ -337,6 +338,12 @@ def create_app():
         guard = _require_page_login()
         if guard: return guard
         return render_page("risk-drift.html")
+
+    @app.route("/notifications")
+    def notifications():
+        guard = _require_page_login()
+        if guard: return guard
+        return render_page("notifications.html")
 
     @app.route("/sync")
     def sync():
