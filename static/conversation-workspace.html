@@ -1786,6 +1786,9 @@ window.voovrInitWorkspace = function() {
       job.id = body.id;
       pollJob('tts-jobs', body.id, function(doc) {
         if (doc.status === 'done') {
+          // Remember the completed job so re-selecting this language later
+          // replays cached audio instead of generating again.
+          job.status = 'done';
           if (sel) sel.disabled = false;
           setState(btn, '');
           setPill(job.pill, 'done', 'Audio ready');
@@ -1794,12 +1797,14 @@ window.voovrInitWorkspace = function() {
           job.pill.onclick = function(e) { e.stopPropagation(); playAudio(block); };
           playAudio(block);
         } else if (doc.status === 'failed') {
+          job.status = 'failed';
           if (sel) sel.disabled = false;
           setState(btn, '');
           setPill(job.pill, 'failed', 'Retry');
           job.pill.onclick = function(e) { e.stopPropagation(); startNarrationJob(btn, wrap, sel, lang); };
         }
       }, function(err) {
+        job.status = 'failed';
         if (sel) sel.disabled = false;
         setState(btn, '');
         setPill(job.pill, 'failed', 'Retry');
@@ -1807,6 +1812,7 @@ window.voovrInitWorkspace = function() {
       });
     })
     .catch(function(err) {
+      job.status = 'failed';
       if (sel) sel.disabled = false;
       setState(btn, '');
       setPill(job.pill, 'failed', 'Retry');
@@ -1943,6 +1949,7 @@ window.voovrInitWorkspace = function() {
           }
           var langLabel = job.lang ? job.lang.label : (ref.language_code || 'audio');
           if (j.status === 'queued' || j.status === 'processing') {
+            job.status = 'processing';
             setState(btn, 'loading');
             if (sel) sel.disabled = true;
             setPill(job.pill, 'running', 'Listen: ' + langLabel + '\u2026');
@@ -1950,10 +1957,12 @@ window.voovrInitWorkspace = function() {
               if (sel) sel.disabled = false;
               setState(btn, '');
               if (doc.status === 'done') {
+                job.status = 'done';
                 setPill(job.pill, 'done', 'Audio ready');
                 job.pill.style.cursor = 'pointer';
                 job.pill.onclick = function(e) { e.stopPropagation(); playAudio(block); };
               } else if (doc.status === 'failed') {
+                job.status = 'failed';
                 setPill(job.pill, 'failed', 'Retry');
                 job.pill.onclick = function(e) {
                   e.stopPropagation();
@@ -1962,15 +1971,18 @@ window.voovrInitWorkspace = function() {
                 };
               }
             }, function() {
+              job.status = 'failed';
               if (sel) sel.disabled = false;
               setState(btn, '');
               setPill(job.pill, 'failed', 'Retry');
             });
           } else if (j.status === 'done') {
+            job.status = 'done';
             setPill(job.pill, 'done', 'Audio ready');
             job.pill.style.cursor = 'pointer';
             job.pill.onclick = function(e) { e.stopPropagation(); playAudio(block); };
           } else if (j.status === 'failed') {
+            job.status = 'failed';
             setPill(job.pill, 'failed', 'Retry');
             job.pill.onclick = function(e) {
               e.stopPropagation();
@@ -2010,6 +2022,20 @@ window.voovrInitWorkspace = function() {
         var lang = NARRATION_LANGUAGES[idx];
         sel.classList.remove('open');
         if (!lang) return;
+        // Cached-job reuse. Manual test: generate audio for a language, then
+        // pick the SAME language again in this dropdown (after navigating away
+        // and returning, or immediately) — it must flash "Playing cached
+        // audio" and replay the completed job instead of starting a fresh
+        // full generation. Picking a different language must still generate.
+        var block = wrap.getAttribute('data-narr-target') || 'section';
+        var cached = ttsJobs[block];
+        if (cached && cached.status === 'done' && cached.lang &&
+            cached.lang.languageCode === lang.languageCode &&
+            (cached.id || cached.pill)) {
+          setPill(cached.pill, 'done', 'Playing cached audio');
+          setTimeout(function() { playAudio(block); }, 350);
+          return;
+        }
         startNarrationJob(btn, wrap, sel, lang);
       });
     }
@@ -2102,17 +2128,32 @@ window.voovrInitWorkspace = function() {
 
       var body = document.createElement('span');
       body.className = 'alert-body';
+      var isJobType = (n.type === 'translation_ready' || n.type === 'audio_ready');
+      var headlineInName = !n.employee_name && isJobType;
       var name = document.createElement('span');
       name.className = 'alert-name';
-      name.textContent = n.employee_name || 'Employee';
+      // Background-job notices aren't tied to an employee: show the headline
+      // as the bold primary line and a neutral fallback instead of "Employee".
+      name.textContent = n.employee_name || (isJobType ? (n.headline || '') : 'Employee');
       var desc = document.createElement('span');
       desc.className = 'alert-desc';
-      desc.textContent = n.headline || '';
       var time = document.createElement('span');
       time.className = 'alert-time';
       time.textContent = relTime(n.created_at);
       body.appendChild(name);
-      body.appendChild(desc);
+      // When the headline already sits in alert-name (job notices), don't
+      // duplicate it in alert-desc; otherwise keep the existing layout.
+      if (!headlineInName) {
+        desc.textContent = n.headline || '';
+        body.appendChild(desc);
+      }
+      // Job notifications carry a genuinely descriptive summary line.
+      if (n.summary) {
+        var summaryEl = document.createElement('span');
+        summaryEl.className = 'alert-summary';
+        summaryEl.textContent = n.summary;
+        body.appendChild(summaryEl);
+      }
       body.appendChild(time);
 
       var action = document.createElement('span');

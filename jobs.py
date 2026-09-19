@@ -190,7 +190,12 @@ def _notify_ready(db, org_id, job, notif_type: str, headline: str, summary: str,
                 "headline": headline,
                 "summary": summary,
                 "confidence": 0,
-                "employee_id": job.get("employee_id") or ObjectId(),
+                # Deliberately store None (not a fabricated ObjectId) when the
+                # job isn't tied to a real employee — notification rendering
+                # uses a neutral label for such types. A random non-existent id
+                # here would make every employee-name lookup fail and the UI
+                # fall back to a misleading "Employee" label.
+                "employee_id": job.get("employee_id"),
                 "source_session_id": job.get("session_id"),
                 "meeting_id": job.get("meeting_id"),
                 "detail_key": dedup_key,
@@ -299,7 +304,7 @@ def _run_translation_job(db, job_id, llm, org_id, language: str) -> None:
             job,
             notif_type="translation_ready",
             headline="Translation ready",
-            summary=f"The analysis for this conversation is now available in {_language_display(language) or 'the selected language'}.",
+            summary=f"Your translated analysis is ready in {_language_display(language) or 'the selected language'}.",
             dedup_key=f"translate:{language}",
         )
     except Exception:
@@ -376,7 +381,7 @@ def _run_tts_job(db, job_id, tts, llm, storage) -> None:
             job,
             notif_type="audio_ready",
             headline="Audio ready",
-            summary=f"The Listen audio{(' for ' + block) if block else ''} is ready to play.",
+            summary=f"Your audio{(' for ' + block) if block else ''} is ready to play.",
             dedup_key=f"tts:{block}:{language_code}",
         )
     except Exception:
