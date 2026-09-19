@@ -851,6 +851,16 @@ html[data-theme="light"]{
                   <span class="toggle-slider"></span>
                 </span>
               </label>
+              <label class="toggle-row">
+                <span class="toggle-label">
+                  <span class="toggle-title">Meeting reminders</span>
+                  <span class="toggle-desc">Get an email and WhatsApp reminder before your scheduled employee meetings.</span>
+                </span>
+                <span class="toggle-switch">
+                  <input type="checkbox" id="notifMeetingReminders" checked>
+                  <span class="toggle-slider"></span>
+                </span>
+              </label>
             </div>
           </div>
 
@@ -1436,7 +1446,7 @@ function clearFieldError(input){
 
 /* ── NOTIFICATIONS: persisted toggle switches (localStorage-only toggles) ── */
 (function(){
-  var toggles = document.querySelectorAll('.toggle-switch input:not(#notifRisk)');
+  var toggles = document.querySelectorAll('.toggle-switch input:not(#notifRisk):not(#notifMeetingReminders)');
   var key = 'voovr-prefs';
   var saved = {};
   try { saved = JSON.parse(localStorage.getItem(key)) || {}; } catch (e) {}
@@ -1493,6 +1503,53 @@ function clearFieldError(input){
   });
 
   loadPref();
+})();
+
+/* ── NOTIFICATIONS: Meeting reminders → backend preference on the user doc
+     (gates email/WhatsApp delivery; in-app reminders are never gated) ── */
+(function(){
+  var meetingInp = document.getElementById('notifMeetingReminders');
+  if (!meetingInp) return;
+
+  function loadMeetingPref(){
+    fetch('/api/user/notification-prefs').then(function(res){
+      return res.ok ? res.json() : null;
+    }).then(function(body){
+      if (body && typeof body.meeting_reminders === 'boolean') {
+        meetingInp.checked = body.meeting_reminders;
+      }
+    }).catch(function(){});
+  }
+
+  meetingInp.addEventListener('change', function(){
+    var prev = !meetingInp.checked;
+    var wanted = meetingInp.checked;
+    meetingInp.disabled = true;
+
+    fetch('/api/user/notification-prefs', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meeting_reminders: wanted })
+    }).then(function(res) {
+      if (!res.ok) {
+        return res.json().then(function(body) {
+          var err = new Error(body.error || 'save_failed');
+          err.code = body.error || 'save_failed';
+          throw err;
+        });
+      }
+      return res.json();
+    }).then(function() {
+      showToast('Meeting reminder preference updated');
+      meetingInp.disabled = false;
+    }).catch(function() {
+      meetingInp.checked = prev;
+      meetingInp.disabled = false;
+      showToast('Could not update — try again');
+    });
+  });
+
+  loadMeetingPref();
 })();
 
 /* ── ACTIVE SESSIONS: real session tracking + revoke ── */

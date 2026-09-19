@@ -19,6 +19,7 @@ import base64
 import logging
 import os
 import re
+from datetime import timedelta, timezone
 
 import requests
 
@@ -326,5 +327,160 @@ def send_manager_invite_email(to_email: str, org_name: str, invite_link: str) ->
         "email_sent provider=brevo status=%s recipient=%s kind=manager_invite",
         resp.status_code,
         to_email,
+    )
+    return True
+
+
+# Stage-specific subject / intro lines for meeting-reminder emails. The tone
+# escalates as the meeting nears: a heads-up tomorrow, an urgent line within
+# the hour, and a same-day nudge on the day itself.
+_REMINDER_STAGE_SUBJECT = {
+    "upcoming_24h": "Heads-up: {employee}'s meeting is coming up",
+    "soon_1h": "Starting soon — {employee}'s meeting is within the hour",
+    "day_of": "Today's meeting with {employee}",
+}
+
+_REMINDER_STAGE_INTRO = {
+    "upcoming_24h": (
+        "A quick heads-up: you have a meeting with <strong>{employee}</strong> "
+        "coming up."
+    ),
+    "soon_1h": (
+        "Your meeting with <strong>{employee}</strong> is about to start."
+    ),
+    "day_of": (
+        "Just a reminder — <strong>{employee}</strong>'s meeting with you is "
+        "scheduled for today."
+    ),
+}
+
+
+def _format_meeting_time(meeting_time) -> str:
+    """Human-readable meeting time for email bodies, labelled UTC when the
+    value carries a UTC offset (scheduled_at is stored UTC)."""
+    if meeting_time is None:
+        return "time to be confirmed"
+    if meeting_time.tzinfo is None:
+        meeting_time = meeting_time.replace(tzinfo=timezone.utc)
+    label = meeting_time.strftime("%A, %B %d · %I:%M %p").strip()
+    if meeting_time.utcoffset() == timedelta(0):
+        label += " (UTC)"
+    return label
+
+
+def _reminder_html(
+    employee_name: str,
+    meeting_time,
+    reminder_summary: str,
+    stage: str,
+) -> str:
+    intro = _REMINDER_STAGE_INTRO.get(
+        stage, _REMINDER_STAGE_INTRO["day_of"]
+    ).format(employee=_escape_html(employee_name or "your colleague"))
+    when = _format_meeting_time(meeting_time)
+    base = _site_base_url()
+    meeting_url = f"{base}/meeting-tracker" if base else "/meeting-tracker"
+    return (
+        "<p>" + intro + "</p>"
+        f"<p><b>Scheduled:</b> {_escape_html(when)}</p>"
+        f"<p><b>Open follow-up:</b> {_escape_html(reminder_summary)}</p>"
+        f"<p style=\"margin:24px 0;\"><a href=\"{meeting_url}\" "
+        "style=\"background:#f5b301;color:#121212;text-decoration:none;"
+        "padding:12px 22px;border-radius:8px;font-weight:600;display:inline-block;\">"
+        "Open Meeting Tracker</a></p>"
+        "<p>You're receiving this because you scheduled this meeting in VooVr. "
+        "You can turn these emails off anytime in Settings &rarr; Notifications.</p>"
+        + _email_footer()
+    )
+
+
+def send_reminder_email(
+    to_email: str,
+    employee_name: str,
+    meeting_time,
+    reminder_summary: str,
+    stage: str,
+) -> bool:
+    """Send a meeting-reminder email via Brevo (mirrors the manager-invite
+    pattern: same config guard, same POST, own subject/html per stage).
+
+    Returns True on success, False on any failure — never raises.
+    """
+    api_key = os.environ.get("BREVO_API_KEY", "")
+    sender_email = os.environ.get("BREVO_SENDER_EMAIL", "")
+    if not api_key or not sender_email:
+        logger.error(
+            "email_failed=missing_config recipient=%s kind=meeting_reminder "
+            "api_key_set=%s sender_email_set=%s",
+            to_email,
+            bool(api_key),
+            bool(sender_email),
+        )
+        return False
+    if not _SENDER_RE.match(sender_email):
+        logger.error(
+            "email_failed=invalid_sender_format recipient=%s sender=%s",
+            to_email,
+            sender_email,
+        )
+        return False
+
+    subject = _REMINDER_STAGE_SUBJECT.get(
+        stage, _REMINDER_STAGE_SUBJECT["day_of"]
+    ).format(employee=employee_name or "your colleague")
+
+    payload = {
+        "sender": {
+            "email": sender_email,
+            "name": os.environ.get("BREVO_SENDER_NAME", "VooVr"),
+        },
+        "replyTo": {"email": "voovrhr@gmail.com", "name": "VooVr"},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": _reminder_html(employee_name, meeting_time, reminder_summary, stage),
+        "headers": _profile_avatar_headers(),
+    }
+
+    try:
+        resp = requests.post(
+            BREVO_API_URL,
+            headers={
+                "api-key": api_key,
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=15,
+        )
+    except requests.Timeout:
+        logger.error(
+            "email_failed=timeout recipient=%s url=%s kind=meeting_reminder",
+            to_email,
+            BREVO_API_URL,
+        )
+        return False
+    except requests.RequestException as exc:
+        logger.error(
+            "email_failed=network recipient=%s url=%s error=%s",
+            to_email,
+            BREVO_API_URL,
+            exc,
+        )
+        return False
+
+    if not resp.ok:
+        logger.error(
+            "email_failed=api_error status=%s recipient=%s kind=meeting_reminder body=%s",
+            resp.status_code,
+            to_email,
+            _brevo_error_message(resp),
+        )
+        return False
+
+    logger.info(
+        "email_sent provider=brevo status=%s recipient=%s kind=meeting_reminder stage=%s",
+        resp.status_code,
+        to_email,
+        stage,
     )
     return True

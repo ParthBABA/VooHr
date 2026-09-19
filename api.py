@@ -491,6 +491,59 @@ def update_organization_notification_prefs():
     return jsonify({"ok": True, "risk_alerts": risk_alerts})
 
 
+@api_bp.route("/user/notification-prefs")
+def get_user_notification_prefs():
+    """Per-user notification preferences (meeting-reminder email/WhatsApp
+    opt-out). Stored on the user doc, distinct from org-level prefs."""
+    user_id = _check_auth()
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        user = db.users.find_one({"_id": ObjectId(user_id)})
+    except InvalidId:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not user:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    prefs = user.get("notification_prefs") or {}
+    return jsonify({"meeting_reminders": bool(prefs.get("meeting_reminders", True))})
+
+
+@api_bp.route("/user/notification-prefs", methods=["PUT"])
+def update_user_notification_prefs():
+    user_id = _check_auth()
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        user = db.users.find_one({"_id": ObjectId(user_id)})
+    except InvalidId:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not user:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    data = request.get_json(silent=True) or {}
+    meeting_reminders = data.get("meeting_reminders")
+    if not isinstance(meeting_reminders, bool):
+        return jsonify({"error": "invalid_meeting_reminders"}), 400
+
+    db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"notification_prefs.meeting_reminders": meeting_reminders}},
+    )
+
+    return jsonify({"ok": True, "meeting_reminders": meeting_reminders})
+
+
 def _extract_version(ua: str, marker: str, max_parts=None):
     """Grab the version number that follows `marker` (e.g. "Chrome/" ->
     "128", "Mac OS X " -> "10.15.7"), normalizing underscores to dots.

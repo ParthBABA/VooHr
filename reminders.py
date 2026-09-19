@@ -18,14 +18,17 @@ An item stops being surfaced the moment it is explicitly COMPLETED (or, for
 openers/questions, explicitly USED) — nothing here changes those states.
 """
 import logging
+import os
 from datetime import datetime, timezone, timedelta
 
 from bson import ObjectId
 from bson.errors import InvalidId
 from flask import Blueprint, jsonify, request
 
+import email_service
 from employees import _require_auth
 from extensions import get_db
+from field_encryption import decrypt_fields
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +155,172 @@ def _reminder_summary(it) -> str:
     return f"{label} {it['status'].lower()}: {it['content']}{suffix}"
 
 
+# ── Delivery channels (email + WhatsApp-on-top of in-app notifications) ───
+
+
+def _meeting_owner(db, org_id, meeting):
+    """The HR/manager user who scheduled a meeting (stored as ``created_by``
+    since create_meeting). Returns None when absent so legacy meetings simply
+    skip out-of-app delivery instead of erroring."""
+    created_by = meeting.get("created_by")
+    if not created_by:
+        return None
+    try:
+        created_by = ObjectId(created_by)
+    except (InvalidId, TypeError):
+        return None
+    return db.users.find_one({"_id": created_by, "org_id": ObjectId(org_id)})
+
+
+def _user_email(user) -> str | None:
+    """Best-effort decrypted email for a user (user PII is envelope-encrypted,
+    with a plain ``email`` fallback for fixtures/legacy docs)."""
+    if not user:
+        return None
+    email = user.get("email") or ""
+    if not email:
+        try:
+            pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
+            email = pii.get("email") or ""
+        except Exception:
+            email = ""
+    return email.strip() or None
+
+
+def _meeting_reminders_enabled(user) -> bool:
+    """User-level opt-out for email/WhatsApp meeting reminders. Defaults to
+    True — in-app notifications are never gated by this."""
+    if not user:
+        return True
+    prefs = user.get("notification_prefs") or {}
+    return bool(prefs.get("meeting_reminders", True))
+
+
+def _reminder_phone_number(user) -> str | None:
+    """Verified phone number for WhatsApp delivery (from the WhatsApp intake
+    feature's settings field). Returns None when the intake integration has not
+    stored one yet."""
+    if not user:
+        return None
+    number = (user.get("phone_number") or "").strip()
+    if not number:
+        wa = user.get("whatsapp") or {}
+        number = (wa.get("phone_number") or "").strip()
+    return number or None
+
+
+def _meeting_page_url() -> str:
+    """Deep link to the Meeting Tracker board (the page that surfaces meetings
+    and their pending follow-ups)."""
+    base = (
+        os.environ.get("CLIENT_URL") or os.environ.get("SITE_URL") or ""
+    ).strip().rstrip("/")
+    return f"{base}/meeting-tracker" if base else "/meeting-tracker"
+
+
+def _whatsapp_reminder_text(employee_name, meeting_time, reminder_summary, stage) -> str:
+    """Terse WhatsApp-style reminder body (not the full email body)."""
+    when = meeting_time.strftime("%A %d %b · %I:%M %p") if meeting_time else "soon"
+    return (
+        f"VooVr · {employee_name or 'Your'} meeting : {when} ({stage}). "
+        f"Open follow-up: {reminder_summary}. "
+        f"Details: {_meeting_page_url()}"
+    )
+
+
+def _send_reminder_whatsapp(to_phone: str, text: str) -> bool:
+    """TODO(whatsapp): WhatsApp Cloud API outbound is not wired up yet.
+
+    The earlier WhatsApp intake integration never landed — there is no
+    whatsapp.py module and no WHATSAPP_ACCESS_TOKEN env var. This is an
+    intentional no-op stub so reminder generation keeps working today; wire it
+    to `whatsapp.send_message(to_phone, text)` once that helper exists.
+    """
+    if not to_phone:
+        return False
+    if not os.environ.get("WHATSAPP_ACCESS_TOKEN"):
+        logger.debug(
+            "reminder_whatsapp=skipped reason=no_whatsapp_token phone_set=%s",
+            bool(to_phone),
+        )
+        return False
+    # TODO(whatsapp): call the Cloud API helper here — this line is unreachable
+    # until WHATSAPP_ACCESS_TOKEN is configured.
+    logger.info("reminder_whatsapp=sent phone=%s", to_phone)
+    return True
+
+
+def _deliver_reminder_channels(db, org_id, meeting, it, stage):
+    """Send email + WhatsApp for one reminder. Every failure is logged and
+    swallowed — a bad address or a dead provider must never block the in-app
+    notification or crash reminder generation."""
+    user = _meeting_owner(db, org_id, meeting)
+    if not user:
+        return
+    if not _meeting_reminders_enabled(user):
+        logger.debug(
+            "reminder_email=skipped reason=opt_out user=%s meeting=%s stage=%s",
+            user.get("_id"), meeting.get("_id"), stage,
+        )
+        return
+
+    emp = None
+    try:
+        eid = meeting.get("employee_id")
+        if eid:
+            emp = db.employees.find_one({"_id": eid, "org_id": ObjectId(org_id)})
+    except Exception:
+        emp = None
+    employee_name = ""
+    if emp:
+        try:
+            pii = decrypt_fields(emp.get("encrypted"), emp.get("wrapped_dek", ""))
+            employee_name = pii.get("name") or ""
+        except Exception:
+            employee_name = ""
+    if not employee_name:
+        employee_name = emp.get("name") if emp else "your colleague"
+
+    summary = _reminder_summary(it)
+    meeting_time = meeting.get("scheduled_at")
+
+    owner_email = _user_email(user)
+    if owner_email:
+        try:
+            email_service.send_reminder_email(
+                owner_email, employee_name, meeting_time, summary, stage
+            )
+        except Exception:
+            logger.exception(
+                "reminder_email=failed meeting=%s stage=%s recipient=%s",
+                meeting.get("_id"), stage, owner_email,
+            )
+
+    phone = _reminder_phone_number(user)
+    if phone:
+        try:
+            _send_reminder_whatsapp(
+                phone, _whatsapp_reminder_text(employee_name, meeting_time, summary, stage)
+            )
+        except Exception:
+            logger.exception(
+                "reminder_whatsapp=failed meeting=%s stage=%s phone_set=True",
+                meeting.get("_id"), stage,
+            )
+
+
+def _deliver_reminder(db, org_id, meeting, it, stage):
+    """Wraps the per-reminder delivery so an unexpected failure anywhere can
+    never escape the generation loop."""
+    try:
+        _deliver_reminder_channels(db, org_id, meeting, it, stage)
+    except Exception:
+        logger.exception(
+            "reminder_delivery=failed meeting=%s stage=%s",
+            meeting.get("_id"), stage,
+        )
+
+
 def ensure_reminder_notifications(db, org_id, now=None) -> int:
     """Idempotently create reminder notifications for reachable upcoming
     meetings.
@@ -209,6 +378,7 @@ def ensure_reminder_notifications(db, org_id, now=None) -> int:
                 "created_at": now,
             })
             created += 1
+            _deliver_reminder(db, org_id, meeting, it, stage)
 
     if created:
         logger.debug("ensure_reminder_notifications: created=%d org=%s", created, org_id)
