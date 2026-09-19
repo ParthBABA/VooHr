@@ -320,6 +320,12 @@ h1,h2,h3,h4,h5,h6{font-family:var(--font-d);font-weight:600;text-transform:upper
 .alert-item .alert-name{font-size:0.88rem;font-weight:600;color:var(--ivory);}
 .alert-item .alert-desc{font-family:var(--font-lato);font-weight:400;font-size:0.6rem;letter-spacing:0.08em;color:var(--ivory-faint);margin-top:0.15rem;}
 .alert-item .alert-summary{font-family:var(--font-lato);font-weight:400;font-size:0.62rem;line-height:1.35;color:var(--ivory-dim);margin-top:0.2rem;}
+.alert-item .alert-severity.audio{background:var(--amber);box-shadow:0 0 8px var(--amber-glow);}
+.alert-item .alert-severity.translation{background:var(--teal);box-shadow:0 0 8px var(--teal-glow);}
+.alert-item .alert-top{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-bottom:0.2rem;}
+.alert-item .alert-top .alert-name{font-size:0.92rem;font-weight:700;letter-spacing:-0.01em;}
+.alert-item .alert-top .alert-time{display:inline;margin:0;font-family:var(--font-lato);font-size:0.62rem;letter-spacing:0.06em;color:var(--ivory-faint);white-space:nowrap;}
+.alert-item .alert-top + .alert-summary{font-size:0.78rem;letter-spacing:0;color:var(--ivory-dim);}
 .alert-item .alert-action{font-family:var(--font-rc);font-weight:600;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--amber);white-space:nowrap;padding:0.35rem 0.8rem;border:1px solid rgba(212,136,74,0.28);background:var(--amber-soft);transition:all 0.3s;}
 .alert-item .alert-action:hover{background:var(--amber);color:var(--void);}
 

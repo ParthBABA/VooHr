@@ -302,38 +302,57 @@
       row.className = 'alert-item notif-item';
       row.setAttribute('data-id', n.id);
 
+      var sevClass = 'alert-severity ' + (n.read ? 'read' : 'critical');
+      if (!n.read && n.type === 'audio_ready') sevClass = 'alert-severity audio';
+      else if (!n.read && n.type === 'translation_ready') sevClass = 'alert-severity translation';
       var sev = document.createElement('span');
-      sev.className = 'alert-severity ' + (n.read ? 'read' : 'critical');
+      sev.className = sevClass;
 
       var body = document.createElement('span');
       body.className = 'alert-body';
       var isJobType = (n.type === 'translation_ready' || n.type === 'audio_ready');
-      var headlineInName = !n.employee_name && isJobType;
-      var name = document.createElement('span');
-      name.className = 'alert-name';
-      // Background-job notices aren't tied to an employee: show the headline
-      // as the bold primary line and a neutral fallback instead of "Employee".
-      name.textContent = n.employee_name || (isJobType ? (n.headline || '') : 'Employee');
-      var desc = document.createElement('span');
-      desc.className = 'alert-desc';
-      var time = document.createElement('span');
-      time.className = 'alert-time';
-      time.textContent = relTime(n.created_at);
-      body.appendChild(name);
-      // When the headline already sits in alert-name (job notices), don't
-      // duplicate it in alert-desc; otherwise keep the existing layout.
-      if (!headlineInName) {
+      if (isJobType) {
+        // Clean stack for finished background jobs: headline + time on one
+        // baseline row, then the relaxed summary body underneath.
+        var top = document.createElement('span');
+        top.className = 'alert-top';
+        var name = document.createElement('span');
+        name.className = 'alert-name';
+        name.textContent = n.headline || 'Ready';
+        var time = document.createElement('span');
+        time.className = 'alert-time';
+        time.textContent = relTime(n.created_at);
+        top.appendChild(name);
+        top.appendChild(time);
+        body.appendChild(top);
+        // Job notifications carry a genuinely descriptive summary line.
+        if (n.summary) {
+          var summaryEl = document.createElement('span');
+          summaryEl.className = 'alert-summary';
+          summaryEl.textContent = n.summary;
+          body.appendChild(summaryEl);
+        }
+      } else {
+        var name = document.createElement('span');
+        name.className = 'alert-name';
+        name.textContent = n.employee_name || 'Employee';
+        var desc = document.createElement('span');
+        desc.className = 'alert-desc';
         desc.textContent = n.headline || '';
+        var time = document.createElement('span');
+        time.className = 'alert-time';
+        time.textContent = relTime(n.created_at);
+        body.appendChild(name);
         body.appendChild(desc);
+        // Job notifications carry a genuinely descriptive summary line.
+        if (n.summary) {
+          var summaryEl = document.createElement('span');
+          summaryEl.className = 'alert-summary';
+          summaryEl.textContent = n.summary;
+          body.appendChild(summaryEl);
+        }
+        body.appendChild(time);
       }
-      // Job notifications carry a genuinely descriptive summary line.
-      if (n.summary) {
-        var summaryEl = document.createElement('span');
-        summaryEl.className = 'alert-summary';
-        summaryEl.textContent = n.summary;
-        body.appendChild(summaryEl);
-      }
-      body.appendChild(time);
 
       var action = document.createElement('span');
       action.className = 'alert-action';
@@ -645,38 +664,57 @@ window.voovrInitRiskDrift = function() {
       row.type = 'button';
       row.className = 'alert-item drift-list-item';
 
+      var sevClass = 'alert-severity ' + (n.read ? 'read' : 'critical');
+      if (!n.read && n.type === 'audio_ready') sevClass = 'alert-severity audio';
+      else if (!n.read && n.type === 'translation_ready') sevClass = 'alert-severity translation';
       var sev = document.createElement('span');
-      sev.className = 'alert-severity ' + (n.read ? 'read' : 'critical');
+      sev.className = sevClass;
 
       var body = document.createElement('span');
       body.className = 'alert-body';
       var isJobType = (n.type === 'translation_ready' || n.type === 'audio_ready');
-      var headlineInName = !n.employee_name && isJobType;
-      var name = document.createElement('span');
-      name.className = 'alert-name';
-      // Background-job notices aren't tied to an employee: show the headline
-      // as the bold primary line and a neutral fallback instead of "Employee".
-      name.textContent = n.employee_name || (isJobType ? (n.headline || '') : 'Employee');
-      var desc = document.createElement('span');
-      desc.className = 'alert-desc';
-      var time = document.createElement('span');
-      time.className = 'alert-time';
-      time.textContent = relTime(n.created_at);
-      body.appendChild(name);
-      // When the headline already sits in alert-name (job notices), don't
-      // duplicate it in alert-desc; otherwise keep the existing layout.
-      if (!headlineInName) {
+      if (isJobType) {
+        // Clean stack for finished background jobs: headline + time on one
+        // baseline row, then the relaxed summary body underneath.
+        var top = document.createElement('span');
+        top.className = 'alert-top';
+        var name = document.createElement('span');
+        name.className = 'alert-name';
+        name.textContent = n.headline || 'Ready';
+        var time = document.createElement('span');
+        time.className = 'alert-time';
+        time.textContent = relTime(n.created_at);
+        top.appendChild(name);
+        top.appendChild(time);
+        body.appendChild(top);
+        // Job notifications carry a genuinely descriptive summary line.
+        if (n.summary) {
+          var summaryEl = document.createElement('span');
+          summaryEl.className = 'alert-summary';
+          summaryEl.textContent = n.summary;
+          body.appendChild(summaryEl);
+        }
+      } else {
+        var name = document.createElement('span');
+        name.className = 'alert-name';
+        name.textContent = n.employee_name || 'Employee';
+        var desc = document.createElement('span');
+        desc.className = 'alert-desc';
         desc.textContent = n.headline || '';
+        var time = document.createElement('span');
+        time.className = 'alert-time';
+        time.textContent = relTime(n.created_at);
+        body.appendChild(name);
         body.appendChild(desc);
+        // Job notifications carry a genuinely descriptive summary line.
+        if (n.summary) {
+          var summaryEl = document.createElement('span');
+          summaryEl.className = 'alert-summary';
+          summaryEl.textContent = n.summary;
+          body.appendChild(summaryEl);
+        }
+        body.appendChild(time);
       }
-      // Job notifications carry a genuinely descriptive summary line.
-      if (n.summary) {
-        var summaryEl = document.createElement('span');
-        summaryEl.className = 'alert-summary';
-        summaryEl.textContent = n.summary;
-        body.appendChild(summaryEl);
-      }
-      body.appendChild(time);
 
       var conf = document.createElement('span');
       conf.className = 'drift-conf ' + confClass(n.confidence || 0);
