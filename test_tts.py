@@ -299,7 +299,7 @@ class _WholeFallbackTTS(BaseTTS):
 
 def _make_tts_app(monkeypatch, provider):
     monkeypatch.setattr(tts_mod, "_require_auth", lambda: _ORG)
-    monkeypatch.setattr(tts_mod, "get_tts_provider", lambda: provider)
+    monkeypatch.setattr(tts_mod, "get_tts_provider_for", lambda language_code=None: provider)
 
     app = Flask(__name__)
     app.config["TESTING"] = True
@@ -432,7 +432,7 @@ def test_route_keeps_request_contract(monkeypatch):
             return text
 
     monkeypatch.setattr(tts_mod, "_require_auth", lambda: _ORG)
-    monkeypatch.setattr(tts_mod, "get_tts_provider", lambda: _CaptureTTS())
+    monkeypatch.setattr(tts_mod, "get_tts_provider_for", lambda language_code=None: _CaptureTTS())
     monkeypatch.setattr(tts_mod, "get_llm_provider", lambda: _FakeLLM())
 
     app = Flask(__name__)

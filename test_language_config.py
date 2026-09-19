@@ -11,7 +11,8 @@ instead of being scattered across backend and frontend:
   the frontend never hardcodes the list.
 
 Spanish and French stay implemented but OFF by default until there is
-validated demand for them.
+validated demand for them. Hindi/Hinglish were also removed from the default
+set per the product decision to pivot to low-English-proficiency markets.
 """
 
 import os
@@ -27,6 +28,15 @@ for _name in ("requests", "flask", "openai"):
         del sys.modules[_name]
 
 import pytest
+
+
+# The 10 low-English-proficiency markets enabled by default (English is
+# implicit and never appears in the list).
+DEFAULT_ENABLED = [
+    "japanese", "thai", "arabic", "mandarin", "indonesian",
+    "vietnamese", "korean", "bengali", "turkish", "portuguese",
+]
+DEFAULT_ENABLED_SET = set(DEFAULT_ENABLED)
 
 
 def _load_llm():
@@ -57,43 +67,53 @@ def _restore_modules():
 
 
 class TestSupportedLanguageEnforcement:
-    def test_default_environment_enables_only_validated_languages(self, monkeypatch):
+    def test_default_environment_enables_market_languages(self, monkeypatch):
         monkeypatch.delenv("ENABLED_ANALYSIS_LANGUAGES", raising=False)
         llm = _load_llm()
-        assert llm.SUPPORTED_ANALYSIS_LANGUAGES == {"hinglish", "hindi"}
-        # Fully implemented, but disabled by default -> behaves like unknown.
-        assert llm._language_instruction("spanish") == ""
-        assert llm._language_instruction("french") == ""
+        assert llm.SUPPORTED_ANALYSIS_LANGUAGES == DEFAULT_ENABLED_SET
+        # Implemented, but disabled by default -> behaves like unknown.
+        for disabled in ("hinglish", "hindi", "spanish", "french"):
+            assert llm._language_instruction(disabled) == ""
         # Validated languages produce their real instruction text.
-        assert "Hindi" in llm._language_instruction("hindi")
-        assert "Hinglish" in llm._language_instruction("hinglish")
+        assert "Japanese" in llm._language_instruction("japanese")
+        assert "Modern Standard Arabic" in llm._language_instruction("arabic")
+        assert "Mandarin" in llm._language_instruction("mandarin")
+        assert "Portuguese" in llm._language_instruction("portuguese")
         # English is the implicit default and never produces a suffix.
         assert llm._language_instruction("en") == ""
         assert llm._language_instruction(None) == ""
         assert llm._language_instruction("") == ""
 
     def test_spanish_enabled_via_env_returns_real_instruction(self, monkeypatch):
-        monkeypatch.setenv("ENABLED_ANALYSIS_LANGUAGES", "hinglish,hindi,spanish")
+        monkeypatch.setenv(
+            "ENABLED_ANALYSIS_LANGUAGES",
+            ",".join(["english"] + DEFAULT_ENABLED + ["spanish"]),
+        )
         llm = _load_llm()
-        assert llm.SUPPORTED_ANALYSIS_LANGUAGES == {"hinglish", "hindi", "spanish"}
+        assert llm.SUPPORTED_ANALYSIS_LANGUAGES == DEFAULT_ENABLED_SET | {"spanish"}
         assert "Spanish" in llm._language_instruction("spanish")
-        # French is still implemented but not enabled.
-        assert "french" not in llm.SUPPORTED_ANALYSIS_LANGUAGES
-        assert llm._language_instruction("french") == ""
+        assert "Japanese" in llm._language_instruction("japanese")
+        # Hindi is implemented but not enabled.
+        assert llm._language_instruction("hindi") == ""
 
     def test_all_languages_enabled(self, monkeypatch):
-        monkeypatch.setenv("ENABLED_ANALYSIS_LANGUAGES", "hinglish,hindi,spanish,french")
+        monkeypatch.setenv(
+            "ENABLED_ANALYSIS_LANGUAGES",
+            "hinglish,hindi,spanish,french," + ",".join(DEFAULT_ENABLED),
+        )
         llm = _load_llm()
-        assert llm.SUPPORTED_ANALYSIS_LANGUAGES == {"hinglish", "hindi", "spanish", "french"}
+        assert llm.SUPPORTED_ANALYSIS_LANGUAGES == (
+            {"hinglish", "hindi", "spanish", "french"} | DEFAULT_ENABLED_SET
+        )
         assert "French" in llm._language_instruction("french")
-        assert "Spanish" in llm._language_instruction("spanish")
+        assert "Bengali" in llm._language_instruction("bengali")
 
     def test_keys_are_normalised_and_unknown_ignored(self, monkeypatch):
-        monkeypatch.setenv("ENABLED_ANALYSIS_LANGUAGES", " Hinglish ,  HINDI ,german,spanish,,")
+        monkeypatch.setenv("ENABLED_ANALYSIS_LANGUAGES", " Japanese ,  THAI ,german,unknown,,")
         llm = _load_llm()
-        # Case and whitespace are stripped; "german" is not implemented so
-        # the intersection with the instruction catalogue drops it.
-        assert llm.SUPPORTED_ANALYSIS_LANGUAGES == {"hinglish", "hindi", "spanish"}
+        # Case and whitespace are stripped; "german"/"unknown" are not
+        # implemented so the intersection with the catalogue drops them.
+        assert llm.SUPPORTED_ANALYSIS_LANGUAGES == {"japanese", "thai"}
         assert llm._language_instruction("GERMAN") == ""
 
 
@@ -114,12 +134,15 @@ class TestConfigLanguagesEndpoint:
         client = self._make_client()
         resp = client.get("/api/config/languages")
         assert resp.status_code == 200
-        assert resp.get_json() == {"languages": ["hinglish", "hindi"]}
+        assert resp.get_json() == {"languages": DEFAULT_ENABLED}
 
     def test_returns_spanish_when_enabled(self, monkeypatch):
-        monkeypatch.setenv("ENABLED_ANALYSIS_LANGUAGES", "hinglish,hindi,spanish")
+        monkeypatch.setenv(
+            "ENABLED_ANALYSIS_LANGUAGES",
+            ",".join(["english"] + DEFAULT_ENABLED + ["spanish"]),
+        )
         _load_llm()
         client = self._make_client()
         resp = client.get("/api/config/languages")
         assert resp.status_code == 200
-        assert resp.get_json() == {"languages": ["hinglish", "hindi", "spanish"]}
+        assert resp.get_json() == {"languages": ["spanish"] + DEFAULT_ENABLED}

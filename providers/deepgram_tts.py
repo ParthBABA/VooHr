@@ -41,6 +41,11 @@ class DeepgramTTS(BaseTTS):
     the client.
     """
 
+    # Base language codes Deepgram Aura-2 can actually voice. Anything outside
+    # this set MUST be routed elsewhere — forcing it through the default English
+    # model produces garbled, mispronounced audio.
+    SUPPORTED_LANGUAGES = frozenset({"en", "es", "nl", "de", "fr", "it", "ja"})
+
     def __init__(self):
         self.api_key = (
             os.environ.get("DEEPGRAM_API_KEY") or os.environ.get("DEEPGRAM", "")

@@ -37,6 +37,13 @@ class GoogleNeural2TTS(BaseTTS):
 
     content_type = "audio/mpeg"
 
+    # Base language codes this provider can voice. Curated to the enabled
+    # market set (English + the 10 low-English-proficiency markets);
+    # Google Cloud TTS genuinely voices far more — extend as markets enable.
+    SUPPORTED_LANGUAGES = frozenset(
+        {"en", "ja", "th", "ar", "zh", "id", "vi", "ko", "bn", "tr", "pt"}
+    )
+
     def __init__(self):
         self.api_key = (
             os.environ.get("GOOGLE_TTS_API_KEY") or os.environ.get("GOOGLE_TTS", "")

@@ -114,6 +114,10 @@ class _FakeDB:
 
 _FAKE_DB = _FakeDB()
 
+# api -> employees -> config requires SECRET_KEY at import time. Set it before
+# importing (same pattern as every other test module in this suite).
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
+
 # Deliberately do NOT import the real `app` module here: app.py binds
 # `get_db` at import time (from-import), so whoever imports it first pins
 # that binding to their own fake and breaks every other test module's

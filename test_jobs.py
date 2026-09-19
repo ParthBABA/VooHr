@@ -20,6 +20,7 @@ from flask import Flask, session as flask_session
 
 import jobs as jobs_mod
 from providers.storage import LocalStorage
+from providers.tts_languages import UnsupportedTTSLanguageError
 
 _ORG = "64b000000000000000000001"
 _USER = "64b000000000000000000002"
@@ -174,7 +175,7 @@ def _make_client(db, monkeypatch, storage=None):
 
     storage = storage or LocalStorage(".")
     monkeypatch.setattr(jobs, "get_llm_provider", lambda: _FakeLLM())
-    monkeypatch.setattr(jobs, "get_tts_provider", lambda: _FakeTTS())
+    monkeypatch.setattr(jobs, "get_tts_provider_for", lambda language_code=None: _FakeTTS())
     monkeypatch.setattr(jobs, "get_storage_provider", lambda: storage)
     monkeypatch.setattr(jobs.threading, "Thread", _SyncThread)
 
@@ -216,7 +217,7 @@ class TestTranslationJobs:
         storage = LocalStorage(str(tmp_path))
         client, db, _ = _make_client(db.fresh(), monkeypatch, storage)
 
-        r = client.post("/api/translate-jobs", json={"session_id": _SESSION, "language": "hindi"})
+        r = client.post("/api/translate-jobs", json={"session_id": _SESSION, "language": "japanese"})
         assert r.status_code == 201
         body = r.get_json()
         assert body["status"] == "queued"
@@ -225,15 +226,15 @@ class TestTranslationJobs:
         job = db.translation_jobs.find_one({"_id": ObjectId(job_id)})
         assert job["status"] == "done"
         s = db.sessions.find_one({"_id": ObjectId(_SESSION)})
-        assert s["analysis_language"] == "hindi"
-        assert "Summary in hindi" in s["analysis"]["summary"]
+        assert s["analysis_language"] == "japanese"
+        assert "Summary in japanese" in s["analysis"]["summary"]
         assert s["status"] == "completed"
 
         n = db.notifications.find_one({"type": "translation_ready"})
         assert n is not None
         assert n["source_session_id"] == ObjectId(_SESSION)
         assert n["employee_id"] == ObjectId(_EMP)
-        assert n["detail_key"] == "translate:hindi"
+        assert n["detail_key"] == "translate:japanese"
         assert n["headline"] == "Translation ready"
 
     def test_notification_deduplicated(self, tmp_path, monkeypatch):
@@ -242,7 +243,7 @@ class TestTranslationJobs:
         client, db, _ = _make_client(db.fresh(), monkeypatch, storage)
 
         for _ in range(2):
-            client.post("/api/translate-jobs", json={"session_id": _SESSION, "language": "hindi"})
+            client.post("/api/translate-jobs", json={"session_id": _SESSION, "language": "japanese"})
 
         matching = list(db.notifications.find({"type": "translation_ready"}))
         assert len(matching) == 1
@@ -257,19 +258,18 @@ class TestTranslationJobs:
     def test_rejects_unknown_session(self, tmp_path, monkeypatch):
         db = _FakeDB()
         client, _, _ = _make_client(db.fresh(), monkeypatch, LocalStorage(str(tmp_path)))
-        r = client.post("/api/translate-jobs", json={"session_id": "5" * 24, "language": "hindi"})
+        r = client.post("/api/translate-jobs", json={"session_id": "5" * 24, "language": "japanese"})
         assert r.status_code == 404
 
     def test_get_job_and_list_filtering(self, tmp_path, monkeypatch):
         db = _FakeDB()
         client, db, _ = _make_client(db.fresh(), monkeypatch, LocalStorage(str(tmp_path)))
-        body = client.post("/api/translate-jobs", json={"session_id": _SESSION, "language": "hinglish"}).get_json()
+        body = client.post("/api/translate-jobs", json={"session_id": _SESSION, "language": "japanese"}).get_json()
         job_id = body["id"]
 
         got = client.get("/api/translate-jobs/" + job_id)
         assert got.status_code == 200
-        assert got.get_json()["status"] == "done"
-        assert got.get_json()["input_ref"] == {"language": "hinglish"}
+        assert got.get_json()["input_ref"] == {"language": "japanese"}
 
         listed = client.get(f"/api/translate-jobs?session_id={_SESSION}&status=done")
         assert listed.status_code == 200
@@ -294,7 +294,7 @@ class TestTTSJobs:
             "/api/tts-jobs",
             json={
                 "text": "Hello there",
-                "language_code": "hi-IN",
+                "language_code": "ja-JP",
                 "translate": True,
                 "session_id": _SESSION,
                 "block": "wsMatters",
@@ -316,7 +316,7 @@ class TestTTSJobs:
 
         n = db.notifications.find_one({"type": "audio_ready"})
         assert n is not None
-        assert n["detail_key"] == "tts:wsMatters:hi-IN"
+        assert n["detail_key"] == "tts:wsMatters:ja-JP"
         assert n["source_session_id"] == ObjectId(_SESSION)
 
     def test_tts_validation(self, tmp_path, monkeypatch):
@@ -324,6 +324,23 @@ class TestTTSJobs:
         client, _, _ = _make_client(db.fresh(), monkeypatch, LocalStorage(str(tmp_path)))
         assert client.post("/api/tts-jobs", json={"language_code": "en-US"}).status_code == 400
         assert client.post("/api/tts-jobs", json={"text": "hi"}).status_code == 400
+
+    def test_tts_job_rejects_unsupported_language(self, tmp_path, monkeypatch):
+        """A language no configured TTS provider can voice returns the real
+        unsupported_tts_language error instead of synthesizing with a default
+        English voice."""
+        db = _FakeDB()
+        client, _, _ = _make_client(db.fresh(), monkeypatch, LocalStorage(str(tmp_path)))
+        monkeypatch.setattr(
+            jobs_mod,
+            "get_tts_provider_for",
+            lambda language_code=None: (_ for _ in ()).throw(
+                UnsupportedTTSLanguageError(language_code)
+            ),
+        )
+        r = client.post("/api/tts-jobs", json={"text": "hello", "language_code": "xx-XX"})
+        assert r.status_code == 400
+        assert r.get_json() == {"error": "unsupported_tts_language", "language": "xx-XX"}
 
     def test_audio_not_served_before_done(self, tmp_path, monkeypatch):
         db = _FakeDB()

@@ -3,7 +3,8 @@ import logging
 from flask import Blueprint, Response, current_app, jsonify, request
 
 from employees import _require_auth
-from providers import get_llm_provider, get_tts_provider
+from providers import get_llm_provider, get_tts_provider_for
+from providers.tts_languages import UnsupportedTTSLanguageError
 
 tts_bp = Blueprint("tts", __name__)
 logger = logging.getLogger(__name__)
@@ -33,13 +34,23 @@ def synthesize():
     if not language_code:
         return jsonify({"error": "language_code_required"}), 400
 
+    # Route to a provider that can actually voice this language. Never feed a
+    # language to a provider whose voice model doesn't support it — that
+    # produces garbled non-English audio. When nothing is configured for the
+    # language, tell the client instead of playing wrong audio.
+    try:
+        tts = get_tts_provider_for(language_code)
+    except UnsupportedTTSLanguageError:
+        return jsonify({
+            "error": "unsupported_tts_language",
+            "language": language_code,
+        }), 400
+
     try:
         # Optional translation before synthesis when the target isn't English.
         if translate_flag and language_code.split("-")[0].lower() != "en":
             llm = get_llm_provider()
             text = llm.translate(text, language_code)
-
-        tts = get_tts_provider()
 
         # Stream audio as soon as each chunk is ready instead of buffering the
         # whole response. Providers that only support whole-response synthesis

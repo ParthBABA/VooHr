@@ -46,7 +46,12 @@ from flask import Blueprint, jsonify, request, session
 
 from employees import _require_auth
 from extensions import get_db, check_rate_limit, record_rate_limit_event
-from providers import get_llm_provider, get_storage_provider, get_tts_provider
+from providers import (
+    get_llm_provider,
+    get_storage_provider,
+    get_tts_provider_for,
+)
+from providers.tts_languages import UnsupportedTTSLanguageError
 from providers.llm import SUPPORTED_ANALYSIS_LANGUAGES
 
 jobs_bp = Blueprint("jobs", __name__)
@@ -76,6 +81,16 @@ _ANALYSIS_LANG_NAMES = {
     "hindi": "Hindi",
     "spanish": "Spanish",
     "french": "French",
+    "japanese": "Japanese",
+    "thai": "Thai",
+    "arabic": "Arabic",
+    "mandarin": "Mandarin",
+    "indonesian": "Indonesian",
+    "vietnamese": "Vietnamese",
+    "korean": "Korean",
+    "bengali": "Bengali",
+    "turkish": "Turkish",
+    "portuguese": "Portuguese",
 }
 _BCP47_LANG_NAMES = {
     "en": "English",
@@ -86,6 +101,15 @@ _BCP47_LANG_NAMES = {
     "ta": "Tamil",
     "te": "Telugu",
     "mr": "Marathi",
+    "ja": "Japanese",
+    "th": "Thai",
+    "ar": "Arabic",
+    "zh": "Mandarin",
+    "id": "Indonesian",
+    "vi": "Vietnamese",
+    "ko": "Korean",
+    "tr": "Turkish",
+    "pt": "Portuguese",
 }
 
 # Provider content-type -> file extension used when storing synthesized audio.
@@ -351,7 +375,7 @@ def _run_tts_job(db, job_id, tts, llm, storage) -> None:
         if input_ref.get("translate") and language_code.split("-")[0].lower() != "en":
             text = llm.translate(text, language_code)
 
-        tts = tts or get_tts_provider()
+        tts = tts or get_tts_provider_for(language_code)
         audio = tts.synthesize(
             text,
             language_code,
@@ -567,8 +591,15 @@ def create_tts_job():
     ).inserted_id
 
     # Resolve providers inside the request context; the worker thread uses the
-    # instances directly and never touches Flask proxies.
-    tts = get_tts_provider()
+    # instances directly and never touches Flask proxies. Language-aware so a
+    # TTS job is only created when some configured provider can voice it.
+    try:
+        tts = get_tts_provider_for(language_code)
+    except UnsupportedTTSLanguageError:
+        return jsonify({
+            "error": "unsupported_tts_language",
+            "language": language_code,
+        }), 400
     llm = get_llm_provider()
     storage = get_storage_provider()
     threading.Thread(

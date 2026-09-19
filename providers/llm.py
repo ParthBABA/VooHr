@@ -956,13 +956,88 @@ _FRENCH_INSTRUCTION = (
     f"{_LANGUAGE_FIELD_NOTE}"
 )
 
+_JAPANESE_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Japanese\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional Japanese (Standard Japanese with an appropriate "
+    "polite register).\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+_THAI_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Thai\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional Thai (Standard Thai with an appropriate polite register).\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+_ARABIC_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Arabic\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional Modern Standard Arabic.\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+_MANDARIN_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Mandarin\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional Simplified Mandarin Chinese.\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+_INDONESIAN_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Indonesian\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional Indonesian (Bahasa Indonesia).\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+_VIETNAMESE_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Vietnamese\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional Vietnamese.\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+_KOREAN_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Korean\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional Korean using the appropriate polite (haeyo) register.\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+_BENGALI_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Bengali\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional Bengali (Bangla).\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+_TURKISH_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Turkish\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional Turkish.\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
+_PORTUGUESE_INSTRUCTION = (
+    "\n\nOUTPUT LANGUAGE: Portuguese\n\n"
+    f"Render every human-readable text value in the response below ({_TRANSLATABLE_FIELDS}) "
+    "in formal, professional Brazilian Portuguese.\n\n"
+    f"{_LANGUAGE_FIELD_NOTE}"
+)
+
 # ── Analysis/translation output languages ────────────────────────────────
 # _ALL_LANGUAGE_INSTRUCTIONS is the full catalogue of implemented languages.
 # _ENABLED_LANGUAGES is the operator-controlled subset that is actually
 # switchable today, driven by ENABLED_ANALYSIS_LANGUAGES (a comma-separated
-# list of keys from _ALL_LANGUAGE_INSTRUCTIONS, default "hinglish,hindi").
-# Spanish and French are implemented but OFF by default until there's
-# validated demand for them. The frontend derives its "Analyze in" /
+# list of keys from _ALL_LANGUAGE_INSTRUCTIONS). The default is the 10
+# low-English-proficiency markets chosen from the EF English Proficiency Index
+# (see README): japanese, thai, arabic, mandarin, indonesian, vietnamese,
+# korean, bengali, turkish, portuguese (English is always implicitly
+# available). Hindi/Hinglish were removed from the default per that product
+# decision but remain implemented; Spanish and French stay implemented but
+# OFF pending validated demand. The frontend derives its "Analyze in" /
 # "Translate" <select> options from SUPPORTED_ANALYSIS_LANGUAGES (via
 # GET /api/config/languages) so nothing has to be kept in sync by hand.
 _ALL_LANGUAGE_INSTRUCTIONS = {
@@ -970,11 +1045,28 @@ _ALL_LANGUAGE_INSTRUCTIONS = {
     "hindi": _HINDI_INSTRUCTION,
     "spanish": _SPANISH_INSTRUCTION,
     "french": _FRENCH_INSTRUCTION,
+    "japanese": _JAPANESE_INSTRUCTION,
+    "thai": _THAI_INSTRUCTION,
+    "arabic": _ARABIC_INSTRUCTION,
+    "mandarin": _MANDARIN_INSTRUCTION,
+    "indonesian": _INDONESIAN_INSTRUCTION,
+    "vietnamese": _VIETNAMESE_INSTRUCTION,
+    "korean": _KOREAN_INSTRUCTION,
+    "bengali": _BENGALI_INSTRUCTION,
+    "turkish": _TURKISH_INSTRUCTION,
+    "portuguese": _PORTUGUESE_INSTRUCTION,
 }
+
+_DEFAULT_ENABLED_ANALYSIS_LANGUAGES = (
+    "english,japanese,thai,arabic,mandarin,indonesian,vietnamese,"
+    "korean,bengali,turkish,portuguese"
+)
 
 _ENABLED_LANGUAGES = frozenset(
     lang.strip().lower()
-    for lang in os.environ.get("ENABLED_ANALYSIS_LANGUAGES", "hinglish,hindi").split(",")
+    for lang in os.environ.get(
+        "ENABLED_ANALYSIS_LANGUAGES", _DEFAULT_ENABLED_ANALYSIS_LANGUAGES
+    ).split(",")
     if lang.strip()
 )
 

@@ -82,11 +82,23 @@ Locally, either set `GOOGLE_CREDENTIALS_JSON` in `.env` or use
 The languages offered by the "Analyze in" / "Translate" controls are driven
 centrally by the `ENABLED_ANALYSIS_LANGUAGES` env var — a comma-separated list
 of language keys from `providers/llm.py`'s `_ALL_LANGUAGE_INSTRUCTIONS`.
-It defaults to `hinglish,hindi`. Spanish and French are implemented but
-disabled by default until there is validated demand for them; to turn one on,
-add it to the list, e.g. `ENABLED_ANALYSIS_LANGUAGES=hinglish,hindi,spanish`.
+It defaults to the 10 low-English-proficiency markets chosen from the EF
+English Proficiency Index: `japanese,thai,arabic,mandarin,indonesian,vietnamese,korean,bengali,turkish,portuguese`
+(English is always available and never appears in the list). Hindi and
+Hinglish were removed from the default because their markets already have
+high English proficiency; they remain implemented in the codebase. Spanish
+and French are also implemented but disabled by default until there is
+validated demand — to turn any of them on, add the key to the list, e.g.
+`ENABLED_ANALYSIS_LANGUAGES=english,japanese,thai,arabic,mandarin,indonesian,vietnamese,korean,bengali,turkish,portuguese,hindi`.
 The workspace page builds its language dropdowns from `GET /api/config/languages`,
 so the frontend needs no changes when this set is modified.
+
+The Listen (TTS) narration languages are routed language-aware: a requested
+language is only ever sent to a TTS provider that can actually voice it.
+If a language isn't supported by the configured TTS provider, the request is
+routed to a provider that does support it (Google first); if no provider can
+voice it, the API returns `{"error": "unsupported_tts_language"}` instead of
+falling back to mispronounced English audio.
 
 ## Running tests
 

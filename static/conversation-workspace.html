@@ -528,7 +528,7 @@ window.voovrInitWorkspace = function() {
   // only for DISPLAY names — it decides how fetched language keys render,
   // never which keys exist as options. English is always present and never
   // disabled, so it is not part of the fetched list.
-  var LANG_LABELS = { en: 'English', hinglish: 'Hinglish', hindi: 'Hindi', spanish: 'Spanish', french: 'French' };
+  var LANG_LABELS = { en: 'English', hinglish: 'Hinglish', hindi: 'Hindi', spanish: 'Spanish', french: 'French', japanese: 'Japanese', thai: 'Thai', arabic: 'Arabic', mandarin: 'Mandarin', indonesian: 'Indonesian', vietnamese: 'Vietnamese', korean: 'Korean', bengali: 'Bengali', turkish: 'Turkish', portuguese: 'Portuguese' };
 
   // Intended analysis language, held apart from the <select> so it survives
   // the async option-population race (the stored language may be applied
@@ -1590,11 +1590,22 @@ window.voovrInitWorkspace = function() {
 // surfaced via the notification bell, and returning to the workspace re-syncs
 // any still-running (or already-finished) jobs via the pills below.
 (function() {
+  // Listen language set mirrored from the server TTS/analysis language list.
+  // Non-English entries route through the analysis language (translate: true)
+  // so the audio is voiced in the requested language rather than the
+  // provider's default English voice.
   var NARRATION_LANGUAGES = [
     { label: 'English', languageCode: 'en-US', translate: false },
-    { label: 'Hindi', languageCode: 'hi-IN', translate: true },
-    { label: 'Spanish', languageCode: 'es-ES', translate: true },
-    { label: 'French', languageCode: 'fr-FR', translate: true }
+    { label: 'Japanese', languageCode: 'ja-JP', translate: true },
+    { label: 'Thai', languageCode: 'th-TH', translate: true },
+    { label: 'Arabic', languageCode: 'ar-SA', translate: true },
+    { label: 'Mandarin', languageCode: 'zh-CN', translate: true },
+    { label: 'Indonesian', languageCode: 'id-ID', translate: true },
+    { label: 'Vietnamese', languageCode: 'vi-VN', translate: true },
+    { label: 'Korean', languageCode: 'ko-KR', translate: true },
+    { label: 'Bengali', languageCode: 'bn-BD', translate: true },
+    { label: 'Turkish', languageCode: 'tr-TR', translate: true },
+    { label: 'Portuguese', languageCode: 'pt-BR', translate: true }
   ];
 
   var wsParams = new URLSearchParams(window.location.search);
