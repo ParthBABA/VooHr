@@ -1608,6 +1608,19 @@ window.voovrInitWorkspace = function() {
     { label: 'Portuguese', languageCode: 'pt-BR', translate: true }
   ];
 
+  // Human-readable names for the narration blocks on this page. Block ids are
+  // internal `data-narr-target` selector strings — always render them through
+  // blockDisplay() so a stale map can never leak a raw identifier to the UI.
+  var BLOCK_LABELS = {
+    '.ws-hero': 'Live Conversation Score',
+    'wsMatters': 'What Matters',
+    'wsFollow': 'Follow-up Plan',
+    'wsSignals': 'Conversation Signals'
+  };
+  function blockDisplay(block) {
+    return BLOCK_LABELS[block || ''] || 'this section';
+  }
+
   var wsParams = new URLSearchParams(window.location.search);
   var sessionId = wsParams.get('session_id');
 

@@ -148,6 +148,23 @@ def _language_display(language: str) -> str:
     return name or language
 
 
+# Human-readable names for the internal narration targets sent from
+# conversation-workspace.html (`data-narr-target` attribute values). These are
+# selector strings, never user-facing text — always render through
+# _block_display() so a stale map can never leak a raw identifier.
+_BLOCK_LABELS = {
+    ".ws-hero": "Live Conversation Score",
+    "wsMatters": "What Matters",
+    "wsFollow": "Follow-up Plan",
+    "wsSignals": "Conversation Signals",
+}
+
+
+def _block_display(block: str) -> str:
+    """Best-effort human name for a narration block selector."""
+    return _BLOCK_LABELS.get(block or "", "this section")
+
+
 def _job_to_json(job: dict) -> dict:
     return {
         "id": str(job["_id"]),
@@ -405,7 +422,7 @@ def _run_tts_job(db, job_id, tts, llm, storage) -> None:
             job,
             notif_type="audio_ready",
             headline="Audio ready",
-            summary=f"Audio{(' for ' + block) if block else ''} finished.",
+            summary=f"Audio for {_block_display(block)} is ready to play.",
             dedup_key=f"tts:{block}:{language_code}",
         )
     except Exception:

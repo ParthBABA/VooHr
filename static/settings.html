@@ -453,6 +453,43 @@ html[data-theme="light"]{
 .badge-amber{background:rgba(243,156,18,0.16);color:#b7791f;}
 .badge-grey{background:rgba(120,120,128,0.14);color:var(--muted);}
 .mr-toast{font-size:0.82rem;font-weight:600;font-family:var(--font-rc);}
+
+/* ════════════════════════════════════════════════════════════════════
+   SETTINGS — PANEL TYPOGRAPHY & SURFACE RESTYLE (CSS-ONLY, NO LOGIC)
+   Removes the repetitive "tracked ALL-CAPS label + hairline per row"
+   template. Every panel shares these classes, so this fixes all of them.
+   · One serif moment per panel (.st-title): Cormorant italic — the app's
+     existing serif language (cf. .drawer-section-title), not a new font.
+   · Sub-sections stop shouting: quiet Inter semibold heading with the
+     description read as a subtitle beneath it, not an inline label pair.
+   · Sections become contained cards (--ink lifted off --void, 1px border,
+     10px radius) — grouping via shared surface, not repeated hairlines.
+   · Short toggle/info groups drop per-row dividers; tall scannable lists
+     (sessions, activity) keep theirs. Danger headings stay red.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* 1) Panel heading — Cormorant italic, the one distinctive moment per panel */
+.st-title{font-family:var(--font-serif);font-weight:700;font-style:italic;font-size:clamp(1.8rem,3vw,2.25rem);letter-spacing:0.005em;line-height:1.12;color:var(--ivory);}
+
+/* 2) Sub-section heading = quiet Inter semibold; description slides under it */
+.st-sec-head{display:flex;flex-direction:column;align-items:flex-start;gap:0.2rem;margin-bottom:1.2rem;}
+.st-sec-head .st-sec-desc{flex:0 0 auto;}
+.st-sec-title{font-family:var(--font-d);font-weight:600;font-size:1rem;letter-spacing:0;text-transform:none;color:var(--ivory);margin:0;}
+.st-sec-desc{font-family:var(--font-lato);font-size:0.8rem;line-height:1.5;color:var(--ivory-faint);}
+
+/* Keep danger sub-headings red (delete flows) */
+.st-sec-title--danger,.st-delete-zone .st-sec-title{color:var(--red);}
+
+/* 3) Sections become contained cards on the --void surface */
+.st-section{background:var(--ink);border:1px solid var(--border);border-radius:10px;padding:1.6rem 1.7rem;}
+.settings-panel .st-section + .st-section{border-top:0;padding-top:1.6rem;}
+.st-section .st-section{background:transparent;border:0;border-radius:0;padding:1.1rem 0 0;}
+
+/* 4) Short groups: rely on vertical rhythm, drop the per-row hairlines */
+.st-row{padding:0.9rem 0;}
+.st-row + .st-row{border-top:none;}
+.toggle-row + .toggle-row{border-top:none;}
+.st-data-item + .st-data-item{border-top:none;}
 </style>
 </head>
 <body>
@@ -976,8 +1013,14 @@ html[data-theme="light"]{
                   <div class="st-restricted-desc">Only organization admins can view the audit log.</div>
                 </div>
               </div>
-              <div class="st-actions" id="auditLogMoreWrap" style="display:none;">
-                <button class="btn btn-sm btn-outline" id="auditLogMoreBtn" type="button">Load more</button>
+              <div class="st-actions">
+                <!-- Progressive disclosure: 5 latest → expand to 30 → full page -->
+                <span id="auditLogMoreWrap" style="display:none;">
+                  <button class="btn btn-sm btn-outline" id="auditLogMoreBtn" type="button">View more</button>
+                </span>
+                <span id="auditLogFullWrap" style="display:none;">
+                  <a class="btn btn-sm btn-outline" href="/activity-log">View full activity log</a>
+                </span>
               </div>
             </div>
           </div>
@@ -1624,10 +1667,16 @@ function clearFieldError(input){
   var listEl = document.getElementById('auditLogList');
   var moreWrap = document.getElementById('auditLogMoreWrap');
   var moreBtn = document.getElementById('auditLogMoreBtn');
+  var fullWrap = document.getElementById('auditLogFullWrap');
   var restricted = document.getElementById('auditLogRestricted');
   if (!card || !listEl) return;
 
-  var page = 1;
+  // Progressive disclosure: the 5 most recent events load first; "View more"
+  // replaces them with a fresh fetch of up to 30; beyond that a link hands off
+  // to the fully-paginated /activity-log page. The backend is re-used
+  // untouched (page/limit + has_more) — only the frontend call pattern
+  // changed. Admins-only exactly as before (server-enforced, 401 → note).
+  var expanded = false; // false → 5-event preview · true → up-to-30 list
 
   var ACTION_LABELS = {
     'employee.create': 'Employee created',
@@ -1760,39 +1809,56 @@ function clearFieldError(input){
   function loadPage(){
     moreBtn.disabled = true;
     moreBtn.textContent = 'Loading\u2026';
-    fetch('/api/audit-log?page=' + page + '&limit=50').then(function(res){
+    var limit = expanded ? 30 : 5;
+    fetch('/api/audit-log?page=1&limit=' + limit).then(function(res){
       if (!res.ok) return null;
       return res.json();
     }).then(function(body){
       if (!body) {
         // Not an admin, or forbidden. Permission is enforced server-side; we
         // only ever show the informational note, never audit data.
+        listEl.innerHTML = '';
         listEl.style.display = 'none';
         moreWrap.style.display = 'none';
+        if (fullWrap) fullWrap.style.display = 'none';
         if (restricted) restricted.style.display = '';
         card.style.display = '';
         return;
       }
       if (restricted) restricted.style.display = 'none';
       listEl.style.display = '';
-      if (!listEl.children.length) card.style.display = '';
-      if (listEl.innerHTML === '' && (!body.events || !body.events.length)) {
+      card.style.display = '';
+
+      // Fresh render each fetch (page is always 1 here) — never append
+      // duplicates from a previous page.
+      listEl.innerHTML = '';
+      if (!body.events || !body.events.length) {
         setEmpty();
+      } else {
+        renderEvents(body.events);
       }
-      if (body.events && body.events.length) renderEvents(body.events);
-      moreWrap.style.display = body.has_more ? '' : 'none';
-      moreBtn.textContent = 'Load more';
+
+      if (!expanded) {
+        // Preview mode: offer to expand while more history exists.
+        if (fullWrap) fullWrap.style.display = 'none';
+        moreWrap.style.display = body.has_more ? '' : 'none';
+      } else {
+        // Expanded to 30: anything further moves to the full activity-log page.
+        moreWrap.style.display = 'none';
+        if (fullWrap) fullWrap.style.display = body.has_more ? '' : 'none';
+      }
+      moreBtn.textContent = 'View more';
       moreBtn.disabled = false;
     }).catch(function(){
       moreWrap.style.display = '';
-      moreBtn.textContent = 'Load more';
+      moreBtn.textContent = 'View more';
       moreBtn.disabled = false;
     });
   }
 
   if (moreBtn) {
     moreBtn.addEventListener('click', function(){
-      page += 1;
+      expanded = true;
       loadPage();
     });
   }

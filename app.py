@@ -10,7 +10,7 @@ from bson import ObjectId
 from flask import Flask, jsonify, request, redirect, render_template, session
 
 from api import api_bp
-from audit_log import audit_bp
+from audit_log import _require_admin, audit_bp
 from auth import auth_bp, register_google_oauth
 from auth_email import auth_email_bp
 from config import Config
@@ -182,6 +182,7 @@ def create_app():
         "/settings",
         "/risk-drift",
         "/notifications",
+        "/activity-log",
         "/sync",
         "/sync/room",
     })
@@ -344,6 +345,17 @@ def create_app():
         guard = _require_page_login()
         if guard: return guard
         return render_page("notifications.html")
+
+    @app.route("/activity-log")
+    def activity_log():
+        guard = _require_page_login()
+        if guard: return guard
+        # Admin-only, mirroring the /api/audit-log endpoint's server-side role
+        # check (_require_admin). Non-admins are sent back to Settings, where
+        # the Activity Log panel shows the standard restricted note.
+        if not _require_admin():
+            return redirect("/settings#activity-log")
+        return render_page("activity-log.html")
 
     @app.route("/sync")
     def sync():

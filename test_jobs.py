@@ -319,7 +319,44 @@ class TestTTSJobs:
         assert n["detail_key"] == "tts:wsMatters:ja-JP"
         assert n["source_session_id"] == ObjectId(_SESSION)
 
-    def test_tts_validation(self, tmp_path, monkeypatch):
+    def test_tts_notification_uses_human_block_label(self, tmp_path, monkeypatch):
+        """The audio-ready summary must show a readable section name, never the
+        raw `data-narr-target` selector sent from the frontend."""
+        db = _FakeDB()
+        client, db, _ = _make_client(db.fresh(), monkeypatch, LocalStorage(str(tmp_path)))
+
+        client.post(
+            "/api/tts-jobs",
+            json={
+                "text": "Hello there",
+                "language_code": "ja-JP",
+                "translate": True,
+                "session_id": _SESSION,
+                "block": ".ws-hero",
+            },
+        )
+        n = db.notifications.find_one({"type": "audio_ready"})
+        assert n is not None
+        summary = n["summary"]
+        assert "Live Conversation Score" in summary
+        assert ".ws-hero" not in summary
+        assert ".ws" not in summary
+
+        # Unknown or missing blocks must fall back to a neutral phrase and can
+        # never leak selector syntax either.
+        db.notifications.clear()
+        client.post(
+            "/api/tts-jobs",
+            json={
+                "text": "Hello there",
+                "language_code": "ja-JP",
+                "translate": True,
+                "session_id": _SESSION,
+            },
+        )
+        n = db.notifications.find_one({"type": "audio_ready"})
+        assert n is not None
+        assert n["summary"] == "Audio for this section is ready to play."
         db = _FakeDB()
         client, _, _ = _make_client(db.fresh(), monkeypatch, LocalStorage(str(tmp_path)))
         assert client.post("/api/tts-jobs", json={"language_code": "en-US"}).status_code == 400
