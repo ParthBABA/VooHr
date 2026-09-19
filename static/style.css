@@ -1244,6 +1244,7 @@ html[data-theme="light"] .ws-coach .wsx-section-title{background:linear-gradient
 .input-tab.active svg{color:var(--void);opacity:1;}
 .input-tab:focus-visible{outline:2px solid var(--violet);outline-offset:-2px;}
 .input-tab-caption{font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);text-align:center;margin:0 0 1.4rem;}
+.input-tab-hint{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.02em;color:var(--ivory-faint);text-align:center;margin:-1.1rem 0 1.4rem;}
 
 /* ── Two-column grid ── */
 .dictation-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:stretch;}
