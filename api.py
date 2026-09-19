@@ -24,6 +24,7 @@ from login_flow import (
     _lookup_location,
 )
 from password_utils import verify_password
+from providers.llm import _ALL_LANGUAGE_INSTRUCTIONS, SUPPORTED_ANALYSIS_LANGUAGES
 from totp_utils import verify_backup_code, verify_code
 
 api_bp = Blueprint("api", __name__)
@@ -80,6 +81,25 @@ def save_pending_org():
         "companySize": company_size,
     }
     return jsonify({"ok": True})
+
+
+@api_bp.route("/config/languages")
+def config_languages():
+    """Return the currently enabled analysis/translation languages.
+
+    The workspace frontend builds its "Analyze in" / "Translate" <select>
+    options from this list instead of hardcoding them, so the set of
+    switchable languages is controlled centrally by the
+    ENABLED_ANALYSIS_LANGUAGES env var (see providers.llm). The order
+    mirrors the implementation catalogue so the rendered options stay stable,
+    and English is intentionally absent because it is always the default and
+    never disabled.
+    """
+    languages = [
+        lang for lang in _ALL_LANGUAGE_INSTRUCTIONS
+        if lang in SUPPORTED_ANALYSIS_LANGUAGES
+    ]
+    return jsonify({"languages": languages})
 
 
 @api_bp.route("/me")

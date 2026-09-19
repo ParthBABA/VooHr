@@ -77,6 +77,17 @@ Locally, either set `GOOGLE_CREDENTIALS_JSON` in `.env` or use
    Visit `http://localhost:5000/onboarding.html` to try the sign-up flow, or
    `http://localhost:5000/signin.html` to sign in.
 
+## Analysis / translation languages
+
+The languages offered by the "Analyze in" / "Translate" controls are driven
+centrally by the `ENABLED_ANALYSIS_LANGUAGES` env var — a comma-separated list
+of language keys from `providers/llm.py`'s `_ALL_LANGUAGE_INSTRUCTIONS`.
+It defaults to `hinglish,hindi`. Spanish and French are implemented but
+disabled by default until there is validated demand for them; to turn one on,
+add it to the list, e.g. `ENABLED_ANALYSIS_LANGUAGES=hinglish,hindi,spanish`.
+The workspace page builds its language dropdowns from `GET /api/config/languages`,
+so the frontend needs no changes when this set is modified.
+
 ## Running tests
 
 Install the dev dependencies (includes pytest and the security scanners), then run the suite:

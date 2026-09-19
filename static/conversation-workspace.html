@@ -201,10 +201,6 @@ withTimeout(fetch('/api/me').then(function(res){
           <label class="ws-lang-label" for="wsAnalysisLang">Translate</label>
           <select id="wsAnalysisLang" class="ws-tool-select" title="Analysis language">
             <option value="en">English</option>
-            <option value="hinglish">Hinglish</option>
-            <option value="hindi">Hindi</option>
-            <option value="spanish">Spanish</option>
-            <option value="french">French</option>
           </select>
         </span>
       </div>
@@ -236,10 +232,6 @@ withTimeout(fetch('/api/me').then(function(res){
           <label class="ws-lang-label" for="wsGateLang">Analyze in</label>
           <select id="wsGateLang" class="ws-tool-select" title="Analysis language">
             <option value="en" selected>English</option>
-            <option value="hinglish">Hinglish</option>
-            <option value="hindi">Hindi</option>
-            <option value="spanish">Spanish</option>
-            <option value="french">French</option>
           </select>
         </div>
         <button class="btn btn-primary" id="runAnalysisBtn">
@@ -489,6 +481,64 @@ window.voovrInitWorkspace = function() {
     if (v >= 70) return { label: 'Strong signal', cls: 'high' };
     if (v >= 40) return { label: 'Mixed signals', cls: 'medium' };
     return { label: 'Needs attention', cls: 'low' };
+  }
+
+  // ── Analysis/translation language selection ────────────────────────────
+  // The set of switchable languages comes from GET /api/config/languages
+  // (driven server-side by ENABLED_ANALYSIS_LANGUAGES). This label map is
+  // only for DISPLAY names — it decides how fetched language keys render,
+  // never which keys exist as options. English is always present and never
+  // disabled, so it is not part of the fetched list.
+  var LANG_LABELS = { en: 'English', hinglish: 'Hinglish', hindi: 'Hindi', spanish: 'Spanish', french: 'French' };
+
+  // Intended analysis language, held apart from the <select> so it survives
+  // the async option-population race (the stored language may be applied
+  // before /api/config/languages resolves). populateLangOptions() applies it
+  // once the option set is known, falling back to English when the stored
+  // language is no longer enabled.
+  var analysisLangSelection = 'en';
+
+  function populateLangOptions(langs) {
+    var ordered = ['en'];
+    (Array.isArray(langs) ? langs : []).forEach(function(l) {
+      l = String(l || '').trim();
+      if (l && ordered.indexOf(l) === -1) ordered.push(l);
+    });
+    ['wsAnalysisLang', 'wsGateLang'].forEach(function(id) {
+      var sel = document.getElementById(id);
+      if (!sel) return;
+      sel.innerHTML = '';
+      ordered.forEach(function(l) {
+        var opt = document.createElement('option');
+        opt.value = l;
+        opt.textContent = LANG_LABELS[l] || l;
+        sel.appendChild(opt);
+      });
+      setAnalysisLangValue();
+    });
+  }
+
+  function setAnalysisLangValue() {
+    var sel = document.getElementById('wsAnalysisLang');
+    if (!sel) return;
+    var lang = analysisLangSelection || 'en';
+    var opt = sel.querySelector('option[value="' + lang + '"]');
+    sel.value = opt ? lang : 'en';
+  }
+
+  function loadLanguageOptions() {
+    fetch('/api/config/languages', { headers: { 'Accept': 'application/json' } })
+      .then(function(r) {
+        if (!r.ok) throw new Error('config/languages returned ' + r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        populateLangOptions(data && data.languages);
+      })
+      .catch(function(err) {
+        console.warn('Could not load enabled analysis languages, defaulting to English only:', err);
+        populateLangOptions([]);
+      });
   }
 
   function fail(msg) {
@@ -1203,7 +1253,8 @@ window.voovrInitWorkspace = function() {
   function renderAll() {
     var a = state.session.analysis || {};
     var wsLangSel = document.getElementById('wsAnalysisLang');
-    if (wsLangSel) wsLangSel.value = (state.session.analysis_language || 'en');
+    if (state.session.analysis_language) analysisLangSelection = state.session.analysis_language;
+    if (wsLangSel) setAnalysisLangValue();
     parseTranscript();
     computeFlagMatches();
     loadingEl.style.display = 'none';
@@ -1232,6 +1283,7 @@ window.voovrInitWorkspace = function() {
       fail('Missing session context. Open this page from a session in the sync list.');
       return;
     }
+    loadLanguageOptions();
     var empPromise = fetch('/api/employees/' + employeeId).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
     var sessPromise = fetch('/api/sessions/' + sessionId).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
 
@@ -1243,7 +1295,8 @@ window.voovrInitWorkspace = function() {
         return;
       }
       var wsLangSel = document.getElementById('wsAnalysisLang');
-      if (wsLangSel) wsLangSel.value = (state.session.analysis_language || 'en');
+      if (state.session.analysis_language) analysisLangSelection = state.session.analysis_language;
+      if (wsLangSel) setAnalysisLangValue();
       var tr = state.session.transcript || {};
       state.transcriptText = tr.edited || tr.raw || '';
       state.duration = state.session.recording_duration || 0;
@@ -1386,7 +1439,6 @@ window.voovrInitWorkspace = function() {
       var newLang = wsLangSel.value;
       if (newLang === storedLang) return; // no redundant re-run
       wsLangSel.disabled = true;
-      var LANG_LABELS = { en: 'English', hinglish: 'Hinglish', hindi: 'Hindi', spanish: 'Spanish', french: 'French' };
       showToast('Translating analysis to ' + (LANG_LABELS[newLang] || newLang) + '\u2026');
       fetch('/api/sessions/' + sessionId + '/analyze', {
         method: 'POST',
@@ -1402,7 +1454,8 @@ window.voovrInitWorkspace = function() {
         renderAll();
       })
       .catch(function(err) {
-        wsLangSel.value = storedLang;
+        analysisLangSelection = storedLang;
+        setAnalysisLangValue();
         showToast('Analysis failed: ' + err.message);
       })
       .finally(function() {

@@ -956,26 +956,42 @@ _FRENCH_INSTRUCTION = (
     f"{_LANGUAGE_FIELD_NOTE}"
 )
 
-# Language keys accepted by the "Analyze in" / "Translate" controls. Keep in
-# sync with the <select> options in conversation-workspace.html.
-_LANGUAGE_INSTRUCTIONS = {
+# ── Analysis/translation output languages ────────────────────────────────
+# _ALL_LANGUAGE_INSTRUCTIONS is the full catalogue of implemented languages.
+# _ENABLED_LANGUAGES is the operator-controlled subset that is actually
+# switchable today, driven by ENABLED_ANALYSIS_LANGUAGES (a comma-separated
+# list of keys from _ALL_LANGUAGE_INSTRUCTIONS, default "hinglish,hindi").
+# Spanish and French are implemented but OFF by default until there's
+# validated demand for them. The frontend derives its "Analyze in" /
+# "Translate" <select> options from SUPPORTED_ANALYSIS_LANGUAGES (via
+# GET /api/config/languages) so nothing has to be kept in sync by hand.
+_ALL_LANGUAGE_INSTRUCTIONS = {
     "hinglish": _HINGLISH_INSTRUCTION,
     "hindi": _HINDI_INSTRUCTION,
     "spanish": _SPANISH_INSTRUCTION,
     "french": _FRENCH_INSTRUCTION,
 }
 
-SUPPORTED_ANALYSIS_LANGUAGES = frozenset(_LANGUAGE_INSTRUCTIONS.keys())
+_ENABLED_LANGUAGES = frozenset(
+    lang.strip().lower()
+    for lang in os.environ.get("ENABLED_ANALYSIS_LANGUAGES", "hinglish,hindi").split(",")
+    if lang.strip()
+)
+
+SUPPORTED_ANALYSIS_LANGUAGES = frozenset(_ALL_LANGUAGE_INSTRUCTIONS.keys()) & _ENABLED_LANGUAGES
 
 
 def _language_instruction(language: str | None) -> str:
     """Return an output-language suffix for the analysis system prompt.
 
-    Only a recognized non-English language key produces a suffix; English /
-    missing / unknown values return "" so the default prompt stays
-    byte-for-byte identical.
+    Only a *supported* (implemented AND enabled) non-English language key
+    produces a suffix; English / missing / unknown / explicitly-disabled
+    values return "" so the default prompt stays byte-for-byte identical.
     """
-    return _LANGUAGE_INSTRUCTIONS.get((language or "").strip().lower(), "")
+    key = (language or "").strip().lower()
+    if key not in SUPPORTED_ANALYSIS_LANGUAGES:
+        return ""
+    return _ALL_LANGUAGE_INSTRUCTIONS[key]
 
 
 def _build_drift_prompt(sessions) -> str:
