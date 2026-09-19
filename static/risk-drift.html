@@ -312,26 +312,19 @@
       body.className = 'alert-body';
       var isJobType = (n.type === 'translation_ready' || n.type === 'audio_ready');
       if (isJobType) {
-        // Clean stack for finished background jobs: headline + time on one
-        // baseline row, then the relaxed summary body underneath.
+        // Single-sentence layout: no headline bolted into a "name" slot — the
+        // finishing line IS the notification text, with the time on the right.
         var top = document.createElement('span');
         top.className = 'alert-top';
-        var name = document.createElement('span');
-        name.className = 'alert-name';
-        name.textContent = n.headline || 'Ready';
+        var punch = document.createElement('span');
+        punch.className = 'alert-summary';
+        punch.textContent = n.summary || n.headline || 'Ready';
         var time = document.createElement('span');
         time.className = 'alert-time';
         time.textContent = relTime(n.created_at);
-        top.appendChild(name);
+        top.appendChild(punch);
         top.appendChild(time);
         body.appendChild(top);
-        // Job notifications carry a genuinely descriptive summary line.
-        if (n.summary) {
-          var summaryEl = document.createElement('span');
-          summaryEl.className = 'alert-summary';
-          summaryEl.textContent = n.summary;
-          body.appendChild(summaryEl);
-        }
       } else {
         var name = document.createElement('span');
         name.className = 'alert-name';
@@ -674,26 +667,19 @@ window.voovrInitRiskDrift = function() {
       body.className = 'alert-body';
       var isJobType = (n.type === 'translation_ready' || n.type === 'audio_ready');
       if (isJobType) {
-        // Clean stack for finished background jobs: headline + time on one
-        // baseline row, then the relaxed summary body underneath.
+        // Single-sentence layout: no headline bolted into a "name" slot — the
+        // finishing line IS the notification text, with the time on the right.
         var top = document.createElement('span');
         top.className = 'alert-top';
-        var name = document.createElement('span');
-        name.className = 'alert-name';
-        name.textContent = n.headline || 'Ready';
+        var punch = document.createElement('span');
+        punch.className = 'alert-summary';
+        punch.textContent = n.summary || n.headline || 'Ready';
         var time = document.createElement('span');
         time.className = 'alert-time';
         time.textContent = relTime(n.created_at);
-        top.appendChild(name);
+        top.appendChild(punch);
         top.appendChild(time);
         body.appendChild(top);
-        // Job notifications carry a genuinely descriptive summary line.
-        if (n.summary) {
-          var summaryEl = document.createElement('span');
-          summaryEl.className = 'alert-summary';
-          summaryEl.textContent = n.summary;
-          body.appendChild(summaryEl);
-        }
       } else {
         var name = document.createElement('span');
         name.className = 'alert-name';

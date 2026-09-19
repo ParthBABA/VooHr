@@ -304,7 +304,7 @@ def _run_translation_job(db, job_id, llm, org_id, language: str) -> None:
             job,
             notif_type="translation_ready",
             headline="Translation ready",
-            summary=f"Your translated analysis is ready in {_language_display(language) or 'the selected language'}.",
+            summary=f"Translation for {_language_display(language) or 'the selected language'} finished.",
             dedup_key=f"translate:{language}",
         )
     except Exception:
@@ -381,7 +381,7 @@ def _run_tts_job(db, job_id, tts, llm, storage) -> None:
             job,
             notif_type="audio_ready",
             headline="Audio ready",
-            summary=f"Your audio{(' for ' + block) if block else ''} is ready to play.",
+            summary=f"Audio{(' for ' + block) if block else ''} finished.",
             dedup_key=f"tts:{block}:{language_code}",
         )
     except Exception:
