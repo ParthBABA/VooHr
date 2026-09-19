@@ -219,11 +219,20 @@
         stopPlayback();
       });
 
-      return fetch('/api/tts/synthesize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      })
+      var fetchInit;
+      if (body && body.audio_url) {
+        // Play a job-produced file already stored server-side (background
+        // TTS jobs). Reuses the exact same mini-player/transport path.
+        fetchInit = { method: 'GET' };
+      } else {
+        fetchInit = {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body || {})
+        };
+      }
+
+      return fetch(body && body.audio_url ? body.audio_url : '/api/tts/synthesize', fetchInit)
         .then(function (r) {
           if (!r.ok) {
             return r.json().then(function (err) {

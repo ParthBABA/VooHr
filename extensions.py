@@ -173,6 +173,35 @@ def _init_indexes(db):
         background=True,
     )
 
+    # ── background jobs (translation_jobs / tts_jobs) ──────────────────
+    # Query: find_one({org_id, _id}) ownership scoping in jobs.py
+    db.translation_jobs.create_index(
+        [("org_id", ASCENDING), ("_id", ASCENDING)],
+        background=True,
+    )
+    # Query: find({org_id, session_id, status}).sort("created_at", -1) —
+    # the workspace resume polling on page load.
+    db.translation_jobs.create_index(
+        [("org_id", ASCENDING), ("session_id", ASCENDING), ("created_at", DESCENDING)],
+        background=True,
+    )
+    db.translation_jobs.create_index(
+        [("org_id", ASCENDING), ("session_id", ASCENDING), ("status", ASCENDING)],
+        background=True,
+    )
+    db.tts_jobs.create_index(
+        [("org_id", ASCENDING), ("_id", ASCENDING)],
+        background=True,
+    )
+    db.tts_jobs.create_index(
+        [("org_id", ASCENDING), ("session_id", ASCENDING), ("created_at", DESCENDING)],
+        background=True,
+    )
+    db.tts_jobs.create_index(
+        [("org_id", ASCENDING), ("session_id", ASCENDING), ("status", ASCENDING)],
+        background=True,
+    )
+
     # ── otp_verifications ──────────────────────────────────────────────
     # Query: find_one({email_hash}) in auth_email.py
     db.otp_verifications.create_index("email_hash", background=True)

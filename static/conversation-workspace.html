@@ -58,6 +58,22 @@
 .wsx-mini-player .wsx-mp-cancel:hover{color:var(--red);border-color:rgba(232,69,69,0.5);background:var(--red-soft);}
 .wsx-mini-player .wsx-mp-range{flex:1;min-width:60px;max-width:110px;accent-color:var(--violet,#7b4fff);cursor:pointer;}
 .wsx-mini-player .wsx-mp-time{font-size:10px;color:var(--muted,#999);white-space:nowrap;}
+
+/* Background-job status pill (Translate / Listen actions) */
+.ws-job-pill{display:none;align-items:center;gap:6px;font-size:11px;line-height:1;padding:4px 10px;border-radius:20px;border:1px solid var(--border);color:var(--ivory-dim);white-space:nowrap;cursor:default;}
+.ws-job-pill.show{display:inline-flex;}
+.ws-job-pill .ws-job-spinner{width:11px;height:11px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--violet);animation:ws-job-spin .8s linear infinite;flex-shrink:0;}
+@keyframes ws-job-spin{to{transform:rotate(360deg);}}
+.ws-job-pill.running{animation:ws-job-pulse 1.5s ease-in-out infinite;}
+@keyframes ws-job-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
+.ws-job-pill.done{color:#2ecc71;border-color:rgba(46,204,113,.5);background:rgba(46,204,113,.08);animation:none;}
+.ws-job-pill.done::before{content:'\2713';}
+.ws-job-pill.failed{color:var(--red);border-color:rgba(232,69,69,.5);background:var(--red-soft);animation:none;cursor:pointer;}
+.ws-job-pill.failed:hover{border-color:var(--red);}
+.ws-job-pill .ws-job-spinner{animation:none;}
+.ws-job-pill.running .ws-job-spinner{animation:ws-job-spin .8s linear infinite;}
+.ws-job-pill.adhoc{max-width:230px;overflow:hidden;text-overflow:ellipsis;}
+.ws-topbar-pill{font-family:var(--font-sans,inherit);}
 </style>
 <style>
 .ws-subtitle{font-size:0.95rem;}
@@ -202,7 +218,30 @@ withTimeout(fetch('/api/me').then(function(res){
           <select id="wsAnalysisLang" class="ws-tool-select" title="Analysis language">
             <option value="en">English</option>
           </select>
+          <span class="ws-job-pill ws-topbar-pill" id="wsTranslatePill">
+            <span class="ws-job-spinner"></span>
+            <span class="ws-job-pill-text">Translating&hellip;</span>
+          </span>
         </span>
+        <div class="notif-wrap" id="notifWrap">
+          <button class="icon-btn" id="notifBtn" title="Notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span class="notif-dot" id="notifDot" style="display:none;"></span>
+            <span class="notif-count" id="notifCount"></span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-dropdown-head">
+              <span class="notif-dropdown-title">Notifications</span>
+              <button class="notif-mark-all" id="notifMarkAll" type="button">Mark all read</button>
+            </div>
+            <div class="notif-dropdown-list" id="notifList"></div>
+            <div class="notif-dropdown-empty" id="notifEmpty" style="display:none;">
+              <span class="notif-dropdown-empty-title">No signals to review</span>
+              <span class="notif-dropdown-empty-body">Genuine risk patterns will appear here automatically.</span>
+            </div>
+            <a class="notif-dropdown-footer" id="notifViewAll" href="/risk-drift">View all notifications</a>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1432,12 +1471,42 @@ window.voovrInitWorkspace = function() {
   });
 
   // ── Translate control: re-run analysis with an output-language instruction ──
+  // Handled as a BACKGROUND JOB (jobs.py) so the translation keeps running
+  // server-side even if the user navigates away; completion arrives via the
+  // notification bell. window.vrJobs is provided by the job-coordinator
+  // script; we fall back to the old inline request when it is unavailable.
   var wsLangSel = document.getElementById('wsAnalysisLang');
   if (wsLangSel) {
     wsLangSel.addEventListener('change', function() {
       var storedLang = (state.session && state.session.analysis_language) || 'en';
       var newLang = wsLangSel.value;
       if (newLang === storedLang) return; // no redundant re-run
+      if (window.vrJobs && window.vrJobs.translate) {
+        window.vrJobs.translate(newLang, {
+          storedLang: storedLang,
+          label: LANG_LABELS[newLang] || newLang,
+          onDone: function(lang) {
+            analysisLangSelection = lang;
+            fetch('/api/sessions/' + sessionId).then(function(r) {
+              if (!r.ok) return readErr(r).then(function(msg) { throw new Error(msg); });
+              return r.json();
+            })
+            .then(function(s) {
+              state.session = s;
+              renderAll();
+            })
+            .catch(function(err) {
+              showToast('Could not refresh the workspace: ' + err.message);
+            });
+          },
+          onFail: function(stored) {
+            analysisLangSelection = stored;
+            setAnalysisLangValue();
+          }
+        });
+        return;
+      }
+      // Fallback (no job coordinator loaded): inline translate.
       wsLangSel.disabled = true;
       showToast('Translating analysis to ' + (LANG_LABELS[newLang] || newLang) + '\u2026');
       fetch('/api/sessions/' + sessionId + '/analyze', {
@@ -1515,7 +1584,11 @@ window.voovrInitWorkspace = function() {
 </script>
 
 <script>
-// ── AI Narration ("Listen") — additive layer ─────────────────────────────
+// ── AI Narration ("Listen") + background-job coordinator ────────────────
+// Converting the "Listen" action to a BACKGROUND JOB (jobs.py) so audio
+// generation keeps running even if the user navigates away; completion is
+// surfaced via the notification bell, and returning to the workspace re-syncs
+// any still-running (or already-finished) jobs via the pills below.
 (function() {
   var NARRATION_LANGUAGES = [
     { label: 'English', languageCode: 'en-US', translate: false },
@@ -1524,10 +1597,69 @@ window.voovrInitWorkspace = function() {
     { label: 'French', languageCode: 'fr-FR', translate: true }
   ];
 
-  // Mini-player: shows a small <audio>-based player (timeline + play/pause +
-  // close) in place of the mic button once a language is chosen.
-  var narrPlayer = window.createNarrationStream();
-  if (!narrPlayer) return;
+  var wsParams = new URLSearchParams(window.location.search);
+  var sessionId = wsParams.get('session_id');
+
+  // pill helpers (shared by Translate + Listen)
+  function setPill(pill, state, text, title) {
+    if (!pill) return;
+    pill.classList.remove('show', 'running', 'done', 'failed', 'adhoc');
+    pill.style.display = '';
+    pill.style.cursor = '';
+    pill.onclick = null;
+    if (state) pill.classList.add(state);
+    if (state !== 'done' && state !== 'failed' && state !== 'running' && state) {
+      pill.classList.add('adhoc');
+    }
+    var textEl = pill.querySelector('.ws-job-pill-text');
+    if (textEl) textEl.textContent = text || '';
+    if (title) pill.title = title; else pill.removeAttribute('title');
+    if (state) pill.classList.add('show');
+  }
+
+  function resetPill(pill, text) {
+    setPill(pill, '', text || '');
+  }
+
+  // status polling with cancellation
+  var pollTimers = {};
+  function pollJob(kind, jobId, onDoc, onTransport) {
+    var key = kind + ':' + jobId;
+    var maxTicks = 120; // ~6 minutes of polling
+    var tick = 0;
+    (function tickOnce() {
+      fetch('/api/' + kind + '/' + jobId)
+        .then(function(r) {
+          if (!r.ok) return r.json().then(function(e) { throw new Error((e && e.error) || ('failed (' + r.status + ')')); });
+          return r.json();
+        })
+        .then(function(doc) {
+          if (pollTimers[key] === null) return; // cancelled
+          if (doc.status === 'done' || doc.status === 'failed') { onDoc(doc); return; }
+          if (++tick > maxTicks) { onTransport && onTransport(new Error('still running')); return; }
+          pollTimers[key] = setTimeout(tickOnce, 3000);
+        })
+        .catch(function(err) {
+          if (pollTimers[key] === null) return;
+          if (++tick > maxTicks) { onTransport && onTransport(err); return; }
+          pollTimers[key] = setTimeout(tickOnce, 3000);
+        });
+    })();
+  }
+  function cancelPoll(kind, jobId) {
+    var key = kind + ':' + jobId;
+    if (pollTimers[key]) { clearTimeout(pollTimers[key]); }
+    pollTimers[key] = null;
+  }
+
+  function readErr(r) {
+    return r.json()
+      .then(function(b) { return (b && b.error) || 'The server returned an error (' + r.status + ').'; })
+      .catch(function() { return 'The server returned an error (' + r.status + ').'; });
+  }
+
+  var narrPlayer = window.createNarrationStream ? window.createNarrationStream() : null;
+  var currentPill = null;
 
   function resolveTarget(sel) {
     var s = String(sel || '').trim();
@@ -1552,18 +1684,23 @@ window.voovrInitWorkspace = function() {
 
   // Only one narrator plays at a time: stop any other playback first.
   function stopAll(exceptBtn) {
-    narrPlayer.stop();
+    if (narrPlayer) narrPlayer.stop();
     var btns = document.querySelectorAll('.wsx-narr-btn');
     for (var i = 0; i < btns.length; i++) {
       if (btns[i] === exceptBtn) continue;
       btns[i].classList.remove('playing', 'loading', 'error');
     }
+    if (currentPill) {
+      setPill(currentPill, 'done', 'Audio ready');
+      currentPill = null;
+    }
   }
 
   function setState(btn, state) {
+    if (!btn) return;
     btn.classList.remove('loading', 'playing', 'error');
     if (state) btn.classList.add(state);
-    setTimeout(function() { btn.classList.remove('error'); }, 2500);
+    setTimeout(function() { if (btn) btn.classList.remove('error'); }, 2500);
   }
 
   function closeAllSelects() {
@@ -1571,18 +1708,279 @@ window.voovrInitWorkspace = function() {
     for (var i = 0; i < sels.length; i++) sels[i].classList.remove('open');
   }
 
-  function synthesizeAndPlay(btn, wrap, lang) {
-    var text = readBlockText(wrap.getAttribute('data-narr-target'));
+  // ── per-block TTS job pills ───────────────────────────────────────────
+  var ttsJobs = {}; // block -> { id, lang, pill, btn, wrap, sel }
+  function pillFor(wrap) {
+    var existing = wrap.querySelector('.ws-job-pill');
+    if (existing) return existing;
+    var pill = document.createElement('span');
+    pill.className = 'ws-job-pill';
+    var spin = document.createElement('span');
+    spin.className = 'ws-job-spinner';
+    var text = document.createElement('span');
+    text.className = 'ws-job-pill-text';
+    pill.appendChild(spin);
+    pill.appendChild(text);
+    wrap.appendChild(pill);
+    return pill;
+  }
+
+  function playAudio(block) {
+    var job = ttsJobs && ttsJobs[block];
+    if (!job || !narrPlayer || !job.id) return;
+    var wrap = job.wrap;
+    if (currentPill && currentPill !== job.pill) {
+      setPill(currentPill, 'done', 'Audio ready');
+    }
+    currentPill = job.pill;
+    job.pill.style.display = 'none';
+    narrPlayer.onDone = function() {
+      if (currentPill === job.pill) { job.pill.style.display = ''; setPill(job.pill, 'done', 'Audio ready'); currentPill = null; }
+    };
+    narrPlayer.onError = function() {
+      if (currentPill === job.pill) { job.pill.style.display = ''; setPill(job.pill, 'failed', 'Retry'); currentPill = null; }
+      setState(job.btn, 'error');
+    };
+    narrPlayer.play({ audio_url: '/api/tts-jobs/' + job.id + '/audio' }, wrap).catch(function() {
+      if (currentPill === job.pill) { job.pill.style.display = ''; setPill(job.pill, 'done', 'Audio ready'); currentPill = null; }
+    });
+  }
+
+  function startNarrationJob(btn, wrap, sel, lang) {
+    if (!sessionId) return;
+    var block = wrap.getAttribute('data-narr-target') || 'section';
+    var text = readBlockText(block);
     if (!text) {
       console.warn('Narration: block has no text to read', wrap);
       setState(btn, 'error');
       return;
     }
-    narrPlayer.play({
+    var job = ttsJobs[block];
+    if (job && job.id) cancelPoll('tts', job.id);
+
+    var pill = pillFor(wrap);
+    job = ttsJobs[block] = { id: null, lang: lang, pill: pill, btn: btn, wrap: wrap, sel: sel };
+    pill.stateForPlayback = null;
+    setPill(pill, 'running', 'Listen: ' + lang.label + '\u2026');
+    if (sel) sel.disabled = true;
+    setState(btn, 'loading');
+
+    var payload = {
       text: text,
       language_code: lang.languageCode,
-      translate: lang.translate
-    }, wrap);
+      translate: !!lang.translate,
+      session_id: sessionId,
+      block: block
+    };
+    fetch('/api/tts-jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r) {
+      if (!r.ok) return readErr(r).then(function(msg) { throw new Error(msg); });
+      return r.json();
+    })
+    .then(function(body) {
+      if (!body || !body.id) throw new Error('No job id returned');
+      job.id = body.id;
+      pollJob('tts-jobs', body.id, function(doc) {
+        if (doc.status === 'done') {
+          if (sel) sel.disabled = false;
+          setState(btn, '');
+          setPill(job.pill, 'done', 'Audio ready');
+          job.pill.title = (lang.label) + ' \u2014 click to listen';
+          job.pill.style.cursor = 'pointer';
+          job.pill.onclick = function(e) { e.stopPropagation(); playAudio(block); };
+          playAudio(block);
+        } else if (doc.status === 'failed') {
+          if (sel) sel.disabled = false;
+          setState(btn, '');
+          setPill(job.pill, 'failed', 'Retry');
+          job.pill.onclick = function(e) { e.stopPropagation(); startNarrationJob(btn, wrap, sel, lang); };
+        }
+      }, function(err) {
+        if (sel) sel.disabled = false;
+        setState(btn, '');
+        setPill(job.pill, 'failed', 'Retry');
+        job.pill.onclick = function(e) { e.stopPropagation(); startNarrationJob(btn, wrap, sel, lang); };
+      });
+    })
+    .catch(function(err) {
+      if (sel) sel.disabled = false;
+      setState(btn, '');
+      setPill(job.pill, 'failed', 'Retry');
+      job.pill.onclick = function(e) { e.stopPropagation(); startNarrationJob(btn, wrap, sel, lang); };
+    });
+  }
+
+  // ── Translate job (top-bar pill) ──────────────────────────────────────
+  var translateActive = false;
+  var translatePill = document.getElementById('wsTranslatePill');
+  function retranslate(lang, opts) {
+    startTranslateJob(lang, opts);
+  }
+  function startTranslateJob(lang, opts) {
+    if (!sessionId) return;
+    if (translateActive) return;
+    translateActive = true;
+    var storedLang = (opts && opts.storedLang) || 'en';
+    var label = (opts && opts.label) || lang;
+    var sel = document.getElementById('wsAnalysisLang');
+
+    // Revert the <select> to the committed language the moment a job is
+    // queued — the pill carries the loading state, the dropdown reflects
+    // what is actually saved on the session.
+    if (sel) {
+      var opt = sel.querySelector('option[value="' + storedLang + '"]');
+      sel.value = opt ? storedLang : 'en';
+      sel.disabled = true;
+    }
+    setPill(translatePill, 'running', 'Translating to ' + label + '\u2026');
+
+    var payload = { session_id: sessionId, language: lang };
+    fetch('/api/translate-jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r) {
+      if (!r.ok) return readErr(r).then(function(msg) { throw new Error(msg); });
+      return r.json();
+    })
+    .then(function(body) {
+      if (!body || !body.id) throw new Error('No job id returned');
+      pollJob('translate-jobs', body.id, function(doc) {
+        if (doc.status === 'done') {
+          translateActive = false;
+          if (sel) sel.disabled = false;
+          var langNow = (doc.input_ref && doc.input_ref.language) || lang;
+          if (sel) {
+            var o = sel.querySelector('option[value="' + langNow + '"]');
+            if (o) sel.value = langNow;
+          }
+          setPill(translatePill, 'done', 'Translated');
+          setTimeout(function() { resetPill(translatePill, ''); }, 3500);
+          if (opts && opts.onDone) opts.onDone(langNow);
+        } else if (doc.status === 'failed') {
+          translateActive = false;
+          if (sel) sel.disabled = false;
+          setPill(translatePill, 'failed', 'Retry');
+          translatePill.onclick = function() { retranslate(lang, opts); };
+          if (opts && opts.onFail) opts.onFail(storedLang);
+        }
+      }, function() {
+        translateActive = false;
+        if (sel) sel.disabled = false;
+        setPill(translatePill, 'failed', 'Retry');
+        translatePill.onclick = function() { retranslate(lang, opts); };
+        if (opts && opts.onFail) opts.onFail(storedLang);
+      });
+    })
+    .catch(function() {
+      translateActive = false;
+      if (sel) sel.disabled = false;
+      setPill(translatePill, 'failed', 'Retry');
+      translatePill.onclick = function() { retranslate(lang, opts); };
+      if (opts && opts.onFail) opts.onFail(storedLang);
+    });
+  }
+
+  // ── Resume: re-surface jobs still running after a page reload ────────
+  function resumeJobs() {
+    if (!sessionId) return;
+    // Translate jobs for this session.
+    fetch('/api/translate-jobs?session_id=' + encodeURIComponent(sessionId))
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
+      .then(function(data) {
+        (data.jobs || []).forEach(function(j) {
+          if (j.status === 'queued' || j.status === 'processing') {
+            setPill(translatePill, 'running', 'Translating\u2026');
+            var sel = document.getElementById('wsAnalysisLang');
+            if (sel) sel.disabled = true;
+            pollJob('translate-jobs', j.id, function(doc) {
+              if (sel) sel.disabled = false;
+              if (doc.status === 'done') {
+                setPill(translatePill, 'done', 'Translated');
+                setTimeout(function() { resetPill(translatePill, ''); }, 3500);
+              } else if (doc.status === 'failed') {
+                setPill(translatePill, 'failed', 'Retry');
+                var lang = (doc.input_ref && doc.input_ref.language);
+                translatePill.onclick = function() {
+                  if (lang) startTranslateJob(lang, { storedLang: lang, label: lang });
+                  else resetPill(translatePill, '');
+                };
+              }
+            }, function() {
+              if (sel) sel.disabled = false;
+              setPill(translatePill, 'failed', 'Retry');
+            });
+          }
+        });
+      })
+      .catch(function() {});
+
+    // Listen (TTS) jobs for this session.
+    fetch('/api/tts-jobs?session_id=' + encodeURIComponent(sessionId))
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
+      .then(function(data) {
+        (data.jobs || []).forEach(function(j) {
+          var ref = j.input_ref || {};
+          var block = ref.block;
+          var wrap = block ? resolveTarget(block) : null;
+          if (!wrap || !wrap.querySelector('.wsx-narr-btn')) return;
+          var btn = wrap.querySelector('.wsx-narr-btn');
+          var sel = wrap.querySelector('.wsx-narr-select');
+          var job = ttsJobs[block] || { wrap: wrap, pill: pillFor(wrap), lang: null };
+          ttsJobs[block] = job;
+          job.pill = pillFor(wrap);
+          job.id = j.id;
+          job.btn = btn;
+          job.sel = sel;
+          var langIdx = -1;
+          for (var i = 0; i < NARRATION_LANGUAGES.length; i++) {
+            if (NARRATION_LANGUAGES[i].languageCode === ref.language_code) { langIdx = i; job.lang = NARRATION_LANGUAGES[i]; break; }
+          }
+          var langLabel = job.lang ? job.lang.label : (ref.language_code || 'audio');
+          if (j.status === 'queued' || j.status === 'processing') {
+            setState(btn, 'loading');
+            if (sel) sel.disabled = true;
+            setPill(job.pill, 'running', 'Listen: ' + langLabel + '\u2026');
+            pollJob('tts-jobs', j.id, function(doc) {
+              if (sel) sel.disabled = false;
+              setState(btn, '');
+              if (doc.status === 'done') {
+                setPill(job.pill, 'done', 'Audio ready');
+                job.pill.style.cursor = 'pointer';
+                job.pill.onclick = function(e) { e.stopPropagation(); playAudio(block); };
+              } else if (doc.status === 'failed') {
+                setPill(job.pill, 'failed', 'Retry');
+                job.pill.onclick = function(e) {
+                  e.stopPropagation();
+                  if (job.lang && sessionId) startNarrationJob(btn, wrap, sel, job.lang);
+                  else resetPill(job.pill, '');
+                };
+              }
+            }, function() {
+              if (sel) sel.disabled = false;
+              setState(btn, '');
+              setPill(job.pill, 'failed', 'Retry');
+            });
+          } else if (j.status === 'done') {
+            setPill(job.pill, 'done', 'Audio ready');
+            job.pill.style.cursor = 'pointer';
+            job.pill.onclick = function(e) { e.stopPropagation(); playAudio(block); };
+          } else if (j.status === 'failed') {
+            setPill(job.pill, 'failed', 'Retry');
+            job.pill.onclick = function(e) {
+              e.stopPropagation();
+              if (job.lang && sessionId) startNarrationJob(btn, wrap, sel, job.lang);
+              else resetPill(job.pill, '');
+            };
+          }
+        });
+      })
+      .catch(function() {});
   }
 
   function setup() {
@@ -1607,13 +2005,13 @@ window.voovrInitWorkspace = function() {
         sel.classList.toggle('open');
       });
 
-        sel.addEventListener('change', function() {
-          var idx = parseInt(sel.value, 10);
-          var lang = NARRATION_LANGUAGES[idx];
-          sel.classList.remove('open');
-          if (!lang) return;
-          synthesizeAndPlay(btn, wrap, lang);
-        });
+      sel.addEventListener('change', function() {
+        var idx = parseInt(sel.value, 10);
+        var lang = NARRATION_LANGUAGES[idx];
+        sel.classList.remove('open');
+        if (!lang) return;
+        startNarrationJob(btn, wrap, sel, lang);
+      });
     }
   }
 
@@ -1622,6 +2020,186 @@ window.voovrInitWorkspace = function() {
   });
 
   setup();
+  resumeJobs();
+
+  // Expose the coordinator so the workspace Translate control can delegate.
+  window.vrJobs = {
+    translate: startTranslateJob,
+    listen: startNarrationJob,
+    resume: resumeJobs
+  };
+})();
+</script>
+
+<script>
+// ── Notification bell ────────────────────────────────────────────────────
+// Completion of background Translate / Listen jobs arrives here as
+// "translation_ready" / "audio_ready" notifications, which deep-link back to
+// /workspace via the source_session_id captured when the job was queued.
+(function() {
+  var wrap = document.getElementById('notifWrap');
+  var btn = document.getElementById('notifBtn');
+  var dropdown = document.getElementById('notifDropdown');
+  var dot = document.getElementById('notifDot');
+  var count = document.getElementById('notifCount');
+  var list = document.getElementById('notifList');
+  var empty = document.getElementById('notifEmpty');
+  var markAll = document.getElementById('notifMarkAll');
+  var open = false;
+
+  function showToast(msg) {
+    var t = document.createElement('div');
+    t.className = 'toast-notification';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    if (window.gsap) {
+      gsap.set(t, { y: 60, opacity: 0 });
+      gsap.to(t, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
+      setTimeout(function() {
+        gsap.to(t, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { t.remove(); } });
+      }, 4000);
+    } else {
+      setTimeout(function() { t.remove(); }, 4000);
+    }
+  }
+
+  function relTime(iso) {
+    if (!iso) return '';
+    var t = new Date(iso);
+    if (isNaN(t.getTime())) return '';
+    var diff = (Date.now() - t.getTime()) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function updateBadge(unread) {
+    if (dot) dot.style.display = unread > 0 ? '' : 'none';
+    if (count) {
+      count.style.display = unread > 0 ? '' : 'none';
+      count.textContent = unread > 99 ? '99+' : String(unread || 0);
+    }
+  }
+
+  function renderList(items) {
+    if (!list) return;
+    list.innerHTML = '';
+    if (!items || !items.length) {
+      if (empty) empty.style.display = '';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    items.forEach(function(n) {
+      var row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'alert-item notif-item';
+      row.setAttribute('data-id', n.id);
+
+      var sev = document.createElement('span');
+      sev.className = 'alert-severity ' + (n.read ? 'read' : 'critical');
+
+      var body = document.createElement('span');
+      body.className = 'alert-body';
+      var name = document.createElement('span');
+      name.className = 'alert-name';
+      name.textContent = n.employee_name || 'Employee';
+      var desc = document.createElement('span');
+      desc.className = 'alert-desc';
+      desc.textContent = n.headline || '';
+      var time = document.createElement('span');
+      time.className = 'alert-time';
+      time.textContent = relTime(n.created_at);
+      body.appendChild(name);
+      body.appendChild(desc);
+      body.appendChild(time);
+
+      var action = document.createElement('span');
+      action.className = 'alert-action';
+      action.textContent = 'View';
+
+      row.appendChild(sev);
+      row.appendChild(body);
+      row.appendChild(action);
+      row.addEventListener('click', function() { openNotification(n); });
+      list.appendChild(row);
+    });
+  }
+
+  function openNotification(n) {
+    if (!n) return;
+    // Fire-and-forget: optimistically mark read, then route.
+    fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
+    closeDropdown();
+    if (n.type === 'translation_ready' || n.type === 'audio_ready') {
+      var q = [];
+      if (n.source_session_id) q.push('session_id=' + encodeURIComponent(n.source_session_id));
+      if (n.employee_id) q.push('employee_id=' + encodeURIComponent(n.employee_id));
+      window.location.href = '/workspace' + (q.length ? '?' + q.join('&') : '');
+      return;
+    }
+    window.location.href = '/risk-drift?notification=' + n.id;
+  }
+
+  function openDropdown() {
+    if (!dropdown || open) return;
+    open = true;
+    loadNotifications();
+    dropdown.classList.add('open');
+    if (window.gsap) {
+      gsap.fromTo(dropdown, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' });
+    } else {
+      dropdown.style.opacity = 1;
+    }
+  }
+
+  function closeDropdown() {
+    if (!dropdown || !open) return;
+    open = false;
+    if (window.gsap) {
+      gsap.to(dropdown, { opacity: 0, y: -8, duration: 0.18, ease: 'power2.in', onComplete: function() {
+        dropdown.classList.remove('open');
+      }});
+    } else {
+      dropdown.classList.remove('open');
+    }
+  }
+
+  function loadNotifications() {
+    fetch('/api/notifications?limit=5')
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
+      .then(function(data) {
+        updateBadge(data.unread_count || 0);
+        renderList(data.notifications || []);
+      })
+      .catch(function() {});
+  }
+
+  if (btn) btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (open) closeDropdown(); else openDropdown();
+  });
+
+  if (markAll) markAll.addEventListener('click', function() {
+    fetch('/api/notifications/read-all', { method: 'PUT' })
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
+      .then(function() {
+        updateBadge(0);
+        renderList([]);
+        showToast('All notifications marked as read');
+      })
+      .catch(function() {});
+  });
+
+  document.addEventListener('click', function(e) {
+    if (open && !(wrap && wrap.contains(e.target))) closeDropdown();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDropdown();
+  });
+
+  loadNotifications();
 })();
 </script>
 </body>

@@ -1580,16 +1580,24 @@ function escHtml(str) {
       row.appendChild(sev);
       row.appendChild(body);
       row.appendChild(action);
-      row.addEventListener('click', function() { openNotification(n.id); });
+      row.addEventListener('click', function() { openNotification(n); });
       list.appendChild(row);
     });
   }
 
-  function openNotification(id) {
-    // Fire-and-forget: optimistically mark read, then navigate.
-    fetch('/api/notifications/' + id + '/read', { method: 'PUT' }).catch(function() {});
+  function openNotification(n) {
+    if (!n) return;
+    // Fire-and-forget: optimistically mark read, then route.
+    fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
     closeDropdown();
-    window.location.href = '/risk-drift?notification=' + id;
+    if (n.type === 'translation_ready' || n.type === 'audio_ready') {
+      var q = [];
+      if (n.source_session_id) q.push('session_id=' + encodeURIComponent(n.source_session_id));
+      if (n.employee_id) q.push('employee_id=' + encodeURIComponent(n.employee_id));
+      window.location.href = '/workspace' + (q.length ? '?' + q.join('&') : '');
+      return;
+    }
+    window.location.href = '/risk-drift?notification=' + n.id;
   }
 
   function openDropdown() {

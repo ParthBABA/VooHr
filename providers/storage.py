@@ -35,5 +35,17 @@ class LocalStorage(BaseStorage):
         file_path.write_bytes(data)
         return f"audio/sessions/{session_id}/{filename}"
 
+    def path_for(self, key: str) -> Path:
+        """Resolve a storage key (e.g. ``audio/sessions/<sid>/<fname>``) back
+        to the absolute file path under this storage's base directory.
+
+        Used by the background-job audio endpoint to hand stored bytes back to
+        the browser without ever mounting the storage directory publicly.
+        """
+        rel = key
+        if rel.startswith("audio/sessions/"):
+            rel = rel[len("audio/sessions/"):]
+        return self.base_dir / rel
+
     def get_url(self, path: str) -> str:
         return f"/{path}"

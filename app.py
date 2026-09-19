@@ -18,6 +18,7 @@ from conversation_memory import conversation_memory_bp
 from employees import employees_bp
 from employees import _session_is_active
 from employees import TOTPRequired
+from jobs import jobs_bp
 from extensions import get_db, init_db, check_rate_limit, record_rate_limit_event, client_ip
 from meetings import meetings_bp
 from notifications import notifications_bp
@@ -147,6 +148,7 @@ def create_app():
     app.register_blueprint(conversation_memory_bp, url_prefix="/api")
     app.register_blueprint(surveys_bp, url_prefix="/api")
     app.register_blueprint(tts_bp, url_prefix="/api")
+    app.register_blueprint(jobs_bp, url_prefix="/api")
 
     @app.errorhandler(TOTPRequired)
     def _handle_totp_required(exc):
