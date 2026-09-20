@@ -28,7 +28,7 @@ from login_flow import (
 from password_utils import verify_password
 from providers.llm import _ALL_LANGUAGE_INSTRUCTIONS, SUPPORTED_ANALYSIS_LANGUAGES
 from totp_utils import verify_backup_code, verify_code
-from whatsapp import is_configured, normalize_phone, send_message
+from whatsapp import is_configured, normalize_phone, send_otp_message
 
 api_bp = Blueprint("api", __name__)
 
@@ -641,10 +641,7 @@ def request_phone_otp():
         upsert=True,
     )
 
-    if not send_message(
-        phone,
-        "Your VooVr verification code is " + otp + ". It expires in 10 minutes. Do not share it.",
-    ):
+    if not send_otp_message(phone, otp):
         return jsonify({"error": "send_failed"}), 502
 
     return jsonify({"ok": True})

@@ -1,8 +1,9 @@
 """Tests for the WhatsApp dictation intake channel (whatsapp.py +
 whatsapp_routes.py).
 
-Covers the Cloud API helpers (signature verification, phone normalization, and
-the "configured" gate) and the webhook end-to-end: Meta handshake, signature
+Covers the Cloud API helpers (signature verification, phone normalization, the
+"configured" gate, and outbound ``send_message`` / ``send_otp_message`` built on
+``_post_message``) and the webhook end-to-end: Meta handshake, signature
 rejection, inbound text/audio intake into dictation sessions, the
 "session_ready" notification, unmatched-number replies, and per-phone rate
 limiting. Like test_jobs.py, the daemon thread is swapped for a synchronous
@@ -255,6 +256,141 @@ class TestWhatsAppHelpers:
         assert whatsapp_mod.is_configured() is True
         monkeypatch.delenv("WHATSAPP_PHONE_NUMBER_ID")
         assert whatsapp_mod.is_configured() is False
+
+
+class _FakeResp:
+    def __init__(self, status_code=200, text='{"messages":[{"id":"wamid.X"}]}'):
+        self.status_code = status_code
+        self.text = text
+
+
+class TestSendOtpMessage:
+    """send_otp_message uses an approved template when configured, with a
+    free-form text fallback otherwise."""
+
+    _BASE_ENV = {
+        "WHATSAPP_ACCESS_TOKEN": "tok",
+        "WHATSAPP_PHONE_NUMBER_ID": "123",
+        "WHATSAPP_OTP_TEMPLATE_NAME": "voovr_otp",
+        "WHATSAPP_OTP_LANG": "en",
+    }
+
+    def _configure(self, monkeypatch, **overrides):
+        env = dict(self._BASE_ENV)
+        env.update(overrides)
+        for k, v in env.items():
+            if v is None:
+                monkeypatch.delenv(k, raising=False)
+            else:
+                monkeypatch.setenv(k, v)
+
+    def _capture(self, monkeypatch, status_code=200):
+        captured = {}
+
+        def fake_post(url, headers=None, json=None, timeout=None):
+            captured["url"] = url
+            captured["headers"] = headers
+            captured["json"] = json
+            captured["timeout"] = timeout
+            return _FakeResp(status_code=status_code)
+
+        monkeypatch.setattr(whatsapp_mod.requests, "post", fake_post)
+        return captured
+
+    def test_template_payload_when_configured(self, monkeypatch):
+        self._configure(monkeypatch)
+        captured = self._capture(monkeypatch)
+        assert whatsapp_mod.send_otp_message("917983582371", "123456") is True
+        assert captured["url"].endswith("/v20.0/123/messages")
+        assert captured["headers"]["Authorization"] == "Bearer tok"
+        body = captured["json"]
+        assert body["to"] == "917983582371"
+        assert body["type"] == "template"
+        assert body["template"]["name"] == "voovr_otp"
+        assert body["template"]["language"] == {"code": "en"}
+        component = body["template"]["components"][0]
+        assert component["type"] == "body"
+        assert component["parameters"] == [{"type": "text", "text": "123456"}]
+
+    def test_template_language_defaults_to_en(self, monkeypatch):
+        self._configure(monkeypatch, WHATSAPP_OTP_LANG=None)
+        captured = self._capture(monkeypatch)
+        assert whatsapp_mod.send_otp_message("917983582371", "123456") is True
+        assert captured["json"]["template"]["language"] == {"code": "en"}
+
+    def test_falls_back_to_plain_text_when_no_template(self, monkeypatch):
+        self._configure(monkeypatch, WHATSAPP_OTP_TEMPLATE_NAME=None)
+        captured = self._capture(monkeypatch)
+        assert whatsapp_mod.send_otp_message("917983582371", "123456") is True
+        body = captured["json"]
+        assert body["type"] == "text"
+        assert "123456" in body["text"]["body"]
+
+    def test_non_2xx_returns_false(self, monkeypatch):
+        self._configure(monkeypatch)
+        self._capture(monkeypatch, status_code=400)
+        assert whatsapp_mod.send_otp_message("917983582371", "123456") is False
+
+    def test_missing_fields_make_no_request(self, monkeypatch):
+        self._configure(monkeypatch)
+        sent = []
+        monkeypatch.setattr(
+            whatsapp_mod.requests, "post",
+            lambda *a, **k: sent.append(1) or _FakeResp(),
+        )
+        assert whatsapp_mod.send_otp_message("", "123456") is False
+        assert whatsapp_mod.send_otp_message("917983582371", "") is False
+        assert sent == []
+
+    def test_not_configured_returns_false(self, monkeypatch):
+        self._configure(
+            monkeypatch,
+            WHATSAPP_ACCESS_TOKEN=None,
+            WHATSAPP_PHONE_NUMBER_ID=None,
+        )
+        sent = []
+        monkeypatch.setattr(
+            whatsapp_mod.requests, "post",
+            lambda *a, **k: sent.append(1) or _FakeResp(),
+        )
+        assert whatsapp_mod.send_otp_message("917983582371", "123456") is False
+        assert sent == []
+
+
+class TestPhoneOtpEndpointUsesTemplate:
+    """request_phone_otp delivers the code through send_otp_message (template
+    path when configured), not a free-form send_message.
+
+    Source-inspection on purpose: importing api.py triggers config.py, which
+    loads .env into the shared test process and flips field-encryption's KMS
+    gate. The repo's batch tests use the same style for rate-limit wiring."""
+
+    def _api_source(self):
+        path = os.path.join(os.path.dirname(__file__), "api.py")
+        return open(path, encoding="utf-8").read()
+
+    def _route_body(self, name):
+        source = self._api_source()
+        start = source.find(f"def {name}(")
+        assert start != -1, f"{name} not found in api.py"
+        end = source.find("\n@", start + 1)
+        return source[start:end if end != -1 else None]
+
+    def test_request_phone_otp_uses_send_otp_message(self):
+        body = self._route_body("request_phone_otp")
+        assert "send_otp_message(phone, otp)" in body
+        assert "send_message(" not in body
+
+    def test_request_phone_otp_still_returns_send_failed_on_failure(self):
+        body = self._route_body("request_phone_otp")
+        assert "send_failed" in body
+        assert "502" in body
+
+    def test_verify_phone_otp_still_intact(self):
+        body = self._route_body("verify_phone_otp")
+        assert "phone_otps" in body
+        assert "invalid_otp" in body
+        assert "phone_in_use" in body
 
 
 class TestWhatsAppWebhookHandshake:

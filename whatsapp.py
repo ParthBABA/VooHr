@@ -3,9 +3,12 @@
 Small, dependency-light wrapper around the Meta WhatsApp Business Cloud API:
 
   * ``send_message``            — outbound plain-text messages (meeting
-                                  reminders, intake acknowledgements, and the
-                                  one-time verification codes used when a user
-                                  links their number in Settings)
+                                  reminders, intake acknowledgements)
+  * ``send_otp_message``        — one-time verification codes for the
+                                  Settings phone-linking flow; sent via an
+                                  approved "Authentication" template when
+                                  ``WHATSAPP_OTP_TEMPLATE_NAME`` is set, with a
+                                  free-form text fallback otherwise
   * ``download_media``          — resolve a WhatsApp media ID to its temporary
                                   URL and fetch the raw audio bytes so an
                                   inbound voice note can be transcribed
@@ -18,6 +21,10 @@ Configuration (see ``.env.example``):
                                  account
     WHATSAPP_PHONE_NUMBER_ID   — the app's registered phone-number ID (used as
                                  the ``from`` sender for outbound messages)
+    WHATSAPP_OTP_TEMPLATE_NAME — name of an approved one-time-password template;
+                                 when set, ``send_otp_message`` uses it and the
+                                 code is sent as the body's ``{{1}}`` parameter
+    WHATSAPP_OTP_LANG          — template language code (default "en")
     WHATSAPP_APP_SECRET        — app secret, only needed for webhook signature
                                  checks
     WHATSAPP_VERIFY_TOKEN      — webhook handshake token, validated by the
@@ -78,6 +85,42 @@ def _graph_headers() -> dict:
     }
 
 
+def _post_message(to_phone: str, payload: dict, kind: str) -> bool:
+    """POST one outbound message payload to the Cloud API.
+
+    Returns ``True``/``False``, never raises. ``kind`` is a short tag (e.g.
+    ``text`` / ``otp_template``) used only in log lines.
+    """
+    if not is_configured():
+        logger.info(
+            "whatsapp_send=skipped reason=not_configured kind=%s phone_set=%s",
+            kind,
+            bool(to_phone),
+        )
+        return False
+
+    number_id = _env("WHATSAPP_PHONE_NUMBER_ID")
+    url = f"{_GRAPH_ENDPOINT}/{_API_VERSION}/{number_id}/messages"
+    try:
+        resp = requests.post(url, headers=_graph_headers(), json=payload, timeout=_REQUEST_TIMEOUT)
+    except requests.RequestException as exc:
+        logger.warning("whatsapp_send=failed kind=%s phone_set=%s error=%s", kind, bool(to_phone), exc)
+        return False
+
+    if 200 <= resp.status_code < 300:
+        logger.info("whatsapp_send=sent kind=%s phone_set=%s", kind, bool(to_phone))
+        return True
+
+    logger.warning(
+        "whatsapp_send=failed kind=%s phone_set=%s http=%s body=%s",
+        kind,
+        bool(to_phone),
+        resp.status_code,
+        resp.text[:500],
+    )
+    return False
+
+
 def send_message(to_phone: str, text: str) -> bool:
     """Send a plain WhatsApp text message via the Cloud API.
 
@@ -88,15 +131,7 @@ def send_message(to_phone: str, text: str) -> bool:
     if not text or not to_phone:
         logger.info("whatsapp_send=skipped reason=missing_fields phone_set=%s", bool(to_phone))
         return False
-    if not is_configured():
-        logger.info(
-            "whatsapp_send=skipped reason=not_configured phone_set=%s",
-            bool(to_phone),
-        )
-        return False
 
-    number_id = _env("WHATSAPP_PHONE_NUMBER_ID")
-    url = f"{_GRAPH_ENDPOINT}/{_API_VERSION}/{number_id}/messages"
     payload = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -104,23 +139,45 @@ def send_message(to_phone: str, text: str) -> bool:
         "type": "text",
         "text": {"body": text},
     }
-    try:
-        resp = requests.post(url, headers=_graph_headers(), json=payload, timeout=_REQUEST_TIMEOUT)
-    except requests.RequestException as exc:
-        logger.warning("whatsapp_send=failed phone_set=%s error=%s", bool(to_phone), exc)
+    return _post_message(to_phone, payload, kind="text")
+
+
+def send_otp_message(to_phone: str, otp: str) -> bool:
+    """Send a one-time verification code by WhatsApp.
+
+    Uses an approved message template (Meta's "Authentication" category) with
+    the code passed as the body's ``{{1}}`` parameter whenever
+    ``WHATSAPP_OTP_TEMPLATE_NAME`` is configured — the reliable path for
+    business-initiated messages even outside the 24-hour customer-service
+    window (free-form text to a number that has never messaged the business is
+    queued by the Cloud API but silently dropped). Falls back to a plain text
+    message otherwise. Returns ``True``/``False``, never raises.
+    """
+    if not otp or not to_phone:
+        logger.info("whatsapp_otp=skipped reason=missing_fields phone_set=%s", bool(to_phone))
         return False
 
-    if 200 <= resp.status_code < 300:
-        logger.info("whatsapp_send=sent phone_set=%s", bool(to_phone))
-        return True
+    template_name = _env("WHATSAPP_OTP_TEMPLATE_NAME")
+    if template_name:
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to_phone,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": _env("WHATSAPP_OTP_LANG") or "en"},
+                "components": [
+                    {"type": "body", "parameters": [{"type": "text", "text": otp}]}
+                ],
+            },
+        }
+        return _post_message(to_phone, payload, kind="otp_template")
 
-    logger.warning(
-        "whatsapp_send=failed phone_set=%s http=%s body=%s",
-        bool(to_phone),
-        resp.status_code,
-        resp.text[:500],
+    return send_message(
+        to_phone,
+        "Your VooVr verification code is " + otp + ". It expires in 10 minutes. Do not share it.",
     )
-    return False
 
 
 def download_media(media_id: str) -> bytes | None:
