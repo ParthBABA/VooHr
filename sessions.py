@@ -118,7 +118,7 @@ def _validate_image_magic_bytes(image_bytes: bytes) -> str | None:
 def _session_to_json(s) -> dict:
     return {
         "id": str(s["_id"]),
-        "employee_id": str(s["employee_id"]),
+        "employee_id": str(s["employee_id"]) if s.get("employee_id") else None,
         "source": s.get("source", "voice_dictation"),
         "status": s.get("status", "draft"),
         "language": s.get("language", "en"),
@@ -169,6 +169,55 @@ def _demote_stale_processing(db, s: dict) -> dict:
     return s
 
 
+def _insert_session_doc(
+    db,
+    org_id,
+    employee_id,
+    raw_text,
+    edited_text=None,
+    source="voice_dictation",
+    duration_seconds=0,
+    recording_device="browser",
+    recording_type="webm",
+    language="en",
+    audio=None,
+) -> dict:
+    """Build and insert a session document — the shared core both the browser
+    save flow (``POST /api/sessions``) and the WhatsApp intake channel use.
+
+    ``employee_id`` may be ``None`` for sessions created from an inbound
+    WhatsApp message: the sender is a linked user (an HR person), not an
+    employee, so the session starts unattributed. Returns the inserted doc
+    (with ``_id`` populated).
+    """
+    now = datetime.now(timezone.utc)
+    doc = {
+        "org_id": ObjectId(org_id) if not isinstance(org_id, ObjectId) else org_id,
+        "employee_id": ObjectId(employee_id) if employee_id else None,
+        "source": source,
+        "status": "transcribed",
+        "language": language,
+        "recording_device": recording_device,
+        "recording_duration": duration_seconds,
+        "recording_type": recording_type,
+        "audio": audio,
+        "transcript": {
+            "raw": raw_text,
+            "edited": edited_text or raw_text,
+            "word_count": len(raw_text.split()),
+        },
+        "analysis": None,
+        "analysis_version": 0,
+        "last_transcript_update": now,
+        "last_analyzed_at": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+    result = db.sessions.insert_one(doc)
+    doc["_id"] = result.inserted_id
+    return doc
+
+
 @sessions_bp.route("/sessions", methods=["POST"])
 def create_session():
     org_id = _require_auth()
@@ -213,32 +262,22 @@ def create_session():
     if not emp:
         return jsonify({"error": "employee_not_found"}), 404
 
-    now = datetime.now(timezone.utc)
-    doc = {
-        "org_id": ObjectId(org_id),
-        "employee_id": ObjectId(employee_id),
-        "source": source,
-        "status": "transcribed",
-        "language": language,
-        "recording_device": recording_device,
-        "recording_duration": duration,
-        "recording_type": recording_type,
-        "audio": data.get("audio"),
-        "transcript": {
-            "raw": raw_text,
-            "edited": data.get("edited_text") or raw_text,
-            "word_count": len(raw_text.split()),
-        },
-        "analysis": None,
-        "analysis_version": 0,
-        "last_transcript_update": now,
-        "last_analyzed_at": None,
-        "created_at": now,
-        "updated_at": now,
-    }
-
-    result = db.sessions.insert_one(doc)
-    doc["_id"] = result.inserted_id
+    # The document build + `db.sessions.insert_one(...)` live in the shared
+    # _insert_session_doc helper so the WhatsApp intake webhook (which has no
+    # authenticated session) can create sessions with the exact same shape.
+    doc = _insert_session_doc(
+        db,
+        org_id,
+        employee_id,
+        raw_text,
+        edited_text=data.get("edited_text"),
+        source=source,
+        duration_seconds=duration,
+        recording_device=recording_device,
+        recording_type=recording_type,
+        language=language,
+        audio=data.get("audio"),
+    )
 
     return jsonify(_session_to_json(doc)), 201
 

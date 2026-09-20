@@ -4,7 +4,9 @@ from flask import Blueprint, jsonify, make_response, request, session
 
 import re
 import threading
-from datetime import datetime, timezone
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
 
 from audit_log import (
     ACTION_ACCOUNT_DELETE,
@@ -26,6 +28,7 @@ from login_flow import (
 from password_utils import verify_password
 from providers.llm import _ALL_LANGUAGE_INSTRUCTIONS, SUPPORTED_ANALYSIS_LANGUAGES
 from totp_utils import verify_backup_code, verify_code
+from whatsapp import is_configured, normalize_phone, send_message
 
 api_bp = Blueprint("api", __name__)
 
@@ -130,6 +133,7 @@ def me():
             "email": pii.get("email", ""),
             "role": user["role"],
             "picture": user.get("picture"),
+            "phone_number": (user.get("phone_number") or "").strip() or None,
             "linked_employee_id": str(user["linked_employee_id"]) if user.get("linked_employee_id") else None,
             "just_registered": session.pop("just_registered", False),
             "organization": (
@@ -542,6 +546,158 @@ def update_user_notification_prefs():
     )
 
     return jsonify({"ok": True, "meeting_reminders": meeting_reminders})
+
+
+# ── WhatsApp number linking (dictation intake + reminder delivery) ─────
+# A phone number is only stored on the user doc (top-level `phone_number`)
+# after being verified with a one-time code sent over WhatsApp itself. This
+# reuses auth_email.py's OTP pattern, keyed on (user_id, phone).
+_PHONE_OTP_TTL = timedelta(minutes=10)
+_PHONE_OTP_MAX_ATTEMPTS = 5
+_PHONE_OTP_MAX_PER_NUMBER = 5     # max OTP sends per phone per window
+_PHONE_OTP_MAX_PER_USER = 10      # max OTP sends per user per window
+_PHONE_OTP_MAX_PER_IP = 20        # max OTP sends per IP per window
+_PHONE_OTP_RATE_WINDOW = 900      # 15-minute sliding window
+_PHONE_NUMBER_MIN_DIGITS = 7
+_PHONE_NUMBER_MAX_DIGITS = 15
+
+
+def _generate_phone_otp() -> str:
+    return f"{secrets.randbelow(900000) + 100000:06d}"
+
+
+def _phone_otp_hash(otp: str) -> str:
+    return hashlib.sha256(otp.encode()).hexdigest()
+
+
+def _check_phone_otp_rate_limit(db, phone, user_id, ip):
+    """Return None on success or a (response, status_code) tuple on 429,
+    mirroring auth_email._check_otp_send_rate_limit. Records the allowed events
+    so the budgets count toward future requests."""
+    for key, max_events in (
+        (f"phone_otp:{phone}", _PHONE_OTP_MAX_PER_NUMBER),
+        (f"phone_otp_user:{user_id}", _PHONE_OTP_MAX_PER_USER),
+        (f"phone_otp_ip:{ip}", _PHONE_OTP_MAX_PER_IP),
+    ):
+        allowed, retry_after = check_rate_limit(db, key, max_events, _PHONE_OTP_RATE_WINDOW)
+        if not allowed:
+            return jsonify({
+                "error": "Too many OTP requests. Please wait a few minutes before requesting another code.",
+                "retry_after": retry_after,
+            }), 429
+        record_rate_limit_event(db, key, ttl_seconds=_PHONE_OTP_RATE_WINDOW)
+    return None
+
+
+@api_bp.route("/settings/phone/request-otp", methods=["POST"])
+def request_phone_otp():
+    """Send a one-time verification code by WhatsApp to the entered number."""
+    user_id = _check_auth()
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not is_configured():
+        return jsonify({"error": "whatsapp_not_configured"}), 503
+
+    data = request.get_json(silent=True) or {}
+    phone = normalize_phone((data.get("phone") or "").strip())
+    if not (_PHONE_NUMBER_MIN_DIGITS <= len(phone) <= _PHONE_NUMBER_MAX_DIGITS):
+        return jsonify({"error": "invalid_phone"}), 400
+
+    db = get_db()
+    try:
+        uid = ObjectId(user_id)
+    except InvalidId:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    user = db.users.find_one({"_id": uid})
+    if not user:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    # A number already linked to another account must not be reusable (or
+    # spoofable into a takeover).
+    if db.users.find_one({"phone_number": phone, "_id": {"$ne": uid}}):
+        return jsonify({"error": "phone_in_use"}), 409
+
+    rate_limit_resp = _check_phone_otp_rate_limit(db, phone, user_id, _client_ip())
+    if rate_limit_resp:
+        return rate_limit_resp
+
+    otp = _generate_phone_otp()
+    now = datetime.now(timezone.utc)
+    db.phone_otps.update_one(
+        {"user_id": uid, "phone": phone},
+        {
+            "$set": {
+                "otp_hash": _phone_otp_hash(otp),
+                "attempts": 0,
+                "expires_at": now + _PHONE_OTP_TTL,
+                "last_sent_at": now,
+                "created_at": now,
+            }
+        },
+        upsert=True,
+    )
+
+    if not send_message(
+        phone,
+        "Your VooVr verification code is " + otp + ". It expires in 10 minutes. Do not share it.",
+    ):
+        return jsonify({"error": "send_failed"}), 502
+
+    return jsonify({"ok": True})
+
+
+@api_bp.route("/settings/phone/verify-otp", methods=["POST"])
+def verify_phone_otp():
+    """Confirm the code; only then save phone_number on the user doc."""
+    user_id = _check_auth()
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    data = request.get_json(silent=True) or {}
+    phone = normalize_phone((data.get("phone") or "").strip())
+    otp = (data.get("otp") or "").strip()
+    if not phone or not otp:
+        return jsonify({"error": "invalid_fields"}), 400
+
+    db = get_db()
+    try:
+        uid = ObjectId(user_id)
+    except InvalidId:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if db.users.find_one({"phone_number": phone, "_id": {"$ne": uid}}):
+        return jsonify({"error": "phone_in_use"}), 409
+
+    doc = db.phone_otps.find_one({"user_id": uid, "phone": phone})
+    if not doc:
+        return jsonify({"error": "no_pending_verification"}), 400
+
+    now = datetime.now(timezone.utc)
+    expires_at = doc.get("expires_at")
+    if expires_at and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at is None or expires_at < now:
+        return jsonify({"error": "expired"}), 400
+
+    if doc.get("attempts", 0) >= _PHONE_OTP_MAX_ATTEMPTS:
+        return jsonify({"error": "too_many_attempts"}), 429
+
+    if _phone_otp_hash(otp) != doc.get("otp_hash"):
+        db.phone_otps.update_one(
+            {"user_id": uid, "phone": phone},
+            {"$inc": {"attempts": 1}},
+        )
+        return jsonify({"error": "invalid_otp"}), 400
+
+    db.users.update_one({"_id": uid}, {"$set": {"phone_number": phone}})
+    db.phone_otps.delete_many({"user_id": uid, "phone": phone})
+
+    return jsonify({"ok": True, "phone_number": phone})
 
 
 def _extract_version(ua: str, marker: str, max_parts=None):

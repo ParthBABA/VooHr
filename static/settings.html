@@ -866,6 +866,30 @@ html[data-theme="light"]{
 
           <div class="st-section">
             <div class="st-sec-head">
+              <h3 class="st-sec-title">WhatsApp dictation</h3>
+              <span class="st-sec-desc">Dictate sessions straight from your phone</span>
+            </div>
+            <div class="st-fields">
+              <div class="st-field span-2">
+                <label for="waPhoneInput">Linked WhatsApp number</label>
+                <p class="st-hint">Verify a phone number to (1) dictate sessions by messaging your VooVr WhatsApp number and (2) receive meeting-reminder texts. A one-time code is sent to the number over WhatsApp itself.</p>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                  <input type="tel" class="form-input" id="waPhoneInput" placeholder="+1 555 123 4567" autocomplete="tel" style="flex:1; min-width:220px;">
+                  <button class="btn btn-primary" id="waSendCodeBtn" type="button">Send code</button>
+                </div>
+                <div class="field-error" id="waPhoneError"></div>
+                <div style="display:none; gap:10px; flex-wrap:wrap; margin-top:10px;" id="waOtpRow">
+                  <input type="text" class="form-input" id="waOtpInput" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="flex:1; min-width:120px;">
+                  <button class="btn btn-primary" id="waVerifyBtn" type="button">Verify</button>
+                </div>
+                <span class="st-hint" id="waPhoneStatus"></span>
+                <span class="st-hint" id="waPhoneMsg"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="st-section">
+            <div class="st-sec-head">
               <h3 class="st-sec-title">HR / employee alerts</h3>
               <span class="st-sec-desc">Managed by your organization admins</span>
             </div>
@@ -1550,6 +1574,122 @@ function clearFieldError(input){
   });
 
   loadMeetingPref();
+})();
+
+/* ── WHATSAPP NUMBER LINKING: verify a phone number via one-time code sent
+     over WhatsApp (enables dictation intake + meeting-reminder texts) ── */
+(function(){
+  var phoneInp = document.getElementById('waPhoneInput');
+  if (!phoneInp) return;
+  var sendBtn = document.getElementById('waSendCodeBtn');
+  var verifyBtn = document.getElementById('waVerifyBtn');
+  var otpInp = document.getElementById('waOtpInput');
+  var otpRow = document.getElementById('waOtpRow');
+  var statusEl = document.getElementById('waPhoneStatus');
+  var msgEl = document.getElementById('waPhoneMsg');
+  var errEl = document.getElementById('waPhoneError');
+  var currentPhone = '';
+
+  function setMsg(text, isError){
+    if (!msgEl) return;
+    msgEl.textContent = text || '';
+    msgEl.style.color = isError ? '#c0392b' : '#16a085';
+  }
+  function setErr(text){
+    if (!errEl) return;
+    errEl.textContent = text || '';
+  }
+
+  function showStatus(phone){
+    if (statusEl && phone) {
+      statusEl.textContent = 'Verified number: ' + phone;
+    } else if (statusEl) {
+      statusEl.textContent = 'No WhatsApp number linked yet.';
+    }
+  }
+
+  function loadPhone(){
+    fetch('/api/me').then(function(res){
+      return res.ok ? res.json() : null;
+    }).then(function(body){
+      if (body && body.phone_number) {
+        currentPhone = body.phone_number;
+        phoneInp.value = body.phone_number;
+        showStatus(body.phone_number);
+      } else {
+        showStatus('');
+      }
+    }).catch(function(){});
+  }
+
+  sendBtn.addEventListener('click', function(){
+    var raw = phoneInp.value.trim();
+    if (!raw) { setErr('Enter a phone number first.'); return; }
+    setErr('');
+    sendBtn.disabled = true;
+    msgEl.textContent = '';
+    fetch('/api/settings/phone/request-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: raw })
+    }).then(function(res) {
+      if (res.status === 503) {
+        throw new Error('WhatsApp is not configured on this workspace yet.');
+      }
+      if (!res.ok) {
+        return res.json().then(function(body){
+          var err = new Error(body.error === 'phone_in_use'
+            ? 'That number is already linked to another account.'
+            : (body.error || 'send_failed'));
+          err.code = body.error || 'send_failed';
+          throw err;
+        });
+      }
+      return res.json();
+    }).then(function() {
+      otpRow.style.display = 'flex';
+      otpInp.value = '';
+      otpInp.focus();
+      setMsg('Verification code sent. Enter the 6-digit code from WhatsApp.');
+    }).catch(function(e) {
+      setMsg(e.message || 'Could not send code — try again', true);
+    }).then(function(){ sendBtn.disabled = false; });
+  });
+
+  verifyBtn.addEventListener('click', function(){
+    var otp = otpInp.value.trim();
+    if (!otp) { setErr('Enter the code you received on WhatsApp.'); return; }
+    setErr('');
+    verifyBtn.disabled = true;
+    fetch('/api/settings/phone/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phoneInp.value.trim(), otp: otp })
+    }).then(function(res) {
+      if (!res.ok) {
+        return res.json().then(function(body){
+          var err = new Error(body.error === 'invalid_otp'
+            ? 'That code is incorrect — try again.'
+            : (body.error === 'expired'
+              ? 'That code has expired. Request a new one.'
+              : (body.error || 'verification_failed')));
+          err.code = body.error || 'verification_failed';
+          throw err;
+        });
+      }
+      return res.json();
+    }).then(function(body) {
+      currentPhone = body.phone_number || phoneInp.value.trim();
+      showStatus(currentPhone);
+      otpRow.style.display = 'none';
+      phoneInp.value = currentPhone;
+      setMsg('WhatsApp number verified.');
+    }).catch(function(e) {
+      setMsg(e.message || 'Verification failed — try again', true);
+    }).then(function(){ verifyBtn.disabled = false; });
+  });
+
+  loadPhone();
 })();
 
 /* ── ACTIVE SESSIONS: real session tracking + revoke ── */

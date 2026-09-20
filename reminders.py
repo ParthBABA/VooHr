@@ -26,6 +26,7 @@ from bson.errors import InvalidId
 from flask import Blueprint, jsonify, request
 
 import email_service
+import whatsapp
 from employees import _require_auth
 from extensions import get_db
 from field_encryption import decrypt_fields
@@ -229,12 +230,10 @@ def _whatsapp_reminder_text(employee_name, meeting_time, reminder_summary, stage
 
 
 def _send_reminder_whatsapp(to_phone: str, text: str) -> bool:
-    """TODO(whatsapp): WhatsApp Cloud API outbound is not wired up yet.
+    """Send a reminder text via the WhatsApp Cloud API helper.
 
-    The earlier WhatsApp intake integration never landed — there is no
-    whatsapp.py module and no WHATSAPP_ACCESS_TOKEN env var. This is an
-    intentional no-op stub so reminder generation keeps working today; wire it
-    to `whatsapp.send_message(to_phone, text)` once that helper exists.
+    Returns True/False; every failure is logged and swallowed by the caller
+    (a bad number or dead provider must never block reminder generation).
     """
     if not to_phone:
         return False
@@ -244,10 +243,7 @@ def _send_reminder_whatsapp(to_phone: str, text: str) -> bool:
             bool(to_phone),
         )
         return False
-    # TODO(whatsapp): call the Cloud API helper here — this line is unreachable
-    # until WHATSAPP_ACCESS_TOKEN is configured.
-    logger.info("reminder_whatsapp=sent phone=%s", to_phone)
-    return True
+    return whatsapp.send_message(to_phone, text)
 
 
 def _deliver_reminder_channels(db, org_id, meeting, it, stage):

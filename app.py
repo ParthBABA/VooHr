@@ -27,6 +27,7 @@ from sessions import sessions_bp
 from totp_routes import totp_bp
 from tts import tts_bp
 from surveys import surveys_bp
+from whatsapp_routes import whatsapp_bp
 from page_rendering import metadata, render_page
 
 logger = logging.getLogger(__name__)
@@ -132,6 +133,21 @@ def create_app():
     else:
         logger.warning("LLM config: provider=%s api key=MISSING — analysis requests will fail", _llm_provider)
 
+    # Startup sanity check for the WhatsApp Cloud API config, mirroring the
+    # email/LLM checks above. Missing pieces are loud at boot instead of
+    # surfacing only when dictation intake or reminder delivery is attempted.
+    # Only presence is logged, never the token/secret values.
+    _wa_token_set = bool((os.environ.get("WHATSAPP_ACCESS_TOKEN") or "").strip())
+    _wa_phone_set = bool((os.environ.get("WHATSAPP_PHONE_NUMBER_ID") or "").strip())
+    if _wa_token_set and _wa_phone_set:
+        logger.info("WhatsApp config: access_token=set phone_number_id=set verify_token=%s app_secret=%s",
+                    "set" if os.environ.get("WHATSAPP_VERIFY_TOKEN") else "MISSING",
+                    "set" if os.environ.get("WHATSAPP_APP_SECRET") else "MISSING")
+    else:
+        logger.warning("WhatsApp config: access_token=%s phone_number_id=%s — WhatsApp dictation + reminders disabled",
+                       "set" if _wa_token_set else "MISSING",
+                       "set" if _wa_phone_set else "MISSING")
+
     init_db(app)
     register_google_oauth(app)
 
@@ -149,6 +165,7 @@ def create_app():
     app.register_blueprint(surveys_bp, url_prefix="/api")
     app.register_blueprint(tts_bp, url_prefix="/api")
     app.register_blueprint(jobs_bp, url_prefix="/api")
+    app.register_blueprint(whatsapp_bp, url_prefix="/api")
 
     @app.errorhandler(TOTPRequired)
     def _handle_totp_required(exc):

@@ -100,6 +100,32 @@ routed to a provider that does support it (Google first); if no provider can
 voice it, the API returns `{"error": "unsupported_tts_language"}` instead of
 falling back to mispronounced English audio.
 
+## WhatsApp dictation channel
+
+Users can dictate sessions from their phone: send a **voice note or text
+message** to the app's WhatsApp Business number and it becomes a dictation
+session (source `whatsapp_dictation`), visible under Activities in the
+notifications hub. The same integration delivers meeting-reminder texts and
+the phone-verification OTP.
+
+Sender numbers are mapped through `users.phone_number`, verified in advance
+via a one-time code sent over WhatsApp itself (Settings → Notifications →
+WhatsApp dictation). Inbound messages hit the `X-Hub-Signature-256`-verified
+webhook at `GET/POST /api/whatsapp/webhook`; unmatched numbers get a reply
+telling them to link the number first, and intake is rate-limited per sender
+(50 messages / hour).
+
+Requires these env vars (see `.env.example`):
+
+- `WHATSAPP_ACCESS_TOKEN` — Facebook Graph API system-user access token.
+- `WHATSAPP_PHONE_NUMBER_ID` — numeric ID of the WhatsApp Business number.
+- `WHATSAPP_VERIFY_TOKEN` — your own random string; echoed in the Meta
+  webhook handshake.
+- `WHATSAPP_APP_SECRET` — Meta app secret; verifies inbound signatures.
+
+Register the webhook URL `https://<your-domain>/api/whatsapp/webhook` (GET =
+verification, POST = message events) in the Meta developer console.
+
 ## Running tests
 
 Install the dev dependencies (includes pytest and the security scanners), then run the suite:

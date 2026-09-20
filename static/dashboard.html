@@ -1557,13 +1557,14 @@ function escHtml(str) {
 
       var sevClass = 'alert-severity ' + (n.read ? 'read' : 'critical');
       if (!n.read && n.type === 'audio_ready') sevClass = 'alert-severity audio';
+      else if (!n.read && n.type === 'session_ready') sevClass = 'alert-severity audio';
       else if (!n.read && n.type === 'translation_ready') sevClass = 'alert-severity translation';
       var sev = document.createElement('span');
       sev.className = sevClass;
 
       var body = document.createElement('span');
       body.className = 'alert-body';
-      var isJobType = (n.type === 'translation_ready' || n.type === 'audio_ready');
+      var isJobType = (n.type === 'translation_ready' || n.type === 'audio_ready' || n.type === 'session_ready');
       if (isJobType) {
         // Single-sentence layout: no headline bolted into a "name" slot — the
         // finishing line IS the notification text, with the time on the right.
@@ -1617,7 +1618,7 @@ function escHtml(str) {
     // Fire-and-forget: optimistically mark read, then route.
     fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
     closeDropdown();
-    if (n.type === 'translation_ready' || n.type === 'audio_ready') {
+    if (n.type === 'translation_ready' || n.type === 'audio_ready' || n.type === 'session_ready') {
       var q = [];
       if (n.source_session_id) q.push('session_id=' + encodeURIComponent(n.source_session_id));
       if (n.employee_id) q.push('employee_id=' + encodeURIComponent(n.employee_id));

@@ -206,6 +206,16 @@ def _init_indexes(db):
     # Query: find_one({email_hash}) in auth_email.py
     db.otp_verifications.create_index("email_hash", background=True)
 
+    # ── phone_otps (WhatsApp number linking) ───────────────────────────
+    # Query: find_one({user_id, phone}) in api.py's request/verify phone OTP
+    db.phone_otps.create_index(
+        [("user_id", ASCENDING), ("phone", ASCENDING)],
+        background=True,
+    )
+    # ── users ──────────────────────────────────────────────────────────
+    # Query: find_one({phone_number}) in whatsapp_routes inbound delivery
+    db.users.create_index("phone_number", background=True)
+
     # ── audit_log ──────────────────────────────────────────────────────
     # Query: find({org_id}).sort("created_at", -1) in the /api/audit-log route
     db.audit_log.create_index(
