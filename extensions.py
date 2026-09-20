@@ -304,7 +304,10 @@ def check_rate_limit(db, key, max_events, window_seconds):
             sort=[("ts", 1)],
         )
         if oldest:
-            remaining = (oldest["ts"] + timedelta(seconds=window_seconds) - now).total_seconds()
+            oldest_ts = oldest["ts"]
+            if oldest_ts.tzinfo is None:
+                oldest_ts = oldest_ts.replace(tzinfo=timezone.utc)
+            remaining = (oldest_ts + timedelta(seconds=window_seconds) - now).total_seconds()
             return False, max(1, int(remaining) + 1)
         return False, window_seconds
     return True, None
