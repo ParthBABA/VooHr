@@ -11,15 +11,26 @@ from employees import _employee_to_json
 from employees import _NEVER_MATCH
 from employees import _employee_scope_filter
 from employees import _employee_accessible
+from audit_log import (
+    ACTION_MEETING_CREATE,
+    ACTION_MEETING_UPDATE,
+    ACTION_MEETING_DELETE,
+    log_audit_event,
+)
+from conversation_memory import _effective_status
 from extensions import get_db
 from reminders import MEETING_MISSED_GRACE
 from reminders import surface_items, ensure_reminder_notifications
+from reminders import _meeting_owner
 
 logger = logging.getLogger(__name__)
 
 meetings_bp = Blueprint("meetings", __name__)
 
 MEETING_STATUSES = {"scheduled", "completed", "cancelled", "missed"}
+
+# Meeting-prep lifecycle: whether HR has prepared for the meeting.
+PREPARATION_STATUSES = {"not_started", "in_progress", "completed"}
 
 MAX_MEETING_TITLE_LEN = 200
 
@@ -38,6 +49,7 @@ def _meeting_to_json(m, emp=None) -> dict:
         "title": m.get("title", ""),
         "scheduled_at": _aware(m["scheduled_at"]).isoformat() if m.get("scheduled_at") else None,
         "status": m.get("status", "scheduled"),
+        "preparation_status": m.get("preparation_status", "not_started"),
         "session_id": str(m["session_id"]) if m.get("session_id") else None,
         "created_at": _aware(m["created_at"]).isoformat() if m.get("created_at") else None,
         "updated_at": _aware(m["updated_at"]).isoformat() if m.get("updated_at") else None,
@@ -151,6 +163,7 @@ def create_meeting():
         "title": title,
         "scheduled_at": scheduled_dt,
         "status": "scheduled",
+        "preparation_status": "not_started",
         "session_id": session_oid,
         "created_by": ObjectId(session.get("user_id")) if session.get("user_id") else None,
         "created_at": now,
@@ -158,6 +171,18 @@ def create_meeting():
     }
     result = db.meetings.insert_one(doc)
     doc["_id"] = result.inserted_id
+
+    try:
+        log_audit_event(
+            db, org_id, str(session.get("user_id") or ""),
+            session.get("user_name") or "", ACTION_MEETING_CREATE,
+            target_type="meeting", target_id=str(doc["_id"]),
+            target_label=title,
+            meta={"employee_id": str(doc["employee_id"]), "scheduled_at": scheduled_dt.isoformat()},
+        )
+    except Exception:
+        logger.exception("audit log meeting.create failed")
+
     return jsonify(_meeting_to_json(doc, emp)), 201
 
 
@@ -294,16 +319,18 @@ def meetings_dashboard():
             if eid not in latest_completed:
                 latest_completed[eid] = s
 
-    # For surfacing/reminders we only need the actionable subset: PENDING
-    # (commitments/follow-ups; OVERDUE is derived at read time) and SAVED
-    # (not-yet-used openers/questions/notes). Full histories are loaded on
-    # demand by the detail views.
-    memory_filter = {"org_id": org_oid, "status": {"$in": ["PENDING", "SAVED"]}}
+    # For surfacing/reminders we only need the actionable subset: PENDING /
+    # IN_PROGRESS (commitments/follow-ups; OVERDUE is derived at read time),
+    # and SAVED (not-yet-used openers/questions/notes).  Archive is excluded
+    # below. Full histories are loaded on demand by the detail views.
+    memory_filter = {"org_id": org_oid, "status": {"$in": ["PENDING", "SAVED", "IN_PROGRESS"]}}
     if allowed_ids is not None:
         memory_filter["employee_id"] = {"$in": allowed_ids}
     memory = list(db.conversation_memory.find(memory_filter))
     by_emp: dict = {}
     for m in memory:
+        if m.get("archive"):
+            continue
         eid = str(m.get("employee_id"))
         agg = by_emp.setdefault(eid, {
             "pending_commitments": 0, "pending_followups": 0,
@@ -316,14 +343,14 @@ def meetings_dashboard():
         effective = status
         if (
             mt in ("COMMITMENT", "FOLLOW_UP")
-            and status == "PENDING"
+            and status in ("PENDING", "IN_PROGRESS")
             and due_at is not None
             and _aware(due_at) < now
         ):
             effective = "OVERDUE"
-        if mt == "COMMITMENT" and effective in ("PENDING", "OVERDUE"):
+        if mt == "COMMITMENT" and effective in ("PENDING", "IN_PROGRESS", "OVERDUE"):
             agg["pending_commitments"] += 1
-        if mt == "FOLLOW_UP" and effective in ("PENDING", "OVERDUE"):
+        if mt == "FOLLOW_UP" and effective in ("PENDING", "IN_PROGRESS", "OVERDUE"):
             agg["pending_followups"] += 1
             if effective == "OVERDUE":
                 agg["overdue_followups"] += 1
@@ -336,7 +363,7 @@ def meetings_dashboard():
         if mt == "QUESTION" and status == "USED":
             agg["questions_used"] += 1
         # Collect the actual open items for the Follow section + detail
-        if mt in ("COMMITMENT", "FOLLOW_UP") and effective in ("PENDING", "OVERDUE"):
+        if mt in ("COMMITMENT", "FOLLOW_UP") and effective in ("PENDING", "IN_PROGRESS", "OVERDUE"):
             agg["open_items"].append({
                 "id": str(m["_id"]),
                 "type": mt,
@@ -514,6 +541,12 @@ def update_meeting(meeting_id: str):
             return jsonify({"error": "invalid_status"}), 400
         set_fields["status"] = status
 
+    if "preparation_status" in data:
+        prep = (data["preparation_status"] or "").strip()
+        if prep not in PREPARATION_STATUSES:
+            return jsonify({"error": "invalid_preparation_status"}), 400
+        set_fields["preparation_status"] = prep
+
     if "session_id" in data:
         session_id = data.get("session_id")
         if session_id:
@@ -537,6 +570,24 @@ def update_meeting(meeting_id: str):
     db.meetings.update_one({"_id": ObjectId(meeting_id)}, {"$set": set_fields})
     m = db.meetings.find_one({"_id": ObjectId(meeting_id)})
     emp = db.employees.find_one({"_id": m["employee_id"], "org_id": ObjectId(org_id)})
+
+    try:
+        log_audit_event(
+            db, org_id, str(session.get("user_id") or ""),
+            session.get("user_name") or "", ACTION_MEETING_UPDATE,
+            target_type="meeting", target_id=str(m["_id"]),
+            target_label=m.get("title", ""),
+            meta={"changed_fields": sorted(set_fields.keys())},
+        )
+    except Exception:
+        logger.exception("audit log meeting.update failed")
+
+    # Phase 6: notify the HR owner about high-signal meeting state changes.
+    try:
+        _maybe_meeting_event_notification(db, org_id, m, set_fields)
+    except Exception:
+        logger.exception("meeting event notification failed")
+
     return jsonify(_meeting_to_json(m, emp))
 
 
@@ -561,4 +612,157 @@ def delete_meeting(meeting_id: str):
         return jsonify({"error": "forbidden"}), 403
 
     db.meetings.delete_one({"_id": oid, "org_id": ObjectId(org_id)})
+
+    try:
+        log_audit_event(
+            db, org_id, str(session.get("user_id") or ""),
+            session.get("user_name") or "", ACTION_MEETING_DELETE,
+            target_type="meeting", target_id=str(oid),
+            target_label=m.get("title", ""),
+        )
+    except Exception:
+        logger.exception("audit log meeting.delete failed")
+
     return jsonify({"ok": True})
+
+
+# ── Meeting event notifications (reschedule / cancel) ──────────────────
+# Fire-and-forget in-app notifications so the HR owner is informed when a
+# meeting is rescheduled or cancelled.  Deduplicated per (org, meeting,
+# event) so PATCH retries never double-notify.
+
+
+def _maybe_meeting_event_notification(db, org_id, meeting, set_fields):
+    now = datetime.now(timezone.utc)
+    event = None
+    headline = "A meeting was rescheduled"
+    if set_fields.get("status") == "cancelled":
+        event = "meeting_cancelled"
+        headline = "A meeting was cancelled"
+    elif set_fields.get("scheduled_at"):
+        event = "meeting_rescheduled"
+    else:
+        return
+
+    if db.notifications.find_one({
+        "org_id": ObjectId(org_id),
+        "meeting_id": meeting["_id"],
+        "event_key": event,
+    }):
+        return
+
+    owner = _meeting_owner(db, org_id, meeting)
+    recipient = str(owner["_id"]) if owner else None
+    db.notifications.insert_one({
+        "org_id": ObjectId(org_id),
+        "type": "meeting_event",
+        "headline": headline,
+        "summary": meeting.get("title", "") or "Meeting",
+        "confidence": 0,
+        "employee_id": meeting.get("employee_id"),
+        "source_session_id": None,
+        "meeting_id": meeting["_id"],
+        "memory_id": None,
+        "stage": event,
+        "event_key": event,
+        "recipient_user_id": recipient,
+        "read": False,
+        "dismissed": False,
+        "created_at": now,
+    })
+
+
+# ── Meeting preparation (dedicated prep endpoint) ──────────────────────
+
+
+def _prep_memory_item(it, now):
+    """Compact, authorized serialization of a memory record for the prep
+    response.  Only stored factual fields — never raw analysis or encrypted
+    PII beyond what the employee serializer already exposes."""
+    due = it.get("due_at")
+    status = _effective_status(it, now)
+    return {
+        "id": str(it["_id"]),
+        "type": it.get("type"),
+        "content": it.get("content", ""),
+        "status": status,
+        "confirmation_status": it.get("confirmation_status") or "confirmed",
+        "due_at": _aware(due).isoformat() if due else None,
+        "priority": it.get("priority") or "medium",
+        "owner_user_id": str(it["owner_user_id"]) if it.get("owner_user_id") else None,
+        "session_id": str(it["session_id"]) if it.get("session_id") else None,
+        "created_at": _aware(it["created_at"]).isoformat() if it.get("created_at") else None,
+    }
+
+
+@meetings_bp.route("/meetings/<meeting_id>/prep")
+def meeting_prep(meeting_id: str):
+    """Structured meeting-preparation summary.
+
+    Only records belonging to the authenticated user's organization and
+    accessible to that user (admin → full org, manager → their team).  The
+    ``suggested_topics`` array is reserved for AI-generated suggestions
+    (confirmation_status != "confirmed"); today the system never writes
+    memory automatically, so it is empty unless a future producer opts in.
+    """
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        m = db.meetings.find_one({"_id": ObjectId(meeting_id), "org_id": ObjectId(org_id)})
+    except InvalidId:
+        return jsonify({"error": "invalid_id"}), 400
+    if not m:
+        return jsonify({"error": "not_found"}), 404
+
+    # IDOR guard: a manager must not fetch prep for another team's meeting.
+    if _meeting_emp_denied(db, org_id, m):
+        return jsonify({"error": "forbidden"}), 403
+
+    emp = db.employees.find_one({"_id": m["employee_id"], "org_id": ObjectId(org_id)})
+    if not emp:
+        return jsonify({"error": "employee_not_found"}), 404
+
+    now = datetime.now(timezone.utc)
+    memory = list(db.conversation_memory.find({
+        "org_id": ObjectId(org_id),
+        "employee_id": m["employee_id"],
+        "archive": {"$ne": True},
+    }).sort("created_at", 1))
+
+    items = [_prep_memory_item(it, now) for it in memory]
+    openers = [i for i in items if i["type"] == "OPENER"]
+    notes = [i for i in items if i["type"] == "NOTE"]
+    commitments = [i for i in items if i["type"] == "COMMITMENT"]
+    follow_ups = [i for i in items if i["type"] == "FOLLOW_UP"]
+
+    open_commitments = [
+        c for c in commitments if c["status"] in ("PENDING", "IN_PROGRESS", "OVERDUE")
+    ]
+
+    prep_status = m.get("preparation_status") or "not_started"
+    return jsonify({
+        "employee": _employee_to_json(emp) if emp else None,
+        "meeting": _meeting_to_json(m, emp),
+        "preparation_status": prep_status,
+        "preparation_completed": prep_status == "completed",
+        "generated_at": now.isoformat(),
+        "confirmed_openers": [o for o in openers if o["confirmation_status"] == "confirmed"],
+        "previously_used_openers": [
+            o for o in openers if o["status"] == "USED" and o["confirmation_status"] == "confirmed"
+        ],
+        "current_openers": [
+            o for o in openers if o["status"] == "SAVED" and o["confirmation_status"] == "confirmed"
+        ],
+        "discussion_points": notes,
+        "pending_commitments": [c for c in open_commitments if not c.get("owner_user_id")],
+        "hr_commitments": [c for c in open_commitments if c.get("owner_user_id")],
+        "follow_ups": follow_ups,
+        "overdue_follow_ups": [f for f in follow_ups if f["status"] == "OVERDUE"],
+        "suggested_topics": [i for i in items if i["confirmation_status"] == "suggested"],
+        "meta": {
+            "note": "suggested_topics are AI-generated suggestions that require HR confirmation before being treated as factual employee records."
+        },
+    })

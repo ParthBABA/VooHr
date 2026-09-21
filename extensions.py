@@ -140,6 +140,25 @@ def _init_indexes(db):
         partialFilterExpression={"type": "meeting_reminder"},
         background=True,
     )
+    # Meeting event (reschedule/cancel) + overdue-item dedup — one notification
+    # per (org, meeting|None, event_key) so PATCH retries and concurrent sweep
+    # workers never double-notify.
+    db.notifications.create_index(
+        [
+            ("org_id", ASCENDING),
+            ("meeting_id", ASCENDING),
+            ("event_key", ASCENDING),
+        ],
+        unique=True,
+        partialFilterExpression={"type": {"$in": ["meeting_event", "memory_overdue"]}},
+        background=True,
+    )
+    # Reminder retry sweep: find({org_id, delivery_status}) for pending/failed
+    # delivery retries with bounded backoff.
+    db.notifications.create_index(
+        [("org_id", ASCENDING), ("delivery_status", ASCENDING)],
+        background=True,
+    )
 
     # ── meetings ───────────────────────────────────────────────────────
     # Query: find({org_id}).sort("scheduled_at", 1) in list_meetings
@@ -152,6 +171,12 @@ def _init_indexes(db):
         [("org_id", ASCENDING), ("employee_id", ASCENDING)],
         background=True,
     )
+    # Query: find({org_id, status, scheduled_at}) for the reminder sweep +
+    # stale-missed sweep (the scheduler and dashboard).
+    db.meetings.create_index(
+        [("org_id", ASCENDING), ("status", ASCENDING), ("scheduled_at", ASCENDING)],
+        background=True,
+    )
 
     # ── conversation_memory ────────────────────────────────────────────
     # Query: find({org_id, employee_id}).sort("created_at", 1)
@@ -162,6 +187,22 @@ def _init_indexes(db):
     # Query: find({org_id, session_id}) for previous-session memory
     db.conversation_memory.create_index(
         [("org_id", ASCENDING), ("session_id", ASCENDING)],
+        background=True,
+    )
+    # Query: find({org_id, status: {$in: [...]}}) in the reminder surfacing +
+    # dashboard open-item aggregation.
+    db.conversation_memory.create_index(
+        [("org_id", ASCENDING), ("status", ASCENDING)],
+        background=True,
+    )
+    # Query: prep/surfacing for AI-vs-HR provenance filters.
+    db.conversation_memory.create_index(
+        [("org_id", ASCENDING), ("confirmation_status", ASCENDING)],
+        background=True,
+    )
+    # Query: overdue due-date sweeps over open commitments/follow-ups.
+    db.conversation_memory.create_index(
+        [("org_id", ASCENDING), ("type", ASCENDING), ("due_at", ASCENDING)],
         background=True,
     )
 

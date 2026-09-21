@@ -22,7 +22,7 @@ from jobs import jobs_bp
 from extensions import get_db, init_db, check_rate_limit, record_rate_limit_event, client_ip
 from meetings import meetings_bp
 from notifications import notifications_bp
-from reminders import reminders_bp
+from reminders import reminders_bp, start_reminder_sweep
 from sessions import sessions_bp
 from totp_routes import totp_bp
 from tts import tts_bp
@@ -166,6 +166,12 @@ def create_app():
     app.register_blueprint(tts_bp, url_prefix="/api")
     app.register_blueprint(jobs_bp, url_prefix="/api")
     app.register_blueprint(whatsapp_bp, url_prefix="/api")
+
+    # ── Reminder sweep background daemon ──────────────────────────────
+    # One low-rate daemon thread walks orgs, generating/retrying reminders and
+    # overdue notifications.  Multi-worker safe (unique partial index + CAS
+    # claims) and env-gated — REMINDER_SWEEP_ENABLED / REMINDER_SWEEP_INTERVAL_SECONDS.
+    start_reminder_sweep(app)
 
     @app.errorhandler(TOTPRequired)
     def _handle_totp_required(exc):

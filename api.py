@@ -347,6 +347,8 @@ def delete_me():
     if delete_org and org_id:
         db.employees.delete_many({"org_id": org_id})
         db.sessions.delete_many({"org_id": org_id})
+        db.meetings.delete_many({"org_id": org_id})
+        db.conversation_memory.delete_many({"org_id": org_id})
         db.notifications.delete_many({"org_id": org_id})
         db.audit_log.delete_many({"org_id": org_id})
         db.organizations.delete_one({"_id": org_id})

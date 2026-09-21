@@ -392,6 +392,21 @@ html[data-theme="light"]{
 .settings-content .st-danger-btn{background:var(--red)!important;border:1px solid var(--red-glow)!important;color:#fff!important;}
 .settings-content .st-danger-btn:hover{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important;}
 
+/* Security overview and metadata rows use the existing settings rhythm. */
+.settings-panel[data-panel="security"] .st-section.st-card{margin-bottom:var(--sp-sm);}
+.security-overview{padding-top:1.15rem!important;padding-bottom:1.15rem!important;}
+.security-overview .st-sec-head{margin-bottom:0.8rem;}
+.security-overview-statuses{display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;}
+.security-overview-statuses .st-status{font-size:0.8rem;}
+.security-overview-statuses .st-status.ok .st-dot{background:var(--teal);}
+.security-overview-statuses .st-status.warn .st-dot{background:var(--amber);}
+.security-overview-statuses .st-status.neutral .st-dot{background:var(--ivory-faint);}
+.security-low-codes{color:var(--amber);}
+@media(max-width:768px){
+  .security-overview-statuses{align-items:flex-start;flex-direction:column;gap:0.55rem;}
+  .settings-panel[data-panel="security"] .st-row-actions{align-self:flex-start;}
+}
+
 /* ════ REFACTOR: shared spacing utilities (CSS custom props, no inline styles) ════ */
 .mt-sm{margin-top:var(--sp-sm);}.mt-md{margin-top:var(--sp-md);}.mt-lg{margin-top:var(--sp-lg);}
 .mb-sm{margin-bottom:var(--sp-sm);}.mb-md{margin-bottom:var(--sp-md);}.mb-lg{margin-bottom:var(--sp-lg);}
@@ -1050,8 +1065,19 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <p class="st-desc">Protect your VooVr account and manage authentication methods.</p>
           </div>
 
+          <div class="st-section st-card security-overview">
+            <div class="st-sec-head">
+              <h3 class="st-sec-title">Security overview</h3>
+              <span class="st-sec-desc" id="securityOverviewCount">Loading&hellip;</span>
+            </div>
+            <div class="security-overview-statuses">
+              <span class="st-status neutral" id="securityOverviewTotp"><span class="st-dot"></span>2FA loading&hellip;</span>
+              <span class="st-status neutral" id="securityOverviewRecovery"><span class="st-dot"></span>Recovery codes loading&hellip;</span>
+            </div>
+          </div>
+
           <!-- TWO-FACTOR AUTHENTICATION -->
-          <div class="st-section st-card mb-md">
+          <div class="st-section st-card mb-sm">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Two-Factor Authentication</h3>
               <span class="st-sec-desc">Extra protection for your account.</span>
@@ -1067,6 +1093,15 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
               <div class="st-row-actions">
                 <span class="st-status" id="totpStatusText"><span class="st-dot"></span>Loading&hellip;</span>
                 <a class="btn btn-sm btn-outline" id="enable2faBtn" href="/settings/security/setup-totp" style="display:none;">Enable 2FA</a>
+              </div>
+            </div>
+            <div class="st-row">
+              <div class="st-row-main">
+                <div class="st-row-title">Setup details</div>
+                <div class="st-row-desc" id="totpEnabledMeta">Checking setup date&hellip;</div>
+              </div>
+              <div class="st-row-actions">
+                <span class="st-monoline" id="totpEnabledDate">Loading&hellip;</span>
               </div>
             </div>
           </div>
@@ -1087,7 +1122,17 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
               </div>
               <div class="st-row-actions">
                 <span class="st-monoline" id="backupCodesText">Loading&hellip;</span>
+                <span class="st-status warn security-low-codes" id="backupCodesWarning" style="display:none;"><span class="st-dot"></span>Running low &mdash; regenerate soon.</span>
                 <button class="btn btn-sm btn-outline" id="regenerateCodesBtn" type="button" style="display:none;">Regenerate codes</button>
+              </div>
+            </div>
+            <div class="st-row">
+              <div class="st-row-main">
+                <div class="st-row-title">Last generated</div>
+                <div class="st-row-desc" id="backupCodesGeneratedMeta">When these recovery codes were created.</div>
+              </div>
+              <div class="st-row-actions">
+                <span class="st-monoline" id="backupCodesGeneratedDate">Loading&hellip;</span>
               </div>
             </div>
           </div>
@@ -2273,10 +2318,49 @@ function clearFieldError(input){
 (function(){
   var statusText=document.getElementById('totpStatusText');
   var codesText=document.getElementById('backupCodesText');
+  var codesWarning=document.getElementById('backupCodesWarning');
   var regenBtn=document.getElementById('regenerateCodesBtn');
   var enableBtn=document.getElementById('enable2faBtn');
+  var overviewCount=document.getElementById('securityOverviewCount');
+  var overviewTotp=document.getElementById('securityOverviewTotp');
+  var overviewRecovery=document.getElementById('securityOverviewRecovery');
+  var enabledMeta=document.getElementById('totpEnabledMeta');
+  var enabledDate=document.getElementById('totpEnabledDate');
+  var generatedMeta=document.getElementById('backupCodesGeneratedMeta');
+  var generatedDate=document.getElementById('backupCodesGeneratedDate');
   var dot=statusText?statusText.querySelector('.st-dot'):null;
   if(!statusText) return;
+
+  function formatSecurityDate(value){
+    if(!value) return 'Date unavailable';
+    var date=new Date(value);
+    if(isNaN(date.getTime())) return 'Date unavailable';
+    return date.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  }
+
+  function setOverview(totpOn, recoveryOn){
+    var enabled=(totpOn?1:0)+(recoveryOn?1:0);
+    if(overviewCount) overviewCount.textContent=enabled+' of 2 protections enabled';
+    if(overviewTotp){
+      overviewTotp.className='st-status '+(totpOn?'ok':'warn');
+      overviewTotp.innerHTML='<span class="st-dot"></span>2FA '+(totpOn?'enabled':'not enabled');
+    }
+    if(overviewRecovery){
+      overviewRecovery.className='st-status '+(recoveryOn?'ok':'warn');
+      overviewRecovery.innerHTML='<span class="st-dot"></span>Recovery codes '+(recoveryOn?'available':'not available');
+    }
+  }
+
+  function setSecurityDates(totpData, codesData){
+    var totpOn=!!(totpData && totpData.totp_enabled);
+    var recoveryOn=!!(codesData && codesData.has_backup_codes);
+    var enabledAt=totpData && (totpData.enabled_at || totpData.totp_enabled_at);
+    var generatedAt=codesData && (codesData.generated_at || codesData.last_generated_at);
+    if(enabledMeta) enabledMeta.textContent=!totpOn?'Not enabled':(enabledAt?'Authenticator setup date':'Enabled date unavailable');
+    if(enabledDate) enabledDate.textContent=!totpOn?'Not enabled':(enabledAt?formatSecurityDate(enabledAt):'Date unavailable');
+    if(generatedMeta) generatedMeta.textContent=!recoveryOn?'No recovery codes':(generatedAt?'Most recent recovery-code generation':'Generation date unavailable');
+    if(generatedDate) generatedDate.textContent=!recoveryOn?'Not available':(generatedAt?formatSecurityDate(generatedAt):'Date unavailable');
+  }
 
   function setStatus(state, label){
     statusText.innerHTML='<span class="st-dot"></span>'+(label||'');
@@ -2288,9 +2372,12 @@ function clearFieldError(input){
     fetch('/auth/totp/status').then(function(r){return r.ok?r.json():null;}).then(function(d){
       if(!d||!d.totp_enabled){
         setStatus('warn','<span>2FA is <strong>off</strong></span>');
+        setOverview(false,false);
+        setSecurityDates(d,null);
         if (enableBtn) enableBtn.style.display='';
         if (regenBtn) regenBtn.style.display='none';
         if (codesText) codesText.textContent='Unavailable until 2FA is enabled';
+        if (codesWarning) codesWarning.style.display='none';
         return;
       }
       setStatus('ok','<span>2FA is <strong>on</strong></span>');
@@ -2299,20 +2386,31 @@ function clearFieldError(input){
       // Load backup codes count.
       fetch('/auth/totp/backup-codes-status').then(function(r){return r.ok?r.json():null;}).then(function(b){
         if(!b||!b.has_backup_codes){
+          setOverview(true,false);
+          setSecurityDates(d,b);
           if(codesText){ codesText.textContent='No backup codes'; codesText.style.color='var(--amber)'; }
+          if(codesWarning) codesWarning.style.display='none';
           if(regenBtn) regenBtn.style.display='';
         } else {
+          setOverview(true,true);
+          setSecurityDates(d,b);
           if(codesText){
             codesText.textContent=b.codes_remaining+' unused codes remaining';
-            codesText.style.color=b.codes_remaining<=2?'var(--amber)':'var(--ivory-dim)';
+            codesText.style.color='';
           }
+          if(codesWarning) codesWarning.style.display=b.codes_remaining<=3?'inline-flex':'none';
           if(regenBtn) regenBtn.style.display='';
         }
       }).catch(function(){
+        setOverview(true,false);
+        setSecurityDates(d,null);
         if(codesText){ codesText.textContent='Could not load'; codesText.style.color='var(--ivory-dim)'; }
+        if(codesWarning) codesWarning.style.display='none';
       });
     }).catch(function(){
       setStatus('neutral','<span>Could not load</span>');
+      setOverview(false,false);
+      setSecurityDates(null,null);
     });
   }
 
@@ -2372,6 +2470,8 @@ function clearFieldError(input){
         document.body.appendChild(overlay);
         overlay.showModal();
         showToast('New backup codes generated');
+        if(generatedMeta) generatedMeta.textContent='Most recent recovery-code generation';
+        if(generatedDate) generatedDate.textContent=formatSecurityDate(new Date());
         regenBtn.disabled=false;
         regenBtn.textContent='Regenerate codes';
         loadStatus();

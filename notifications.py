@@ -5,12 +5,55 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from flask import Blueprint, jsonify, request
 
-from employees import _require_auth
+from employees import _require_auth, _employee_scope_filter, _NEVER_MATCH
 from extensions import get_db
 from field_encryption import decrypt_fields
 
 notifications_bp = Blueprint("notifications", __name__)
 logger = logging.getLogger(__name__)
+
+
+def _notification_scope_employee_ids(db, org_id: str):
+    """Employee ObjectIds a manager may see notifications for.
+
+    Mirrors ``meetings._meeting_scope_employee_ids`` — the same fail-closed
+    helper the employee routes use. Returns:
+      None → admin / unscoped: no employee filter, full org (unchanged).
+      list → manager's reachable employee ObjectIds (own record + direct
+             reports).
+      []   → fail-closed: malformed/unknown scope matches nothing.
+    """
+    scope = _employee_scope_filter(db, org_id)
+    if scope == _NEVER_MATCH:
+        return []
+    if not scope:
+        return None
+    reports_to = scope.get("reports_to")
+    docs = db.employees.find(
+        {
+            "org_id": ObjectId(org_id),
+            "$or": [{"reports_to": reports_to}, {"_id": reports_to}],
+        },
+        {"_id": 1},
+    )
+    return [d["_id"] for d in docs]
+
+
+def _scoped_notification_filter(db, org_id, base):
+    """AND an employee scope into a notification filter for manager sessions.
+
+    Managers never see (or act on) notifications for employees outside their
+    team; notifications without an employee are denied too (fail closed)."""
+    allowed = _notification_scope_employee_ids(db, org_id)
+    if allowed is None:
+        return base
+    if not allowed:
+        base = dict(base)
+        base["_id"] = None
+        return base
+    base = dict(base)
+    base["employee_id"] = {"$in": allowed}
+    return base
 
 
 def _notification_to_json(n, employee_name="") -> dict:
@@ -31,6 +74,14 @@ def _notification_to_json(n, employee_name="") -> dict:
         "meeting_id": str(n["meeting_id"]) if n.get("meeting_id") else None,
         "memory_id": str(n["memory_id"]) if n.get("memory_id") else None,
         "stage": n.get("stage"),
+        "recipient_user_id": str(n["recipient_user_id"]) if n.get("recipient_user_id") else None,
+        "delivery_status": n.get("delivery_status"),
+        "delivery_channel": n.get("delivery_channel") or [],
+        "delivery_errors": n.get("delivery_errors") or [],
+        "attempts": n.get("attempts", 0),
+        "last_attempt_at": n["last_attempt_at"].isoformat() if n.get("last_attempt_at") else None,
+        "next_attempt_at": n["next_attempt_at"].isoformat() if n.get("next_attempt_at") else None,
+        "event_key": n.get("event_key"),
         "dismissed": n.get("dismissed", False),
         "read": n.get("read", False),
         "created_at": n["created_at"].isoformat() if n.get("created_at") else None,
@@ -62,7 +113,7 @@ def list_notifications():
     page = max(page, 1)
     skip = (page - 1) * limit
 
-    query = {"org_id": ObjectId(org_id)}
+    query = _scoped_notification_filter(db, org_id, {"org_id": ObjectId(org_id)})
     notifications = list(
         db.notifications.find(query).sort("created_at", -1).skip(skip).limit(limit)
     )
@@ -78,9 +129,10 @@ def list_notifications():
 
     result = [_notification_to_json(n, emp_names.get(n.get("employee_id"), "")) for n in notifications]
 
-    unread_count = db.notifications.count_documents(
-        {"org_id": ObjectId(org_id), "read": False}
+    unread_query = _scoped_notification_filter(
+        db, org_id, {"org_id": ObjectId(org_id), "read": False}
     )
+    unread_count = db.notifications.count_documents(unread_query)
     total = db.notifications.count_documents(query)
 
     logger.debug("notifications list: page=%d limit=%d total=%d unread=%d", page, limit, total, unread_count)
@@ -103,7 +155,9 @@ def get_notification(notification_id: str):
     db = get_db()
     try:
         n = db.notifications.find_one(
-            {"_id": ObjectId(notification_id), "org_id": ObjectId(org_id)}
+            _scoped_notification_filter(
+                db, org_id, {"_id": ObjectId(notification_id), "org_id": ObjectId(org_id)}
+            )
         )
     except InvalidId:
         return jsonify({"error": "invalid_id"}), 400
@@ -133,9 +187,11 @@ def mark_read(notification_id: str):
         return jsonify({"error": "invalid_id"}), 400
 
     # Idempotent: updating an already-read notification still matches and
-    # returns ok; only non-existent/foreign ids 404.
+    # returns ok; only non-existent/foreign/out-of-scope ids 404.
     result = db.notifications.update_one(
-        {"_id": nid, "org_id": ObjectId(org_id)},
+        _scoped_notification_filter(
+            db, org_id, {"_id": nid, "org_id": ObjectId(org_id)}
+        ),
         {"$set": {"read": True, "read_at": datetime.now(timezone.utc)}},
     )
     if result.matched_count == 0:
@@ -152,7 +208,9 @@ def mark_all_read():
 
     db = get_db()
     result = db.notifications.update_many(
-        {"org_id": ObjectId(org_id), "read": False},
+        _scoped_notification_filter(
+            db, org_id, {"org_id": ObjectId(org_id), "read": False}
+        ),
         {"$set": {"read": True, "read_at": datetime.now(timezone.utc)}},
     )
 
@@ -180,7 +238,9 @@ def dismiss_notification(notification_id: str):
         return jsonify({"error": "invalid_id"}), 400
 
     result = db.notifications.update_one(
-        {"_id": nid, "org_id": ObjectId(org_id)},
+        _scoped_notification_filter(
+            db, org_id, {"_id": nid, "org_id": ObjectId(org_id)}
+        ),
         {"$set": {
             "dismissed": True,
             "read": True,
@@ -191,6 +251,8 @@ def dismiss_notification(notification_id: str):
         return jsonify({"error": "not_found"}), 404
 
     # Confirm the underlying memory record was not altered.
-    n = db.notifications.find_one({"_id": nid, "org_id": ObjectId(org_id)})
+    n = db.notifications.find_one(
+        _scoped_notification_filter(db, org_id, {"_id": nid, "org_id": ObjectId(org_id)})
+    )
     memory_id = str(n["memory_id"]) if n.get("memory_id") else None
     return jsonify({"ok": True, "dismissed": True, "memory_id": memory_id})

@@ -45,6 +45,14 @@ ACTION_SURVEY_TEMPLATE_DELETE = "survey.template_delete"
 ACTION_SURVEY_RESPONSE_CREATE = "survey.response_create"
 ACTION_SURVEY_RESPONSE_UPDATE = "survey.response_update"
 ACTION_SURVEY_RESPONSE_DELETE = "survey.response_delete"
+# Meeting Tracker + Conversational Memory domain (Phase 7 audit coverage).
+ACTION_MEMORY_CREATE = "memory.create"
+ACTION_MEMORY_UPDATE = "memory.update"
+ACTION_MEMORY_DELETE = "memory.delete"
+ACTION_MEMORY_USE = "memory.usage"
+ACTION_MEETING_CREATE = "meeting.create"
+ACTION_MEETING_UPDATE = "meeting.update"
+ACTION_MEETING_DELETE = "meeting.delete"
 
 # Pagination for the audit-log endpoint.
 DEFAULT_PAGE_LIMIT = 50

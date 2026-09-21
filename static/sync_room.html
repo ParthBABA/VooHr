@@ -10,7 +10,7 @@
 <style>
   .gsap-hidden { opacity: 0 !important; }
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* =========================================================
      STEP 2–5 VISUAL POLISH — semantic enterprise design system
@@ -44,7 +44,7 @@
     --step-danger: #F87171;
 
     /* Derived component tokens */
-    --step-heading-font: 'Sora', sans-serif;
+    --step-heading-font: 'Inter', sans-serif;
     --step-body-font: 'Inter', sans-serif;
     --step-quote-color: #A7F3D0;
     --step-card-bg: rgba(255,255,255,0.025);
@@ -3273,6 +3273,102 @@
     #stepContent5 #step5Cards > .analysis-card.fs-card-goal{ flex-wrap: wrap; }
     #stepContent5 #step5Cards > .analysis-card.fs-card-goal .fs-prio{ margin-left: auto; }
   }
+
+  /* ---------- Readability and action sizing ---------- */
+  #stepContent5 .step-header{margin-bottom:2rem;padding-bottom:1.75rem;}
+  #stepContent5 .step-number{font-size:0.75rem;letter-spacing:0.14em;}
+  #stepContent5 .step-title{font-family:var(--step-body-font);font-size:clamp(30px,3vw,40px);font-weight:700;letter-spacing:-0.02em;}
+  #stepContent5 .step-desc{font-size:1rem;line-height:1.75;max-width:70ch;}
+  #stepContent5 .fs-eyebrow--summary{padding:1rem 1.25rem;gap:0.8rem;}
+  #stepContent5 .fs-eyebrow-title{font-size:0.7rem;letter-spacing:0.14em;}
+  #stepContent5 .fs-stage{font-size:0.65rem;}
+  #stepContent5 .fs-ready{font-size:0.65rem;padding:0.35rem 0.75rem;}
+  #stepContent5 .fs-dynamic{gap:1.1rem;}
+  #stepContent5 #step5Cards > .analysis-card.fs-card-goal{padding:1.35rem 1.5rem;min-height:100px;}
+  #stepContent5 #step5Cards > .analysis-card.fs-card-goal .analysis-card-label{flex-basis:150px;font-size:0.72rem;}
+  #stepContent5 #step5Cards > .analysis-card.fs-card-goal .analysis-card-value{font-size:1rem;line-height:1.7;}
+  #stepContent5 #step5Cards > .analysis-card.fs-card-focus,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-opening,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-followup,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-response,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-reply,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-listen,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-success{padding:1.25rem 1.3rem;min-height:150px;gap:0.65rem;}
+  #stepContent5 #step5Cards > .analysis-card.fs-card-focus .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-opening .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-followup .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-response .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-reply .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-listen .analysis-card-label,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-success .analysis-card-label{font-size:0.68rem;letter-spacing:0.13em;}
+  #stepContent5 #step5Cards > .analysis-card.fs-card-focus .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-opening .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-followup .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-response .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-reply .analysis-card-value,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-listen .analysis-list-item,
+  #stepContent5 #step5Cards > .analysis-card.fs-card-success .analysis-card-value{font-size:0.98rem;line-height:1.65;}
+  #stepContent5 .fs-prio{font-size:0.65rem!important;padding:0.35rem 0.65rem!important;}
+  #stepContent5 .fs-use-followup{align-self:flex-start;margin-top:auto;min-height:44px;padding:0.65rem 1rem;border:1px solid var(--step-primary);border-radius:8px;background:var(--step-accent-tint);color:var(--step-primary-soft);font-family:var(--step-body-font);font-size:0.85rem;font-weight:600;cursor:pointer;transition:background 0.2s,border-color 0.2s,transform 0.2s;}
+  #stepContent5 .fs-use-followup:hover{background:rgba(139,92,246,0.14);border-color:var(--step-primary-soft);transform:translateY(-1px);}
+  #stepContent5 .fs-use-followup:focus-visible,#stepContent5 #fsScheduleDate:focus-visible,#stepContent5 #fsScheduleTime:focus-visible,#stepContent5 #capPanel input:focus-visible,#stepContent5 .cap-add button:focus-visible,#stepContent5 #completeSyncBtn:focus-visible{outline:3px solid rgba(167,139,250,0.45);outline-offset:2px;}
+  #stepContent5 .fs-script{padding:1.25rem 1.4rem;}
+  #stepContent5 .fs-script .script-text{font-size:1rem;line-height:1.75;}
+  #stepContent5 .cap-panel{padding:1.5rem 1.55rem;}
+  #stepContent5 .cap-head{margin-bottom:1.15rem;}
+  #stepContent5 .cap-title{font-family:var(--step-body-font);font-size:0.9rem;letter-spacing:0.1em;}
+  #stepContent5 .cap-hint{font-family:var(--step-body-font);font-size:0.8rem;}
+  #stepContent5 #capPanel .cap-grid{gap:1rem;}
+  #stepContent5 #capPanel .cap-col{padding:1.15rem 1.1rem;gap:0.75rem;}
+  #stepContent5 #capPanel .cap-colhead{font-family:var(--step-body-font);font-size:0.72rem;letter-spacing:0.1em;margin-bottom:0.35rem;}
+  #stepContent5 #capPanel .cap-opener{gap:0.8rem;}
+  #stepContent5 #capPanel .cap-opener input{width:20px;height:20px;margin-top:3px;}
+  #stepContent5 #capPanel .cap-opener .cap-opener-txt{font-size:0.9rem;line-height:1.6;}
+  #stepContent5 #capPanel .cap-list{gap:0.5rem;margin-bottom:0.7rem;}
+  #stepContent5 #capPanel .cap-item{min-height:44px;padding:0.6rem 0.7rem;font-family:var(--step-body-font);font-size:0.86rem;line-height:1.45;}
+  #stepContent5 #capPanel .cap-item .cap-idue{font-size:0.75rem;}
+  #stepContent5 #capPanel .cap-item .cap-x{width:32px;height:32px;font-size:1.15rem;}
+  #stepContent5 #capPanel .cap-empty{font-size:0.82rem;}
+  #stepContent5 #capPanel .cap-add{gap:0.55rem;}
+  #stepContent5 #capPanel .cap-add input[type=text],#stepContent5 #capPanel .cap-add input[type=date]{min-height:44px;padding:0.65rem 0.7rem;font-family:var(--step-body-font);font-size:0.88rem;}
+  #stepContent5 #capPanel .cap-add input[type=date]{flex:0 1 150px;}
+  #stepContent5 #capPanel .cap-add button,#stepContent5 .fs-reminder .btn,#stepContent5 #completeSyncBtn{min-height:44px;padding:0.65rem 1rem;font-family:var(--step-body-font);font-size:0.88rem;font-weight:600;}
+  #stepContent5 .fs-schedule{padding:1.25rem 1.3rem;gap:0.9rem 1.1rem;}
+  #stepContent5 .fs-flow-id{font-size:0.72rem;}
+  #stepContent5 .fs-field{gap:0.55rem;}
+  #stepContent5 .fs-field-label{font-size:0.7rem;letter-spacing:0.1em;}
+  #stepContent5 .fs-field input{min-height:46px;padding:0.65rem 0.7rem;font-size:0.95rem;}
+  #stepContent5 .fs-reco{padding:0.4rem 0.7rem;font-size:0.78rem;}
+  #stepContent5 .fs-hint{font-size:0.8rem;}
+  #stepContent5 .fs-progress,#stepContent5 .fs-stats{padding:1.25rem 1.3rem;}
+  #stepContent5 .fs-progress-title,#stepContent5 .fs-stats::before{font-size:0.72rem;}
+  #stepContent5 .fs-progress-meta{font-size:0.7rem;}
+  #stepContent5 .fs-track-stage{padding:0.55rem 0;font-size:0.9rem;}
+  #stepContent5 .fs-progress-note{font-size:0.82rem;}
+  #stepContent5 .fs-stat-label{font-size:0.88rem;}
+  #stepContent5 .fs-stat-value{font-size:0.95rem;}
+  #stepContent5 .step-nav{gap:1rem;padding-top:1.5rem;}
+  #stepContent5 .step-nav .btn{min-height:44px;padding:0.65rem 1.1rem;font-family:var(--step-body-font);font-size:0.88rem;}
+  @media (max-width:768px){
+    #stepContent5 .step-title{font-size:clamp(28px,8vw,34px);}
+    #stepContent5 .fs-eyebrow--summary{align-items:flex-start;}
+    #stepContent5 .fs-journ{margin-left:0;width:100%;}
+    #stepContent5 #step5Cards > .analysis-card.fs-card-goal{display:block;}
+    #stepContent5 #step5Cards > .analysis-card.fs-card-goal .analysis-card-label{margin-bottom:0.65rem;}
+    #stepContent5 .cap-panel{padding:1.25rem 1rem;}
+    #stepContent5 #capPanel .cap-add input[type=text]{min-width:100%;}
+    #stepContent5 #capPanel .cap-add input[type=date]{flex:1 1 140px;}
+    #stepContent5 #capPanel .cap-add button{flex:1 1 100%;}
+    #stepContent5 .fs-field{justify-content:space-between;}
+    #stepContent5 .fs-field input{width:auto;min-width:160px;}
+    #stepContent5 .fs-reminder{flex-wrap:wrap;}
+    #stepContent5 .fs-reminder .btn{width:100%;justify-content:center;}
+    #stepContent5 .step-nav .btn{width:100%;}
+  }
+  @media (max-width:480px){
+    #stepContent5 .fs-field{display:grid;grid-template-columns:1fr;align-items:stretch;gap:0.35rem;}
+    #stepContent5 .fs-field input{width:100%;min-width:0;}
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -4616,9 +4712,12 @@ function analysisCardClass(extra, defaultBorderColor) {
 
 function renderCard(label, value, extra) {
   if (!value || value === 'Limited transcript evidence.') return '';
+  var followupAction = extra && extra.typeClass === 'fs-card-followup'
+    ? '<button type="button" class="fs-use-followup" data-follow-up-text="' + escHtml(value) + '">Use This Follow-up</button>'
+    : '';
   return '<div class="' + analysisCardClass(extra) + '">' +
     '<div class="analysis-card-label">' + escHtml(label) + '</div>' +
-    '<div class="analysis-card-value">' + escHtml(value) + '</div></div>';
+    '<div class="analysis-card-value">' + escHtml(value) + '</div>' + followupAction + '</div>';
 }
 
 function renderConfidence(score) {
@@ -5665,6 +5764,19 @@ sessionPromise.then(function(s) {
       document.getElementById('capFollowCount')
     );
   }
+
+  // The AI suggestion stays user-confirmed: copy it into the existing
+  // follow-up field so the manager can edit it and explicitly add it.
+  document.addEventListener('click', function(e) {
+    var useBtn = e.target.closest('.fs-use-followup');
+    if (!useBtn) return;
+    var input = document.getElementById('capFollowTxt');
+    var panel = document.getElementById('capPanel');
+    if (!input) return;
+    input.value = useBtn.getAttribute('data-follow-up-text') || '';
+    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    input.focus();
+  });
 
   // ── Complete Sync Handler ──
   document.getElementById('completeSyncBtn').addEventListener('click', function() {
