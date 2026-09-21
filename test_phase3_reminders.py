@@ -174,8 +174,13 @@ def client(monkeypatch, fake):
 
 # ── Helpers (mutate the fixture DB) ─────────────────────────────────────
 
-def add_meeting(fake, title="1:1", scheduled_at="2026-08-30T15:00:00",
+def add_meeting(fake, title="1:1", scheduled_at=None,
                 employee=EMP_1, org=ORG_A):
+    if scheduled_at is None:
+        # Future-relative default within the 24h reminder stage window so
+        # reminder/dashboard tests don't trip the stale-meeting cutoffs
+        # (real clock).
+        scheduled_at = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
     st = datetime.fromisoformat(scheduled_at)
     if st.tzinfo is None:
         st = st.replace(tzinfo=timezone.utc)
@@ -279,10 +284,17 @@ def test_stage_for():
     assert rm_mod.stage_for(NOW + timedelta(hours=50), NOW) is None
 
 
+def test_stage_for_past_meeting_returns_none():
+    # A meeting 3 weeks in the past must not be mislabeled "1 hour away".
+    assert rm_mod.stage_for(NOW - timedelta(days=21), NOW) is None
+    # Beyond the grace period (2h) is well in the past → no reminder stage.
+    assert rm_mod.stage_for(NOW - timedelta(hours=3), NOW) is None
+
+
 # ── Surfacing in dashboard ──────────────────────────────────────────────
 
 def test_dashboard_exposes_surfaced(client, fake):
-    add_meeting(fake, scheduled_at="2026-08-30T15:00:00")
+    add_meeting(fake)
     add_memory(fake, "COMMITMENT", content="ship", status="PENDING",
                due_at="2026-09-05T10:00:00")
     r = client.get("/api/meetings/dashboard")
@@ -296,7 +308,7 @@ def test_dashboard_exposes_surfaced(client, fake):
 # ── Notification generation (idempotent, dedup, org isolation) ──────────
 
 def test_generate_dedup_by_meeting_memory_stage(client, fake):
-    add_meeting(fake, scheduled_at="2026-08-30T15:00:00")
+    add_meeting(fake)
     add_memory(fake, "COMMITMENT", content="ship", status="PENDING",
                due_at="2026-09-05T10:00:00")
     r1 = client.post("/api/reminders/generate")
@@ -334,7 +346,7 @@ def test_generate_notifications_in_bell(client, fake, monkeypatch):
 # ── Dismiss separate from memory ────────────────────────────────────────
 
 def test_dismiss_does_not_complete_memory(client, fake):
-    add_meeting(fake, scheduled_at="2026-08-30T15:00:00")
+    add_meeting(fake)
     c_id = add_memory(fake, "COMMITMENT", content="ship", status="PENDING",
                       due_at="2026-09-05T10:00:00")
     client.post("/api/reminders/generate")
@@ -347,7 +359,7 @@ def test_dismiss_does_not_complete_memory(client, fake):
 
 
 def test_dismiss_only_sets_dismissed(client, fake):
-    add_meeting(fake, scheduled_at="2026-08-30T15:00:00")
+    add_meeting(fake)
     add_memory(fake, "COMMITMENT", content="ship", status="PENDING",
                due_at="2026-09-05T10:00:00")
     client.post("/api/reminders/generate")

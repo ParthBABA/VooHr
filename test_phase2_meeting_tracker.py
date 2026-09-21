@@ -172,8 +172,16 @@ def client(monkeypatch, fake):
 
 # ── Meetings ─────────────────────────────────────────────────────────────
 
-def _create_meeting(client, employee_id=EMP_1, scheduled_at="2026-09-05T10:00:00",
+def _future_iso(days=3):
+    """An ISO scheduled_at comfortably in the future relative to the real
+    clock, so dashboard tests never trip the stale-meeting/missed sweep."""
+    return (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+
+
+def _create_meeting(client, employee_id=EMP_1, scheduled_at=None,
                     title="1:1", session_id=None):
+    if scheduled_at is None:
+        scheduled_at = _future_iso()
     body = {"employee_id": employee_id, "scheduled_at": scheduled_at, "title": title}
     if session_id:
         body["session_id"] = session_id
@@ -187,7 +195,7 @@ def test_create_meeting_ok(client):
     assert d["id"]
     assert d["employee_id"] == EMP_1
     assert d["status"] == "scheduled"
-    assert d["scheduled_at"].startswith("2026-09-05")
+    assert datetime.fromisoformat(d["scheduled_at"]) > datetime.now(timezone.utc)
 
 
 def test_create_meeting_rejects_wrong_org_employee(client):
@@ -331,7 +339,7 @@ def test_memory_rejects_other_org_employee(client):
 # ── Meetings dashboard (aggregate feed for Meeting Tracker) ──────────────
 
 def test_dashboard_returns_employee_and_meeting(client):
-    _create_meeting(client, scheduled_at="2026-09-05T10:00:00")
+    _create_meeting(client)
     d = client.get("/api/meetings/dashboard").get_json()
     assert any(e["id"] == EMP_1 for e in d["employees"])
     assert "reminders" not in d["counters"]  # no fake reminder engine
@@ -366,6 +374,66 @@ def test_dashboard_previous_session_linked(client):
     row = d["people"][0]
     # SESSION_1 is the latest completed session for EMP_1
     assert row["previous_session"]["session_id"] == SESSION_1
+
+
+def _insert_meeting(fake, title, scheduled_at, status="scheduled"):
+    now = datetime.now(timezone.utc)
+    r = fake.meetings.insert_one({
+        "org_id": ObjectId(ORG_A), "employee_id": ObjectId(EMP_1),
+        "title": title, "scheduled_at": scheduled_at, "status": status,
+        "session_id": None, "created_at": now, "updated_at": now,
+    })
+    return r.inserted_id
+
+
+def test_dashboard_excludes_past_scheduled_meeting(client, fake):
+    now = datetime.now(timezone.utc)
+    _insert_meeting(fake, "stale 1:1", now - timedelta(days=21))
+    future_mid = _insert_meeting(fake, "real next", now + timedelta(days=3))
+
+    d = client.get("/api/meetings/dashboard").get_json()
+    row = next(p for p in d["people"] if p["id"] == EMP_1)
+    # The genuinely next upcoming meeting wins, never the stale one.
+    assert row["next_meeting"]["id"] == str(future_mid)
+    assert row["next_meeting"]["title"] == "real next"
+    # The stale record was swept to "missed" in the DB.
+    stale = next(m for m in fake.meetings._docs if m.get("title") == "stale 1:1")
+    assert stale["status"] == "missed"
+    assert stale["updated_at"] >= now
+    future = next(m for m in fake.meetings._docs if m.get("title") == "real next")
+    assert future["status"] == "scheduled"
+
+
+def test_dashboard_sweeps_stale_scheduled_to_missed(client, fake):
+    now = datetime.now(timezone.utc)
+    _insert_meeting(fake, "ancient 1:1", now - timedelta(days=30))
+
+    assert client.get("/api/meetings/dashboard").status_code == 200
+    doc = next(m for m in fake.meetings._docs if m.get("title") == "ancient 1:1")
+    assert doc["status"] == "missed"
+    # Second load: already "missed" → excluded from the sweep fetch, stays.
+    assert client.get("/api/meetings/dashboard").status_code == 200
+    doc = next(m for m in fake.meetings._docs if m.get("title") == "ancient 1:1")
+    assert doc["status"] == "missed"
+
+
+def test_dashboard_no_next_meeting_when_only_past_scheduled(client, fake):
+    now = datetime.now(timezone.utc)
+    _insert_meeting(fake, "old 1:1", now - timedelta(days=7))
+    # A follow-up keeps the person on the board with no upcoming meeting.
+    fake.conversation_memory.insert_one({
+        "org_id": ObjectId(ORG_A), "employee_id": ObjectId(EMP_1),
+        "session_id": ObjectId(SESSION_1), "type": "FOLLOW_UP",
+        "content": "follow up on the review", "status": "PENDING",
+        "due_at": now + timedelta(days=2), "used_at": None,
+        "completed_at": None, "usage_count": 0, "usage": [],
+        "created_at": now, "updated_at": now,
+    })
+
+    d = client.get("/api/meetings/dashboard").get_json()
+    row = next(p for p in d["people"] if p["id"] == EMP_1)
+    assert row["next_meeting"] is None
+    assert row["counts"]["pending_followups"] == 1
 
 
 # ── Manager-role scoping ─────────────────────────────────────────────────
@@ -407,13 +475,13 @@ def mgr_client(monkeypatch):
     my_meeting = db.meetings.insert_one({
         "org_id": ObjectId(ORG_A), "employee_id": ObjectId(EMP_2),
         "title": "my team", "status": "scheduled",
-        "scheduled_at": datetime(2026, 9, 5, 10, 0, tzinfo=timezone.utc),
+        "scheduled_at": now + timedelta(days=1),
         "created_at": now, "updated_at": now,
     })
     other_meeting = db.meetings.insert_one({
         "org_id": ObjectId(ORG_A), "employee_id": ObjectId(EMP_OTHER),
         "title": "other team", "status": "scheduled",
-        "scheduled_at": datetime(2026, 9, 6, 10, 0, tzinfo=timezone.utc),
+        "scheduled_at": now + timedelta(days=2),
         "created_at": now, "updated_at": now,
     })
     db._manager_meeting_ids = {"my_meeting": my_meeting.inserted_id, "other_meeting": other_meeting.inserted_id}
@@ -441,7 +509,9 @@ def mgr_client(monkeypatch):
         yield db, c
 
 
-def _create_meeting_for(client, employee_id, scheduled_at="2026-09-05T10:00:00", title="1:1"):
+def _create_meeting_for(client, employee_id, scheduled_at=None, title="1:1"):
+    if scheduled_at is None:
+        scheduled_at = _future_iso()
     return client.post("/api/meetings", json={
         "employee_id": employee_id, "scheduled_at": scheduled_at, "title": title,
     })

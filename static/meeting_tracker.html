@@ -83,6 +83,8 @@
   .mt-status--upcoming .dot{background:var(--mt-teal);}
   .mt-status--follow{color:var(--mt-violet);background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.35);}
   .mt-status--follow .dot{background:var(--mt-violet);}
+  .mt-status--missed{color:#94A3B8;background:rgba(148,163,184,0.12);border:1px solid rgba(148,163,184,0.35);}
+  .mt-status--missed .dot{background:#94A3B8;}
   .mt-body{display:flex;flex-direction:column;gap:0.65rem;}
   .mt-meta{display:flex;flex-wrap:wrap;gap:0.5rem 1.2rem;font-family:var(--font-m);font-size:0.72rem;color:var(--ivory-dim);}
   .mt-meta span{display:inline-flex;align-items:center;gap:0.4rem;}
@@ -392,6 +394,7 @@ function accentFor(id) {
 // ── Section (status) resolution for a person ──
 function personSection(p) {
   var nm = p.next_meeting;
+  if (nm && nm.status === 'missed') return 'missed';
   if (nm && nm.scheduled_at && isSameDay(new Date(nm.scheduled_at), new Date())) return 'today';
   if (p.counts.overdue_followups > 0) return 'overdue';
   if (p.counts.pending_followups > 0) return 'follow';
@@ -406,10 +409,10 @@ function mdAvatar(p) {
 }
 
 function mdStatus(section) {
-  var map = { today: 'Today', upcoming: 'Upcoming', follow: 'Follow-up', overdue: 'Overdue' };
+  var map = { today: 'Today', upcoming: 'Upcoming', follow: 'Follow-up', overdue: 'Overdue', missed: 'Missed' };
   var cls = {
     today: 'mt-status--today', upcoming: 'mt-status--upcoming',
-    follow: 'mt-status--follow', overdue: 'mt-status--overdue'
+    follow: 'mt-status--follow', overdue: 'mt-status--overdue', missed: 'mt-status--missed'
   }[section === 'thisweek' || section === 'nextweek' ? 'upcoming' : section] || 'mt-status--upcoming';
   var label = map[section === 'thisweek' || section === 'nextweek' ? 'upcoming' : section] || 'Upcoming';
   return '<span class="mt-status ' + cls + '"><span class="dot"></span>' + label + '</span>';
@@ -440,6 +443,10 @@ function employerCell(p, section) {
     dateStr = fmtDate(when) + ' \u00b7 ' + fmtTime(when);
   }
   else if (section === 'overdue') { timeline = 'Overdue'; dateStr = p.counts.overdue_followups + ' overdue item(s)'; }
+  else if (section === 'missed') {
+    timeline = 'Missed';
+    dateStr = when ? 'Scheduled ' + fmtDate(when) + ' \u00b7 ' + fmtTime(when) + ' \u2014 never actioned' : 'Scheduled but never actioned';
+  }
   else { timeline = 'Follow-up'; dateStr = p.counts.pending_followups + ' follow-up(s)'; }
   return { name: name, role: role, timeline: timeline, dateStr: dateStr, when: when };
 }
@@ -526,7 +533,7 @@ function matchesItem(p) {
   var section = personSection(p);
   if (mtFilter === 'today' && section !== 'today') return false;
   if (mtFilter === 'thisweek' && section !== 'today' && section !== 'thisweek') return false;
-  if (mtFilter === 'followup' && section !== 'follow' && section !== 'overdue') return false;
+  if (mtFilter === 'followup' && section !== 'follow' && section !== 'overdue' && section !== 'missed') return false;
   if (mtFilter === 'overdue' && section !== 'overdue') return false;
   if (mtQuery) {
     var hay = (p.employee.name + ' ' + (p.employee.position || '') + ' ' + topicFor(p) + ' ' + (p.open_items || []).map(function(o){ return o.content; }).join(' ')).toLowerCase();
@@ -560,7 +567,7 @@ function render() {
   var filtered = mtPeople.filter(matchesItem);
   var today = filtered.filter(function(p){ return personSection(p) === 'today'; });
   var upcoming = filtered.filter(function(p){ var s = personSection(p); return s === 'thisweek' || s === 'nextweek'; });
-  var follow = filtered.filter(function(p){ var s = personSection(p); return s === 'follow' || s === 'overdue'; });
+  var follow = filtered.filter(function(p){ var s = personSection(p); return s === 'follow' || s === 'overdue' || s === 'missed'; });
 
   $('mtToday').innerHTML = today.map(mdCard).join('');
   $('mtUpcoming').innerHTML = upcoming.map(mdCard).join('');

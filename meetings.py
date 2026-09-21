@@ -12,13 +12,14 @@ from employees import _NEVER_MATCH
 from employees import _employee_scope_filter
 from employees import _employee_accessible
 from extensions import get_db
+from reminders import MEETING_MISSED_GRACE
 from reminders import surface_items, ensure_reminder_notifications
 
 logger = logging.getLogger(__name__)
 
 meetings_bp = Blueprint("meetings", __name__)
 
-MEETING_STATUSES = {"scheduled", "completed", "cancelled"}
+MEETING_STATUSES = {"scheduled", "completed", "cancelled", "missed"}
 
 MAX_MEETING_TITLE_LEN = 200
 
@@ -212,9 +213,13 @@ def meetings_dashboard():
     """One-shot aggregate feed for the Meeting Tracker board.
 
     Real-world, org-scoped: each active employee becomes one card carrying
-    their latest scheduled meeting, latest completed session (for previous
-    context), and factual conversation-memory counters + the actual open
-    (PENDING/OVERDUE) commitment & follow-up items.
+    their latest upcoming scheduled meeting, latest completed session (for
+    previous context), and factual conversation-memory counters + the actual
+    open (PENDING/OVERDUE) commitment & follow-up items.
+
+    Scheduled meetings whose time has passed are swept to "missed" (see the
+    sweep below) and never occupy the ``next_meeting`` slot, so a stale record
+    cannot hide a genuinely upcoming meeting.
 
     Returned in a single call to avoid N+1; the detailed per-item history is
     still loaded on demand by the detail views via the dedicated endpoints.
@@ -250,6 +255,26 @@ def meetings_dashboard():
     if allowed_ids is not None:
         meeting_filter["employee_id"] = {"$in": allowed_ids}
     meetings = list(db.meetings.find(meeting_filter).sort("scheduled_at", 1))
+
+    # Sweep stale meetings: a still-"scheduled" meeting whose scheduled time
+    # passed beyond the grace period is auto-transitioned to "missed" (a
+    # distinct status — nobody confirmed it happened) so it can never block
+    # that employee's genuinely next meeting. Running the sweep on every load
+    # also catches pre-existing stale records already in the DB (no migration
+    # script needed), and once marked "missed" a meeting no longer matches the
+    # scheduled/completed fetch filter, so it is never re-evaluated again.
+    missed_before = now - MEETING_MISSED_GRACE
+    for mk in meetings:
+        if (
+            mk.get("status") == "scheduled"
+            and mk.get("scheduled_at") is not None
+            and mk["scheduled_at"] < missed_before
+        ):
+            db.meetings.update_one(
+                {"_id": mk["_id"]},
+                {"$set": {"status": "missed", "updated_at": now}},
+            )
+            mk["status"] = "missed"
 
     session_filter = {"org_id": org_oid}
     if allowed_ids is not None:
@@ -324,7 +349,14 @@ def meetings_dashboard():
             "notes": 0, "questions_used": 0, "open_items": [],
         })
         next_meeting = next(
-            (mk for mk in meetings if str(mk.get("employee_id")) == eid and mk.get("status") == "scheduled"),
+            (
+                mk
+                for mk in meetings
+                if str(mk.get("employee_id")) == eid
+                and mk.get("status") == "scheduled"
+                and mk.get("scheduled_at") is not None
+                and mk["scheduled_at"] >= now
+            ),
             None,
         )
         prev = latest_completed.get(eid)

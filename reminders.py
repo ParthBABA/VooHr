@@ -37,6 +37,12 @@ reminders_bp = Blueprint("reminders", __name__)
 
 _RELEVANT_STATUSES = {"PENDING", "SAVED"}
 
+# A meeting that is still "scheduled" this far past its scheduled time is
+# treated as missed (swept to "missed" by meetings_dashboard) and generates no
+# reminder stage. Shared by reminders.stage_for (past cutoff) and meetings.py
+# (sweep threshold) so the two stay consistent.
+MEETING_MISSED_GRACE = timedelta(hours=2)
+
 # Factual labels only — no interpretation, no advice.
 _TYPE_LABEL = {
     "OPENER": "opener",
@@ -137,10 +143,17 @@ def stage_for(meeting_time, now):
     soon_1h  -> within the next hour
     day_of   -> meeting is scheduled for today (calendar day)
     upcoming_24h -> within the next 24 hours (but not today)
+
+    Returns None for a meeting already well in the past (more than
+    ``MEETING_MISSED_GRACE`` before ``now``): a "meeting starts in an hour"
+    reminder for something that happened weeks ago is misleading and never
+    generated.
     """
     if meeting_time.tzinfo is None:
         meeting_time = meeting_time.replace(tzinfo=timezone.utc)
     delta = meeting_time - now
+    if delta < -MEETING_MISSED_GRACE:
+        return None
     if delta <= timedelta(hours=1):
         return "soon_1h"
     if meeting_time.date() == now.date():
