@@ -126,6 +126,41 @@ Requires these env vars (see `.env.example`):
 Register the webhook URL `https://<your-domain>/api/whatsapp/webhook` (GET =
 verification, POST = message events) in the Meta developer console.
 
+## Reminder scheduler (self-hosted, in-process)
+
+Meeting-reminder generation runs automatically **inside the web process** via
+[APScheduler](https://apscheduler.readthedocs.io/) — no external cron service
+(e.g. cron-job.org) and no separate worker dyno/process is needed.
+
+`create_app()` calls `scheduler.start_scheduler(app)`, which starts one
+`BackgroundScheduler` per worker on a 15-minute interval. Because
+`render.yaml` / `Procfile` run `gunicorn app:app --workers 2`, both workers
+would otherwise generate — and email/WhatsApp — every reminder twice. To
+prevent that, each sweep is guarded by a **short-lived distributed lock** stored
+as a document in the MongoDB `scheduler_locks` collection. The lock is claimed
+atomically (`find_one_and_update` + upsert on a unique `job` key, with a
+`locked_until` staleness timestamp):
+
+- exactly **one** worker per interval acquires the lock and runs
+  `reminders.ensure_reminder_notifications(db, org_id, now)` for every
+  organization (enumerated from `organizations` plus scheduled meetings);
+- the other worker logs a skip and waits for the next tick;
+- a crashed worker never blocks the sweep — there is no explicit release, the
+  lock timestamp simply goes stale after 10 minutes and is reclaimed.
+
+Confirm it in the Render logs:
+
+- on boot: `reminder scheduler: started pid=<pid> interval=15min`
+- every interval, one worker logs
+  `reminder scheduler: lock acquired pid=<pid> orgs=... created=...` and the
+  other logs `reminder scheduler: skipped — lock held by pid=<pid>`
+
+Optional tunables:
+
+- `REMINDER_SWEEP_INTERVAL_MINUTES` — sweep cadence (default `15`).
+- `REMINDER_SWEEP_LOCK_TTL_MINUTES` — how long a claimed lock stays fresh
+  (default `10`).
+
 ## Running tests
 
 Install the dev dependencies (includes pytest and the security scanners), then run the suite:
