@@ -7,7 +7,6 @@
 <title>VooVr - Settings</title>
 <!-- shared-head -->
 <script src="/ui-feedback.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <script src="/csrf.js" defer></script>
@@ -20,21 +19,14 @@
    surface flips automatically with the light/dark theme.
    ════════════════════════════════════════════════════════════════════ */
 
-/* ── Layout: no global sidebar — main takes full width, settings rail is the only left nav ── */
+/* ── Layout ── */
 :root{
   --sp-sm:0.75rem;
   --sp-md:1.5rem;
   --sp-lg:2.5rem;
 }
-.main-content{flex:1;margin-left:0;}
-.settings-layout{display:flex;gap:clamp(1.5rem,4vw,3rem);align-items:flex-start;max-width:1600px;margin:0 auto;padding:2rem clamp(0.75rem,1.5vw,1.5rem) 5rem;}
+.settings-layout{display:block;max-width:1600px;margin:0 auto;padding:2rem clamp(0.75rem,1.5vw,1.5rem) 5rem;}
 
-/* Settings sidebar — dedicated, sticky, anchored just right of the global nav.
-   Deliberately distinct from the icon-only VooVr sidebar (full-width labels,
-   grouped sections, active indicator, no giant card treatment). */
-.settings-rail{width:295px;flex-shrink:0;position:sticky;top:5.9rem;align-self:flex-start;padding:0.4rem 0.4rem 1rem;border-right:1px solid var(--border);}
-.settings-rail-head{font-family:var(--font-lato);font-weight:700;font-size:0.66rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--ivory-dim);padding:0.55rem 0.4rem 0.85rem;display:flex;align-items:center;justify-content:center;}
-.settings-rail-head svg{width:28px;height:28px;color:var(--amber);}
 .settings-nav{display:flex;flex-direction:column;}
 .settings-nav-group{font-family:var(--font-lato);font-weight:700;font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--ivory-faint);margin:1.2rem 0.9rem 0.5rem;opacity:0.75;}
 .settings-nav-group:first-child{margin-top:0.35rem;}
@@ -201,8 +193,6 @@
 }
 @media(max-width:1024px){
   .settings-layout{flex-direction:column;}
-  .settings-rail{position:static;width:100%;top:auto;margin:0 0 0.5rem;border-right:none;border-bottom:1px solid var(--border);padding:0.25rem 0 0.5rem;}
-  .settings-rail-head{display:none;}
   .settings-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:0.3rem;padding-bottom:0.35rem;-webkit-overflow-scrolling:touch;}
   .settings-nav-group{display:none;}
   .settings-nav-item{white-space:nowrap;padding:0.45rem 0.85rem;}
@@ -327,12 +317,9 @@
 /* ── Responsive ── */
 @media(max-width:1280px){
   .settings-layout{gap:1.45rem;}
-  .settings-rail{width:268px;}
 }
 @media(max-width:1024px){
   .settings-layout{flex-direction:column;gap:0.8rem;}
-  .settings-rail{position:static;width:100%;top:auto;padding:0.5rem;border-radius:12px;}
-  .settings-rail-head{display:none;}
   .settings-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:0.4rem;padding-bottom:0.25rem;-webkit-overflow-scrolling:touch;}
   .settings-nav-group{display:none;}
   .settings-nav-item{white-space:nowrap;padding:0.5rem 0.85rem;}
@@ -382,14 +369,6 @@ html[data-theme="light"]{
 /* Footer actions + destructive-zone neutral dividers */
 .st-actions{border-top-color:var(--settings-divider);}
 .st-delete-zone{border-top-color:var(--settings-divider);}
-
-/* Settings rail lining + sidebar group structure */
-.settings-rail{border-right-color:var(--settings-divider);}
-@media(max-width:1024px){.settings-rail{border-bottom-color:var(--settings-divider);}}
-@media(min-width:1025px){
-  .settings-nav-group{border-top:1px solid var(--settings-divider);margin-top:1.35rem;padding-top:0.9rem;}
-  .settings-nav-group:first-child{border-top:none;margin-top:0.35rem;padding-top:0;}
-}
 
 /* Settings input borders kept visible in both themes (never dominant) */
 .settings-content .form-input{border-color:var(--settings-divider);}
@@ -485,6 +464,32 @@ html[data-theme="light"]{
 .settings-panel .st-section + .st-section{border-top:0;padding-top:1.6rem;}
 .st-section .st-section{background:transparent;border:0;border-radius:0;padding:1.1rem 0 0;}
 
+/* Horizontal settings tabs and contained settings sections. */
+.settings-layout{display:block;}
+.settings-content{max-width:none;}
+.settings-nav{display:flex;flex-direction:row;align-items:stretch;gap:0.3rem;overflow-x:auto;padding:0 0 0.35rem;border-bottom:1px solid var(--border);margin-bottom:2rem;-webkit-overflow-scrolling:touch;}
+.settings-nav-group{display:none;}
+.settings-nav-item{white-space:nowrap;border-radius:6px;padding:0.7rem 0.9rem;}
+.settings-nav-item .nav-ind{left:0;right:0;top:auto;bottom:-1px;width:auto;height:2px;border-radius:0;}
+.settings-nav-item.active{background:var(--ivory-ghost);}
+.st-card{border:1px solid var(--border);border-radius:6px;background:var(--surface);padding:1.6rem 1.7rem;}
+.st-section.st-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.6rem 1.7rem;margin-bottom:1.5rem;}
+.settings-panel .st-section.st-card + .st-section.st-card{border-top:1px solid var(--border);padding-top:1.6rem;}
+.st-row-icon,.toggle-icon{width:38px;height:38px;border-radius:14px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--ivory-dim);}
+.st-row-icon svg,.toggle-icon svg{width:18px;height:18px;}
+.st-row-main{display:flex;align-items:flex-start;gap:0.8rem;}
+.toggle-label{display:flex;align-items:flex-start;gap:0.8rem;}
+.toggle-label > span:last-child{min-width:0;}
+.notification-groups{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem 1.75rem;}
+.notification-groups .wa-card{grid-column:1 / -1;}
+.toggle-label{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:0.8rem;row-gap:0.25rem;align-items:start;}
+.toggle-label .toggle-icon{grid-row:1 / span 2;}
+.toggle-label .toggle-title,.toggle-label .toggle-desc{grid-column:2;}
+@media(max-width:768px){
+  .notification-groups{grid-template-columns:1fr;}
+  .settings-nav{overflow-x:auto;}
+}
+
 /* 4) Short groups: rely on vertical rhythm, drop the per-row hairlines */
 .st-row{padding:0.9rem 0;}
 .st-row + .st-row{border-top:none;}
@@ -548,12 +553,18 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
     var profAvatar = document.getElementById('profileAvatar');
     var profDisplayName = document.getElementById('profileDisplayName');
     var profDisplayRole = document.getElementById('profileDisplayRole');
+    var userName = document.getElementById('userName');
+    var userRole = document.getElementById('userRole');
+    var userAvatar = document.getElementById('userAvatar');
     if (profName) profName.value = data.name || '';
     if (profEmail) profEmail.value = data.email || '';
     if (profRole) profRole.value = data.role === 'admin' ? 'HR Admin' : (data.role || '');
     if (profAvatar) profAvatar.textContent = initialsOf(data.name);
     if (profDisplayName) profDisplayName.textContent = data.name || 'You';
     if (profDisplayRole) profDisplayRole.textContent = data.role === 'admin' ? 'HR Admin' : (data.role || '');
+    if (userName) userName.textContent = data.name || 'User';
+    if (userRole) userRole.textContent = data.role === 'admin' ? 'HR Admin' : (data.role || '');
+    if (userAvatar) userAvatar.textContent = initialsOf(data.name);
 
     var orgEl = document.getElementById('planOrgName');
     if (orgEl && data.organization) orgEl.textContent = data.organization.name;
@@ -622,7 +633,44 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
   });
 })();
 </script>
+<button class="mobile-toggle" id="mobileToggle">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+</button>
 <div class="page-wrapper">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <img src="voovr-logo-full.png" alt="VOOVR" class="sidebar-logo-img">
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Command Center</div>
+      <a href="dashboard.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/sync" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14"/></svg>
+        Sync
+      </a>
+      <a href="/meeting-tracker" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="16" cy="18" r="1"/><circle cx="8" cy="18" r="1"/></svg>
+        Meeting Tracker
+      </a>
+      <a href="settings.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a2 2 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar" id="userAvatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">User</div>
+        <div class="user-role" id="userRole">Admin</div>
+      </div>
+    </div>
+  </nav>
   <!-- MAIN -->
   <main class="main-content">
     <div class="top-bar">
@@ -646,61 +694,6 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
     <!-- NEW SETTINGS LAYOUT: Settings rail (left) + scrollable content (right) -->
     <div class="settings-layout">
 
-      <!-- SETTINGS SIDEBAR -->
-      <aside class="settings-rail">
-        <div class="settings-rail-head">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-        </div>
-
-        <nav class="settings-nav">
-          <div class="settings-nav-group">Account</div>
-          <a href="#profile" class="settings-nav-item active" data-panel="profile" data-accent="violet">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            Profile <span class="nav-ind"></span>
-          </a>
-          <a href="#organization" class="settings-nav-item" data-panel="organization" data-accent="teal">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
-            Organization <span class="nav-ind"></span>
-          </a>
-          <a href="#manager-roles" class="settings-nav-item admin-only" data-panel="manager-roles" data-accent="indigo" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-            Manager Roles <span class="nav-ind"></span>
-          </a>
-
-          <div class="settings-nav-group">Communication</div>
-          <a href="#notifications" class="settings-nav-item" data-panel="notifications" data-accent="amber">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-            Notifications <span class="nav-ind"></span>
-          </a>
-
-          <div class="settings-nav-group">Security</div>
-          <a href="#security" class="settings-nav-item" data-panel="security" data-accent="teal">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-            Security <span class="nav-ind"></span>
-          </a>
-          <a href="#sessions" class="settings-nav-item" data-panel="sessions" data-accent="violet">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            Sessions <span class="nav-ind"></span>
-          </a>
-          <a href="#activity-log" class="settings-nav-item" data-panel="activity-log" data-accent="teal">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            Activity Log <span class="nav-ind"></span>
-          </a>
-
-          <div class="settings-nav-group admin-only" style="display:none;">Billing</div>
-          <a href="#billing" class="settings-nav-item admin-only" data-panel="billing" data-accent="violet" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-            Plan &amp; Billing <span class="nav-ind"></span>
-          </a>
-
-          <div class="settings-nav-group">Data &amp; Privacy</div>
-          <a href="#data-privacy" class="settings-nav-item" data-panel="data-privacy" data-accent="red">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Data &amp; Privacy <span class="nav-ind"></span>
-          </a>
-        </nav>
-      </aside>
-
       <!-- SETTINGS CONTENT -->
       <section class="settings-content">
 
@@ -712,7 +705,19 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <p class="st-desc">Manage your personal information and how you appear across VooVr.</p>
           </div>
 
-          <div class="st-section" id="profileIdentitySection">
+          <nav class="settings-nav" aria-label="Settings sections">
+            <a href="#profile" class="settings-nav-item active" data-panel="profile" data-accent="violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile<span class="nav-ind"></span></a>
+            <a href="#organization" class="settings-nav-item" data-panel="organization" data-accent="teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>Organization<span class="nav-ind"></span></a>
+            <a href="#manager-roles" class="settings-nav-item admin-only" data-panel="manager-roles" data-accent="indigo" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Manager Roles<span class="nav-ind"></span></a>
+            <a href="#notifications" class="settings-nav-item" data-panel="notifications" data-accent="amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>Notifications<span class="nav-ind"></span></a>
+            <a href="#security" class="settings-nav-item" data-panel="security" data-accent="teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Security<span class="nav-ind"></span></a>
+            <a href="#sessions" class="settings-nav-item" data-panel="sessions" data-accent="violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Sessions<span class="nav-ind"></span></a>
+            <a href="#activity-log" class="settings-nav-item" data-panel="activity-log" data-accent="teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Activity Log<span class="nav-ind"></span></a>
+            <a href="#billing" class="settings-nav-item admin-only" data-panel="billing" data-accent="violet" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Plan &amp; Billing<span class="nav-ind"></span></a>
+            <a href="#data-privacy" class="settings-nav-item" data-panel="data-privacy" data-accent="red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Data &amp; Privacy<span class="nav-ind"></span></a>
+          </nav>
+
+          <div class="st-section st-card" id="profileIdentitySection">
             <div class="profile-head mb-md">
               <div class="profile-avatar" id="profileAvatar">U</div>
               <div>
@@ -722,7 +727,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             </div>
           </div>
 
-          <div class="st-section">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Profile information</h3>
               <span class="st-sec-desc">Basic details about you</span>
@@ -745,7 +750,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             </div>
           </div>
 
-          <div class="st-section">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Contact information</h3>
               <span class="st-sec-desc">How teammates and the system reach you</span>
@@ -773,7 +778,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <p class="st-desc">Update your company profile. These details affect your plan and how your team identifies the workspace.</p>
           </div>
 
-          <div class="st-section">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Organization information</h3>
               <span class="st-sec-desc">Editable only by organization admins</span>
@@ -829,11 +834,11 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <p class="st-desc">Send manager invites to employees who need read-only, scoped access to their team's data.</p>
           </div>
 
-          <div class="st-section p-lg" id="mrLoading">
+          <div class="st-section st-card p-lg" id="mrLoading">
             <div class="st-muted">Loading roster…</div>
           </div>
 
-          <div class="st-section" id="mrTableWrap" style="display:none;">
+          <div class="st-section st-card" id="mrTableWrap" style="display:none;">
             <div class="mr-actions manager-actions">
               <button class="btn btn-sm btn-primary" id="mrBulkInviteBtn" type="button" disabled>Send Invites</button>
               <span class="st-muted" id="mrSelectedInfo">0 selected</span>
@@ -857,7 +862,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
               </table>
             </div>
 
-            <div class="st-section p-lg">
+            <div class="st-section st-card p-lg">
               <div class="field-group">
                 <label class="field-label">How manager invites work</label>
                 <p class="st-muted text-help">Employees with no account and a valid email receive an invite link. Invites expire after 7 days. Clicking the link creates a manager account scoped to their direct reports — no admin access, no code-deploy access.</p>
@@ -876,14 +881,15 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <p class="st-desc">Control which VooVr events and updates you receive.</p>
           </div>
 
-          <div class="st-section">
+          <div class="notification-groups">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Email notifications</h3>
               <span class="st-sec-desc">Sent to your account email</span>
             </div>
             <div class="notif-prefs">
               <label class="toggle-row">
-                <span class="toggle-label">
+                <span class="toggle-label"><span class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span>
                   <span class="toggle-title">Email alerts</span>
                   <span class="toggle-desc">Notify me when an employee is added or updated.</span>
                 </span>
@@ -893,7 +899,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                 </span>
               </label>
               <label class="toggle-row">
-                <span class="toggle-label">
+                <span class="toggle-label"><span class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
                   <span class="toggle-title">Meeting reminders</span>
                   <span class="toggle-desc">Get an email and WhatsApp reminder before your scheduled employee meetings.</span>
                 </span>
@@ -941,14 +947,14 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             </div>
           </div>
 
-          <div class="st-section">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">HR / employee alerts</h3>
               <span class="st-sec-desc">Managed by your organization admins</span>
             </div>
             <div class="notif-prefs">
               <label class="toggle-row">
-                <span class="toggle-label">
+                <span class="toggle-label"><span class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v5c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg></span>
                   <span class="toggle-title">Risk &amp; burnout alerts</span>
                   <span class="toggle-desc">High-risk and wellbeing flags detected by AI.</span>
                 </span>
@@ -960,15 +966,16 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
               <div id="notifRiskNote" class="st-note" style="display:none;">Only org admins can change this.</div>
             </div>
           </div>
+          </div>
 
-          <div class="st-section">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Product &amp; system updates</h3>
               <span class="st-sec-desc">Occasional news from the VooVr team</span>
             </div>
             <div class="notif-prefs">
               <label class="toggle-row">
-                <span class="toggle-label">
+                <span class="toggle-label"><span class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 12h8M8 8h5"/></svg></span>
                   <span class="toggle-title">Weekly digest</span>
                   <span class="toggle-desc">A Monday summary of trends across your team.</span>
                 </span>
@@ -978,7 +985,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                 </span>
               </label>
               <label class="toggle-row">
-                <span class="toggle-label">
+                <span class="toggle-label"><span class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg></span>
                   <span class="toggle-title">Product updates</span>
                   <span class="toggle-desc">New features and improvements to VooVr.</span>
                 </span>
@@ -1000,7 +1007,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
           </div>
 
           <!-- TWO-FACTOR AUTHENTICATION -->
-          <div class="st-section mb-md">
+          <div class="st-section st-card mb-md">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Two-Factor Authentication</h3>
               <span class="st-sec-desc">Extra protection for your account.</span>
@@ -1008,7 +1015,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
 
             <div class="st-row">
               <div class="st-row-main">
-                <div class="st-row-title">Two-Factor Authentication</div>
+                <div class="st-row-title"><span class="st-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>Two-Factor Authentication</div>
                 <div class="st-row-desc">
                   A 6-digit code from your authenticator app on new sign-ins.
                 </div>
@@ -1021,7 +1028,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
           </div>
 
           <!-- RECOVERY -->
-          <div class="st-section">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Recovery</h3>
               <span class="st-sec-desc">Backup access if you lose your device.</span>
@@ -1029,7 +1036,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
 
             <div class="st-row">
               <div class="st-row-main">
-                <div class="st-row-title">Recovery codes</div>
+                <div class="st-row-title"><span class="st-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span>Recovery codes</div>
                 <div class="st-row-desc">
                   Single-use backup codes. Shown only when generated.
                 </div>
@@ -1051,7 +1058,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
           </div>
 
           <!-- CURRENT SESSION -->
-          <div class="st-section mb-lg">
+          <div class="st-section st-card mb-lg">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Current Session</h3>
               <span class="st-sec-desc">This is the device you are using right now.</span>
@@ -1068,7 +1075,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
           </div>
 
           <!-- ACTIVE SESSIONS -->
-          <div class="st-section">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Active Sessions</h3>
               <span class="st-sec-desc">Other devices signed in to your account.</span>
@@ -1085,7 +1092,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <p class="st-desc">Review important activity and administrative changes across your VooVr organization.</p>
           </div>
 
-          <div class="st-section">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Activity</h3>
               <span class="st-sec-desc">Sensitive and administrative actions, newest first.</span>
@@ -1122,7 +1129,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
           </div>
 
           <!-- CURRENT PLAN -->
-          <div class="st-section mb-lg">
+          <div class="st-section st-card mb-lg">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Current Plan</h3>
               <span class="st-sec-desc">Your subscription and organization information.</span>
@@ -1142,7 +1149,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
 
             <div class="st-row st-row--bordered mt-md pb-0">
               <div class="st-row-main">
-                <div class="st-row-title">Manage your subscription</div>
+                <div class="st-row-title"><span class="st-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>Manage your subscription</div>
                 <div class="st-row-desc">Update billing details, add seats or change your plan through the billing portal.</div>
               </div>
               <div class="st-row-actions">
@@ -1152,7 +1159,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
           </div>
 
           <!-- USAGE -->
-          <div class="st-section">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Usage</h3>
               <span class="st-sec-desc">Employee seats used across your organization this cycle.</span>
@@ -1181,7 +1188,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
 
           <div id="dangerZoneCard" style="display:none;">
             <!-- YOUR DATA -->
-            <div class="st-section">
+            <div class="st-section st-card">
               <div class="st-sec-head">
                 <h3 class="st-sec-title">Your Data</h3>
                 <span class="st-sec-desc">Download, review, or delete your account data.</span>
@@ -1190,7 +1197,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             </div>
 
             <!-- DATA WE STORE -->
-            <div class="st-section">
+            <div class="st-section st-card">
               <div class="st-sec-head">
                 <h3 class="st-sec-title">Data We Store</h3>
                 <span class="st-sec-desc">Categories of information your account holds.</span>
@@ -1216,7 +1223,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             </div>
 
             <!-- EXPORT & DELETE -->
-            <div class="st-section">
+            <div class="st-section st-card">
               <div class="st-sec-head">
                 <h3 class="st-sec-title">Export &amp; Delete</h3>
                 <span class="st-sec-desc">Download your data or delete your account.</span>
@@ -1224,7 +1231,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
 
               <div class="st-row">
                 <div class="st-row-main">
-                  <div class="st-row-title">Download a copy of your data</div>
+                  <div class="st-row-title"><span class="st-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></span>Download a copy of your data</div>
                   <div class="st-row-desc">Your account profile and organization details as JSON.</div>
                 </div>
                 <div class="st-row-actions">
@@ -1234,7 +1241,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
 
               <div class="st-row">
                 <div class="st-row-main">
-                  <div class="st-row-title">Delete your account</div>
+                  <div class="st-row-title"><span class="st-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg></span>Delete your account</div>
                   <div class="st-row-desc">Permanent &mdash; removes your account and, if you&rsquo;re the only member, your organization.</div>
                 </div>
                 <div class="st-row-actions">
