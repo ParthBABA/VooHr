@@ -27,6 +27,9 @@
 }
 .settings-layout{display:block;max-width:1600px;margin:0 auto;padding:2rem clamp(0.75rem,1.5vw,1.5rem) 5rem;}
 
+/* Page title: scoped bump for the Settings page only — the shared .page-title rule in style.css stays untouched for other pages */
+.top-bar .page-title{font-size:1.6rem;font-weight:700;}
+
 .settings-nav{display:flex;flex-direction:column;}
 .settings-nav-group{font-family:var(--font-lato);font-weight:700;font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--ivory-faint);margin:1.2rem 0.9rem 0.5rem;opacity:0.75;}
 .settings-nav-group:first-child{margin-top:0.35rem;}
@@ -90,13 +93,13 @@
 .st-row-actions{flex-shrink:0;display:flex;align-items:center;gap:0.7rem;}
 
 /* Contextual status indicator: icon/dot + label. Color never carries meaning alone. */
-.st-status{display:inline-flex;align-items:center;gap:0.55rem;font-family:var(--font-lato);font-size:0.78rem;font-weight:600;color:var(--ivory-dim);}
+.st-status{display:inline-flex;align-items:center;gap:0.5rem;font-family:var(--font-lato);font-size:0.76rem;font-weight:600;color:var(--ivory-dim);padding:0.4rem 0.85rem;border-radius:100px;background:var(--surface);border:1px solid var(--border);}
 .st-status .st-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--ivory-faint);}
-.st-status.ok{color:var(--teal);}
+.st-status.ok{color:var(--teal);background:var(--teal-soft);border-color:var(--teal-glow);}
 .st-status.ok .st-dot{background:var(--teal);box-shadow:0 0 0 3px var(--teal-soft);}
-.st-status.warn{color:var(--amber);}
+.st-status.warn{color:var(--amber);background:var(--amber-soft);border-color:var(--amber-glow);}
 .st-status.warn .st-dot{background:var(--amber);box-shadow:0 0 0 3px var(--amber-soft);}
-.st-status.crit{color:var(--red);}
+.st-status.crit{color:var(--red);background:var(--red-soft);border-color:var(--red-glow);}
 .st-status.crit .st-dot{background:var(--red);box-shadow:0 0 0 3px var(--red-soft);}
 .st-status.neutral .st-dot{background:var(--ivory-faint);}
 .st-status strong{font-weight:700;color:var(--ivory);}
@@ -267,13 +270,13 @@
 
 /* Contextual status indicator: a small icon + tinted label. Color never
    carries meaning alone — glyph and label text are always present. */
-.st-status{display:inline-flex;align-items:center;gap:0.55rem;font-family:var(--font-lato);font-size:0.78rem;font-weight:600;color:var(--ivory-dim);}
+.st-status{display:inline-flex;align-items:center;gap:0.5rem;font-family:var(--font-lato);font-size:0.76rem;font-weight:600;color:var(--ivory-dim);padding:0.4rem 0.85rem;border-radius:100px;background:var(--surface);border:1px solid var(--border);}
 .st-status .st-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--ivory-faint);}
-.st-status.ok{color:var(--teal);}
+.st-status.ok{color:var(--teal);background:var(--teal-soft);border-color:var(--teal-glow);}
 .st-status.ok .st-dot{background:var(--teal);box-shadow:0 0 0 3px var(--teal-soft);}
-.st-status.warn{color:var(--amber);}
+.st-status.warn{color:var(--amber);background:var(--amber-soft);border-color:var(--amber-glow);}
 .st-status.warn .st-dot{background:var(--amber);box-shadow:0 0 0 3px var(--amber-soft);}
-.st-status.crit{color:var(--red);}
+.st-status.crit{color:var(--red);background:var(--red-soft);border-color:var(--red-glow);}
 .st-status.crit .st-dot{background:var(--red);box-shadow:0 0 0 3px var(--red-soft);}
 .st-status.neutral .st-dot{background:var(--ivory-faint);}
 .st-status strong{font-weight:700;color:var(--ivory);}
@@ -480,7 +483,8 @@ html[data-theme="light"]{
 .st-card{border:1px solid var(--border);border-radius:6px;background:var(--surface);padding:1.6rem 1.7rem;}
 .st-section.st-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.6rem 1.7rem;margin-bottom:1.5rem;}
 .settings-panel .st-section.st-card + .st-section.st-card{border-top:1px solid var(--border);padding-top:1.6rem;}
-.st-row-icon,.toggle-icon{width:38px;height:38px;border-radius:14px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--ivory-dim);}
+.st-row-icon,.toggle-icon{width:38px;height:38px;border-radius:14px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--ivory-dim);transition:background 0.16s var(--ease-out);}
+.st-row:hover .st-row-icon,.toggle-row:hover .toggle-icon{background:var(--ivory-ghost);}
 .st-row-icon svg,.toggle-icon svg{width:18px;height:18px;}
 .st-row-main{display:flex;align-items:flex-start;gap:0.8rem;}
 .toggle-label{display:flex;align-items:flex-start;gap:0.8rem;}
