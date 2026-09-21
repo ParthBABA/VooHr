@@ -198,6 +198,33 @@ def _audio_payload(phone, media_id="MEDIA123"):
     }
 
 
+def _document_payload(phone, media_id="MEDIADOC", mime_type="text/plain", filename="notes.txt"):
+    return {
+        "object": "whatsapp_business_account",
+        "entry": [{
+            "id": "wa_biz_1",
+            "changes": [{
+                "field": "messages",
+                "value": {
+                    "messaging_product": "whatsapp",
+                    "contacts": [{"profile": {"name": "Sender"}, "wa_id": phone}],
+                    "messages": [{
+                        "from": phone,
+                        "id": "wamid.TESTDOC",
+                        "timestamp": "1700000000",
+                        "type": "document",
+                        "document": {
+                            "id": media_id,
+                            "mime_type": mime_type,
+                            "filename": filename,
+                        },
+                    }],
+                },
+            }],
+        }],
+    }
+
+
 def _make_client(monkeypatch, db=None):
     app = Flask(__name__)
     app.config.update(TESTING=True, SECRET_KEY="test-secret-key")
@@ -514,6 +541,104 @@ class TestWhatsAppWebhookIntake:
         assert r.status_code == 200
         assert db.sessions.docs == []
         assert any("couldn't fetch" in text for _, text in sent)
+
+    def test_txt_document_creates_session_from_decoded_text(self, monkeypatch):
+        client, db = _seeded_store(monkeypatch)
+        sent = []
+        monkeypatch.setattr(wr, "send_message", lambda phone, text: sent.append((phone, text)) or True)
+        monkeypatch.setattr(
+            wr, "download_media",
+            lambda media_id: "Meeting notes for tomorrow.\nSign the contract.".encode("utf-8"),
+        )
+
+        r = client.post("/api/whatsapp/webhook", json=_document_payload(_PHONE))
+        assert r.status_code == 200
+
+        sessions = db.sessions.docs
+        assert len(sessions) == 1
+        s = sessions[0]
+        assert s["source"] == "whatsapp_dictation"
+        assert s["recording_device"] == "whatsapp_document"
+        assert s["recording_type"] == "text"
+        assert s["employee_id"] is None
+        assert s["transcript"]["raw"] == "Meeting notes for tomorrow.\nSign the contract."
+        assert s["transcript"]["edited"] == "Meeting notes for tomorrow.\nSign the contract."
+
+        n = db.notifications.find_one({"type": "session_ready"})
+        assert n is not None
+        assert n["source_session_id"] == s["_id"]
+
+        assert sent[0][1] == wr._ACK_TEXT
+        assert "Done!" in sent[-1][1]
+        assert all(phone == _PHONE for phone, _ in sent)
+
+    def test_txt_document_matches_by_filename_when_mime_type_is_generic(self, monkeypatch):
+        client, db = _seeded_store(monkeypatch)
+        monkeypatch.setattr(wr, "send_message", lambda phone, text: True)
+        monkeypatch.setattr(
+            wr, "download_media",
+            lambda media_id: "Plain text served with a generic mime type.".encode("utf-8"),
+        )
+
+        r = client.post(
+            "/api/whatsapp/webhook",
+            json=_document_payload(_PHONE, mime_type="application/octet-stream", filename="draft.txt"),
+        )
+        assert r.status_code == 200
+        assert len(db.sessions.docs) == 1
+        assert db.sessions.docs[0]["recording_type"] == "text"
+        assert db.sessions.docs[0]["transcript"]["raw"] == "Plain text served with a generic mime type."
+
+    def test_txt_document_decodes_non_utf8_bytes(self, monkeypatch):
+        client, db = _seeded_store(monkeypatch)
+        monkeypatch.setattr(wr, "send_message", lambda phone, text: True)
+        monkeypatch.setattr(wr, "download_media", lambda media_id: "caf\xe9 latin".encode("latin-1"))
+
+        r = client.post("/api/whatsapp/webhook", json=_document_payload(_PHONE))
+        assert r.status_code == 200
+        assert len(db.sessions.docs) == 1
+        assert "caf" in db.sessions.docs[0]["transcript"]["raw"]
+
+    def test_audio_mime_document_goes_through_stt_and_creates_session(self, monkeypatch):
+        client, db = _seeded_store(monkeypatch)
+        sent = []
+        stt = _FakeSTT("Transcribed from the attached file")
+        monkeypatch.setattr(wr, "send_message", lambda phone, text: sent.append((phone, text)) or True)
+        monkeypatch.setattr(wr, "get_stt_provider", lambda: stt)
+        monkeypatch.setattr(wr, "download_media", lambda media_id: b"FAKEAUDIOBYTES")
+
+        payload = _document_payload(_PHONE, media_id="MEDIAMP3", mime_type="audio/mpeg", filename="recording.mp3")
+        r = client.post("/api/whatsapp/webhook", json=payload)
+        assert r.status_code == 200
+
+        assert stt.calls == [{"audio_bytes": b"FAKEAUDIOBYTES", "content_type": "audio/mpeg", "language": None}]
+
+        sessions = db.sessions.docs
+        assert len(sessions) == 1
+        s = sessions[0]
+        assert s["source"] == "whatsapp_dictation"
+        assert s["recording_device"] == "whatsapp_document"
+        assert s["recording_type"] == "audio/mpeg"
+        assert s["transcript"]["raw"] == "Transcribed from the attached file"
+        assert s["employee_id"] is None
+
+        assert db.notifications.find_one({"type": "session_ready"}) is not None
+        assert sent[0][1] == wr._ACK_TEXT
+        assert "Done!" in sent[-1][1]
+
+    def test_unsupported_document_gets_not_supported_reply_no_session(self, monkeypatch):
+        client, db = _seeded_store(monkeypatch)
+        sent = []
+        monkeypatch.setattr(wr, "send_message", lambda phone, text: sent.append((phone, text)) or True)
+
+        payload = _document_payload(_PHONE, media_id="MEDIAPDF", mime_type="application/pdf", filename="report.pdf")
+        r = client.post("/api/whatsapp/webhook", json=payload)
+        assert r.status_code == 200
+
+        assert db.sessions.docs == []
+        assert db.notifications.docs == []
+        assert sent[0][1] == wr._ACK_TEXT
+        assert any(".txt" in text and "aren't supported yet" in text for _, text in sent)
 
     def test_rate_limited_phone_gets_throttle_reply(self, monkeypatch):
         client, db = _seeded_store(monkeypatch)

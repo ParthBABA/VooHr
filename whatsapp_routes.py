@@ -8,6 +8,13 @@ for the linked user's organization:
               'whatsapp_text'``, STT skipped)
   * audio  -> downloaded and transcribed via the configured STT provider
               (``recording_device 'whatsapp'``)
+  * document (plain text) -> file downloaded, decoded, and used directly as
+              the transcript (``recording_device 'whatsapp_document'``,
+              ``recording_type 'text'``)
+  * document (audio) -> file downloaded and transcribed like voice notes
+              (``recording_device 'whatsapp_document'``)
+  * document (other) -> acknowledged but politely declined (only .txt and
+              audio attachments are supported); no session is created
 
 Flow (mirrors jobs.py's background translation/TTS jobs):
 
@@ -49,6 +56,37 @@ _WHATSAPP_INBOUND_WINDOW = 3600 # 1 hour
 _ACK_TEXT = "Got it — transcribing now..."
 
 _VERIFY_TOKEN_ENV = "WHATSAPP_VERIFY_TOKEN"
+
+# ── Document-attachment handling ────────────────────────────────────────────
+# WhatsApp sends a file attachment as a ``document``-type message. Only plain
+# text and audio files get processed; anything else gets a polite decline.
+_DOCUMENT_DECODE_ENCODINGS = ("utf-8", "latin-1")
+
+
+def _is_text_document(mime_type: str, filename: str) -> bool:
+    """True for a plain-text file attachment: a ``text/plain`` mime type or a
+    ``.txt`` filename (the filename check catches senders whose client reports
+    a generic mime type)."""
+    mime = (mime_type or "").strip().lower()
+    name = (filename or "").strip().lower()
+    return mime == "text/plain" or name.endswith(".txt")
+
+
+def _is_audio_document(mime_type: str) -> bool:
+    """True for an audio file sent as a document rather than a WhatsApp voice
+    note (audio/mpeg, audio/wav, audio/mp4, audio/ogg, ...)."""
+    return (mime_type or "").strip().lower().startswith("audio/")
+
+
+def _decode_document_bytes(data: bytes) -> str | None:
+    """Decode a downloaded document's bytes, falling back from UTF-8 to
+    latin-1 so an unexpected encoding never crashes the intake thread."""
+    for encoding in _DOCUMENT_DECODE_ENCODINGS:
+        try:
+            return data.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return None
 
 
 def _now() -> datetime:
@@ -166,6 +204,34 @@ def _handle_inbound_message(db, msg) -> None:
             args=(db, user, phone, text),
             daemon=True,
         ).start()
+    elif mtype == "document":
+        document = msg.get("document") or {}
+        media_id = (document.get("id") or "").strip()
+        mime_type = (document.get("mime_type") or "").strip()
+        filename = (document.get("filename") or "").strip()
+        if not media_id:
+            logger.debug("whatsapp_inbound=skipped reason=document_no_media_id")
+            return
+        if _is_text_document(mime_type, filename):
+            threading.Thread(
+                target=_process_document_text,
+                args=(db, user, phone, media_id),
+                daemon=True,
+            ).start()
+        elif _is_audio_document(mime_type):
+            stt = get_stt_provider()
+            threading.Thread(
+                target=_process_document_audio,
+                args=(db, user, phone, media_id, mime_type, stt),
+                daemon=True,
+            ).start()
+        else:
+            send_message(
+                phone,
+                "Sorry, I can only process .txt text files and audio file "
+                "attachments right now. PDFs, images, and other document "
+                "types aren't supported yet.",
+            )
 
 
 def _process_voice_note(db, user, phone, media_id, mime_type, stt) -> None:
@@ -221,6 +287,69 @@ def _process_text(db, user, phone, text) -> None:
     except Exception:
         logger.exception("whatsapp_intake=text_failed phone_set=True")
         send_message(phone, "Something went wrong while saving that message. Please try again.")
+
+
+def _process_document_text(db, user, phone, media_id) -> None:
+    """Background: download a plain-text file attachment, decode it, and
+    persist the text directly as a dictation session (no STT needed)."""
+    try:
+        data = download_media(media_id)
+        if not data:
+            send_message(phone, "Sorry, I couldn't fetch that document. Please try again.")
+            return
+        text = (_decode_document_bytes(data) or "").strip()
+        if not text:
+            send_message(phone, "Sorry, that document didn't contain any readable text. Please try again.")
+            return
+        if len(text.encode("utf-8")) > MAX_RAW_TEXT_BYTES:
+            send_message(phone, "That document was too long to save as a dictation. Please send a shorter one.")
+            return
+        session = _insert_session_doc(
+            db,
+            user.get("org_id"),
+            None,
+            raw_text=text,
+            edited_text=text,
+            source="whatsapp_dictation",
+            duration_seconds=0,
+            recording_device="whatsapp_document",
+            recording_type="text",
+            language="en",
+        )
+        _finish_intake(db, user, session, phone)
+    except Exception:
+        logger.exception("whatsapp_intake=document_text_failed phone_set=True")
+        send_message(phone, "Something went wrong while saving that document. Please try again.")
+
+
+def _process_document_audio(db, user, phone, media_id, mime_type, stt) -> None:
+    """Background: download an audio file sent as a document attachment and
+    transcribe it through the same STT path as voice notes."""
+    try:
+        data = download_media(media_id)
+        if not data:
+            send_message(phone, "Sorry, I couldn't fetch that audio file. Please try again.")
+            return
+        raw_text = (stt.transcribe(data, content_type=mime_type) or "").strip()
+        if not raw_text:
+            send_message(phone, "I couldn't hear any speech in that audio file. Please try again.")
+            return
+        session = _insert_session_doc(
+            db,
+            user.get("org_id"),
+            None,
+            raw_text=raw_text,
+            edited_text=raw_text,
+            source="whatsapp_dictation",
+            duration_seconds=0,
+            recording_device="whatsapp_document",
+            recording_type=mime_type or "audio",
+            language="en",
+        )
+        _finish_intake(db, user, session, phone)
+    except Exception:
+        logger.exception("whatsapp_intake=document_audio_failed phone_set=True")
+        send_message(phone, "Something went wrong while transcribing that audio file. Please try again.")
 
 
 def _finish_intake(db, user, session, phone) -> None:
