@@ -189,6 +189,14 @@
   select.mt-field{appearance:auto;}
   .mt-formerr{font-family:var(--font-m);font-size:0.7rem;color:var(--mt-red);}
 
+  /* ── Detail modal · delete-meeting action ── */
+  .btn-danger{color:var(--mt-red);border-color:rgba(248,113,113,0.35);}
+  .btn-danger:hover{color:var(--void);background:var(--mt-red);border-color:var(--mt-red);box-shadow:0 0 14px rgba(248,113,113,0.4);}
+  .mt-delzone{display:flex;flex-direction:column;gap:0.6rem;}
+  .mt-delconfirm{display:flex;align-items:center;justify-content:flex-end;gap:0.6rem;flex-wrap:wrap;padding:0.7rem 0.85rem;background:var(--elevated);border:1px solid rgba(248,113,113,0.3);border-radius:8px;}
+  .mt-delmsg{font-family:var(--font-m);font-size:0.68rem;color:var(--ivory-dim);line-height:1.5;flex:1;min-width:180px;}
+  .mt-delconfirm .mt-formerr{flex-basis:100%;text-align:right;}
+
   /* ── Schedule form · employee search (real-time, org-scoped) ── */
   .mt-empsearch{position:relative;}
   .mt-empsearch .mt-field{padding-right:2.3rem;}
@@ -781,7 +789,8 @@ function mtOpenDetail(eid) {
     meetingInfo =
       '<div class="mt-d"><div class="mt-dtitle">Meeting</div>' +
       '<div class="mt-meetinfo"><span><b>Date:</b> ' + (p.next_meeting.scheduled_at ? fmtFullDate(p.next_meeting.scheduled_at) : '\u2014') + '</span>' +
-      '<span><b>Title:</b> ' + escHtml(p.next_meeting.title || '\u2014') + '</span></div></div>';
+      '<span><b>Title:</b> ' + escHtml(p.next_meeting.title || '\u2014') + '</span></div>' +
+      '<div class="mt-delzone"><button class="btn btn-danger btn-sm" type="button" id="mtDeleteMeetingBtn" data-meeting-id="' + p.next_meeting.id + '">Delete meeting</button></div></div>';
     meetTxt = (p.next_meeting.title || 'Meeting') + ' \u00b7 ' + (p.next_meeting.scheduled_at ? fmtFullDate(p.next_meeting.scheduled_at) : '');
   }
   var prevInfo = '';
@@ -800,6 +809,7 @@ function mtOpenDetail(eid) {
     prevInfo +
     '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Loading recorded items\u2026</div></div>';
   fillModalBody(bodyHtml);
+  mtWireDeleteMeeting();
 
   fetch('/api/conversation-memory?employee_id=' + encodeURIComponent(eid))
     .then(function(r){ if (!r.ok) throw new Error('Failed (' + r.status + ')'); return r.json(); })
@@ -816,10 +826,59 @@ function mtOpenDetail(eid) {
         memoryBlock('Follow-ups', follows, 'No follow-ups recorded.') +
         memoryBlock('Notes', notes, 'No notes recorded.');
       fillModalBody(bodyHtmlWithOverview(meetingInfo, prevInfo, p, usedOpeners, html));
+      mtWireDeleteMeeting();
     })
     .catch(function(err){
       fillModalBody(meetingInfo + '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Couldn\u2019t load items \u2014 ' + escHtml(err.message) + '</div></div>');
+      mtWireDeleteMeeting();
     });
+}
+function mtWireDeleteMeeting() {
+  var btn = $('mtDeleteMeetingBtn');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var mid = btn.getAttribute('data-meeting-id');
+    var zone = btn.parentNode;
+    var confirmHtml =
+      '<div class="mt-delconfirm">' +
+        '<span class="mt-delmsg">Delete this scheduled meeting? This can\u2019t be undone.</span>' +
+        '<button class="btn btn-outline btn-sm" type="button" id="mtDeleteCancel">Cancel</button>' +
+        '<button class="btn btn-danger btn-sm" type="button" id="mtDeleteConfirm">Delete meeting</button>' +
+        '<div class="mt-formerr" id="mtDeleteErr"></div>' +
+      '</div>';
+    zone.innerHTML = confirmHtml;
+    $('mtDeleteCancel').addEventListener('click', function() {
+      zone.innerHTML = '<button class="btn btn-danger btn-sm" type="button" id="mtDeleteMeetingBtn" data-meeting-id="' + mid + '">Delete meeting</button>';
+      mtWireDeleteMeeting();
+    });
+    $('mtDeleteConfirm').addEventListener('click', function() {
+      var confirmBtn = $('mtDeleteConfirm');
+      var errEl = $('mtDeleteErr');
+      errEl.textContent = '';
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Deleting\u2026';
+      fetch('/api/meetings/' + encodeURIComponent(mid), { method: 'DELETE' })
+        .then(function(r) {
+          if (!r.ok) {
+            var err = new Error('Request failed (' + r.status + ')');
+            err.status = r.status;
+            throw err;
+          }
+          return r.json();
+        })
+        .then(function() {
+          closeModal();
+          loadData();
+        })
+        .catch(function(err) {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Delete meeting';
+          errEl.textContent = (err && err.status === 403)
+            ? 'You don\u2019t have access to delete this meeting.'
+            : 'Couldn\u2019t delete this meeting \u2014 ' + (err && err.message ? err.message : 'Request failed');
+        });
+    });
+  });
 }
 function memoryRow(it) {
   return '<div class="mt-item"><span style="color:var(--ivory-faint);width:14px;flex-shrink:0;">' + mtStatusSym(it.status, it.type) + '</span>' +
