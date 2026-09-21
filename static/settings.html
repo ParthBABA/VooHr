@@ -40,11 +40,12 @@
 
 /* ── Content pane: comfortable reading width, aligned to the rail ── */
 .settings-content{flex:1;min-width:0;max-width:840px;padding-top:0.2rem;}
-.settings-panel{display:block;scroll-margin-top:6.5rem;}
+.settings-panel{display:none;}
+.settings-panel.active{display:block;}
 .settings-panel + .settings-panel{margin-top:3rem;}
 
 /* ── Page header: eyebrow / title / description ── */
-.st-page{padding-bottom:2rem;border-bottom:1px solid var(--border);margin-bottom:2.5rem;}
+.st-page{padding-bottom:1rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem;}
 .st-eyebrow{font-family:var(--font-lato);font-weight:700;font-size:0.66rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--amber);margin-bottom:0.65rem;display:flex;align-items:center;gap:0.5rem;}
 .st-eyebrow svg{width:15px;height:15px;}
 .st-title{font-family:var(--font-d);font-weight:600;font-size:1.85rem;letter-spacing:-0.02em;color:var(--ivory);line-height:1.12;}
@@ -469,6 +470,9 @@ html[data-theme="light"]{
 .settings-content{max-width:none;}
 .settings-nav{display:flex;flex-direction:row;align-items:stretch;gap:0.3rem;overflow-x:auto;padding:0 0 0.35rem;border-bottom:1px solid var(--border);margin-bottom:2rem;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;}
 .settings-nav::-webkit-scrollbar{display:none;}
+.settings-nav-wrap{position:relative;}
+.settings-nav-wrap::after{content:"";pointer-events:none;position:absolute;right:0;top:0;bottom:0;width:32px;background:linear-gradient(90deg,transparent,var(--void) 80%);}
+.settings-nav-wrap:not(.is-overflowing)::after{display:none;}
 .settings-nav-group{display:none;}
 .settings-nav-item{white-space:nowrap;border-radius:6px;padding:0.7rem 0.9rem;}
 .settings-nav-item .nav-ind{left:0;right:0;top:auto;bottom:-1px;width:auto;height:2px;border-radius:0;}
@@ -708,12 +712,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
       <!-- SETTINGS CONTENT -->
       <section class="settings-content">
 
-        <!-- ═══ PROFILE ═══ -->
-        <div class="settings-panel active" data-panel="profile">
-          <div class="st-page">
-            <p class="st-desc">Manage your personal information and how you appear across VooVr.</p>
-          </div>
-
+        <div class="settings-nav-wrap">
           <nav class="settings-nav" aria-label="Settings sections">
             <a href="#profile" class="settings-nav-item active" data-panel="profile" data-accent="violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile<span class="nav-ind"></span></a>
             <a href="#organization" class="settings-nav-item" data-panel="organization" data-accent="teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>Organization<span class="nav-ind"></span></a>
@@ -726,6 +725,13 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <a href="#billing" class="settings-nav-item admin-only" data-panel="billing" data-accent="violet" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Plan &amp; Billing<span class="nav-ind"></span></a>
             <a href="#data-privacy" class="settings-nav-item" data-panel="data-privacy" data-accent="red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Data &amp; Privacy<span class="nav-ind"></span></a>
           </nav>
+        </div>
+
+        <!-- ═══ PROFILE ═══ -->
+        <div class="settings-panel active" data-panel="profile">
+          <div class="st-page">
+            <p class="st-desc">Manage your personal information and how you appear across VooVr.</p>
+          </div>
 
           <div class="st-section st-card" id="profileIdentitySection">
             <div class="profile-head mb-md">
@@ -1304,7 +1310,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
 </div>
 
 <script>
-/* ── Settings sidebar navigation: keep all sections in one scrollable flow while highlighting the active section ── */
+/* ── Settings tab switching: show only the active panel and highlight its nav item ── */
 (function(){
   var items = document.querySelectorAll('.settings-nav-item');
   var panels = document.querySelectorAll('.settings-panel');
@@ -1313,6 +1319,9 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
   function activate(panelId){
     var nav = document.querySelector('.settings-nav-item[data-panel="' + panelId + '"]');
     items.forEach(function(x){ x.classList.toggle('active', x === nav); });
+    panels.forEach(function(p){
+      p.classList.toggle('active', p.getAttribute('data-panel') === panelId);
+    });
     if (crumb && nav) {
       crumb.textContent = nav.textContent.replace(/\s+/g, ' ').trim();
     }
@@ -1321,38 +1330,27 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
   items.forEach(function(item){
     item.addEventListener('click', function(e){
       e.preventDefault();
-      var panelId = item.getAttribute('data-panel');
-      activate(panelId);
-      var panel = document.querySelector('.settings-panel[data-panel="' + panelId + '"]');
-      if (panel) {
-        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      activate(item.getAttribute('data-panel'));
     });
   });
-
-  if (typeof IntersectionObserver !== 'undefined') {
-    var observer = new IntersectionObserver(function(entries){
-      entries.forEach(function(entry){
-        if (!entry.isIntersecting) return;
-        if (entry.intersectionRatio < 0.3) return;
-        var panelId = entry.target.getAttribute('data-panel');
-        if (panelId) activate(panelId);
-      });
-    }, { threshold: [0.3, 0.5, 0.7], rootMargin: '-10% 0px -35% 0px' });
-
-    panels.forEach(function(panel){ observer.observe(panel); });
-  }
 
   // Support ?panel=... deep link (e.g. ?panel=organization).
   var params = new URLSearchParams(window.location.search);
   var requested = params.get('panel');
   if (requested && document.querySelector('.settings-nav-item[data-panel="' + requested + '"]')) {
-    var requestedPanel = document.querySelector('.settings-panel[data-panel="' + requested + '"]');
     activate(requested);
-    if (requestedPanel) {
-      setTimeout(function(){ requestedPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
+  }
+
+  // Overflow fade cue: only show the right-edge fade while the tab row overflows.
+  var navWrap = document.querySelector('.settings-nav-wrap');
+  var navRow = document.querySelector('.settings-nav');
+  function updateNavOverflow(){
+    if (navWrap && navRow) {
+      navWrap.classList.toggle('is-overflowing', navRow.scrollWidth > navRow.clientWidth);
     }
   }
+  updateNavOverflow();
+  window.addEventListener('resize', updateNavOverflow);
 })();
 
 function escapeHtml(s){
