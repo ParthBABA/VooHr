@@ -326,7 +326,7 @@
 
       <div class="mt-empty" id="mtEmpty" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-        <div>No conversations match your filter.</div>
+        <div id="mtEmptyText">No conversations match your filter.</div>
       </div>
 
     </div>
@@ -579,7 +579,14 @@ function render() {
   $('mtTotalCount').textContent = mtPeople.length;
 
   var isEmpty = today.length === 0 && upcoming.length === 0 && follow.length === 0;
-  $('mtEmpty').style.display = isEmpty ? 'block' : 'none';
+  if (isEmpty) {
+    $('mtEmptyText').textContent = mtFilter !== 'all'
+      ? 'No conversations match your filter.'
+      : 'No meetings yet \u2014 once you add employees and schedule meetings, they\u2019ll show up here.';
+    $('mtEmpty').style.display = 'block';
+  } else {
+    $('mtEmpty').style.display = 'none';
+  }
   $('hdrToday').style.display = today.length ? '' : 'none';
   $('hdrUpcoming').style.display = upcoming.length ? '' : 'none';
   $('hdrFollow').style.display = follow.length ? '' : 'none';
@@ -616,7 +623,7 @@ function showError(msg) {
   box.innerHTML =
     '<div class="mt-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
     '<div class="mt-state-title">Couldn\u2019t load the meeting board</div>' +
-    '<div class="mt-state-sub">' + escHtml(msg || 'Please try again.') + '</div>' +
+    '<div class="mt-state-sub">We\u2019re having trouble reaching your meeting data right now.</div>' +
     '<button class="btn btn-outline btn-sm mt-retry" type="button">Retry</button></div>';
   box.querySelector('.mt-retry').addEventListener('click', loadData);
 }
@@ -639,6 +646,7 @@ function loadData() {
       renderMetrics();
       render();
       if (!mtPeople.length) {
+        $('mtEmptyText').textContent = 'No meetings yet \u2014 once you add employees and schedule meetings, they\u2019ll show up here.';
         $('mtEmpty').style.display = 'block';
         $('mtToday').innerHTML = ''; $('mtUpcoming').innerHTML = ''; $('mtFollow').innerHTML = '';
       }
