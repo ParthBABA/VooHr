@@ -193,7 +193,7 @@
 }
 @media(max-width:1024px){
   .settings-layout{flex-direction:column;}
-  .settings-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:0.3rem;padding-bottom:0.35rem;-webkit-overflow-scrolling:touch;}
+  .settings-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:0.3rem;padding-bottom:0.35rem;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;}
   .settings-nav-group{display:none;}
   .settings-nav-item{white-space:nowrap;padding:0.45rem 0.85rem;}
   .settings-nav-item .nav-ind{display:none;}
@@ -320,7 +320,7 @@
 }
 @media(max-width:1024px){
   .settings-layout{flex-direction:column;gap:0.8rem;}
-  .settings-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:0.4rem;padding-bottom:0.25rem;-webkit-overflow-scrolling:touch;}
+  .settings-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:0.4rem;padding-bottom:0.25rem;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;}
   .settings-nav-group{display:none;}
   .settings-nav-item{white-space:nowrap;padding:0.5rem 0.85rem;}
   .settings-nav-item .nav-ind{display:none;}
@@ -467,7 +467,8 @@ html[data-theme="light"]{
 /* Horizontal settings tabs and contained settings sections. */
 .settings-layout{display:block;}
 .settings-content{max-width:none;}
-.settings-nav{display:flex;flex-direction:row;align-items:stretch;gap:0.3rem;overflow-x:auto;padding:0 0 0.35rem;border-bottom:1px solid var(--border);margin-bottom:2rem;-webkit-overflow-scrolling:touch;}
+.settings-nav{display:flex;flex-direction:row;align-items:stretch;gap:0.3rem;overflow-x:auto;padding:0 0 0.35rem;border-bottom:1px solid var(--border);margin-bottom:2rem;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;}
+.settings-nav::-webkit-scrollbar{display:none;}
 .settings-nav-group{display:none;}
 .settings-nav-item{white-space:nowrap;border-radius:6px;padding:0.7rem 0.9rem;}
 .settings-nav-item .nav-ind{left:0;right:0;top:auto;bottom:-1px;width:auto;height:2px;border-radius:0;}
@@ -487,7 +488,7 @@ html[data-theme="light"]{
 .toggle-label .toggle-title,.toggle-label .toggle-desc{grid-column:2;}
 @media(max-width:768px){
   .notification-groups{grid-template-columns:1fr;}
-  .settings-nav{overflow-x:auto;}
+  .settings-nav{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
 }
 
 /* 4) Short groups: rely on vertical rhythm, drop the per-row hairlines */
@@ -536,6 +537,16 @@ html[data-theme="light"] .wa-card .wa-msg{color:#8893A8;}
 html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
 @media(max-width:768px){.wa-card::before{background:linear-gradient(180deg,rgba(8,10,15,0.64) 0%,rgba(8,10,15,0.90) 50%,rgba(8,10,15,0.97) 100%);}.wa-card-body{padding:1.45rem 1.35rem 1.6rem;}}
 @media(max-width:480px){.wa-card::before{background:linear-gradient(180deg,rgba(8,10,15,0.72) 0%,rgba(8,10,15,0.93) 50%,rgba(8,10,15,0.98) 100%);}.wa-connect-row{flex-direction:column;align-items:stretch;}.wa-connect-row .wa-btn,.wa-card .wa-connect-row .wa-btn{width:100%;min-width:0;}.wa-status{width:100%;justify-content:center;}}
+
+/* ════ GMAIL INTEGRATION CARD — static placeholder; neutral accent from the existing token set (no banner asset) ════ */
+.wa-card.gmail-card{background-image:none;}
+.wa-card.gmail-card::before{display:none;}
+.wa-card.gmail-card .wa-status.is-off{color:var(--ivory-dim);background:var(--ivory-ghost);border:1px solid var(--border);}
+.wa-card.gmail-card .wa-status.is-off .st-dot{background:transparent;border:1.5px solid var(--ivory-faint);box-shadow:0 0 0 3px var(--ivory-ghost);}
+.gmail-btn{background:var(--violet);border:1px solid var(--violet);color:#FFFFFF;flex-shrink:0;min-width:148px;height:42px;border-radius:6px;}
+.gmail-btn:hover{background:var(--violet);border-color:var(--violet);color:#FFFFFF;opacity:0.92;}
+.gmail-btn:focus-visible{box-shadow:0 0 0 3px var(--violet-soft);}
+@media(max-width:480px){.wa-card.gmail-card .wa-connect-row .gmail-btn{width:100%;min-width:0;}}
 </style>
 </head>
 <body>
@@ -700,8 +711,6 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
         <!-- ═══ PROFILE ═══ -->
         <div class="settings-panel active" data-panel="profile">
           <div class="st-page">
-            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Account</div>
-            <h2 class="st-title">Profile</h2>
             <p class="st-desc">Manage your personal information and how you appear across VooVr.</p>
           </div>
 
@@ -710,6 +719,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <a href="#organization" class="settings-nav-item" data-panel="organization" data-accent="teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>Organization<span class="nav-ind"></span></a>
             <a href="#manager-roles" class="settings-nav-item admin-only" data-panel="manager-roles" data-accent="indigo" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Manager Roles<span class="nav-ind"></span></a>
             <a href="#notifications" class="settings-nav-item" data-panel="notifications" data-accent="amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>Notifications<span class="nav-ind"></span></a>
+            <a href="#integrations" class="settings-nav-item" data-panel="integrations" data-accent="violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Integrations<span class="nav-ind"></span></a>
             <a href="#security" class="settings-nav-item" data-panel="security" data-accent="teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Security<span class="nav-ind"></span></a>
             <a href="#sessions" class="settings-nav-item" data-panel="sessions" data-accent="violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Sessions<span class="nav-ind"></span></a>
             <a href="#activity-log" class="settings-nav-item" data-panel="activity-log" data-accent="teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Activity Log<span class="nav-ind"></span></a>
@@ -773,8 +783,6 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
         <!-- ═══ ORGANIZATION ═══ -->
         <div class="settings-panel" data-panel="organization">
           <div class="st-page">
-            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>Account</div>
-            <h2 class="st-title">Organization</h2>
             <p class="st-desc">Update your company profile. These details affect your plan and how your team identifies the workspace.</p>
           </div>
 
@@ -829,8 +837,6 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
         <!-- ═══ MANAGER ROLES ═══ -->
         <div class="settings-panel admin-only" data-panel="manager-roles" style="display:none;">
           <div class="st-page">
-            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Access</div>
-            <h2 class="st-title">Manager Roles</h2>
             <p class="st-desc">Send manager invites to employees who need read-only, scoped access to their team's data.</p>
           </div>
 
@@ -876,8 +882,6 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
         <!-- ═══ NOTIFICATIONS ═══ -->
         <div class="settings-panel" data-panel="notifications">
           <div class="st-page">
-            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>Communication</div>
-            <h2 class="st-title">Notifications</h2>
             <p class="st-desc">Control which VooVr events and updates you receive.</p>
           </div>
 
@@ -908,42 +912,6 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                   <span class="toggle-slider"></span>
                 </span>
               </label>
-            </div>
-          </div>
-
-          <div class="wa-card">
-            <div class="wa-card-body">
-              <div class="wa-head">
-                <div class="wa-head-copy">
-                  <h3 class="wa-title">Connect WhatsApp</h3>
-                  <p class="wa-sub">Dictate sessions by voice, right from your phone.</p>
-                </div>
-                <span class="wa-status is-off" id="waStatusBadge" role="status">
-                  <svg class="wa-glyph wa-glyph-wa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-2.9-.4-4.1-1.1L4 20l1.2-3.2A8.5 8.5 0 1 1 20 11.5Z"/>
-                    <path d="M8.4 9.3c.5-.9 1.4-1 2.1-.9h.3l.9 1.5-.9.9c.3.8 1 1.6 1.8 1.9l.9-.9 1.5.9v.3c0 .6-.3 1.5-1.4 2-2 .9-5.1-1.2-6.2-3.4-1.1-2.2-1.2-3.4-.3-4.5Z"/>
-                  </svg>
-                  <svg class="wa-glyph wa-glyph-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M5 13l4 4L19 7"/>
-                  </svg>
-                  <span class="st-dot"></span>
-                  <span class="wa-status-label" id="waStatusLabel">Not connected</span>
-                </span>
-              </div>
-
-              <p class="wa-note">Verify a phone number to (1) dictate sessions by messaging your VooVr WhatsApp number and (2) receive meeting-reminder texts. A one-time code is sent to the number over WhatsApp itself.</p>
-
-              <div class="wa-connect-row">
-                <input type="tel" class="form-input" id="waPhoneInput" placeholder="+1 555 123 4567" autocomplete="tel">
-                <button class="btn wa-btn" id="waSendCodeBtn" type="button">Send code</button>
-              </div>
-              <div class="field-error" id="waPhoneError"></div>
-              <div class="wa-connect-row wa-otp-row" id="waOtpRow" style="display:none;">
-                <input type="text" class="form-input" id="waOtpInput" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
-                <button class="btn wa-btn" id="waVerifyBtn" type="button">Verify</button>
-              </div>
-              <span class="wa-msg" id="waPhoneMsg"></span>
-              <span class="st-hint" id="waPhoneStatus" hidden></span>
             </div>
           </div>
 
@@ -998,11 +966,77 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
           </div>
         </div>
 
+        <!-- ═══ INTEGRATIONS ═══ -->
+        <div class="settings-panel" data-panel="integrations">
+          <div class="st-page">
+            <p class="st-desc">Connect outside services to extend what VooVr can do for you.</p>
+          </div>
+
+          <div class="wa-card">
+            <div class="wa-card-body">
+              <div class="wa-head">
+                <div class="wa-head-copy">
+                  <h3 class="wa-title">Connect WhatsApp</h3>
+                  <p class="wa-sub">Dictate sessions by voice, right from your phone.</p>
+                </div>
+                <span class="wa-status is-off" id="waStatusBadge" role="status">
+                  <svg class="wa-glyph wa-glyph-wa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-2.9-.4-4.1-1.1L4 20l1.2-3.2A8.5 8.5 0 1 1 20 11.5Z"/>
+                    <path d="M8.4 9.3c.5-.9 1.4-1 2.1-.9h.3l.9 1.5-.9.9c.3.8 1 1.6 1.8 1.9l.9-.9 1.5.9v.3c0 .6-.3 1.5-1.4 2-2 .9-5.1-1.2-6.2-3.4-1.1-2.2-1.2-3.4-.3-4.5Z"/>
+                  </svg>
+                  <svg class="wa-glyph wa-glyph-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <span class="st-dot"></span>
+                  <span class="wa-status-label" id="waStatusLabel">Not connected</span>
+                </span>
+              </div>
+
+              <p class="wa-note">Verify a phone number to (1) dictate sessions by messaging your VooVr WhatsApp number and (2) receive meeting-reminder texts. A one-time code is sent to the number over WhatsApp itself.</p>
+
+              <div class="wa-connect-row">
+                <input type="tel" class="form-input" id="waPhoneInput" placeholder="+1 555 123 4567" autocomplete="tel">
+                <button class="btn wa-btn" id="waSendCodeBtn" type="button">Send code</button>
+              </div>
+              <div class="field-error" id="waPhoneError"></div>
+              <div class="wa-connect-row wa-otp-row" id="waOtpRow" style="display:none;">
+                <input type="text" class="form-input" id="waOtpInput" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+                <button class="btn wa-btn" id="waVerifyBtn" type="button">Verify</button>
+              </div>
+              <span class="wa-msg" id="waPhoneMsg"></span>
+              <span class="st-hint" id="waPhoneStatus" hidden></span>
+            </div>
+          </div>
+
+          <div class="wa-card gmail-card">
+            <div class="wa-card-body">
+              <div class="wa-head">
+                <div class="wa-head-copy">
+                  <h3 class="wa-title">Gmail Integration</h3>
+                  <p class="wa-sub">Connect your Gmail account to enable automated follow-ups and email notifications.</p>
+                </div>
+                <span class="wa-status is-off" id="gmailStatusBadge" role="status">
+                  <svg class="wa-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <path d="M22 6l-10 7L2 6"/>
+                  </svg>
+                  <span class="st-dot"></span>
+                  <span class="wa-status-label">Not connected</span>
+                </span>
+              </div>
+
+              <p class="wa-note">Automated follow-ups on overdue 1:1 meetings and email notifications from VooVr will flow through your connected Gmail account.</p>
+
+              <div class="wa-connect-row">
+                <button class="btn gmail-btn" id="gmailConnectBtn" type="button">Connect Gmail</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- ═══ SECURITY (existing TOTP + recovery functionality preserved) ═══ -->
         <div class="settings-panel" data-panel="security">
           <div class="st-page">
-            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Security</div>
-            <h2 class="st-title">Security</h2>
             <p class="st-desc">Protect your VooVr account and manage authentication methods.</p>
           </div>
 
@@ -1052,8 +1086,6 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
         <!-- ═══ SESSIONS (existing active-sessions functionality preserved) ═══ -->
         <div class="settings-panel" data-panel="sessions">
           <div class="st-page">
-            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Sessions</div>
-            <h2 class="st-title">Sessions</h2>
             <p class="st-desc">Manage devices and active sessions connected to your VooVr account.</p>
           </div>
 
@@ -1087,8 +1119,6 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
         <!-- ═══ ACTIVITY LOG (existing admin-only audit-log functionality preserved) ═══ -->
         <div class="settings-panel" data-panel="activity-log">
           <div class="st-page">
-            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Activity Log</div>
-            <h2 class="st-title">Activity Log</h2>
             <p class="st-desc">Review important activity and administrative changes across your VooVr organization.</p>
           </div>
 
@@ -1123,8 +1153,6 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
         <!-- ═══ BILLING (existing billing functionality preserved, admin-only) ═══ -->
         <div class="settings-panel admin-only" data-panel="billing" style="display:none;">
           <div class="st-page">
-            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Billing</div>
-            <h2 class="st-title">Plan &amp; Billing</h2>
             <p class="st-desc">Your subscription, plan details and employee seat usage.</p>
           </div>
 
@@ -1181,8 +1209,6 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
         <!-- ═══ DATA &amp; PRIVACY (existing export + account-deletion functionality preserved) ═══ -->
         <div class="settings-panel" data-panel="data-privacy">
           <div class="st-page">
-            <div class="st-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Data &amp; Privacy</div>
-            <h2 class="st-title">Data &amp; Privacy</h2>
             <p class="st-desc">Manage your personal data, exports, and account lifecycle.</p>
           </div>
 
@@ -1764,6 +1790,15 @@ function clearFieldError(input){
   });
 
   loadPhone();
+})();
+
+/* ── GMAIL INTEGRATION: static placeholder (no backend) — toast only ── */
+(function(){
+  var btn = document.getElementById('gmailConnectBtn');
+  if (!btn) return;
+  btn.addEventListener('click', function(){
+    showToast('Gmail integration is coming soon.');
+  });
 })();
 
 /* ── ACTIVE SESSIONS: real session tracking + revoke ── */
