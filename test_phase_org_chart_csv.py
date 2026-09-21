@@ -13,6 +13,7 @@ live DB):
 """
 import io
 import os
+from datetime import datetime, timezone
 
 import pytest
 from bson import ObjectId
@@ -26,6 +27,17 @@ ORG_B = "bbbbbbbbbbbbbbbbbbbbbbbb"
 ADMIN_USER = "999999999999999999999999"
 
 os.environ.setdefault("HASH_INDEX_SECRET", "test-secret")
+
+
+def _bson_strip(v):
+    """Mirror real BSON: datetime values are stored without tzinfo (naive UTC)."""
+    if isinstance(v, dict):
+        return {k: _bson_strip(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_bson_strip(x) for x in v]
+    if isinstance(v, datetime):
+        return v if v.tzinfo is None else v.astimezone(timezone.utc).replace(tzinfo=None)
+    return v
 
 
 class FakeCollection:
@@ -62,7 +74,7 @@ class FakeCollection:
         return Cursor()
 
     def insert_one(self, doc):
-        d = dict(doc)
+        d = _bson_strip(dict(doc))
         d["_id"] = d.get("_id") or ObjectId()
         self._docs.append(d)
         return type("R", (), {"inserted_id": d["_id"]})()
@@ -71,7 +83,7 @@ class FakeCollection:
         for d in self._docs:
             if self._match(d, filt):
                 if "$set" in update:
-                    d.update(update["$set"])
+                    d.update(_bson_strip(update["$set"]))
                 return type("R", (), {"modified_count": 1})()
         return type("R", (), {"modified_count": 0})()
 

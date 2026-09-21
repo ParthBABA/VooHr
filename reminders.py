@@ -43,6 +43,13 @@ _RELEVANT_STATUSES = {"PENDING", "SAVED"}
 # (sweep threshold) so the two stay consistent.
 MEETING_MISSED_GRACE = timedelta(hours=2)
 
+
+def _aware(dt):
+    """Mongo returns naive UTC datetimes; normalize before comparing."""
+    if dt is not None and dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
 # Factual labels only — no interpretation, no advice.
 _TYPE_LABEL = {
     "OPENER": "opener",
@@ -98,7 +105,7 @@ def surface_items(memory, upcoming_emp_ids, now):
             mt in ("COMMITMENT", "FOLLOW_UP")
             and status == "PENDING"
             and due is not None
-            and due < now
+            and _aware(due) < now
         ):
             effective = "OVERDUE"
 
@@ -149,8 +156,9 @@ def stage_for(meeting_time, now):
     reminder for something that happened weeks ago is misleading and never
     generated.
     """
-    if meeting_time.tzinfo is None:
-        meeting_time = meeting_time.replace(tzinfo=timezone.utc)
+    if meeting_time is None:
+        return None
+    meeting_time = _aware(meeting_time)
     delta = meeting_time - now
     if delta < -MEETING_MISSED_GRACE:
         return None
@@ -348,7 +356,8 @@ def ensure_reminder_notifications(db, org_id, now=None) -> int:
 
     upcoming_by_emp: dict = {}
     for m in meetings:
-        if m.get("scheduled_at") and stage_for(m["scheduled_at"], now) is not None:
+        scheduled = _aware(m.get("scheduled_at"))
+        if scheduled and stage_for(scheduled, now) is not None:
             upcoming_by_emp[str(m.get("employee_id"))] = m
 
     surfaces = surface_items(memory, set(upcoming_by_emp.keys()), now)
@@ -358,7 +367,7 @@ def ensure_reminder_notifications(db, org_id, now=None) -> int:
         meeting = upcoming_by_emp.get(eid)
         if not meeting:
             continue
-        stage = stage_for(meeting["scheduled_at"], now)
+        stage = stage_for(_aware(meeting["scheduled_at"]), now)
         if stage is None:
             continue
         for it in items:

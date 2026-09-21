@@ -13,7 +13,11 @@ def init_db(app):
     database handle on app.extensions so blueprints can look it up lazily
     via get_db(), without needing MONGODB_URI to be valid at import time.
     """
-    client = MongoClient(app.config["MONGODB_URI"]) if app.config.get("MONGODB_URI") else None
+    client = (
+        MongoClient(app.config["MONGODB_URI"], tz_aware=True, tzinfo=timezone.utc)
+        if app.config.get("MONGODB_URI")
+        else None
+    )
     app.extensions["mongo_client"] = client
     app.extensions["mongo_db"] = client[app.config["MONGODB_DB"]] if client is not None else None
 

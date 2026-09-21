@@ -38,6 +38,18 @@ ADMIN_USER = "999999999999999999999999"
 NOW = datetime(2026, 8, 30, 9, 0, tzinfo=timezone.utc)
 
 
+def _bson_strip(v):
+    """Mirror real BSON: datetime values are stored without tzinfo (naive UTC),
+    so code that compares them against aware ``now`` must normalize on read."""
+    if isinstance(v, dict):
+        return {k: _bson_strip(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_bson_strip(x) for x in v]
+    if isinstance(v, datetime):
+        return v if v.tzinfo is None else v.astimezone(timezone.utc).replace(tzinfo=None)
+    return v
+
+
 class FakeCollection:
     def __init__(self):
         self._docs = []
@@ -79,7 +91,7 @@ class FakeCollection:
         return Cursor()
 
     def insert_one(self, doc):
-        d = dict(doc)
+        d = _bson_strip(dict(doc))
         d["_id"] = d.get("_id") or ObjectId()
         self._docs.append(d)
         return type("R", (), {"inserted_id": d["_id"]})()
@@ -88,7 +100,7 @@ class FakeCollection:
         for d in self._docs:
             if self._match(d, filt):
                 if "$set" in update:
-                    d.update(update["$set"])
+                    d.update(_bson_strip(update["$set"]))
                 return type("R", (), {"matched_count": 1, "modified_count": 1})()
         return type("R", (), {"matched_count": 0, "modified_count": 0})()
 

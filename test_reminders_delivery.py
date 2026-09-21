@@ -46,6 +46,15 @@ class FakeCollection:
                 return False
         return True
 
+    def _strip(self, v):
+        if isinstance(v, dict):
+            return {k: self._strip(x) for k, x in v.items()}
+        if isinstance(v, list):
+            return [self._strip(x) for x in v]
+        if isinstance(v, datetime):
+            return v if v.tzinfo is None else v.astimezone(timezone.utc).replace(tzinfo=None)
+        return v
+
     def find_one(self, filt, *args, **kw):
         for d in self._docs:
             if self._match(d, filt):
@@ -57,7 +66,7 @@ class FakeCollection:
         return [d for d in self._docs if self._match(d, filt)]
 
     def insert_one(self, doc):
-        d = dict(doc)
+        d = self._strip(dict(doc))
         d["_id"] = d.get("_id") or ObjectId()
         self._docs.append(d)
         return type("R", (), {"inserted_id": d["_id"]})()
@@ -66,7 +75,7 @@ class FakeCollection:
         for d in self._docs:
             if self._match(d, filt):
                 if "$set" in update:
-                    d.update(update["$set"])
+                    d.update(self._strip(update["$set"]))
                 return type("R", (), {"matched_count": 1, "modified_count": 1})()
         return type("R", (), {"matched_count": 0, "modified_count": 0})()
 

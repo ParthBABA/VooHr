@@ -35,7 +35,7 @@ def _effective_status(m, now):
         m.get("type") in ("COMMITMENT", "FOLLOW_UP")
         and status == "PENDING"
         and due_at is not None
-        and due_at < now
+        and (due_at.replace(tzinfo=timezone.utc) if due_at.tzinfo is None else due_at) < now
     ):
         return "OVERDUE"
     return status

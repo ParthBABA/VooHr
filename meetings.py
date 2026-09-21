@@ -24,16 +24,23 @@ MEETING_STATUSES = {"scheduled", "completed", "cancelled", "missed"}
 MAX_MEETING_TITLE_LEN = 200
 
 
+def _aware(dt):
+    """Mongo returns naive UTC datetimes; normalize before comparing."""
+    if dt is not None and dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 def _meeting_to_json(m, emp=None) -> dict:
     return {
         "id": str(m["_id"]),
         "employee_id": str(m["employee_id"]),
         "title": m.get("title", ""),
-        "scheduled_at": m["scheduled_at"].isoformat() if m.get("scheduled_at") else None,
+        "scheduled_at": _aware(m["scheduled_at"]).isoformat() if m.get("scheduled_at") else None,
         "status": m.get("status", "scheduled"),
         "session_id": str(m["session_id"]) if m.get("session_id") else None,
-        "created_at": m["created_at"].isoformat() if m.get("created_at") else None,
-        "updated_at": m["updated_at"].isoformat() if m.get("updated_at") else None,
+        "created_at": _aware(m["created_at"]).isoformat() if m.get("created_at") else None,
+        "updated_at": _aware(m["updated_at"]).isoformat() if m.get("updated_at") else None,
         "employee": _employee_to_json(emp) if emp else None,
     }
 
@@ -268,7 +275,7 @@ def meetings_dashboard():
         if (
             mk.get("status") == "scheduled"
             and mk.get("scheduled_at") is not None
-            and mk["scheduled_at"] < missed_before
+            and _aware(mk["scheduled_at"]) < missed_before
         ):
             db.meetings.update_one(
                 {"_id": mk["_id"]},
@@ -311,7 +318,7 @@ def meetings_dashboard():
             mt in ("COMMITMENT", "FOLLOW_UP")
             and status == "PENDING"
             and due_at is not None
-            and due_at < now
+            and _aware(due_at) < now
         ):
             effective = "OVERDUE"
         if mt == "COMMITMENT" and effective in ("PENDING", "OVERDUE"):
@@ -355,7 +362,7 @@ def meetings_dashboard():
                 if str(mk.get("employee_id")) == eid
                 and mk.get("status") == "scheduled"
                 and mk.get("scheduled_at") is not None
-                and mk["scheduled_at"] >= now
+                and _aware(mk["scheduled_at"]) >= now
             ),
             None,
         )

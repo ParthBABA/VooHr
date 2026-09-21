@@ -55,6 +55,17 @@ class FakeCursor:
         return len(self._docs)
 
 
+def _bson_strip(v):
+    """Mirror real BSON: datetime values are stored without tzinfo (naive UTC)."""
+    if isinstance(v, dict):
+        return {k: _bson_strip(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_bson_strip(x) for x in v]
+    if isinstance(v, datetime):
+        return v if v.tzinfo is None else v.astimezone(timezone.utc).replace(tzinfo=None)
+    return v
+
+
 class FakeCollection:
     def __init__(self):
         self._docs = []
@@ -87,7 +98,7 @@ class FakeCollection:
         return sum(1 for d in self._docs if self._match(d, filt))
 
     def insert_one(self, doc):
-        d = dict(doc)
+        d = _bson_strip(dict(doc))
         d["_id"] = d.get("_id") or ObjectId()
         self._docs.append(d)
         return type("R", (), {"inserted_id": d["_id"]})()
@@ -96,7 +107,7 @@ class FakeCollection:
         for d in self._docs:
             if self._match(d, filt):
                 if "$set" in update:
-                    d.update(update["$set"])
+                    d.update(_bson_strip(update["$set"]))
                 if "$unset" in update:
                     for k in update["$unset"]:
                         d.pop(k, None)
