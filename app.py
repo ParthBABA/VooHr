@@ -4,6 +4,23 @@ import os
 import secrets
 from datetime import datetime, timezone
 
+# ── Logging configuration ──────────────────────────────────────────────
+# Configure the root logger at import time, before create_app() (and before
+# any imported module's logger) can emit. Python's logging defaults to level
+# WARNING with no handler, so without this every logger.info()/warning() call
+# in the app — the LLM/WhatsApp startup diagnostics and scheduler.py's sweep
+# logs — is silently discarded and never reaches Render.
+#
+# basicConfig() only attaches a handler when the root logger has none, so it
+# cannot duplicate handlers. Under gunicorn each worker is its own interpreter
+# with its own root logger, so each worker emits its own copy (exactly like the
+# existing per-worker HTTP access logs) — expected, not duplication.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from bson import ObjectId
