@@ -378,7 +378,7 @@ html[data-theme="light"]{
 .settings-content .form-input{border-color:var(--settings-divider);}
 
 /* ════ DATA & PRIVACY (informational sections — data/privacy lining) ════ */
-.st-data-intro{font-family:var(--font-lato);font-size:0.85rem;color:var(--ivory-dim);line-height:1.7;max-width:620px;}
+.st-data-intro{font-family:var(--font-lato);font-size:0.85rem;color:var(--ivory-dim);line-height:1.7;max-width:620px;margin:0 0 0.75rem;}
 .st-data-intro strong{color:var(--ivory);font-weight:600;}
 
 .st-data-list{display:flex;flex-direction:column;}
@@ -389,8 +389,8 @@ html[data-theme="light"]{
 
 /* Destructive action button — red accent only, not a full-section wash.
    !important keeps the red fill consistent against the base .btn styles. */
-.settings-content .st-danger-btn{background:var(--red)!important;border:1px solid var(--red-glow)!important;color:#fff!important;}
-.settings-content .st-danger-btn:hover{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important;}
+.settings-content .st-danger-btn{background:var(--red)!important;border:1px solid var(--red-glow)!important;color:#fff!important;transition:box-shadow 0.2s var(--ease-out);}
+.settings-content .st-danger-btn:hover{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important;box-shadow:0 4px 18px var(--red-glow);}
 
 /* Security overview and metadata rows use the existing settings rhythm. */
 .settings-panel[data-panel="security"] .st-section.st-card{margin-bottom:var(--sp-sm);}
@@ -1123,7 +1123,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
               <div class="st-row-actions">
                 <span class="st-monoline" id="backupCodesText">Loading&hellip;</span>
                 <span class="st-status warn security-low-codes" id="backupCodesWarning" style="display:none;"><span class="st-dot"></span>Running low &mdash; regenerate soon.</span>
-                <button class="btn btn-sm btn-outline" id="regenerateCodesBtn" type="button" style="display:none;">Regenerate codes</button>
+                <button class="btn btn-sm btn-primary" id="regenerateCodesBtn" type="button" style="display:none;">Regenerate codes</button>
               </div>
             </div>
             <div class="st-row">
@@ -1274,41 +1274,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                 <h3 class="st-sec-title">Your Data</h3>
                 <span class="st-sec-desc">Download, review, or delete your account data.</span>
               </div>
-              <p class="st-data-intro">Download a copy of your data, review what we store, or permanently delete your account. Exports only include your own account and organization details &mdash; never other employees&rsquo; HR data.</p>
-            </div>
-
-            <!-- DATA WE STORE -->
-            <div class="st-section st-card">
-              <div class="st-sec-head">
-                <h3 class="st-sec-title">Data We Store</h3>
-                <span class="st-sec-desc">Categories of information your account holds.</span>
-              </div>
-              <div class="st-data-list">
-                <div class="st-data-item">
-                  <div class="st-data-title">Profile</div>
-                  <div class="st-data-desc">Your name, email, role.</div>
-                </div>
-                <div class="st-data-item">
-                  <div class="st-data-title">Organization</div>
-                  <div class="st-data-desc">Company name, industry, size, plan.</div>
-                </div>
-                <div class="st-data-item">
-                  <div class="st-data-title">Security</div>
-                  <div class="st-data-desc">2FA, recovery codes, sessions.</div>
-                </div>
-                <div class="st-data-item">
-                  <div class="st-data-title">Activity</div>
-                  <div class="st-data-desc">Admin and security actions.</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- EXPORT & DELETE -->
-            <div class="st-section st-card">
-              <div class="st-sec-head">
-                <h3 class="st-sec-title">Export &amp; Delete</h3>
-                <span class="st-sec-desc">Download your data or delete your account.</span>
-              </div>
+              <p class="st-data-intro">Download a copy of what VooVr holds about you, review the categories below, or permanently delete your account at any time. Exports only include your own account and organization details &mdash; never other employees&rsquo; HR data. Deletion is immediate and irreversible: your account is removed on confirmation and, if you&rsquo;re the only member of your organization, the organization is removed with it.</p>
 
               <div class="st-row">
                 <div class="st-row-main">
@@ -1316,7 +1282,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                   <div class="st-row-desc">Your account profile and organization details as JSON.</div>
                 </div>
                 <div class="st-row-actions">
-                  <button class="btn btn-sm btn-outline" id="exportDataBtn" type="button">Export Data</button>
+                  <button class="btn btn-sm btn-primary" id="exportDataBtn" type="button">Export Data</button>
                 </div>
               </div>
 
@@ -1347,6 +1313,32 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                 <div class="st-actions st-actions--tight">
                   <button class="btn btn-sm st-danger-btn" id="confirmDeleteBtn" type="button">Delete account</button>
                   <button class="btn btn-sm btn-outline" id="cancelDeleteBtn" type="button">Cancel</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- DATA WE STORE -->
+            <div class="st-section st-card">
+              <div class="st-sec-head">
+                <h3 class="st-sec-title">Data We Store</h3>
+                <span class="st-sec-desc">Categories of information your account holds &mdash; the data used to run your VooVr workspace, including your profile, organization details, security settings, and an activity trail.</span>
+              </div>
+              <div class="st-data-list">
+                <div class="st-data-item">
+                  <div class="st-data-title">Profile</div>
+                  <div class="st-data-desc">Your name, email, role.</div>
+                </div>
+                <div class="st-data-item">
+                  <div class="st-data-title">Organization</div>
+                  <div class="st-data-desc">Company name, industry, size, plan.</div>
+                </div>
+                <div class="st-data-item">
+                  <div class="st-data-title">Security</div>
+                  <div class="st-data-desc">2FA, recovery codes, sessions.</div>
+                </div>
+                <div class="st-data-item">
+                  <div class="st-data-title">Activity</div>
+                  <div class="st-data-desc">Admin and security actions.</div>
                 </div>
               </div>
             </div>

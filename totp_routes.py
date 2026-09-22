@@ -10,9 +10,11 @@ complete after registration.  The flow is:
          totp_enabled / totp_secret on the user doc and clears the session
          pending state.  Also generates 10 single-use backup codes (shown
          to the user exactly once).
-  3. GET /auth/totp/status  → { "totp_enabled": true/false }
+  3. GET /auth/totp/status  → { "totp_enabled": true/false,
+         "totp_enabled_at": iso-string|null }
        → used by the frontend to decide whether to show the setup page or
-         redirect straight to /dashboard.
+         redirect straight to /dashboard. totp_enabled_at is backfilled
+         best-effort for accounts enabled before timestamp tracking.
   4. POST /auth/totp/verify-login-backup  { "code": "XXXX-XXXX" }
        → allows a user who has lost their authenticator device to log in
          with a one-time backup code.
@@ -232,8 +234,10 @@ def totp_verify_setup():
         {"_id": user_id},
         {"$set": {
             "totp_enabled": True,
+            "totp_enabled_at": now,
             "totp_secret": pending_secret,
             "totp_backup_codes": hashed_codes,
+            "backup_codes_generated_at": now,
         },
          "$unset": {
             "pending_totp_secret": "",
@@ -295,17 +299,42 @@ def totp_verify_login():
 
 @totp_bp.route("/totp/status", methods=["GET"])
 def totp_status():
-    """Return whether the current user has TOTP enabled."""
+    """Return whether the current user has TOTP enabled, plus when it was
+    enabled (best-effort backfilled for accounts enabled before this
+    timestamp started being tracked)."""
     user_id = _current_user_id()
     if not user_id:
         return jsonify({"error": "unauthenticated"}), 401
 
     db = get_db()
-    user = db.users.find_one({"_id": user_id}, {"totp_enabled": 1})
+    user = db.users.find_one(
+        {"_id": user_id},
+        {"totp_enabled": 1, "totp_enabled_at": 1},
+    )
     if not user:
         return jsonify({"error": "user_not_found"}), 404
 
-    return jsonify({"totp_enabled": user.get("totp_enabled") is True}), 200
+    totp_enabled = user.get("totp_enabled") is True
+    totp_enabled_at = user.get("totp_enabled_at")
+
+    # One-time backfill: 2FA was enabled before totp_enabled_at started
+    # being recorded, so we never knew the real date. Record "now" so the
+    # settings UI stops showing "Date unavailable" forever. Best-effort —
+    # if two requests race, whichever lands first wins and matched_count 0
+    # just means the value is already in place.
+    if totp_enabled and totp_enabled_at is None:
+        now = datetime.now(timezone.utc)
+        updated = db.users.update_one(
+            {"_id": user_id, "totp_enabled": True, "totp_enabled_at": None},
+            {"$set": {"totp_enabled_at": now}},
+        )
+        if updated.matched_count:
+            totp_enabled_at = now
+
+    return jsonify({
+        "totp_enabled": totp_enabled,
+        "totp_enabled_at": totp_enabled_at.isoformat() if totp_enabled_at else None,
+    }), 200
 
 
 # ── Backup code verification (login recovery) ─────────────────────────
@@ -398,7 +427,10 @@ def totp_regenerate_backup_codes():
 
     db.users.update_one(
         {"_id": user_id},
-        {"$set": {"totp_backup_codes": hashed_codes}},
+        {"$set": {
+            "totp_backup_codes": hashed_codes,
+            "backup_codes_generated_at": datetime.now(timezone.utc),
+        }},
     )
 
     log_audit_event(
@@ -416,7 +448,9 @@ def totp_regenerate_backup_codes():
 
 @totp_bp.route("/totp/backup-codes-status", methods=["GET"])
 def totp_backup_codes_status():
-    """Return the count of unused backup codes for the current user.
+    """Return the count of unused backup codes for the current user, plus
+    when they were last generated (best-effort backfilled for accounts
+    created before this timestamp started being tracked).
 
     Requires an already TOTP-verified session.
     """
@@ -431,11 +465,39 @@ def totp_backup_codes_status():
     db = get_db()
     user = db.users.find_one(
         {"_id": user_id},
-        {"totp_enabled": 1, "totp_backup_codes": 1},
+        {"totp_enabled": 1, "totp_backup_codes": 1, "backup_codes_generated_at": 1},
     )
     if not user or user.get("totp_enabled") is not True:
-        return jsonify({"codes_remaining": 0, "has_backup_codes": False})
+        return jsonify({
+            "codes_remaining": 0,
+            "has_backup_codes": False,
+            "backup_codes_generated_at": None,
+            "last_generated_at": None,
+        })
 
     codes = user.get("totp_backup_codes") or []
     remaining = sum(1 for c in codes if not c.get("used"))
-    return jsonify({"codes_remaining": remaining, "has_backup_codes": True}), 200
+    generated_at = user.get("backup_codes_generated_at")
+
+    # One-time backfill: codes were generated before
+    # backup_codes_generated_at started being tracked. Best-effort —
+    # if two requests race, whichever lands first wins and matched_count 0
+    # just means the value is already in place.
+    if codes and generated_at is None:
+        now = datetime.now(timezone.utc)
+        updated = db.users.update_one(
+            {"_id": user_id, "backup_codes_generated_at": None},
+            {"$set": {"backup_codes_generated_at": now}},
+        )
+        if updated.matched_count:
+            generated_at = now
+
+    iso_generated_at = generated_at.isoformat() if generated_at else None
+    return jsonify({
+        "codes_remaining": remaining,
+        "has_backup_codes": True,
+        "backup_codes_generated_at": iso_generated_at,
+        # Mirror under last_generated_at for the existing settings UI,
+        # which reads (generated_at || last_generated_at).
+        "last_generated_at": iso_generated_at,
+    }), 200
