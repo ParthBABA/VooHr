@@ -319,7 +319,8 @@
       sev.className = sevClass;
 
       var body = document.createElement('span');
-      body.className = 'alert-body';
+      body.className = 'alert-body protected-text';
+      body.setAttribute('translate', 'no');
       var isJobType = (n.type === 'translation_ready' || n.type === 'audio_ready' || n.type === 'session_ready');
       if (isJobType) {
         // Single-sentence layout: no headline bolted into a "name" slot — the
@@ -506,7 +507,8 @@ window.voovrInitNotifications = function() {
     sev.className = severityClass(n);
 
     var body = document.createElement('span');
-    body.className = 'alert-body';
+    body.className = 'alert-body protected-text';
+    body.setAttribute('translate', 'no');
 
     if (isActivity(n)) {
       var top = document.createElement('span');

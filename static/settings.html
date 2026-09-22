@@ -561,9 +561,9 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
 @media(max-width:768px){.wa-card::before{background:linear-gradient(180deg,rgba(8,10,15,0.64) 0%,rgba(8,10,15,0.90) 50%,rgba(8,10,15,0.97) 100%);}.wa-card-body{padding:1.45rem 1.35rem 1.6rem;}}
 @media(max-width:480px){.wa-card::before{background:linear-gradient(180deg,rgba(8,10,15,0.72) 0%,rgba(8,10,15,0.93) 50%,rgba(8,10,15,0.98) 100%);}.wa-connect-row{flex-direction:column;align-items:stretch;}.wa-connect-row .wa-btn,.wa-card .wa-connect-row .wa-btn{width:100%;min-width:0;}.wa-status{width:100%;justify-content:center;}}
 
-/* ════ GMAIL INTEGRATION CARD — static placeholder; neutral accent from the existing token set (no banner asset) ════ */
-.wa-card.gmail-card{background-image:none;}
-.wa-card.gmail-card::before{display:none;}
+/* ════ GMAIL INTEGRATION CARD ════ */
+.wa-card.gmail-card{background-image:url('gmail_integeration.webp');}
+.wa-card.gmail-card::before{display:block;}
 .wa-card.gmail-card .wa-status.is-off{color:var(--ivory-dim);background:var(--ivory-ghost);border:1px solid var(--border);}
 .wa-card.gmail-card .wa-status.is-off .st-dot{background:transparent;border:1.5px solid var(--ivory-faint);box-shadow:0 0 0 3px var(--ivory-ghost);}
 .gmail-btn{background:var(--violet);border:1px solid var(--violet);color:#FFFFFF;flex-shrink:0;min-width:148px;height:42px;border-radius:6px;}
@@ -1068,11 +1068,11 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
           <div class="st-section st-card security-overview">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Security overview</h3>
-              <span class="st-sec-desc" id="securityOverviewCount">Loading&hellip;</span>
+              <span class="st-sec-desc protected-text" id="securityOverviewCount" translate="no">Loading&hellip;</span>
             </div>
             <div class="security-overview-statuses">
-              <span class="st-status neutral" id="securityOverviewTotp"><span class="st-dot"></span>2FA loading&hellip;</span>
-              <span class="st-status neutral" id="securityOverviewRecovery"><span class="st-dot"></span>Recovery codes loading&hellip;</span>
+              <span class="st-status neutral protected-text" id="securityOverviewTotp" translate="no"><span class="st-dot"></span>2FA loading&hellip;</span>
+              <span class="st-status neutral protected-text" id="securityOverviewRecovery" translate="no"><span class="st-dot"></span>Recovery codes loading&hellip;</span>
             </div>
           </div>
 
@@ -1091,17 +1091,17 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                 </div>
               </div>
               <div class="st-row-actions">
-                <span class="st-status" id="totpStatusText"><span class="st-dot"></span>Loading&hellip;</span>
+                <span class="st-status protected-text" id="totpStatusText" translate="no"><span class="st-dot"></span>Loading&hellip;</span>
                 <a class="btn btn-sm btn-outline" id="enable2faBtn" href="/settings/security/setup-totp" style="display:none;">Enable 2FA</a>
               </div>
             </div>
             <div class="st-row">
               <div class="st-row-main">
                 <div class="st-row-title">Setup details</div>
-                <div class="st-row-desc" id="totpEnabledMeta">Checking setup date&hellip;</div>
+                <div class="st-row-desc protected-text" id="totpEnabledMeta" translate="no">Checking setup date&hellip;</div>
               </div>
               <div class="st-row-actions">
-                <span class="st-monoline" id="totpEnabledDate">Loading&hellip;</span>
+                <span class="st-monoline protected-text" id="totpEnabledDate" translate="no">Loading&hellip;</span>
               </div>
             </div>
           </div>
@@ -1121,18 +1121,18 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                 </div>
               </div>
               <div class="st-row-actions">
-                <span class="st-monoline" id="backupCodesText">Loading&hellip;</span>
-                <span class="st-status warn security-low-codes" id="backupCodesWarning" style="display:none;"><span class="st-dot"></span>Running low &mdash; regenerate soon.</span>
+                <span class="st-monoline protected-text" id="backupCodesText" translate="no">Loading&hellip;</span>
+                <span class="st-status warn security-low-codes protected-text" id="backupCodesWarning" style="display:none;" translate="no"><span class="st-dot"></span>Running low &mdash; regenerate soon.</span>
                 <button class="btn btn-sm btn-primary" id="regenerateCodesBtn" type="button" style="display:none;">Regenerate codes</button>
               </div>
             </div>
             <div class="st-row">
               <div class="st-row-main">
                 <div class="st-row-title">Last generated</div>
-                <div class="st-row-desc" id="backupCodesGeneratedMeta">When these recovery codes were created.</div>
+                <div class="st-row-desc protected-text" id="backupCodesGeneratedMeta" translate="no">When these recovery codes were created.</div>
               </div>
               <div class="st-row-actions">
-                <span class="st-monoline" id="backupCodesGeneratedDate">Loading&hellip;</span>
+                <span class="st-monoline protected-text" id="backupCodesGeneratedDate" translate="no">Loading&hellip;</span>
               </div>
             </div>
           </div>
@@ -1154,8 +1154,8 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <div class="st-current" id="currentSessionCard" style="display:none;">
               <span class="session-icon" id="currentSessionIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
               <div class="st-current-row-main">
-                <div class="st-current-device" id="currentSessionDevice">&mdash;</div>
-                <div class="st-current-meta" id="currentSessionMeta">&mdash;</div>
+                <div class="st-current-device protected-text" id="currentSessionDevice" translate="no">&mdash;</div>
+                <div class="st-current-meta protected-text" id="currentSessionMeta" translate="no">&mdash;</div>
               </div>
               <span class="st-status ok"><span class="st-dot"></span><strong>Current session</strong></span>
             </div>
@@ -1929,7 +1929,8 @@ function clearFieldError(input){
       icon.innerHTML = deviceIconSvg(s.device ? s.device.device_type : '');
 
       var meta = document.createElement('div');
-      meta.className = 'session-meta';
+      meta.className = 'session-meta protected-text';
+      meta.setAttribute('translate', 'no');
       var device = document.createElement('div');
       device.className = 'session-device';
       device.textContent = deviceLabel(s.device);
@@ -2117,7 +2118,8 @@ function clearFieldError(input){
       icon.innerHTML = iconOf(ev.action);
 
       var main = document.createElement('div');
-      main.className = 'activity-main';
+      main.className = 'activity-main protected-text';
+      main.setAttribute('translate', 'no');
 
       var title = document.createElement('div');
       title.className = 'activity-title';

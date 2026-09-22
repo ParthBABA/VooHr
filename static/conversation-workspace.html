@@ -304,7 +304,7 @@ withTimeout(fetch('/api/me').then(function(res){
             <label class="ws-filter-opt"><input type="checkbox" id="wsPinnedOnly"> Pinned lines only</label>
           </div>
 
-          <div class="ws-lines" id="wsLines"></div>
+          <div class="ws-lines protected-text" id="wsLines" translate="no"></div>
 
           <div class="ws-disclaimer" id="wsDisclaimer">Speaker labels are inferred and may not reflect who actually spoke.</div>
 
@@ -326,7 +326,7 @@ withTimeout(fetch('/api/me').then(function(res){
         <!-- RIGHT: CONVERSATION INTELLIGENCE -->
         <section class="ws-coach">
           <!-- LIVE CONVERSATION SCORE — primary intelligence hero -->
-          <section class="card ws-hero" aria-label="Live Conversation Score">
+          <section class="card ws-hero protected-text" aria-label="Live Conversation Score" translate="no">
             <div class="wsx-score-head">
               <h2 class="wsx-score-title">Live Conversation Score</h2>
               <span class="wsx-score-status unmeasured" id="wsScoreStatus" style="display:none;">Not measured</span>
@@ -369,7 +369,7 @@ withTimeout(fetch('/api/me').then(function(res){
                   </select>
                 </span>
               </div>
-              <div id="wsMatters"></div>
+              <div id="wsMatters" class="protected-text" translate="no"></div>
             </div>
 
             <!-- 2 · FOLLOW-UP PLAN -->
@@ -386,7 +386,7 @@ withTimeout(fetch('/api/me').then(function(res){
                   </select>
                 </span>
               </div>
-              <div id="wsFollow"></div>
+              <div id="wsFollow" class="protected-text" translate="no"></div>
             </div>
 
             <!-- 3 · DON'T BRING THIS BACK UP -->
@@ -395,7 +395,7 @@ withTimeout(fetch('/api/me').then(function(res){
                 <h3 class="wsx-section-title">Don't Bring This Back Up</h3>
                 <span class="wsx-section-rule"></span>
               </div>
-              <div id="wsAvoidTopics"></div>
+              <div id="wsAvoidTopics" class="protected-text" translate="no"></div>
             </div>
 
             <!-- 4 · CONVERSATION SIGNALS -->
@@ -412,7 +412,7 @@ withTimeout(fetch('/api/me').then(function(res){
                   </select>
                 </span>
               </div>
-              <div id="wsSignals"></div>
+              <div id="wsSignals" class="protected-text" translate="no"></div>
             </div>
 
             <!-- 5 · ASK ABOUT THIS CONVERSATION -->
@@ -421,7 +421,7 @@ withTimeout(fetch('/api/me').then(function(res){
                 <h3 class="wsx-section-title">Ask About This Conversation</h3>
                 <span class="wsx-section-rule"></span>
               </div>
-              <div id="wsAsk"></div>
+              <div id="wsAsk" class="protected-text" translate="no"></div>
             </div>
 
             <div class="wsx-footer">

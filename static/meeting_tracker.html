@@ -311,7 +311,7 @@
         <span class="mt-rule"></span>
         <span class="mt-count-chip" id="chipToday">0</span>
       </div>
-      <div class="mt-grid" id="mtToday"></div>
+      <div class="mt-grid protected-text" id="mtToday" translate="no"></div>
 
       <!-- UPCOMING -->
       <div class="mt-sectionhead" id="hdrUpcoming">
@@ -319,7 +319,7 @@
         <span class="mt-rule"></span>
         <span class="mt-count-chip" id="chipUpcoming">0</span>
       </div>
-      <div class="mt-grid" id="mtUpcoming"></div>
+      <div class="mt-grid protected-text" id="mtUpcoming" translate="no"></div>
 
       <!-- FOLLOW-UPS -->
       <div class="mt-sectionhead" id="hdrFollow">
@@ -327,7 +327,7 @@
         <span class="mt-rule"></span>
         <span class="mt-count-chip" id="chipFollow">0</span>
       </div>
-      <div class="mt-grid" id="mtFollow"></div>
+      <div class="mt-grid protected-text" id="mtFollow" translate="no"></div>
 
       <!-- LOADING / ERROR STATE -->
       <div id="mtStateBox"></div>
@@ -689,7 +689,7 @@ function modalShell(title, sub) {
     '<div class="mt-modal">' +
       '<div class="mt-modal-head"><div><div class="mt-modal-title">' + title + '</div>' + (sub ? '<div class="mt-modal-sub">' + sub + '</div>' : '') + '</div>' +
       '<button class="mt-modal-x" type="button" title="Close">&times;</button></div>' +
-      '<div class="mt-modal-body">' + '<div class="mt-state" style="margin:0;"><div class="mt-spinner"></div></div>' + '</div>' +
+      '<div class="mt-modal-body protected-text" translate="no">' + '<div class="mt-state" style="margin:0;"><div class="mt-spinner"></div></div>' + '</div>' +
     '</div>'
   );
 }
@@ -978,7 +978,7 @@ function openSchedule() {
       '<div class="mt-modal-head"><div><div class="mt-modal-title">Schedule a 1:1</div>' +
       '<div class="mt-modal-sub">Pick a real employee and a time \u2014 saved as a meeting</div></div>' +
       '<button class="mt-modal-x" type="button" title="Close">&times;</button></div>' +
-      '<div class="mt-modal-body">' +
+      '<div class="mt-modal-body protected-text" translate="no">' +
         '<form class="mt-form" id="mtScheduleForm">' +
           '<div>' +
             '<label class="form-label">Employee</label>' +

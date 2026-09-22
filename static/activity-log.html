@@ -290,7 +290,8 @@
       icon.innerHTML = iconOf(ev.action);
 
       var main = document.createElement('div');
-      main.className = 'activity-main';
+      main.className = 'activity-main protected-text';
+      main.setAttribute('translate', 'no');
 
       var title = document.createElement('div');
       title.className = 'activity-title';

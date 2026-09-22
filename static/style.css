@@ -1515,3 +1515,25 @@ html[data-theme="light"] .stat-heart .heart-track{stroke:rgba(20,30,60,0.2);}
   html{scroll-behavior:auto;}
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;}
 }
+
+/* ═══ PROTECTED TEXT — UI-level copy/selection deterrent ═══
+   Applied only to sensitive read-only intelligence. This is a copy/selection
+   deterrent, NOT a security boundary. Editable controls (inputs, textareas,
+   selects, contenteditable) inside a protected region stay fully usable. */
+.protected-text, .protected-text *{
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  -ms-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+}
+.protected-text input,
+.protected-text textarea,
+.protected-text select,
+.protected-text [contenteditable="true"]{
+  -webkit-user-select:text;
+  -moz-user-select:text;
+  -ms-user-select:text;
+  user-select:text;
+  -webkit-touch-callout:default;
+}
