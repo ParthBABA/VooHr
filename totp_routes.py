@@ -320,16 +320,14 @@ def totp_status():
     # One-time backfill: 2FA was enabled before totp_enabled_at started
     # being recorded, so we never knew the real date. Record "now" so the
     # settings UI stops showing "Date unavailable" forever. Best-effort —
-    # if two requests race, whichever lands first wins and matched_count 0
-    # just means the value is already in place.
+    # the atomic filter means a concurrent write never gets clobbered, and
+    # a no-op match just means the value is already in place.
     if totp_enabled and totp_enabled_at is None:
-        now = datetime.now(timezone.utc)
-        updated = db.users.update_one(
+        totp_enabled_at = datetime.now(timezone.utc)
+        db.users.update_one(
             {"_id": user_id, "totp_enabled": True, "totp_enabled_at": None},
-            {"$set": {"totp_enabled_at": now}},
+            {"$set": {"totp_enabled_at": totp_enabled_at}},
         )
-        if updated.matched_count:
-            totp_enabled_at = now
 
     return jsonify({
         "totp_enabled": totp_enabled,
@@ -481,16 +479,14 @@ def totp_backup_codes_status():
 
     # One-time backfill: codes were generated before
     # backup_codes_generated_at started being tracked. Best-effort —
-    # if two requests race, whichever lands first wins and matched_count 0
-    # just means the value is already in place.
+    # the atomic filter means a concurrent write never gets clobbered, and
+    # a no-op match just means the value is already in place.
     if codes and generated_at is None:
-        now = datetime.now(timezone.utc)
-        updated = db.users.update_one(
+        generated_at = datetime.now(timezone.utc)
+        db.users.update_one(
             {"_id": user_id, "backup_codes_generated_at": None},
-            {"$set": {"backup_codes_generated_at": now}},
+            {"$set": {"backup_codes_generated_at": generated_at}},
         )
-        if updated.matched_count:
-            generated_at = now
 
     iso_generated_at = generated_at.isoformat() if generated_at else None
     return jsonify({
