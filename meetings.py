@@ -251,7 +251,8 @@ def meetings_dashboard():
 
     Scheduled meetings whose time has passed are swept to "missed" (see the
     sweep below) and never occupy the ``next_meeting`` slot, so a stale record
-    cannot hide a genuinely upcoming meeting.
+    cannot hide a genuinely upcoming meeting. Each person still carries their
+    most recent ``last_missed`` record so the UI can surface and clear it.
 
     Returned in a single call to avoid N+1; the detailed per-item history is
     still loaded on demand by the detail views via the dedicated endpoints.
@@ -283,7 +284,7 @@ def meetings_dashboard():
         emp_filter["_id"] = {"$in": allowed_ids}
     employees = list(db.employees.find(emp_filter).sort("created_at", 1))
 
-    meeting_filter = {"org_id": org_oid, "status": {"$in": ["scheduled", "completed"]}}
+    meeting_filter = {"org_id": org_oid, "status": {"$in": ["scheduled", "completed", "missed"]}}
     if allowed_ids is not None:
         meeting_filter["employee_id"] = {"$in": allowed_ids}
     meetings = list(db.meetings.find(meeting_filter).sort("scheduled_at", 1))
@@ -393,6 +394,16 @@ def meetings_dashboard():
             ),
             None,
         )
+        # Most recent missed meeting (meetings are sorted by scheduled_at
+        # ascending, so the last match is the newest). Never occupies the
+        # next_meeting slot, but stays reachable so the UI can delete it.
+        missed_meetings = [
+            mk for mk in meetings
+            if str(mk.get("employee_id")) == eid
+            and mk.get("status") == "missed"
+            and mk.get("scheduled_at") is not None
+        ]
+        last_missed = missed_meetings[-1] if missed_meetings else None
         prev = latest_completed.get(eid)
         counts = {k: agg[k] for k in (
             "pending_commitments", "pending_followups", "overdue_followups",
@@ -402,6 +413,7 @@ def meetings_dashboard():
             "id": eid,
             "employee": _employee_to_json(e),
             "next_meeting": _meeting_to_json(next_meeting) if next_meeting else None,
+            "last_missed": _meeting_to_json(last_missed) if last_missed else None,
             "previous_session": {
                 "session_id": str(prev["_id"]) if prev else None,
                 "created_at": prev["created_at"].isoformat() if prev else None,
@@ -422,7 +434,7 @@ def meetings_dashboard():
         m = p["next_meeting"]
         return m is not None and m["scheduled_at"] is not None
 
-    people = [p for p in people if p["next_meeting"] or has_followup(p)]
+    people = [p for p in people if p["next_meeting"] or p["last_missed"] or has_followup(p)]
     people.sort(key=lambda p: (p["employee"]["name"] or "").lower())
 
     # Deterministic memory surfacing: for each employee with an upcoming

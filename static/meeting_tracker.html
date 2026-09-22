@@ -406,6 +406,7 @@ function personSection(p) {
   if (nm && nm.scheduled_at && isSameDay(new Date(nm.scheduled_at), new Date())) return 'today';
   if (p.counts.overdue_followups > 0) return 'overdue';
   if (p.counts.pending_followups > 0) return 'follow';
+  if (p.last_missed) return 'missed';
   if (nm && nm.scheduled_at) return isThisWeek(new Date(nm.scheduled_at)) ? 'thisweek' : 'nextweek';
   return 'today';
 }
@@ -439,6 +440,7 @@ function employerCell(p, section) {
   var name = p.employee.name;
   var role = p.employee.position || '';
   var when = p.next_meeting && p.next_meeting.scheduled_at ? new Date(p.next_meeting.scheduled_at) : null;
+  var missedWhen = p.last_missed && p.last_missed.scheduled_at ? new Date(p.last_missed.scheduled_at) : null;
   var timeline, dateStr;
   if (section === 'today' && when) { timeline = 'Today'; dateStr = 'Today \u00b7 ' + fmtTime(when); }
   else if (section === 'thisweek' && when) {
@@ -450,12 +452,16 @@ function employerCell(p, section) {
     timeline = 'Next Week';
     dateStr = fmtDate(when) + ' \u00b7 ' + fmtTime(when);
   }
-  else if (section === 'overdue') { timeline = 'Overdue'; dateStr = p.counts.overdue_followups + ' overdue item(s)'; }
+  else if (section === 'overdue') {
+    timeline = 'Overdue';
+    dateStr = (when ? 'Scheduled ' + fmtDate(when) + ' \u00b7 ' + fmtTime(when) + ' \u00b7 ' : '') + p.counts.overdue_followups + ' overdue item(s)';
+  }
   else if (section === 'missed') {
     timeline = 'Missed';
-    dateStr = when ? 'Scheduled ' + fmtDate(when) + ' \u00b7 ' + fmtTime(when) + ' \u2014 never actioned' : 'Scheduled but never actioned';
+    var mw = missedWhen || when;
+    dateStr = mw ? 'Scheduled ' + fmtDate(mw) + ' \u00b7 ' + fmtTime(mw) + ' \u2014 never actioned' : 'Scheduled but never actioned';
   }
-  else { timeline = 'Follow-up'; dateStr = p.counts.pending_followups + ' follow-up(s)'; }
+  else { timeline = 'Follow-up'; dateStr = (when ? 'Scheduled ' + fmtDate(when) + ' \u00b7 ' + fmtTime(when) + ' \u00b7 ' : '') + p.counts.pending_followups + ' follow-up(s)'; }
   return { name: name, role: role, timeline: timeline, dateStr: dateStr, when: when };
 }
 
@@ -784,14 +790,18 @@ function mtOpenDetail(eid) {
   var p = mtByEmp[eid];
   if (!p) return;
   var name = p.employee.name, role = p.employee.position || 'HR';
+  // A missed meeting (no longer occupying next_meeting) is still shown and
+  // deletable, so stale records never linger unreachable in the DB.
+  var meet = p.next_meeting || p.last_missed || null;
+  var isMissed = !!(meet && meet.status === 'missed');
   var meetTxt = 'No upcoming meeting scheduled', meetingInfo = '';
-  if (p.next_meeting) {
+  if (meet) {
     meetingInfo =
-      '<div class="mt-d"><div class="mt-dtitle">Meeting</div>' +
-      '<div class="mt-meetinfo"><span><b>Date:</b> ' + (p.next_meeting.scheduled_at ? fmtFullDate(p.next_meeting.scheduled_at) : '\u2014') + '</span>' +
-      '<span><b>Title:</b> ' + escHtml(p.next_meeting.title || '\u2014') + '</span></div>' +
-      '<div class="mt-delzone"><button class="btn btn-danger btn-sm" type="button" id="mtDeleteMeetingBtn" data-meeting-id="' + p.next_meeting.id + '">Delete meeting</button></div></div>';
-    meetTxt = (p.next_meeting.title || 'Meeting') + ' \u00b7 ' + (p.next_meeting.scheduled_at ? fmtFullDate(p.next_meeting.scheduled_at) : '');
+      '<div class="mt-d"><div class="mt-dtitle">' + (isMissed ? 'Missed meeting' : 'Meeting') + '</div>' +
+      '<div class="mt-meetinfo"><span><b>Date:</b> ' + (meet.scheduled_at ? fmtFullDate(meet.scheduled_at) : '\u2014') + '</span>' +
+      '<span><b>Title:</b> ' + escHtml(meet.title || '\u2014') + '</span></div>' +
+      '<div class="mt-delzone"><button class="btn btn-danger btn-sm" type="button" id="mtDeleteMeetingBtn" data-meeting-id="' + meet.id + '">' + (isMissed ? 'Delete missed meeting' : 'Delete meeting') + '</button></div></div>';
+    meetTxt = (meet.title || 'Meeting') + ' \u00b7 ' + (meet.scheduled_at ? fmtFullDate(meet.scheduled_at) : '');
   }
   var prevInfo = '';
   if (p.previous_session && p.previous_session.session_id) {
@@ -841,7 +851,7 @@ function mtWireDeleteMeeting() {
     var zone = btn.parentNode;
     var confirmHtml =
       '<div class="mt-delconfirm">' +
-        '<span class="mt-delmsg">Delete this scheduled meeting? This can\u2019t be undone.</span>' +
+        '<span class="mt-delmsg">Delete this meeting? This can\u2019t be undone.</span>' +
         '<button class="btn btn-outline btn-sm" type="button" id="mtDeleteCancel">Cancel</button>' +
         '<button class="btn btn-danger btn-sm" type="button" id="mtDeleteConfirm">Delete meeting</button>' +
         '<div class="mt-formerr" id="mtDeleteErr"></div>' +

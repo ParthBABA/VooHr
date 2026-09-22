@@ -448,6 +448,45 @@ def test_dashboard_no_next_meeting_when_only_past_scheduled(client, fake):
     assert row["counts"]["pending_followups"] == 1
 
 
+def test_dashboard_surfaces_only_missed_meeting(client, fake):
+    # A stale scheduled meeting is swept to "missed"; with nothing else on
+    # the board the person still appears via last_missed so the stale record
+    # can be opened and cleared from the UI.
+    now = datetime.now(timezone.utc)
+    _insert_meeting(fake, "gone 1:1", now - timedelta(days=5))
+
+    d = client.get("/api/meetings/dashboard").get_json()
+    row = next(p for p in d["people"] if p["id"] == EMP_1)
+    assert row["next_meeting"] is None
+    assert row["last_missed"] is not None
+    assert row["last_missed"]["status"] == "missed"
+    assert row["last_missed"]["title"] == "gone 1:1"
+
+
+def test_dashboard_last_missed_never_masks_upcoming(client, fake):
+    now = datetime.now(timezone.utc)
+    missed_mid = _insert_meeting(fake, "old 1:1", now - timedelta(days=10))
+    future_mid = _insert_meeting(fake, "real next", now + timedelta(days=2))
+
+    d = client.get("/api/meetings/dashboard").get_json()
+    row = next(p for p in d["people"] if p["id"] == EMP_1)
+    assert row["next_meeting"]["id"] == str(future_mid)
+    assert row["last_missed"]["id"] == str(missed_mid)
+
+
+def test_delete_missed_meeting_via_api(client, fake):
+    now = datetime.now(timezone.utc)
+    mid = _insert_meeting(fake, "stale 1:1", now - timedelta(days=4))
+
+    d = client.get("/api/meetings/dashboard").get_json()
+    row = next(p for p in d["people"] if p["id"] == EMP_1)
+    assert row["last_missed"]["id"] == str(mid)
+
+    assert client.delete(f"/api/meetings/{mid}").status_code == 200
+    d = client.get("/api/meetings/dashboard").get_json()
+    assert all(p["id"] != EMP_1 for p in d["people"])
+
+
 # ── Manager-role scoping ─────────────────────────────────────────────────
 
 @pytest.fixture
