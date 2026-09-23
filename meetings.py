@@ -129,10 +129,11 @@ def create_meeting():
 
     try:
         scheduled_dt = datetime.fromisoformat(scheduled_at)
-        if scheduled_dt.tzinfo is None:
-            scheduled_dt = scheduled_dt.replace(tzinfo=timezone.utc)
     except (ValueError, TypeError):
         return jsonify({"error": "invalid_scheduled_at"}), 400
+    if scheduled_dt.tzinfo is None:
+        return jsonify({"error": "invalid_scheduled_at"}), 400
+    scheduled_dt = scheduled_dt.astimezone(timezone.utc)
 
     db = get_db()
     emp = _lookup_employee(db, org_id, employee_id)
@@ -541,10 +542,11 @@ def update_meeting(meeting_id: str):
     if "scheduled_at" in data:
         try:
             scheduled_dt = datetime.fromisoformat(data["scheduled_at"])
-            if scheduled_dt.tzinfo is None:
-                scheduled_dt = scheduled_dt.replace(tzinfo=timezone.utc)
         except (ValueError, TypeError):
             return jsonify({"error": "invalid_scheduled_at"}), 400
+        if scheduled_dt.tzinfo is None:
+            return jsonify({"error": "invalid_scheduled_at"}), 400
+        scheduled_dt = scheduled_dt.astimezone(timezone.utc)
         set_fields["scheduled_at"] = scheduled_dt
 
     if "status" in data:

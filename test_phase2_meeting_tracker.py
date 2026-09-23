@@ -227,6 +227,58 @@ def test_create_meeting_invalid_scheduled_at(client):
     assert r.status_code == 400
 
 
+def test_create_meeting_rejects_naive_datetime_local(client):
+    # The old frontend sent the raw <input type="datetime-local"> value
+    # (e.g. "2026-09-22T16:15") which carries no timezone. A naive string is
+    # ambiguous — the backend must reject it instead of silently treating it
+    # as UTC and silently shifting the real-wall-clock moment.
+    naive_local = (datetime.now(timezone.utc) + timedelta(days=2)).strftime("%Y-%m-%dT%H:%M")
+    r = _create_meeting(client, scheduled_at=naive_local)
+    assert r.status_code == 400
+    assert r.get_json()["error"] == "invalid_scheduled_at"
+
+
+def test_create_meeting_stores_utc_aware_scheduled_at(client, fake):
+    # The fixed frontend converts the datetime-local value to a UTC-offset ISO
+    # string before sending (e.g. 4:15 PM IST -> "2026-09-22T10:45:00Z"). The
+    # stored instant must equal the user's intended wall-clock moment.
+    local_aware = datetime(2026, 9, 22, 16, 15, 0, tzinfo=timezone(timedelta(hours=5, minutes=30)))
+    expected_utc = local_aware.astimezone(timezone.utc)
+
+    r = _create_meeting(client, scheduled_at=local_aware.isoformat())
+    assert r.status_code == 201
+    d = r.get_json()
+
+    read_back = datetime.fromisoformat(d["scheduled_at"])
+    assert read_back.tzinfo is not None
+    assert read_back == expected_utc
+
+    stored = fake.meetings._docs[0]["scheduled_at"]
+    assert stored.replace(tzinfo=timezone.utc) == expected_utc
+
+
+def test_update_meeting_rejects_naive_datetime_local(client):
+    mid = _create_meeting(client).get_json()["id"]
+    naive_local = (datetime.now(timezone.utc) + timedelta(days=2)).strftime("%Y-%m-%dT%H:%M")
+    r = client.patch(f"/api/meetings/{mid}", json={"scheduled_at": naive_local})
+    assert r.status_code == 400
+    assert r.get_json()["error"] == "invalid_scheduled_at"
+
+
+def test_update_meeting_stores_utc_aware_scheduled_at(client, fake):
+    mid = _create_meeting(client).get_json()["id"]
+    local_aware = datetime(2026, 9, 22, 16, 15, 0, tzinfo=timezone(timedelta(hours=5, minutes=30)))
+    expected_utc = local_aware.astimezone(timezone.utc)
+
+    r = client.patch(f"/api/meetings/{mid}", json={"scheduled_at": local_aware.isoformat()})
+    assert r.status_code == 200
+    d = r.get_json()
+    assert datetime.fromisoformat(d["scheduled_at"]) == expected_utc
+
+    stored = next(m for m in fake.meetings._docs if str(m["_id"]) == mid)
+    assert stored["scheduled_at"].replace(tzinfo=timezone.utc) == expected_utc
+
+
 def test_create_meeting_links_existing_session(client):
     r = _create_meeting(client, session_id=SESSION_1)
     assert r.status_code == 201

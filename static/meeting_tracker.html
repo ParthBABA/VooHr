@@ -1170,6 +1170,12 @@ function submitSchedule(ev) {
     return;
   }
   if (!title || !when) { errEl.textContent = 'Please fill in the title and date &amp; time.'; return; }
+  try {
+    when = new Date(when).toISOString();
+  } catch (e) {
+    errEl.textContent = 'Please enter a valid date &amp; time.';
+    return;
+  }
   var btn = $('mtSchedSave');
   btn.disabled = true; btn.textContent = 'Saving\u2026';
   fetch('/api/meetings', {
