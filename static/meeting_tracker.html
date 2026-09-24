@@ -3,12 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VooVr · Meeting Tracker</title>
+<title>VooVr - Meeting Tracker</title>
 <!-- shared-head -->
-<script src="/ui-feedback.js"></script>
-<script src="/csrf.js"></script>
 <script>
-(function () {
+(function(){
   try {
     var saved = localStorage.getItem('voovr-theme');
     if (saved === 'light' || saved === 'dark') {
@@ -17,416 +15,385 @@
   } catch (e) {}
 })();
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://api.fontshare.com">
-<link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,600&f[]=cabinet-grotesk@400,500,600,700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 <style>
-/* ============================================================
-   VooVr Meeting Tracker — command-centre rebuild (mtx / mt-*).
-   Brand layer sits on the shared design tokens from style.css.
-   ============================================================ */
-.mtx{
-  --mt-violet:#8B5CF6;
-  --mt-cyan:#60A5FA;
-  --mt-teal:#34D399;
-  --mt-amber:#FBBF24;
-  --mt-amber-2:#F97316;
-  --mt-red:#F87171;
-  --mt-slate:#94A3B8;
-  --mt-grad:linear-gradient(120deg,var(--mt-violet),var(--mt-cyan));
-  --mt-sand:linear-gradient(96deg,var(--mt-amber),var(--mt-violet));
-  --ease-out:cubic-bezier(0.4,0,0.2,1);
-  position:relative;
-}
-.mtx::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:60;opacity:.35;mix-blend-mode:overlay;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");}
+  .gsap-hidden { opacity: 0 !important; }
 
-/* ---------- Hero ---------- */
-.mt-hero{padding:2.6rem 0 1.9rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem;position:relative;}
-.mt-eyebrow{display:flex;align-items:center;gap:.7rem;font-family:var(--font-m);font-weight:700;font-size:.66rem;letter-spacing:.34em;text-transform:uppercase;color:var(--mt-amber);margin-bottom:1.15rem;}
-.mt-eyebrow::before{content:'';width:34px;height:1px;background:linear-gradient(90deg,var(--mt-amber),transparent);}
-.mt-hero-title{margin:0;font-family:'Clash Display',var(--font-d),sans-serif;font-weight:600;font-size:clamp(2.6rem,6.2vw,5.4rem);line-height:.94;letter-spacing:-0.02em;text-transform:uppercase;color:var(--ivory);display:flex;flex-direction:column;}
-.mt-h-accent{width:max-content;color:transparent;background:var(--mt-sand);-webkit-background-clip:text;background-clip:text;}
-.mt-hero-sub{max-width:640px;margin:1.2rem 0 1.7rem;font-family:'Cabinet Grotesk',var(--font-rc),sans-serif;font-size:clamp(.92rem,1.25vw,1.06rem);line-height:1.7;color:var(--ivory-dim);}
-.mt-hero-actions{display:flex;flex-wrap:wrap;gap:.7rem;}
-.mt-hero-actions .btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--font-m);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:.68rem;}
+  /* ══════════════════════════════════════════════════════════════
+     MEETING TRACKER — professional redesign
+     Same class contract as before (JS renders these exact classes);
+     only the visual layer changes. Fully theme-aware via CSS vars.
+     ══════════════════════════════════════════════════════════════ */
+  .mt-root {
+    --mt-violet: #7C6FF2;
+    --mt-teal: #22B387;
+    --mt-amber: #E0A32E;
+    --mt-red: #E5584F;
+    --mt-cyan: #3E8FD9;
+    --mt-radius: 10px;
+    --mt-radius-sm: 7px;
+  }
 
-/* ---------- Summary metrics ---------- */
-.mt-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.7rem;margin:1.6rem 0 2.1rem;counter-reset:mtm;}
-.mt-metric{position:relative;border:1px solid var(--border);background:linear-gradient(180deg,rgba(140,150,190,.05),rgba(140,150,190,.012));padding:1rem 1rem 1.05rem;overflow:hidden;transition:transform .3s var(--ease-out),border-color .3s var(--ease-out);}
-.mt-metric::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--accent),transparent);transform:scaleY(0);transform-origin:top;transition:transform .4s var(--ease-out);}
-.mt-metric:hover{transform:translateY(-3px);border-color:var(--border-lit);}
-.mt-metric:hover::before{transform:scaleY(1);}
-.mt-m-num{font-family:'Clash Display',var(--font-d),sans-serif;font-weight:600;font-size:clamp(1.5rem,2.3vw,2.15rem);line-height:1;color:var(--ivory);letter-spacing:-0.01em;}
-.mt-m-lbl{margin-top:.6rem;display:flex;align-items:center;gap:.45rem;font-family:var(--font-m);font-size:.58rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ivory-faint);}
-.mt-m-lbl i{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;}
+  .mt-root, .mt-root * { box-sizing: border-box; }
 
-/* ---------- Toolbar ---------- */
-.mt-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.8rem 1rem;padding:1.1rem 0;border-top:1px solid var(--border);}
-.mt-shown{flex:none;font-family:var(--font-m);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ivory-faint);}
-.mt-shown b{color:var(--ivory);font-weight:700;}
-.mt-chips{display:flex;flex-wrap:wrap;gap:.4rem;}
-.mt-pill{display:inline-flex;align-items:center;gap:.45rem;border:1px solid var(--border);background:transparent;color:var(--ivory-dim);font-family:var(--font-m);font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:.48rem .78rem;cursor:pointer;transition:all .2s var(--ease-out);}
-.mt-pill i{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.85;flex:none;}
-.mt-pill:hover{border-color:var(--border-lit);color:var(--ivory);}
-.mt-pill.active{color:var(--ivory);border-color:rgba(139,92,246,.55);background:linear-gradient(120deg,rgba(139,92,246,.18),rgba(251,191,36,.12));}
-.mt-search{flex:1;min-width:230px;display:flex;align-items:center;gap:.55rem;border-bottom:1px solid var(--border);color:var(--ivory-faint);padding:.3rem .15rem;transition:border-color .25s var(--ease-out);}
-.mt-search:focus-within{border-color:var(--mt-amber);}
-.mt-search svg{flex:none;}
-.mt-search input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--ivory);font-family:var(--font-m);font-size:.78rem;letter-spacing:.02em;}
-.mt-search input::placeholder{color:var(--ivory-faint);}
+  /* ── Toolbar / filters ── */
+  .mt-toolbar{display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;margin-bottom:1.75rem;padding-bottom:1.1rem;border-bottom:1px solid var(--border);}
+  .mt-count{font-family:var(--font-m);font-size:0.72rem;letter-spacing:0.03em;color:var(--ivory-faint);margin-right:auto;white-space:nowrap;}
+  .mt-count b{color:var(--ivory);font-weight:700;}
+  .mt-pill{padding:0.44rem 0.85rem;background:var(--surface);border:1px solid var(--border);color:var(--ivory-dim);font-family:var(--font-m);font-weight:500;font-size:0.74rem;letter-spacing:0.01em;cursor:pointer;border-radius:100px;transition:border-color .15s,color .15s,background .15s;white-space:nowrap;}
+  .mt-pill:hover{border-color:var(--border-lit);color:var(--ivory);}
+  .mt-pill.active{background:var(--ivory);border-color:var(--ivory);color:var(--void);font-weight:700;}
+  .mt-pill .mt-pill-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:0.4rem;vertical-align:middle;}
+  .mt-search{display:flex;align-items:center;gap:0.5rem;padding:0.44rem 0.8rem;background:var(--surface);border:1px solid var(--border);border-radius:100px;min-width:210px;max-width:280px;transition:border-color 0.15s;}
+  .mt-search:focus-within{border-color:var(--mt-cyan);}
+  .mt-search svg{opacity:0.5;flex-shrink:0;}
+  .mt-search input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--ivory);font-family:var(--font-m);font-size:0.78rem;}
+  .mt-search input::placeholder{color:var(--ivory-faint);}
 
-/* ---------- Sections & directory rows ---------- */
-.mt-sec{margin:0 0 2.7rem;}
-.mt-sec-head{display:flex;align-items:center;gap:.9rem;margin:0 0 1rem;}
-.mt-sec-eyebrow{font-family:var(--font-m);font-size:.68rem;font-weight:700;letter-spacing:.32em;text-transform:uppercase;color:var(--ivory);}
-.mt-sec-rule{flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent 82%);}
-.mt-sec-chip{font-family:var(--font-m);font-size:.64rem;letter-spacing:.1em;color:var(--ivory-dim);border:1px solid var(--border);padding:.3rem .6rem;}
-.mt-dir{border:1px solid var(--border);}
-.mt-row{display:grid;grid-template-columns:minmax(205px,250px) minmax(0,1fr) 118px 176px auto;gap:1rem;align-items:center;border-top:1px solid var(--border);padding:1.05rem 1.15rem;background:rgba(140,150,190,.015);transition:background .25s var(--ease-out);position:relative;}
-.mt-row:first-child{border-top:0;}
-.mt-row:hover{background:rgba(140,150,190,.055);}
-.mt-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--mt-grad);transform:scaleY(0);transform-origin:top;transition:transform .35s var(--ease-out);}
-.mt-row:hover::before{transform:scaleY(1);}
-.mt-anim .mt-row{animation:mt-rise .6s var(--ease-out) both;animation-delay:var(--i,0s);}
+  /* ── Summary metrics ── */
+  .mt-metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:0.85rem;margin-bottom:1.9rem;}
+  .mt-metric{background:var(--ink);border:1px solid var(--border);padding:1.05rem 1.2rem;position:relative;overflow:hidden;transition:border-color .2s,box-shadow .2s;border-radius:var(--mt-radius);}
+  .mt-metric::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--accent);}
+  .mt-metric:hover{border-color:var(--border-lit);box-shadow:var(--shadow-sm);}
+  .mt-metric .mt-mval{font-family:var(--font-lato);font-weight:800;font-size:clamp(1.5rem,2.1vw,1.85rem);letter-spacing:-0.02em;line-height:1;color:var(--ivory);}
+  .mt-metric .mt-mlabel{font-family:var(--font-m);font-weight:600;font-size:0.66rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--ivory-faint);margin-top:0.5rem;}
+  .mt-metric.m-accent0{--accent:var(--mt-violet);}
+  .mt-metric.m-accent1{--accent:var(--mt-amber);}
+  .mt-metric.m-accent2{--accent:var(--mt-teal);}
+  .mt-metric.m-accent3{--accent:var(--mt-red);}
+  .mt-metric.m-accent4{--accent:var(--mt-cyan);}
+  .mt-metric.m-accent5{--accent:var(--mt-amber);}
 
-.mt-id{display:flex;align-items:center;gap:.75rem;min-width:0;}
-.mt-av{flex:none;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Clash Display',var(--font-d),sans-serif;font-weight:600;font-size:.72rem;color:var(--ivory);background:linear-gradient(135deg,var(--a1),var(--a2));}
-.mt-name{font-family:'Cabinet Grotesk',var(--font-rc),sans-serif;font-weight:600;font-size:.98rem;color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.mt-role{font-family:var(--font-m);font-size:.62rem;color:var(--ivory-faint);letter-spacing:.04em;margin-top:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.mt-sec-tag{margin-top:.45rem;display:inline-block;font-family:var(--font-m);font-size:.52rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--mt-amber);}
+  /* ── Section headers ── */
+  .mt-sectionhead{display:flex;align-items:center;gap:0.75rem;margin:0 0 0.9rem;}
+  .mt-sectionhead .mt-eyebrow{font-family:var(--font-lato);font-size:0.85rem;font-weight:700;letter-spacing:0.01em;color:var(--ivory);}
+  .mt-sectionhead .mt-rule{flex:1;height:1px;background:var(--border);}
+  .mt-sectionhead .mt-count-chip{font-family:var(--font-m);font-weight:600;font-size:0.68rem;color:var(--ivory-dim);padding:0.16rem 0.55rem;background:var(--surface);border:1px solid var(--border);border-radius:100px;}
 
-.mt-meet{min-width:0;}
-.mt-pr-label{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--font-m);font-size:.52rem;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:.4rem;}
-.mt-pr-label i{width:5px;height:5px;border-radius:50%;background:var(--mt-amber);}
-.mt-pr-title{font-family:'Cabinet Grotesk',var(--font-rc),sans-serif;font-weight:600;font-size:.94rem;color:var(--ivory);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.mt-pr-when{display:flex;align-items:center;gap:.4rem;font-family:var(--font-m);font-size:.66rem;color:var(--ivory-dim);margin-top:.35rem;}
-.mt-pr-when svg{width:12px;height:12px;flex:none;}
-.mt-primary--none{font-family:var(--font-m);font-size:.72rem;color:var(--ivory-faint);text-transform:uppercase;letter-spacing:.08em;}
+  /* ── Meeting cards ── */
+  .mt-grid{display:grid;grid-template-columns:1fr;gap:0.75rem;margin:0 0 2.4rem;}
+  .mt-card{background:var(--ink);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:var(--mt-radius);padding:1.15rem 1.25rem;display:flex;flex-direction:column;gap:0.9rem;position:relative;transition:border-color .18s,box-shadow .18s;}
+  .mt-card:hover{border-color:var(--border-lit);border-left-color:var(--mt-cyan);box-shadow:var(--shadow-sm);}
+  .mt-card-top{display:flex;align-items:center;gap:0.85rem;}
+  .mt-avatar{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-lato);font-weight:700;font-size:0.82rem;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));}
+  .mt-who{flex:1;min-width:0;}
+  .mt-who .mt-name{font-family:var(--font-lato);font-weight:700;font-size:0.94rem;color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mt-who .mt-role{font-family:var(--font-m);font-size:0.7rem;color:var(--ivory-faint);margin-top:0.1rem;}
+  .mt-status{flex-shrink:0;font-family:var(--font-m);font-weight:600;font-size:0.64rem;letter-spacing:0.04em;text-transform:uppercase;padding:0.3rem 0.65rem;border-radius:100px;display:inline-flex;align-items:center;gap:0.4rem;}
+  .mt-status .dot{width:6px;height:6px;border-radius:50%;}
+  .mt-status--today{color:var(--mt-amber);background:rgba(224,163,46,0.12);border:1px solid rgba(224,163,46,0.3);}
+  .mt-status--today .dot{background:var(--mt-amber);}
+  .mt-status--overdue{color:var(--mt-red);background:rgba(229,88,79,0.12);border:1px solid rgba(229,88,79,0.3);}
+  .mt-status--overdue .dot{background:var(--mt-red);}
+  .mt-status--upcoming{color:var(--mt-teal);background:rgba(34,179,135,0.12);border:1px solid rgba(34,179,135,0.3);}
+  .mt-status--upcoming .dot{background:var(--mt-teal);}
+  .mt-status--follow{color:var(--mt-violet);background:rgba(124,111,242,0.12);border:1px solid rgba(124,111,242,0.3);}
+  .mt-status--follow .dot{background:var(--mt-violet);}
+  .mt-status--missed{color:var(--ivory-dim);background:var(--surface);border:1px solid var(--border);}
+  .mt-status--missed .dot{background:var(--ivory-faint);}
+  .mt-body{display:flex;flex-direction:column;gap:0.7rem;}
+  .mt-meta{display:flex;flex-wrap:wrap;gap:0.5rem 1.3rem;font-family:var(--font-m);font-size:0.74rem;color:var(--ivory-dim);}
+  .mt-meta span{display:inline-flex;align-items:center;gap:0.4rem;}
+  .mt-meta svg{width:13px;height:13px;opacity:0.6;}
+  .mt-topic{font-family:var(--font-b);font-size:0.85rem;color:var(--ivory);line-height:1.55;padding:0.15rem 0;}
+  .mt-topic b{color:var(--ivory);font-weight:700;}
+  .mt-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.55rem;}
+  .mt-cell{background:var(--surface);border:1px solid var(--border);border-radius:var(--mt-radius-sm);padding:0.65rem 0.8rem;min-width:0;}
+  .mt-cell .mt-celllabel{font-family:var(--font-m);font-size:0.6rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:0.4rem;display:flex;align-items:center;gap:0.35rem;}
+  .mt-cell .mt-celllabel svg{width:12px;height:12px;opacity:0.7;}
+  .mt-cell .mt-cellline{font-family:var(--font-lato);font-weight:600;font-size:0.79rem;color:var(--ivory);line-height:1.4;}
+  .mt-cell .mt-cellline.is-owner{color:var(--mt-amber);}
+  .mt-cell .mt-cellline.is-date{color:var(--mt-teal);}
+  .mt-cell.is-promise{border-left:2px solid var(--mt-amber);}
+  .mt-cell.is-reminder{border-left:2px solid var(--mt-red);}
+  .mt-cell.is-follow{border-left:2px solid var(--mt-violet);}
+  .mt-follow{display:flex;align-items:center;justify-content:space-between;gap:0.8rem;flex-wrap:wrap;padding:0.6rem 0.8rem;background:rgba(124,111,242,0.07);border:1px solid rgba(124,111,242,0.22);border-radius:var(--mt-radius-sm);}
+  .mt-folllabel{font-family:var(--font-m);font-size:0.62rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--mt-violet);display:inline-flex;align-items:center;gap:0.4rem;flex-shrink:0;}
+  .mt-folllabel svg{width:12px;height:12px;}
+  .mt-fover{font-family:var(--font-m);font-size:0.72rem;color:var(--ivory-dim);}
+  .mt-footer{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:0.5rem;padding-top:0.8rem;border-top:1px solid var(--border);}
+  .mt-link{font-family:var(--font-m);font-size:0.68rem;font-weight:600;letter-spacing:0.01em;color:var(--ivory-dim);text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border:1px solid var(--border);border-radius:100px;transition:all 0.15s;}
+  .mt-link:hover{color:var(--ivory);border-color:var(--border-lit);background:var(--surface);}
+  .mt-link svg{width:13px;height:13px;}
 
-.mt-st{display:flex;flex-direction:column;gap:.4rem;align-items:flex-start;}
-.mt-st-dim{font-family:var(--font-m);font-size:.58rem;color:var(--ivory-faint);letter-spacing:.08em;}
-.mt-it{display:flex;flex-wrap:wrap;gap:.4rem;align-items:flex-start;}
-.mt-chip{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--font-m);font-size:.52rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ivory-dim);border:1px solid var(--border);padding:.3rem .55rem;white-space:nowrap;}
-.mt-chip i{width:6px;height:6px;border-radius:50%;background:var(--c,#8893A8);flex:none;}
-.mt-chip--scheduled{--c:var(--mt-cyan);}
-.mt-chip--completed{--c:var(--mt-teal);}
-.mt-chip--missed{--c:var(--mt-red);}
-.mt-chip--cancelled{--c:var(--mt-slate);}
-.mt-chip--other{--c:var(--ivory-faint);}
-.mt-chip--ov{color:var(--mt-amber);border-color:rgba(251,191,36,.4);}
-.mt-chip--ov i{background:var(--mt-amber);animation:mt-pulse 1.6s ease-in-out infinite;}
+  /* ── Before you start (surfaced memory on the card) ── */
+  .mt-beforestart{display:flex;flex-direction:column;gap:0.5rem;padding:0.8rem 0.9rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--mt-radius-sm);}
+  .mt-bys-head{font-family:var(--font-m);font-size:0.62rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--mt-violet);display:flex;align-items:center;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;}
+  .mt-bys-row{display:flex;align-items:flex-start;gap:0.55rem;font-family:var(--font-b);font-size:0.79rem;line-height:1.5;color:var(--ivory);min-width:0;}
+  .mt-bys-sym{flex-shrink:0;width:7px;height:7px;border-radius:50%;margin-top:6px;}
+  .mt-bys-sym.is-commit{background:var(--mt-amber);}
+  .mt-bys-sym.is-follow{background:var(--mt-cyan);}
+  .mt-bys-sym.is-opener{background:var(--mt-violet);}
+  .mt-bys-sym.is-other{background:var(--ivory-faint);}
+  .mt-bys-label{flex-shrink:0;font-family:var(--font-m);font-size:0.6rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--ivory-faint);padding-top:1px;}
+  .mt-bys-text{min-width:0;word-break:break-word;}
 
-.mt-act{display:flex;flex-direction:column;align-items:stretch;gap:.45rem;justify-content:center;}
-.mt-act .btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;font-family:var(--font-m);font-weight:700;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;padding:.5rem .7rem;}
-.mt-act .btn svg{width:13px;height:13px;flex:none;}
+  /* ── Detail: meeting info strip + usage history ── */
+  .mt-meetinfo{display:flex;flex-wrap:wrap;gap:0.5rem 1.4rem;font-family:var(--font-b);font-size:0.8rem;color:var(--ivory-dim);line-height:1.65;}
+  .mt-meetinfo b{color:var(--ivory);font-family:var(--font-lato);font-weight:700;}
+  .mt-usage{font-family:var(--font-m);font-size:0.64rem;color:var(--mt-cyan);margin-top:3px;}
 
-.mt-records{grid-column:1/-1;margin-top:.1rem;}
-.mt-records summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:.5rem;font-family:var(--font-m);font-size:.58rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--ivory-dim);padding:.75rem .1rem .35rem;}
-.mt-records summary::-webkit-details-marker{display:none;}
-.mt-records summary::after{content:'+';margin-left:auto;color:var(--mt-amber);font-size:1rem;line-height:1;}
-.mt-records[open] summary::after{content:'\2212';}
-.mt-rec-list{padding:.2rem 0 .2rem;}
-.mt-rec{display:flex;align-items:center;gap:.9rem;padding:.6rem .7rem;border-top:1px solid rgba(130,160,210,.07);font-size:.76rem;}
-.mt-rec-main{flex:1;min-width:0;}
-.mt-rec-title{color:var(--ivory);font-family:'Cabinet Grotesk',var(--font-rc),sans-serif;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.mt-rec-when{font-family:var(--font-m);font-size:.6rem;color:var(--ivory-faint);margin-top:.14rem;letter-spacing:.04em;text-transform:uppercase;}
-.mt-rec-action{flex:none;}
+  .mt-empty{text-align:center;padding:3.75rem 1rem;border:1px dashed var(--border);border-radius:var(--mt-radius);color:var(--ivory-faint);font-family:var(--font-b);font-size:0.85rem;margin-bottom:2.6rem;}
+  .mt-empty svg{width:36px;height:36px;opacity:0.35;margin-bottom:0.9rem;color:var(--ivory-faint);}
 
-/* ---------- Delete buttons ---------- */
-button.mt-del,.mt-del{display:inline-flex;align-items:center;gap:.45rem;color:var(--mt-red) !important;border-color:rgba(248,113,113,.3) !important;font-family:var(--font-m);font-weight:700;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;}
-button.mt-del:hover,.mt-del:hover{background:rgba(248,113,113,.08) !important;border-color:rgba(248,113,113,.55) !important;}
-button.mt-del.is-busy{opacity:.6;cursor:default;}
-.mt-del svg{width:13px;height:13px;flex:none;}
+  /* ── Responsive ── */
+  @media (max-width: 1280px){ .mt-metrics{grid-template-columns:repeat(3,minmax(0,1fr));} }
+  @media (max-width: 768px){
+    .mt-metrics{grid-template-columns:repeat(2,1fr);}
+    .mt-toolbar{gap:0.5rem;}
+    .mt-search{min-width:100%;max-width:100%;order:99;}
+  }
 
-/* ---------- Promises & Follow-ups ---------- */
-.mt-open-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:1.2rem;}
-.mt-open-col{border:1px solid var(--border);background:rgba(140,150,190,.012);}
-.mt-open-col-title{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-m);font-size:.6rem;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--mt-amber);padding:.9rem 1.05rem;border-bottom:1px solid var(--border);}
-.mt-open-col-title span{color:var(--ivory-dim);letter-spacing:.1em;}
-.mt-open-item{display:grid;grid-template-columns:auto 1fr auto;gap:.55rem .8rem;align-items:baseline;padding:.8rem 1.05rem;font-family:'Cabinet Grotesk',var(--font-rc),sans-serif;font-size:.8rem;line-height:1.5;color:var(--ivory-dim);border-top:1px solid rgba(130,160,210,.07);}
-.mt-open-item:first-of-type{border-top:0;}
-.mt-o-dot{width:7px;height:7px;border-radius:50%;flex:none;transform:translateY(-2px);}
-.mt-o-text{min-width:0;}
-.mt-o-who{display:block;font-family:var(--font-m);font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ivory-faint);margin-top:.3rem;}
-.mt-o-meta{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:.4rem;}
-.mt-o-due{font-family:var(--font-m);font-size:.6rem;color:var(--ivory-faint);letter-spacing:.06em;text-transform:uppercase;}
-.mt-o-due.is-ov{color:var(--mt-amber);}
+  /* ── prefer reduced motion ── */
+  @media (prefers-reduced-motion: reduce){
+    .mt-card{transition:none;transform:none !important;}
+    .mt-metric{transition:none;}
+    .mt-delconfirm{animation:none;}
+    .mt-delconfirm.shake{animation:none;}
+  }
 
-/* ---------- States ---------- */
-.mt-state{display:flex;flex-direction:column;align-items:center;gap:.9rem;padding:3.6rem 1.5rem;text-align:center;border:1px dashed var(--border);margin:1.1rem 0;color:var(--ivory-faint);}
-.mt-state h3{font-family:'Clash Display',var(--font-d),sans-serif;font-size:1.05rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ivory);margin:0;}
-.mt-state p{font-family:var(--font-m);font-size:.7rem;letter-spacing:.04em;margin:0;}
-.mt-spinner{width:30px;height:30px;border-radius:50%;border:2px solid var(--border-lit);border-top-color:var(--mt-amber);animation:mt-spin .8s linear infinite;}
+  /* ── Loading / error / notice states ── */
+  .mt-state{padding:3.75rem 1.5rem;text-align:center;border:1px solid var(--border);border-radius:var(--mt-radius);font-family:var(--font-b);font-size:0.85rem;color:var(--ivory-dim);margin-bottom:2rem;}
+  .mt-state svg{width:34px;height:34px;opacity:0.4;margin-bottom:0.85rem;color:var(--mt-red);}
+  .mt-state-title{font-family:var(--font-lato);font-weight:700;font-size:0.92rem;color:var(--ivory);margin-bottom:0.4rem;}
+  .mt-state-sub{font-family:var(--font-b);font-size:0.76rem;color:var(--ivory-faint);margin-bottom:1.1rem;}
+  .mt-spinner{width:24px;height:24px;border:2.5px solid var(--border);border-top-color:var(--mt-violet);border-radius:50%;margin:0 auto 0.9rem;animation:mtSpin 0.8s linear infinite;}
+  @keyframes mtSpin{to{transform:rotate(360deg);}}
+  .mt-retry{cursor:pointer;}
 
-/* ---------- Modal / drawer ---------- */
-.tk-overlay{position:fixed;inset:0;z-index:300;background:rgba(6,8,13,.74);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .3s var(--ease-out);}
-.tk-overlay.is-open{opacity:1;pointer-events:auto;}
-.tk-overlay.mt-aside{justify-content:flex-end;padding:0;}
-.tk-modal{width:min(680px,100%);max-height:calc(100dvh - 2rem);overflow:auto;border:1px solid var(--border-lit);background:linear-gradient(180deg,var(--surface),var(--ink));box-shadow:0 30px 90px rgba(0,0,0,.55);animation:mt-rise .45s var(--ease-out) both;position:relative;}
-.tk-overlay.mt-aside .tk-modal{width:min(600px,100%);max-height:100dvh;height:100%;box-shadow:-30px 0 90px rgba(0,0,0,.5);}
-.tk-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding:1.25rem 1.4rem;border-bottom:1px solid var(--border);}
-.tk-modal-title{font-family:'Clash Display',var(--font-d),sans-serif;font-size:1.12rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ivory);}
-.tk-modal-sub{font-family:var(--font-m);font-size:.66rem;color:var(--ivory-faint);margin-top:.4rem;letter-spacing:.05em;text-transform:uppercase;}
-.tk-modal-x{border:1px solid var(--border);background:none;color:var(--ivory-dim);width:32px;height:32px;cursor:pointer;font-size:1.05rem;line-height:1;flex:none;transition:all .2s;}
-.tk-modal-x:hover{color:var(--ivory);border-color:var(--border-lit);}
-.tk-modal-body{padding:1.25rem 1.4rem 1.5rem;}
-.mt-block{border:1px solid var(--border);padding:1rem 1.1rem;margin:0 0 .95rem;background:rgba(140,150,190,.015);}
-.mt-block-title{font-family:var(--font-m);font-size:.58rem;font-weight:800;letter-spacing:.28em;text-transform:uppercase;color:var(--mt-amber);margin-bottom:.8rem;}
-.mt-dgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem .9rem;font-family:var(--font-m);font-size:.7rem;color:var(--ivory-dim);line-height:1.7;}
-.mt-dgrid b{color:var(--ivory);font-weight:700;font-family:'Cabinet Grotesk',var(--font-rc),sans-serif;letter-spacing:.04em;text-transform:uppercase;font-size:.62rem;}
-.mt-mem-item{display:flex;gap:.7rem;align-items:flex-start;padding:.65rem 0;border-top:1px solid rgba(130,160,210,.08);font-family:'Cabinet Grotesk',var(--font-rc),sans-serif;font-size:.78rem;line-height:1.55;color:var(--ivory-dim);}
-.mt-mem-item:first-of-type{border-top:0;}
-.mt-mem-kind{flex:none;font-family:var(--font-m);font-size:.5rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;padding:.32rem .55rem;border:1px solid var(--border);color:var(--ivory-dim);border-top-width:2px;border-top-color:var(--kind,#8893A8);margin-top:.15rem;}
-.mt-mem-body{min-width:0;}
-.mt-mem-meta{display:flex;flex-wrap:wrap;gap:.3rem .8rem;font-family:var(--font-m);font-size:.56rem;color:var(--ivory-faint);margin-top:.32rem;letter-spacing:.05em;text-transform:uppercase;}
-.mt-mem-meta .mt-is-link{color:var(--mt-violet);}
-.mt-none{font-family:var(--font-m);font-size:.68rem;color:var(--ivory-faint);font-style:italic;letter-spacing:.03em;}
-.mt-danger{border:1px solid rgba(248,113,113,.32);padding:1rem 1.1rem;margin-top:1.2rem;}
-.mt-danger-title{font-family:var(--font-m);font-size:.58rem;font-weight:800;letter-spacing:.28em;text-transform:uppercase;color:var(--mt-red);margin-bottom:.55rem;}
-.mt-danger p{font-family:var(--font-m);font-size:.7rem;color:var(--ivory-dim);line-height:1.6;margin:0 0 .85rem;}
-.mt-danger .mt-del{width:100%;justify-content:center;min-height:40px;}
+  /* ── Detail modal (native, additive) ── */
+  .mt-modal-overlay{position:fixed;inset:0;background:rgba(8,10,15,0.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:300;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+  html[data-theme="light"] .mt-modal-overlay{background:rgba(20,30,60,0.35);}
+  .mt-modal-overlay.active{opacity:1;pointer-events:all;}
+  .mt-modal{background:var(--ink);border:1px solid var(--border);border-radius:14px;width:100%;max-width:640px;max-height:86vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);}
+  .mt-modal-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.25rem 1.4rem;border-bottom:1px solid var(--border);}
+  .mt-modal-title{font-family:var(--font-lato);font-weight:700;font-size:1.08rem;color:var(--ivory);}
+  .mt-modal-sub{font-family:var(--font-b);font-size:0.76rem;color:var(--ivory-faint);margin-top:0.3rem;}
+  .mt-modal-x{background:transparent;border:1px solid var(--border);color:var(--ivory-dim);width:30px;height:30px;border-radius:100px;cursor:pointer;font-size:1.05rem;line-height:1;flex-shrink:0;transition:all .15s;}
+  .mt-modal-x:hover{color:var(--ivory);border-color:var(--border-lit);background:var(--surface);}
+  .mt-modal-body{padding:1.4rem;overflow-y:auto;display:flex;flex-direction:column;gap:1.3rem;}
+  .mt-d{display:flex;flex-direction:column;gap:0.85rem;}
+  .mt-dtitle{font-family:var(--font-lato);font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--ivory-dim);padding-bottom:0.5rem;border-bottom:1px solid var(--border);}
+  .mt-drow{font-family:var(--font-b);font-size:0.84rem;color:var(--ivory-dim);line-height:1.6;}
+  .mt-drow b{color:var(--ivory);}
+  .mt-item{display:flex;gap:0.7rem;align-items:flex-start;padding:0.7rem 0.85rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--mt-radius-sm);}
+  .mt-item .mt-itxt{flex:1;min-width:0;font-family:var(--font-b);font-size:0.82rem;color:var(--ivory);line-height:1.5;word-break:break-word;}
+  .mt-item .mt-idue{font-family:var(--font-m);font-size:0.64rem;color:var(--ivory-faint);white-space:nowrap;margin-top:2px;}
+  .mt-badge{flex-shrink:0;font-family:var(--font-m);font-weight:600;font-size:0.6rem;letter-spacing:0.04em;text-transform:uppercase;padding:0.22rem 0.6rem;border-radius:100px;white-space:nowrap;}
+  .mt-badge--saved{color:var(--mt-teal);background:rgba(34,179,135,0.12);border:1px solid rgba(34,179,135,0.3);}
+  .mt-badge--used{color:var(--mt-cyan);background:rgba(62,143,217,0.12);border:1px solid rgba(62,143,217,0.3);}
+  .mt-badge--pending{color:var(--mt-amber);background:rgba(224,163,46,0.12);border:1px solid rgba(224,163,46,0.3);}
+  .mt-badge--completed{color:var(--mt-teal);background:rgba(34,179,135,0.12);border:1px solid rgba(34,179,135,0.3);}
+  .mt-badge--overdue{color:var(--mt-red);background:rgba(229,88,79,0.12);border:1px solid rgba(229,88,79,0.3);}
+  .mt-none{font-family:var(--font-b);font-size:0.8rem;color:var(--ivory-faint);font-style:italic;}
+  .mt-split{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;}
+  @media (max-width:768px){ .mt-split{grid-template-columns:minmax(0,1fr);} }
+  @media (max-width:480px){ .mt-metrics{grid-template-columns:minmax(0,1fr);} }
 
-/* ---------- Schedule panel ---------- */
-.mt-sched-ov{position:fixed;inset:0;z-index:340;background:rgba(6,8,13,.8);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .3s var(--ease-out);}
-.mt-sched-ov.is-open{opacity:1;pointer-events:auto;}
-.mt-sched{width:min(580px,100%);max-height:calc(100dvh - 2rem);overflow:auto;background:linear-gradient(180deg,var(--surface),var(--ink));border:1px solid var(--border-lit);box-shadow:0 30px 90px rgba(0,0,0,.6);animation:mt-rise .45s var(--ease-out) both;}
-.mt-sched-body{padding:1.25rem 1.4rem 0;}
-.mt-sched-foot{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.6rem;padding:1rem 1.4rem;}
-.mt-field{margin-bottom:1.05rem;}
-.mt-field label{display:block;font-family:var(--font-m);font-size:.58rem;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--ivory-dim);margin-bottom:.5rem;}
-.mt-field label b{color:var(--mt-red);}
-.mt-field .mt-input{width:100%;background:var(--ink);border:1px solid var(--border);color:var(--ivory);font-family:'Cabinet Grotesk',var(--font-rc),sans-serif;font-size:.86rem;padding:.72rem .85rem;outline:none;transition:border-color .2s var(--ease-out);}
-.mt-field .mt-input:focus{border-color:var(--mt-amber);}
-.mt-pick{position:relative;}
-.mt-pick-list{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--surface);border:1px solid var(--border-lit);max-height:230px;overflow:auto;}
-.mt-pick-item{display:flex;align-items:center;gap:.6rem;padding:.55rem .75rem;cursor:pointer;font-family:'Cabinet Grotesk',var(--font-rc),sans-serif;font-size:.8rem;color:var(--ivory-dim);border-bottom:1px solid rgba(130,160,210,.07);}
-.mt-pick-item:hover,.mt-pick-item.is-sel{background:rgba(139,92,246,.13);color:var(--ivory);}
-.mt-pick-item .mt-pick-who{font-family:var(--font-m);font-size:.56rem;color:var(--ivory-faint);text-transform:uppercase;letter-spacing:.06em;}
-.mt-sched-selected{display:flex;align-items:center;gap:.6rem;padding:.65rem .8rem;border:1px solid rgba(139,92,246,.5);background:rgba(139,92,246,.08);font-family:'Cabinet Grotesk',var(--font-rc),sans-serif;font-size:.82rem;color:var(--ivory);}
-.mt-f-err{display:none;color:var(--mt-red);font-family:var(--font-m);font-size:.64rem;margin-top:.45rem;letter-spacing:.03em;}
-.mt-f-err.is-on{display:block;}
+  /* ── Schedule form ── */
+  .mt-form{display:flex;flex-direction:column;gap:1.05rem;}
+  .mt-form .form-label{margin-bottom:0.4rem;font-family:var(--font-m);font-weight:600;font-size:0.72rem;letter-spacing:0.03em;color:var(--ivory-dim);text-transform:uppercase;}
+  .mt-field{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--mt-radius-sm);color:var(--ivory);font-family:var(--font-b);font-size:0.87rem;padding:0.65rem 0.8rem;outline:none;transition:border-color .15s;}
+  .mt-field:focus{border-color:var(--mt-cyan);}
+  select.mt-field{appearance:auto;}
+  .mt-formerr{font-family:var(--font-m);font-size:0.72rem;color:var(--mt-red);}
 
-/* ---------- Motion ---------- */
-@keyframes mt-rise{from{opacity:0;transform:translateY(14px) scale(.992);}to{opacity:1;transform:none;}}
-@keyframes mt-spin{to{transform:rotate(360deg);}}
-@keyframes mt-pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
-@media (prefers-reduced-motion: reduce){
-  .mtx::after{display:none;}
-  .mtx *,.mt-anim .mt-row{animation:none !important;transition:none !important;}
-}
-@media (max-width:1280px){.mt-metrics{grid-template-columns:repeat(3,minmax(0,1fr));}}
-@media (max-width:1100px){
-  .mt-row{grid-template-columns:minmax(180px,1fr) minmax(0,1.4fr) 176px auto;}
-  .mt-st{display:none;}
-}
-@media (max-width:860px){
-  .mt-row{grid-template-columns:minmax(0,1fr);gap:.7rem;}
-  .mt-records{grid-column:1;}
-  .mt-act{flex-direction:row;flex-wrap:wrap;}
-}
-@media (max-width:700px){
-  .mt-metrics{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .mt-search{min-width:100%;order:99;}
-  .mt-dgrid{grid-template-columns:minmax(0,1fr);}
-}
-@media (max-width:460px){
-  .mt-metrics{grid-template-columns:minmax(0,1fr);}
-}
+  /* ── Detail modal · delete-meeting action ── */
+  .btn-danger{color:var(--mt-red);border-color:rgba(229,88,79,0.3);}
+  .btn-danger:hover{color:#fff;background:var(--mt-red);border-color:var(--mt-red);}
+  .mt-delzone{display:flex;flex-direction:column;gap:0.6rem;}
+  .mt-delconfirm{display:flex;align-items:center;justify-content:flex-end;gap:0.6rem;flex-wrap:wrap;padding:0.8rem 0.9rem;background:rgba(229,88,79,0.08);border:1px solid rgba(229,88,79,0.4);border-left:3px solid var(--mt-red);border-radius:var(--mt-radius-sm);animation:mtDelIn 0.18s ease-out;}
+  .mt-delmsg{font-family:var(--font-m);font-size:0.72rem;font-weight:600;color:var(--ivory);line-height:1.5;flex:1;min-width:180px;display:inline-flex;align-items:center;gap:0.45rem;}
+  .mt-delmsg svg{width:14px;height:14px;color:var(--mt-red);flex-shrink:0;}
+  .mt-delerr{flex-basis:100%;text-align:left;padding:0.5rem 0.65rem;border-radius:var(--mt-radius-sm);background:rgba(229,88,79,0.1);border:1px solid rgba(229,88,79,0.35);color:var(--mt-red);font-weight:600;font-size:0.74rem;}
+  .mt-delconfirm.shake{animation:mtShake 0.45s ease-in-out;}
+  @keyframes mtDelIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes mtShake{0%,100%{transform:translateX(0);}15%{transform:translateX(-6px);}30%{transform:translateX(6px);}45%{transform:translateX(-4px);}60%{transform:translateX(4px);}75%{transform:translateX(-2px);}90%{transform:translateX(2px);}}
+
+  /* ── Bottom-of-popup delete action ── */
+  .mt-del-bottom{margin-top:0.5rem;border-top:1px solid var(--border);padding-top:1rem;}
+  .mt-del-bottom .mt-dtitle{color:var(--mt-red);}
+  .mt-del-bottom .mt-dfoot-note{font-family:var(--font-b);font-size:0.76rem;color:var(--ivory-dim);line-height:1.5;margin-bottom:0.7rem;}
+
+  /* ── Meeting history rows (non-scheduled meetings, deletable) ── */
+  .mt-hitem{display:flex;align-items:center;justify-content:space-between;gap:0.8rem;padding:0.7rem 0.85rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--mt-radius-sm);flex-wrap:wrap;transition:border-color .15s;}
+  .mt-hitem:hover{border-color:var(--border-lit);}
+  .mt-hinfo{display:flex;align-items:center;gap:0.65rem;flex-wrap:wrap;min-width:0;}
+  .mt-hmeta{font-family:var(--font-b);font-size:0.78rem;color:var(--ivory-dim);line-height:1.4;min-width:0;word-break:break-word;}
+  .mt-hitem .mt-delzone{margin-left:auto;}
+  .mt-badge--missed{color:var(--ivory-dim);background:var(--elevated);border:1px solid var(--border);}
+  .mt-badge--cancelled{color:var(--mt-red);background:rgba(229,88,79,0.12);border:1px solid rgba(229,88,79,0.3);}
+
+  /* ── Schedule form · employee search (real-time, org-scoped) ── */
+  .mt-empsearch{position:relative;}
+  .mt-empsearch .mt-field{padding-right:2.3rem;}
+  .mt-empclear{position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);width:22px;height:22px;border:1px solid var(--border);border-radius:50%;background:var(--elevated);color:var(--ivory-dim);font-size:0.95rem;line-height:1;padding:0;cursor:pointer;display:none;align-items:center;justify-content:center;transition:all 0.15s;z-index:1;}
+  .mt-empclear:hover{color:var(--ivory);border-color:var(--border-lit);background:var(--ivory-ghost);}
+  .mt-empsearch.has-val .mt-empclear{display:flex;}
+  .mt-empdrop{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--ink);border:1px solid var(--border-lit);border-radius:var(--mt-radius-sm);box-shadow:var(--shadow-lg);z-index:320;max-height:230px;overflow-y:auto;padding:0.3rem;display:none;}
+  .mt-empdrop.show{display:block;}
+  .mt-empopt{display:flex;align-items:center;gap:0.65rem;padding:0.55rem 0.65rem;border-radius:var(--mt-radius-sm);cursor:pointer;border-left:2px solid transparent;transition:background 0.15s;color:var(--ivory);}
+  .mt-empopt:hover,.mt-empopt.active{background:var(--surface);border-left-color:var(--mt-violet);}
+  .mt-empavatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-lato);font-weight:700;font-size:0.66rem;color:#fff;}
+  .mt-epinfo{flex:1;min-width:0;}
+  .mt-epname{font-family:var(--font-lato);font-weight:700;font-size:0.82rem;color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mt-epmeta{font-family:var(--font-m);font-size:0.64rem;color:var(--ivory-faint);margin-top:0.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mt-epid{flex-shrink:0;font-family:var(--font-m);font-size:0.6rem;color:var(--mt-violet);letter-spacing:0.03em;white-space:nowrap;}
+  .mt-empempty{padding:0.75rem 0.65rem;font-family:var(--font-m);font-size:0.7rem;color:var(--ivory-faint);text-align:center;}
+  .mt-empnote{font-family:var(--font-m);font-size:0.66rem;color:var(--mt-teal);margin-top:0.45rem;display:none;}
+  .mt-empnote.show{display:block;}
+
+  /* ── Avatar accent palette (deterministic per person) ── */
+  .mt-accents{display:none;}
 </style>
 </head>
 <body>
+<div style="display:flex;min-height:100vh;">
 
-<!-- SIDEBAR -->
-<nav class="sidebar icon-only">
-  <div class="sidebar-header">
-    <div class="sidebar-logo">
-      <span class="logo-mark">HR</span>
-      <span>VooVr</span>
-    </div>
-  </div>
-  <div class="sidebar-nav">
-    <div class="nav-section">Command Center</div>
-    <a href="/dashboard" class="nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      <span>Dashboard</span>
-    </a>
-    <a href="/sync" class="nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14"/></svg>
-      <span>Sync</span>
-    </a>
-    <a href="/sync/room" class="nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
-      <span>Sync Room</span>
-    </a>
-    <a href="/meeting-tracker" class="nav-item active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="16" cy="18" r="1"/><circle cx="8" cy="18" r="1"/></svg>
-      <span>Meeting Tracker</span>
-    </a>
-    <a href="/settings" class="nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      <span>Settings</span>
-    </a>
-  </div>
-  <div class="sidebar-footer">
-    <div class="avatar" id="userAvatar">U</div>
-    <div class="user-info">
-      <div class="user-name" id="userName">User</div>
-      <div class="user-role" id="userRole">Admin</div>
-    </div>
-  </div>
-</nav>
-
-<main class="main-content">
-  <div class="top-bar">
-    <div class="top-bar-left">
-      <div>
-        <div class="page-title" id="pageTitle">Meeting Tracker</div>
-        <div class="breadcrumb" id="breadcrumbRow"><span>Dashboard</span> / <span>Meeting Tracker</span></div>
+  <!-- SIDEBAR -->
+  <nav class="sidebar icon-only gsap-hidden">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <span class="logo-mark">HR</span>
+        <span>VooVr</span>
       </div>
     </div>
-    <div class="top-bar-right">
-      <button class="btn btn-gradient btn-sm mt-sync-nav" id="syncRoomBtn" title="Open Sync Room">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
-        Sync Room
-      </button>
-      <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle light/dark theme" aria-label="Toggle theme">
-        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-      </button>
+    <div class="sidebar-nav">
+      <div class="nav-section">Command Center</div>
+      <a href="/dashboard" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="/sync" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14"/></svg>
+        <span>Sync</span>
+      </a>
+      <a href="/sync/room" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+        <span>Sync Room</span>
+      </a>
+      <a href="/meeting-tracker" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="16" cy="18" r="1"/><circle cx="8" cy="18" r="1"/></svg>
+        <span>Meeting Tracker</span>
+      </a>
+      <a href="/settings" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span>Settings</span>
+      </a>
     </div>
-  </div>
+    <div class="sidebar-footer">
+      <div class="avatar" id="userAvatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">User</div>
+        <div class="user-role" id="userRole">Admin</div>
+      </div>
+    </div>
+  </nav>
 
-  <div class="content-area mtx" id="contentArea">
-    <!-- HERO -->
-    <header class="mt-hero">
-      <div class="mt-eyebrow">Meeting Intelligence</div>
-      <h1 class="mt-hero-title"><span>Meeting</span><span class="mt-h-accent">Tracker</span></h1>
-      <p class="mt-hero-sub">A live command centre for every 1:1, check-in and promise in play. Who is on the calendar today, what is overdue, and what was said would get done.</p>
-      <div class="mt-hero-actions">
-        <button type="button" class="btn btn-gradient" id="mtScheduleBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div>
+          <div class="page-title" id="pageTitle">Meeting Tracker</div>
+          <div class="breadcrumb" id="breadcrumbRow"><span>Dashboard</span> / <span>Meeting Tracker</span></div>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <button class="btn btn-gradient btn-sm" id="syncRoomBtn" title="Open Sync Room">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+          Sync Room
+        </button>
+        <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle light/dark theme">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="content-area mt-root" id="contentArea">
+
+      <!-- SUMMARY METRICS -->
+      <div class="mt-metrics" id="mtMetrics"></div>
+
+      <!-- TOOLBAR -->
+      <div class="mt-toolbar">
+        <div class="mt-count">Showing <b id="mtShownCount">0</b> of <b id="mtTotalCount">0</b> conversations</div>
+        <button class="mt-pill active" data-filter="all">All</button>
+        <button class="mt-pill" data-filter="today"><span class="mt-pill-dot" style="background:var(--mt-amber)"></span>Today</button>
+        <button class="mt-pill" data-filter="thisweek"><span class="mt-pill-dot" style="background:var(--mt-teal)"></span>This Week</button>
+        <button class="mt-pill" data-filter="followup"><span class="mt-pill-dot" style="background:var(--mt-violet)"></span>Follow-ups</button>
+        <button class="mt-pill" data-filter="overdue"><span class="mt-pill-dot" style="background:var(--mt-red)"></span>Overdue</button>
+        <div class="mt-search">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="mtSearch" placeholder="Search people or topics…">
+        </div>
+        <button class="btn btn-gradient btn-sm" id="scheduleMeetingBtn" title="Schedule a 1:1 meeting">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Schedule Meeting
         </button>
-        <button type="button" class="btn btn-outline mt-sync-nav">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
-          Enter Sync Room
-        </button>
       </div>
-    </header>
 
-    <!-- SUMMARY METRICS -->
-    <section class="mt-metrics" id="mtMetrics" aria-label="Meeting summary"></section>
+      <!-- TODAY'S MEETINGS -->
+      <div class="mt-sectionhead" id="hdrToday">
+        <span class="mt-eyebrow">Today's Meetings</span>
+        <span class="mt-rule"></span>
+        <span class="mt-count-chip" id="chipToday">0</span>
+      </div>
+      <div class="mt-grid protected-text" id="mtToday" translate="no"></div>
 
-    <!-- TOOLBAR -->
-    <div class="mt-toolbar">
-      <div class="mt-shown">Showing <b id="tkShown">0</b> / <b id="tkTotal">0</b> people</div>
-      <div class="mt-chips" id="tkChips">
-        <button type="button" class="mt-pill active" data-filter="all" aria-pressed="true">All</button>
-        <button type="button" class="mt-pill" data-filter="today" aria-pressed="false"><i style="background:var(--mt-amber)"></i>Today</button>
-        <button type="button" class="mt-pill" data-filter="week" aria-pressed="false"><i style="background:var(--mt-cyan)"></i>This Week</button>
-        <button type="button" class="mt-pill" data-filter="upcoming" aria-pressed="false"><i style="background:var(--mt-violet)"></i>Upcoming</button>
-        <button type="button" class="mt-pill" data-filter="follow" aria-pressed="false"><i style="background:var(--mt-violet)"></i>Follow-ups</button>
-        <button type="button" class="mt-pill" data-filter="overdue" aria-pressed="false"><i style="background:var(--mt-red)"></i>Overdue</button>
-        <button type="button" class="mt-pill" data-filter="missed" aria-pressed="false"><i style="background:var(--mt-slate)"></i>Missed</button>
-        <button type="button" class="mt-pill" data-filter="completed" aria-pressed="false"><i style="background:var(--mt-teal)"></i>Completed</button>
+      <!-- UPCOMING -->
+      <div class="mt-sectionhead" id="hdrUpcoming">
+        <span class="mt-eyebrow">Upcoming Conversations</span>
+        <span class="mt-rule"></span>
+        <span class="mt-count-chip" id="chipUpcoming">0</span>
       </div>
-      <div class="mt-search">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="tkSearch" placeholder="Search people, topics, promises…" autocomplete="off" aria-label="Search meetings">
+      <div class="mt-grid protected-text" id="mtUpcoming" translate="no"></div>
+
+      <!-- FOLLOW-UPS -->
+      <div class="mt-sectionhead" id="hdrFollow">
+        <span class="mt-eyebrow">Follow-ups &amp; Promises</span>
+        <span class="mt-rule"></span>
+        <span class="mt-count-chip" id="chipFollow">0</span>
       </div>
+      <div class="mt-grid protected-text" id="mtFollow" translate="no"></div>
+
+      <!-- LOADING / ERROR STATE -->
+      <div id="mtStateBox"></div>
+
+      <div class="mt-empty" id="mtEmpty" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <div id="mtEmptyText">No conversations match your filter.</div>
+      </div>
+
     </div>
-
-    <div id="tkState"></div>
-    <div id="tkSections"></div>
-
-    <!-- PROMISES & FOLLOW-UPS -->
-    <section class="mt-open" id="mtOpenSection" aria-label="Promises and follow-ups">
-      <div class="mt-sec-head"><span class="mt-sec-eyebrow">Promises &amp; Follow-ups</span><span class="mt-sec-rule"></span><span class="mt-sec-chip" id="mtOpenCount">0</span></div>
-      <div class="mt-open-grid">
-        <div class="mt-open-col">
-          <div class="mt-open-col-title">Promises <span id="mtPledgeCount">0</span></div>
-          <div id="mtPromises" class="protected-text" translate="no"></div>
-        </div>
-        <div class="mt-open-col">
-          <div class="mt-open-col-title">Follow-ups <span id="mtFollowCount">0</span></div>
-          <div id="mtFollowups" class="protected-text" translate="no"></div>
-        </div>
-      </div>
-    </section>
-  </div>
-</main>
-
-<!-- MODAL / DRAWER OVERLAY -->
-<div id="tkOverlay" class="tk-overlay" aria-hidden="true"></div>
-
-<!-- SCHEDULE MEETING OVERLAY -->
-<div id="mtScheduleOverlay" class="mt-sched-ov" aria-hidden="true">
-  <div class="mt-sched" role="dialog" aria-modal="true" aria-labelledby="mtSchedTitle">
-    <div class="tk-modal-head">
-      <div>
-        <div class="tk-modal-title" id="mtSchedTitle">Schedule a Meeting</div>
-        <div class="tk-modal-sub">Put a new check-in on the board</div>
-      </div>
-      <button type="button" class="tk-modal-x" id="mtSchedClose" aria-label="Close dialog">×</button>
-    </div>
-    <div class="mt-sched-body">
-      <div class="mt-field">
-        <label for="mtSchedSearch">Employee <b>*</b></label>
-        <div class="mt-pick">
-          <input type="text" class="mt-input" id="mtSchedSearch" placeholder="Search by name, position or department…" autocomplete="off">
-          <div class="mt-pick-list" id="mtSchedList" style="display:none;"></div>
-        </div>
-        <div id="mtSchedEmp" style="display:none;"></div>
-      </div>
-      <div class="mt-field">
-        <label for="mtSchedTitleInput">Meeting title <b>*</b></label>
-        <input type="text" class="mt-input" id="mtSchedTitleInput" placeholder="e.g. Weekly check-in" maxlength="200" autocomplete="off">
-      </div>
-      <div class="mt-field">
-        <label for="mtSchedWhen">Date &amp; time <b>*</b></label>
-        <input type="datetime-local" class="mt-input" id="mtSchedWhen">
-      </div>
-      <div class="mt-f-err" id="mtSchedError"></div>
-    </div>
-    <div class="mt-sched-foot">
-      <button type="button" class="btn btn-outline" id="mtSchedCancel">Cancel</button>
-      <button type="button" class="btn btn-gradient" id="mtSchedSubmit">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Schedule Meeting
-      </button>
-    </div>
-  </div>
+  </main>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/csrf.js"></script>
+<div id="mtModalOverlay" class="mt-modal-overlay"></div>
 <script>
-'use strict';
-/* ============================================================
-   VooVr Meeting Tracker — command-centre frontend.
-   Lives on the existing backend contract only:
-     · GET  /api/meetings/dashboard      → board (people/counters)
-     · GET  /api/me                      → signed-in user (identity)
-     · GET  /api/conversation-memory?employee_id=… → memory context
-     · POST /api/meetings                → schedule a meeting
-     · DELETE /api/meetings/<id>         → delete an exact meeting
-   No new endpoints are introduced.
-   ============================================================ */
+/* ═══════════════════════════════════════════════════════════════
+   MEETING TRACKER — Phase 2: real backend data.
+   Consumes GET /api/meetings/dashboard (one call) for the board and
+   lazily loads conversation memory + meeting detail via dedicated
+   endpoints. Visual design (.mt-*) is preserved from Phase 1.
+   ═══════════════════════════════════════════════════════════════ */
+var mtData = null;          // raw dashboard payload
+var mtPeople = [];          // rendered people (each = one card)
+var mtByEmp = {};           // employee_id -> person (for detail lookups)
+var mtEmployees = [];       // active employees (for scheduling)
+var mtFilter = 'all';
+var mtQuery = '';
 
-var tkData = null;        // raw dashboard payload
-var tkPeople = [];        // filtered/rendered people list
-var tkByEmp = {};         // emp id -> person
-var tkEmpById = {};       // emp id -> employee json (manager lookup)
-var tkUser = null;        // GET /api/me result (identity / owner)
-var tkFilter = 'all';
-var tkQuery = '';
-var tkMounted = false;
-var mtFirstRender = true;
-
-/* ---------- Small helpers ---------- */
+// ── Small DOM helpers ──
+var MT_DEBUG = true; // flip to false to silence the [mt] debug logs below
+function mtLog() {
+  if (!MT_DEBUG || !window.console) return;
+  var a = Array.prototype.slice.call(arguments);
+  a.unshift('[mt]');
+  console.log.apply(console, a);
+}
 function escHtml(str) {
   if (str === null || str === undefined) return '';
   var d = document.createElement('div');
@@ -434,940 +401,985 @@ function escHtml(str) {
   return d.innerHTML;
 }
 function $(id) { return document.getElementById(id); }
-function tkPad(n) { return (n < 10 ? '0' : '') + n; }
-var TK_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function tkTime(d) {
-  var h = d.getHours(), m = d.getMinutes(), ap = h < 12 ? 'AM' : 'PM';
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function fmtTime(d) {
+  var h = d.getHours(), m = d.getMinutes(), am = h < 12 ? 'AM' : 'PM';
   h = h % 12; if (h === 0) h = 12;
-  return h + ':' + tkPad(m) + ' ' + ap;
+  return h + ':' + pad(m) + ' ' + am;
 }
-function mtWhenTxt(iso) {
-  if (!iso) return '';
-  var d = new Date(iso);
-  if (isNaN(d.getTime())) return '';
-  return tkPad(d.getDate()) + ' ' + TK_MONTHS[d.getMonth()].toUpperCase() + ' ' + d.getFullYear() + ' \u00b7 ' + tkTime(d);
+function fmtDate(d) {
+  return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
 }
-function tkDayLbl(iso) {
-  var d = new Date(iso);
-  if (isNaN(d.getTime())) return '';
+function isSameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+function isThisWeek(d) {
   var now = new Date();
-  var same = now.getFullYear() === d.getFullYear() && now.getMonth() === d.getMonth() && now.getDate() === d.getDate();
-  var y = new Date(now); y.setDate(now.getDate() - 1);
-  var wasY = y.getFullYear() === d.getFullYear() && y.getMonth() === d.getMonth() && y.getDate() === d.getDate();
-  return same ? 'Today' : (wasY ? 'Yesterday' : TK_MONTHS[d.getMonth()] + ' ' + d.getDate());
+  var mon = new Date(now); mon.setHours(0,0,0,0); mon.setDate(now.getDate() - now.getDay() + 1);
+  var sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  return d >= mon && d <= sun;
 }
 function initials(name) {
-  return String(name || '?').trim().split(/\s+/).map(function (w) { return w.charAt(0); }).join('').slice(0, 2).toUpperCase() || '?';
+  return String(name || '?').trim().split(/\s+/).map(function(w){ return w.charAt(0); }).join('').slice(0,2).toUpperCase() || '?';
 }
-function tkAccent(id) {
-  var accs = [
-    ['#8B5CF6','#60A5FA'],['#FBBF24','#F97316'],['#34D399','#22D3EE'],
-    ['#F87171','#FB7185'],['#60A5FA','#A78BFA'],['#22D3EE','#34D399'],
-    ['#A78BFA','#F472B6'],['#F97316','#FBBF24'],['#8B5CF6','#34D399']
-  ];
-  var hash = 0, s = String(id || '');
+// Deterministic accent per employee id (stable across renders)
+var ACCENTS = [
+  ['#8B5CF6', '#60A5FA'], ['#FBBF24', '#F97316'], ['#34D399', '#22D3EE'],
+  ['#F87171', '#FB7185'], ['#60A5FA', '#A78BFA'], ['#F97316', '#FBBF24'],
+  ['#34D399', '#8B5CF6'], ['#A78BFA', '#F472B6'], ['#22D3EE', '#34D399'],
+  ['#FB7185', '#FBBF24']
+];
+function accentFor(id) {
+  var hash = 0;
+  var s = String(id || '');
   for (var i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
-  return accs[hash % accs.length];
-}
-function recordLabel(status) {
-  var s = String(status || 'scheduled').toLowerCase();
-  var map = { scheduled: 'Scheduled', missed: 'Missed', completed: 'Completed', cancelled: 'Cancelled' };
-  return map[s] || 'Record';
-}
-function recordLabelOf(status) {
-  return recordLabel(status);
-}
-function mtStatusCls(status) {
-  var s = String(status || '').toLowerCase();
-  return { scheduled: 'mt-chip--scheduled', missed: 'mt-chip--missed', completed: 'mt-chip--completed', cancelled: 'mt-chip--cancelled' }[s] || 'mt-chip--other';
-}
-function mtChip(status) {
-  return '<span class="mt-chip ' + mtStatusCls(status) + '"><i></i>' + escHtml(recordLabel(status)) + '</span>';
-}
-var TK_ICONS = {
-  cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>',
-  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>',
-  chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
-  bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>',
-  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-  list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
-  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>'
-};
-
-/* ---------- Delete trigger ---------- */
-function mtDelTrigger(mid, label, cls, title, when) {
-  return '<button type="button" class="btn btn-outline btn-sm mt-del ' + (cls || '') + '" ' +
-    'data-mid="' + escHtml(mid) + '" data-title="' + escHtml(title || '') + '" data-when="' + escHtml(when || '') + '" ' +
-    'aria-label="Delete meeting" title="Delete meeting: ' + escHtml(title || '') + '">' +
-    TK_ICONS.trash + '<span>' + (label || 'Delete') + '</span></button>';
+  return ACCENTS[hash % ACCENTS.length];
 }
 
-/* ---------- Modal ---------- */
-function openModal(html, isAside) {
-  var ov = $('tkOverlay');
-  if (!ov) return;
-  ov.innerHTML = '<div class="tk-modal' + (isAside ? ' mt-drawer' : '') + '" role="dialog" aria-modal="true" aria-labelledby="tkModalTitle">' + html + '</div>';
-  ov.classList.toggle('mt-aside', !!isAside);
-  ov.classList.add('is-open');
-  ov.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('tk-modal-open');
-  var x = ov.querySelector('.tk-modal-x');
-  if (x) x.focus();
-}
-function closeModal() {
-  var ov = $('tkOverlay');
-  if (!ov) return;
-  ov.classList.remove('is-open');
-  ov.setAttribute('aria-hidden', 'true');
-  document.body.classList.remove('tk-modal-open');
-  ov.innerHTML = '';
-}
-function mtModalShell(title, sub) {
-  return '<div class="tk-modal-head"><div><div id="tkModalTitle" class="tk-modal-title">' + title + '</div>' +
-    (sub ? '<div class="tk-modal-sub">' + sub + '</div>' : '') + '</div>' +
-    '<button type="button" class="tk-modal-x" aria-label="Close dialog">\u00d7</button></div>' +
-    '<div class="tk-modal-body">';
-}
-function mtModalClose(html) {
-  return html + '</div>';
+// ── Section (status) resolution for a person ──
+function personSection(p) {
+  var nm = p.next_meeting;
+  if (nm && nm.status === 'missed') return 'missed';
+  if (nm && nm.scheduled_at && isSameDay(new Date(nm.scheduled_at), new Date())) return 'today';
+  if (p.counts.overdue_followups > 0) return 'overdue';
+  if (p.counts.pending_followups > 0) return 'follow';
+  if (p.last_missed) return 'missed';
+  if (nm && nm.scheduled_at) return isThisWeek(new Date(nm.scheduled_at)) ? 'thisweek' : 'nextweek';
+  return 'today';
 }
 
-/* ---------- Delete flow (existing DELETE /api/meetings/<id>) ---------- */
-function mtDeleteMeeting(mid, btn) {
-  if (!mid) return;
-  var title = btn ? (btn.getAttribute('data-title') || '') : '';
-  var confirmResult = false;
-  if (window.VooVrUI) {
-    VooVrUI.ask('Delete this meeting' + (title ? ' "' + title + '"' : '') + '? This permanently removes the meeting record and cannot be undone.', {
-      title: 'Delete meeting',
-      accept: 'Delete'
-    }).then(function (ok) {
-      confirmResult = !!ok;
-      if (!confirmResult) return;
-      mtDoDeleteMeeting(mid, btn);
-    });
+// ── Card renderers ──
+function mdAvatar(p) {
+  var acc = accentFor(p.id);
+  return '<div class="mt-avatar" style="--accent:' + acc[0] + ';--accent2:' + acc[1] + ';">' + escHtml(initials(p.employee.name)) + '</div>';
+}
+
+function mdStatus(section) {
+  var map = { today: 'Today', upcoming: 'Upcoming', follow: 'Follow-up', overdue: 'Overdue', missed: 'Missed' };
+  var cls = {
+    today: 'mt-status--today', upcoming: 'mt-status--upcoming',
+    follow: 'mt-status--follow', overdue: 'mt-status--overdue', missed: 'mt-status--missed'
+  }[section === 'thisweek' || section === 'nextweek' ? 'upcoming' : section] || 'mt-status--upcoming';
+  var label = map[section === 'thisweek' || section === 'nextweek' ? 'upcoming' : section] || 'Upcoming';
+  return '<span class="mt-status ' + cls + '"><span class="dot"></span>' + label + '</span>';
+}
+
+function mdCell(label, value, cls, isOwner, svgPath) {
+  var outer = cls || '';
+  var line = '<div class="mt-cellline' + (isOwner ? ' is-owner' : '') + '">' + escHtml(value || '—') + '</div>';
+  if (label === 'Promise') outer += ' is-promise';
+  if (label === 'Follow-up') outer += ' is-follow';
+  var svg = svgPath || '';
+  return '<div class="mt-cell ' + outer + '"><div class="mt-celllabel">' + svg + escHtml(label) + '</div>' + line + '</div>';
+}
+
+function employerCell(p, section) {
+  var name = p.employee.name;
+  var role = p.employee.position || '';
+  var when = p.next_meeting && p.next_meeting.scheduled_at ? new Date(p.next_meeting.scheduled_at) : null;
+  var missedWhen = p.last_missed && p.last_missed.scheduled_at ? new Date(p.last_missed.scheduled_at) : null;
+  var timeline, dateStr;
+  if (section === 'today' && when) { timeline = 'Today'; dateStr = 'Today \u00b7 ' + fmtTime(when); }
+  else if (section === 'thisweek' && when) {
+    timeline = 'This Week';
+    var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    dateStr = days[when.getDay()] + ' \u00b7 ' + fmtTime(when);
+  }
+  else if (section === 'nextweek' && when) {
+    timeline = 'Next Week';
+    dateStr = fmtDate(when) + ' \u00b7 ' + fmtTime(when);
+  }
+  else if (section === 'overdue') {
+    timeline = 'Overdue';
+    dateStr = (when ? 'Scheduled ' + fmtDate(when) + ' \u00b7 ' + fmtTime(when) + ' \u00b7 ' : '') + p.counts.overdue_followups + ' overdue item(s)';
+  }
+  else if (section === 'missed') {
+    timeline = 'Missed';
+    var mw = missedWhen || when;
+    dateStr = mw ? 'Scheduled ' + fmtDate(mw) + ' \u00b7 ' + fmtTime(mw) + ' \u2014 never actioned' : 'Scheduled but never actioned';
+  }
+  else { timeline = 'Follow-up'; dateStr = (when ? 'Scheduled ' + fmtDate(when) + ' \u00b7 ' + fmtTime(when) + ' \u00b7 ' : '') + p.counts.pending_followups + ' follow-up(s)'; }
+  return { name: name, role: role, timeline: timeline, dateStr: dateStr, when: when };
+}
+
+function mdCard(p) {
+  var section = personSection(p);
+  var info = employerCell(p, section);
+  var isOwnerSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+  var mgrSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+  var calSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  var promiseSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
+  var followSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 6v6l4 2"/></svg>';
+
+  // Promises cell: factual open commitments
+  var commitments = (p.open_items || []).filter(function(o){ return o.type === 'COMMITMENT'; });
+  var promises = commitments.length
+    ? commitments.map(function(c){ return '<div class="mt-cellline is-owner">' + escHtml(c.content) + '</div>'; }).join('')
+    : '<div class="mt-cellline">—</div>';
+
+  // Follow row: next due open follow-up
+  var followups = (p.open_items || []).filter(function(o){ return o.type === 'FOLLOW_UP'; });
+  var follow = '';
+  if (followups.length) {
+    var first = followups[0];
+    var due = first.due_at ? 'Due ' + fmtDate(new Date(first.due_at)) : 'No due date';
+    if (first.status === 'OVERDUE') due = 'Overdue \u00b7 ' + (first.due_at ? fmtDate(new Date(first.due_at)) : '');
+    follow =
+      '<div class="mt-follow">' +
+        '<span class="mt-folllabel">' + followSvg + 'Follow-up</span>' +
+        '<span class="mt-fover">' + escHtml(first.content) + ' \u2014 ' + due + '</span>' +
+      '</div>';
+  } else if (section === 'follow' || section === 'overdue') {
+    follow =
+      '<div class="mt-follow">' +
+        '<span class="mt-folllabel">' + followSvg + 'Follow-up</span>' +
+        '<span class="mt-fover">' + escHtml(info.dateStr) + '</span>' +
+      '</div>';
+  }
+
+  var topic = (p.next_meeting && p.next_meeting.title)
+    ? p.next_meeting.title
+    : ((followups.length ? followups : commitments).length
+        ? ((followups[0] || commitments[0]).content)
+        : 'Action items \u2014 no upcoming meeting scheduled');
+
+  var prevLink = '';
+  if (p.previous_session && p.previous_session.session_id) {
+    prevLink = '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenPrevious(\'' + escHtml(p.id) + '\')" title="View previous session context"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.36 2.64L3 8"/><path d="M3 3v5h5"/></svg>Previous Context</a>';
+  }
+
+  var histCount = (p.meeting_history || []).filter(function(m){ return m && m.id; }).length;
+  var histLink = histCount
+    ? '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenHistory(\'' + escHtml(p.id) + '\')" title="View &amp; delete past (missed / completed / cancelled) meetings for this person"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7.5 13l3 3 5-6"/></svg>History (' + histCount + ')</a>'
+    : '';
+
+  return (
+    '<div class="mt-card" data-seen="' + escHtml(p.id) + '">' +
+      '<div class="mt-card-top">' +
+        mdAvatar(p) +
+        '<div class="mt-who"><div class="mt-name">' + escHtml(info.name) + '</div><div class="mt-role">' + escHtml(info.role) + '</div></div>' +
+        mdStatus(section) +
+      '</div>' +
+      '<div class="mt-body">' +
+        '<div class="mt-meta">' +
+          '<span>' + calSvg + escHtml(info.dateStr) + '</span>' +
+          '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' + escHtml(info.name) + '</span>' +
+        '</div>' +
+        '<div class="mt-topic">' + escHtml(topic) + '</div>' +
+        '<div class="mt-board">' +
+          '<div class="mt-cell is-owner"><div class="mt-celllabel">' + isOwnerSvg + 'Owner</div><div class="mt-cellline is-owner">' + escHtml(info.name) + '</div></div>' +
+          '<div class="mt-cell"><div class="mt-celllabel">' + mgrSvg + 'Manager</div><div class="mt-cellline">You</div></div>' +
+          '<div class="mt-cell"><div class="mt-celllabel">' + calSvg + 'Timeline</div><div class="mt-cellline is-date">' + escHtml(info.timeline) + '</div></div>' +
+          '<div class="mt-cell is-promise"><div class="mt-celllabel">' + promiseSvg + 'Promises</div>' + promises + '</div>' +
+          '<div class="mt-cell is-follow"><div class="mt-celllabel">' + followSvg + 'Open Follow-ups</div><div class="mt-cellline">' + escHtml(followups.length) + '</div></div>' +
+        '</div>' +
+        follow +
+        mtBeforeStart(p) +
+        '<div class="mt-footer">' +
+          '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenDetail(\'' + escHtml(p.id) + '\')" title="View full meeting &amp; recorded context"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>View Meeting</a>' +
+          prevLink +
+          histLink +
+          '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenAllMemory(\'' + escHtml(p.id) + '\')" title="View all recorded memory for this person"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>All Memory</a>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function matchesItem(p) {
+  var section = personSection(p);
+  if (mtFilter === 'today' && section !== 'today') return false;
+  if (mtFilter === 'thisweek' && section !== 'today' && section !== 'thisweek') return false;
+  if (mtFilter === 'followup' && section !== 'follow' && section !== 'overdue' && section !== 'missed') return false;
+  if (mtFilter === 'overdue' && section !== 'overdue') return false;
+  if (mtQuery) {
+    var hay = (p.employee.name + ' ' + (p.employee.position || '') + ' ' + topicFor(p) + ' ' + (p.open_items || []).map(function(o){ return o.content; }).join(' ')).toLowerCase();
+    if (hay.indexOf(mtQuery) === -1) return false;
+  }
+  return true;
+}
+
+function topicFor(p) {
+  if (p.next_meeting && p.next_meeting.title) return p.next_meeting.title;
+  var it = (p.open_items || [])[0];
+  return it ? it.content : '';
+}
+
+function renderMetrics() {
+  var c = mtData ? mtData.counters : { today: 0, this_week: 0, pending_followups: 0, pending_commitments: 0 };
+  var overdue = mtPeople.reduce(function(n, p){ return n + p.counts.overdue_followups; }, 0);
+  var cells = [
+    { v: c.today, l: 'Today', a: 'm-accent0' },
+    { v: c.this_week, l: 'This Week', a: 'm-accent1' },
+    { v: c.pending_followups, l: 'Follow-ups', a: 'm-accent2' },
+    { v: c.pending_commitments, l: 'Promises', a: 'm-accent4' },
+    { v: overdue, l: 'Overdue', a: 'm-accent3' }
+  ];
+  $('mtMetrics').innerHTML = cells.map(function(ce){
+    return '<div class="mt-metric ' + ce.a + '"><div class="mt-mval">' + ce.v + '</div><div class="mt-mlabel">' + ce.l + '</div></div>';
+  }).join('');
+}
+
+function render() {
+  var filtered = mtPeople.filter(matchesItem);
+  var today = filtered.filter(function(p){ return personSection(p) === 'today'; });
+  var upcoming = filtered.filter(function(p){ var s = personSection(p); return s === 'thisweek' || s === 'nextweek'; });
+  var follow = filtered.filter(function(p){ var s = personSection(p); return s === 'follow' || s === 'overdue' || s === 'missed'; });
+
+  $('mtToday').innerHTML = today.map(mdCard).join('');
+  $('mtUpcoming').innerHTML = upcoming.map(mdCard).join('');
+  $('mtFollow').innerHTML = follow.map(mdCard).join('');
+  $('chipToday').textContent = today.length;
+  $('chipUpcoming').textContent = upcoming.length;
+  $('chipFollow').textContent = follow.length;
+  $('mtShownCount').textContent = filtered.length;
+  $('mtTotalCount').textContent = mtPeople.length;
+
+  var isEmpty = today.length === 0 && upcoming.length === 0 && follow.length === 0;
+  if (isEmpty) {
+    $('mtEmptyText').textContent = mtFilter !== 'all'
+      ? 'No conversations match your filter.'
+      : 'No meetings yet \u2014 once you add employees and schedule meetings, they\u2019ll show up here.';
+    $('mtEmpty').style.display = 'block';
   } else {
-    confirmResult = true;
-    if (!confirmResult) return;
-    mtDoDeleteMeeting(mid, btn);
+    $('mtEmpty').style.display = 'none';
   }
-}
-function mtDoDeleteMeeting(mid, btn) {
-  if (btn) {
-    btn.classList.add('is-busy');
-    btn.disabled = true;
-    var span = btn.querySelector('span');
-    if (span) span.textContent = 'Deleting\u2026';
-  }
-  if (window.csrfTokenReady) {
-    window.csrfTokenReady.catch(function () {});
-  }
-  fetch('/api/meetings/' + encodeURIComponent(mid), {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'same-origin'
-  }).then(function (res) {
-    if (res.ok) {
-      closeModal();
-      VooVrUI.show('Meeting deleted.', { kind: 'success' });
-      loadData();
-      return;
-    }
-    var restore = function () {
-      if (btn) { btn.classList.remove('is-busy'); btn.disabled = false; var sp = btn.querySelector('span'); if (sp) sp.textContent = 'Delete'; }
-    };
-    if (res.status === 403) {
-      restore();
-      VooVrUI.show('You don\u2019t have permission to delete this meeting', { kind: 'error' });
-    } else if (res.status === 404) {
-      restore();
-      VooVrUI.show('Meeting already deleted.', { kind: 'error' });
-      loadData();
-    } else {
-      restore();
-      VooVrUI.show('Could not delete this meeting. Please try again.', { kind: 'error' });
-    }
-  }).catch(function () {
-    var restore = function () {
-      if (btn) { btn.classList.remove('is-busy'); btn.disabled = false; var sp = btn.querySelector('span'); if (sp) sp.textContent = 'Delete'; }
-    };
-    restore();
-    VooVrUI.show('Could not delete this meeting. Please try again.', { kind: 'error' });
-  });
-}
-function mtWireDeleteMeeting(scope) {
-  if (!scope || scope.__mtDelWired) return;
-  scope.__mtDelWired = 1;
-  scope.addEventListener('click', function (ev) {
-    var btn = ev.target && ev.target.closest ? ev.target.closest('[data-mid]') : null;
-    if (!btn) return;
-    ev.preventDefault();
-    ev.stopPropagation();
-    mtDeleteMeeting(btn.getAttribute('data-mid'), btn);
-  });
+  $('hdrToday').style.display = today.length ? '' : 'none';
+  $('hdrUpcoming').style.display = upcoming.length ? '' : 'none';
+  $('hdrFollow').style.display = follow.length ? '' : 'none';
+
+  animateCards();
 }
 
-/* ---------- State / load ---------- */
-function renderState(kind, title, msg) {
-  var box = $('tkState');
-  if (!box) return;
-  if (kind === 'loading') {
-    box.innerHTML = '<div class="mt-state"><div class="mt-spinner"></div><h3>Loading Meeting Tracker…</h3><p>' + escHtml(msg || '') + '</p></div>';
-  } else if (kind === 'error') {
-    box.innerHTML = '<div class="mt-state">' + TK_ICONS.alert + '<h3>' + escHtml(title || 'Something went wrong') + '</h3>' +
-      '<p>' + escHtml(msg || '') + '</p><button type="button" class="btn btn-outline btn-sm" id="mtRetry">Retry</button></div>';
-    var retry = $('mtRetry');
-    if (retry) retry.addEventListener('click', loadData);
-  } else {
-    box.innerHTML = '';
+function animateCards() {
+  if (!$('contentArea')) return;
+  var re = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (re) return;
+  var cards = document.querySelectorAll('.mt-card');
+  if (window.gsap && cards.length) {
+    gsap.set(cards, { opacity: 0, y: 12 });
+    gsap.to(cards, { opacity: 1, y: 0, duration: 0.35, stagger: 0.04, ease: 'power3.out' });
   }
+}
+
+// ── Data loading + states ──
+function showLoading() {
+  $('mtMetrics').innerHTML = '';
+  $('hdrToday').style.display = 'none';
+  $('hdrUpcoming').style.display = 'none';
+  $('hdrFollow').style.display = 'none';
+  $('mtEmpty').style.display = 'none';
+  var box = $('mtStateBox');
+  box.style.display = 'block';
+  box.innerHTML =
+    '<div class="mt-state"><div class="mt-spinner"></div><div class="mt-state-title">Loading your meeting board</div><div class="mt-state-sub">Fetching real employees, meetings &amp; conversation memory</div></div>';
+}
+function showError(msg) {
+  var box = $('mtStateBox');
+  box.style.display = 'block';
+  box.innerHTML =
+    '<div class="mt-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+    '<div class="mt-state-title">Couldn\u2019t load the meeting board</div>' +
+    '<div class="mt-state-sub">We\u2019re having trouble reaching your meeting data right now.</div>' +
+    '<button class="btn btn-outline btn-sm mt-retry" type="button">Retry</button></div>';
+  box.querySelector('.mt-retry').addEventListener('click', loadData);
+}
+function hideState() {
+  $('mtStateBox').style.display = 'none';
+  $('mtStateBox').innerHTML = '';
 }
 
 function loadData() {
-  renderState('loading', '', 'Fetching your meeting board…');
-  fetch('/api/meetings/dashboard', { credentials: 'same-origin' })
-    .then(function (res) {
-      if (res.status === 401) { window.location.href = '/signin'; throw new Error('unauthorized'); }
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    })
-    .then(function (data) {
-      tkData = data;
-      tkByEmp = {};
-      tkEmpById = {};
-      (data.people || []).forEach(function (p) { tkByEmp[p.id] = p; });
-      (data.employees || []).forEach(function (e) { tkEmpById[e.id] = e; });
-      mtRender();
-      renderState('');
-      var sec = $('tkSections');
-      if (sec) sec.style.display = '';
-    })
-    .catch(function (err) {
-      if (err && err.message === 'unauthorized') return;
-      renderState('error', 'Could not load meeting intelligence.', 'The board could not be fetched from the server. Check your connection and try again.');
-    });
-}
-
-function loadIdentity() {
-  fetch('/api/me', { credentials: 'same-origin' })
-    .then(function (res) { return res.ok ? res.json() : null; })
-    .then(function (data) {
-      if (!data) return;
-      tkUser = data;
-      var av = $('userAvatar'), nm = $('userName'), rl = $('userRole');
-      if (nm) nm.textContent = data.name || 'User';
-      if (rl) rl.textContent = (data.role === 'admin' ? 'HR Admin' : data.role === 'manager' ? 'Manager' : 'Member');
-      if (av) av.textContent = initials(data.name || 'U');
-    })
-    .catch(function () {});
-}
-
-/* ---------- Section classification & filters ---------- */
-function tkSection(p) {
-  var nm = p.next_meeting;
-  if (nm && nm.scheduled_at) {
-    var d = new Date(nm.scheduled_at);
-    if (!isNaN(d.getTime())) {
-      var today = new Date();
-      var same = today.getFullYear() === d.getFullYear() && today.getMonth() === d.getMonth() && today.getDate() === d.getDate();
-      if (same) return 'today';
-      if (d.getTime() >= Date.now()) return 'upcoming';
-    }
-  }
-  if ((p.counts.pending_followups || 0) > 0 || (p.counts.pending_commitments || 0) > 0 || (p.counts.overdue_followups || 0) > 0) return 'follow';
-  if (p.last_missed) return 'history';
-  if ((p.meeting_history || []).length > 0) return 'history';
-  if ((p.meeting_records || []).length > 0) return 'history';
-  return 'follow';
-}
-function tkOwner() {
-  return tkUser && tkUser.name ? tkUser.name : (tkUser && tkUser.email ? tkUser.email : 'HR owner');
-}
-function tkManager(p) {
-  var rid = p.employee.reports_to;
-  if (rid && tkEmpById[rid]) return tkEmpById[rid].name || '\u2014';
-  return '\u2014';
-}
-function tkAnyRecordToday(p) {
-  var recs = (p.meeting_records || []).concat(p.next_meeting ? [p.next_meeting] : []);
-  for (var i = 0; i < recs.length; i++) {
-    var m = recs[i];
-    if (m && m.scheduled_at) {
-      var d = new Date(m.scheduled_at);
-      if (!isNaN(d.getTime())) {
-        var now = new Date();
-        if (now.getFullYear() === d.getFullYear() && now.getMonth() === d.getMonth() && now.getDate() === d.getDate()) return true;
+  showLoading();
+  fetch('/api/meetings/dashboard')
+    .then(function(r){ if (!r.ok) throw new Error('Request failed (' + r.status + ')'); return r.json(); })
+    .then(function(data) {
+      mtData = data;
+      mtEmployees = data.employees || [];
+      mtPeople = data.people || [];
+      mtByEmp = {};
+      mtPeople.forEach(function(p){ mtByEmp[p.id] = p; });
+      hideState();
+      renderMetrics();
+      render();
+      if (!mtPeople.length) {
+        $('mtEmptyText').textContent = 'No meetings yet \u2014 once you add employees and schedule meetings, they\u2019ll show up here.';
+        $('mtEmpty').style.display = 'block';
+        $('mtToday').innerHTML = ''; $('mtUpcoming').innerHTML = ''; $('mtFollow').innerHTML = '';
       }
-    }
-  }
-  return false;
-}
-function tkAnyThisWeek(p) {
-  var now = new Date();
-  var start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  var end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
-  var recs = (p.meeting_records || []).concat(p.next_meeting ? [p.next_meeting] : [], p.last_missed ? [p.last_missed] : []);
-  for (var i = 0; i < recs.length; i++) {
-    var m = recs[i];
-    if (m && m.scheduled_at) {
-      var d = new Date(m.scheduled_at);
-      if (!isNaN(d.getTime()) && d.getTime() >= start.getTime() && d.getTime() < end.getTime()) return true;
-    }
-  }
-  return false;
-}
-function tkAnyUpcoming(p) {
-  var recs = (p.meeting_records || []).concat(p.next_meeting ? [p.next_meeting] : []);
-  for (var i = 0; i < recs.length; i++) {
-    var m = recs[i];
-    if (m && m.scheduled_at) {
-      var d = new Date(m.scheduled_at);
-      if (!isNaN(d.getTime()) && d.getTime() >= Date.now()) return true;
-    }
-  }
-  return false;
-}
-function tkAnyStatus(p, status) {
-  var recs = (p.meeting_records || []).concat(p.next_meeting ? [p.next_meeting] : [], p.last_missed ? [p.last_missed] : []);
-  for (var i = 0; i < recs.length; i++) {
-    if (recs[i] && recs[i].status === status) return true;
-  }
-  return false;
-}
-function tkFitsFilter(p) {
-  if (tkFilter === 'all') return true;
-  switch (tkFilter) {
-    case 'today': return tkAnyRecordToday(p);
-    case 'week': return tkAnyThisWeek(p);
-    case 'upcoming': return tkAnyUpcoming(p);
-    case 'follow': return ((p.counts.pending_followups || 0) + (p.counts.pending_commitments || 0)) > 0;
-    case 'overdue': return (p.counts.overdue_followups || 0) > 0;
-    case 'missed': return !!(p.last_missed) || tkAnyStatus(p, 'missed');
-    case 'completed': return tkAnyStatus(p, 'completed');
-    default: return true;
-  }
-}
-function tkMatchesQuery(p) {
-  if (!tkQuery) return true;
-  var q = tkQuery.toLowerCase();
-  var hay = [p.employee.name, p.employee.position, p.employee.department, p.employee.employee_id, tkManager(p), tkOwner()];
-  var recs = (p.meeting_records || []).concat(p.next_meeting ? [p.next_meeting] : [], p.last_missed ? [p.last_missed] : []);
-  for (var i = 0; i < recs.length; i++) { if (recs[i]) hay.push(recs[i].title, recs[i].status || ''); }
-  var items = p.open_items || [];
-  for (var j = 0; j < items.length; j++) { hay.push(items[j].content || '', items[j].status || ''); }
-  for (var k = 0; k < hay.length; k++) {
-    if (hay[k] && String(hay[k]).toLowerCase().indexOf(q) !== -1) return true;
-  }
-  return false;
-}
-
-/* ---------- Row pieces ---------- */
-function mtPrimaryMeeting(p) {
-  var nm = p.next_meeting;
-  if (nm && nm.scheduled_at) return nm;
-  if (p.last_missed) return p.last_missed;
-  var recs = (p.meeting_records || []).filter(function (m) { return m && m.id; }).slice();
-  recs.sort(function (a, b) {
-    var ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : 0;
-    var tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : 0;
-    return tb - ta;
-  });
-  return recs[0] || null;
-}
-function mtPrimeLabel(p, prime, sec) {
-  if (!prime) return 'No upcoming meeting scheduled';
-  if (sec === 'today') return 'Today\u2019s meeting';
-  if (prime.status === 'missed') return 'Missed meeting';
-  if (prime.status === 'completed' || prime.status === 'cancelled') return 'Past meeting';
-  return 'Upcoming meeting';
-}
-function mtCountChip(n, label, color) {
-  if (!n) return '';
-  return '<span class="mt-chip" style="--c:' + color + '">' + n + ' ' + escHtml(label) + '</span>';
-}
-function mtCardMeetings(p) {
-  var recs = (p.meeting_records || []).slice().sort(function (a, b) {
-    var ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : 0;
-    var tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : 0;
-    return tb - ta;
-  });
-  if (!recs.length) return '';
-  var rows = '';
-  for (var i = 0; i < recs.length; i++) {
-    var m = recs[i];
-    var recordLabel = recordLabelOf(m.status);
-    rows += '<div class="mt-rec">' +
-      '<div class="mt-rec-main"><div class="mt-rec-title">' + escHtml(m.title || '\u2014') + '</div>' +
-      '<div class="mt-rec-when">' + escHtml(recordLabel) + ' \u00b7 ' + escHtml(mtWhenTxt(m.scheduled_at) || '\u2014') + '</div></div>' +
-      mtChip(m.status) +
-      '<div class="mt-rec-action">' + mtDelTrigger(m.id, 'Delete', '', m.title || '', mtWhenTxt(m.scheduled_at)) + '</div></div>';
-  }
-  return '<details class="mt-records"><summary>' + TK_ICONS.list + ' All meeting records \u2014 ' + recs.length + '</summary>' +
-    '<div class="mt-rec-list protected-text" translate="no">' + rows + '</div></details>';
-}
-function mtRow(p, idx) {
-  var sec = tkSection(p);
-  var acc = tkAccent(p.id);
-  var nc = p.counts || {};
-  var prom = nc.pending_commitments || 0;
-  var fu = nc.pending_followups || 0;
-  var ov = nc.overdue_followups || 0;
-  var histCount = (p.meeting_history || []).length;
-  var secLabel = { today: 'Today', upcoming: 'Upcoming', follow: 'Follow-up', history: 'Missed / Completed' }[sec] || 'Upcoming';
-  var prime = mtPrimaryMeeting(p);
-
-  var idCell = '<div class="mt-id">' +
-    '<span class="mt-av" style="--a1:' + acc[0] + ';--a2:' + acc[1] + ';">' + escHtml(initials(p.employee.name)) + '</span>' +
-    '<div class="mt-who" style="min-width:0;"><div class="mt-name">' + escHtml(p.employee.name) + '</div>' +
-    '<div class="mt-role">' + escHtml(p.employee.position || 'Position unknown') + (p.employee.department ? ' \u00b7 ' + escHtml(p.employee.department) : '') + '</div>' +
-    '<span class="mt-sec-tag">' + escHtml(secLabel) + '</span></div></div>';
-
-  var meetCell;
-  if (prime) {
-    meetCell = '<div class="mt-pr-label"><i></i>' + escHtml(mtPrimeLabel(p, prime, sec)) + '</div>' +
-      '<div class="mt-pr-title">' + escHtml(prime.title || '\u2014') + '</div>' +
-      '<div class="mt-pr-when">' + TK_ICONS.cal + '<span>' + escHtml(mtWhenTxt(prime.scheduled_at) || '\u2014') + '</span></div>';
-  } else {
-    meetCell = '<div class="mt-primary--none">No upcoming meeting scheduled</div>';
-  }
-  var meet = '<div class="mt-meet">' + meetCell + '</div>';
-
-  var stCell = '<div class="mt-st">' + (prime ? mtChip(prime.status) : '<span class="mt-st-dim">\u2014</span>') + '</div>';
-
-  var itemsCell = '<div class="mt-it">' +
-    mtCountChip(prom, 'Promises', 'var(--mt-amber)') +
-    mtCountChip(fu, 'Follow-ups', 'var(--mt-cyan)') +
-    (ov ? '<span class="mt-chip mt-chip--ov"><i></i>' + ov + ' overdue</span>' : '') +
-    '</div>';
-
-  var delBtn = prime && prime.id ? mtDelTrigger(prime.id, 'Delete', '', prime.title || '', mtWhenTxt(prime.scheduled_at)) : '';
-  var act = '<div class="mt-act">' +
-    '<button type="button" class="btn btn-gradient btn-sm mt-view" data-eid="' + escHtml(p.id) + '">View Meeting</button>' +
-    '<div style="display:flex;flex-wrap:wrap;gap:.45rem;">' +
-    (histCount > 0 ? '<button type="button" class="btn btn-outline btn-sm mt-hist" data-eid="' + escHtml(p.id) + '">History ' + histCount + '</button>' : '') +
-    '<button type="button" class="btn btn-outline btn-sm mt-mem" data-eid="' + escHtml(p.id) + '">All Memory</button>' +
-    '</div>' +
-    (delBtn ? delBtn : '') +
-    '</div>';
-
-  return '<article class="mt-row mt--' + sec + '" data-eid="' + escHtml(p.id) + '"' + (idx !== undefined ? ' style="--i:' + (idx * 0.05) + 's"' : '') + '>' +
-    idCell + meet + stCell + itemsCell + act + mtCardMeetings(p) + '</article>';
-}
-
-var MT_SECTION_META = {
-  today: { title: 'Today\u2019s Meetings' },
-  upcoming: { title: 'Upcoming Meetings' },
-  follow: { title: 'Follow-ups &amp; Promises' },
-  history: { title: 'Missed / Completed' }
-};
-
-/* ---------- Metrics ---------- */
-function mtMetrics() {
-  var today = 0, up = 0, follow = 0, prom = 0, overdue = 0, missed = 0;
-  (tkData.people || []).forEach(function (p) {
-    var s = tkSection(p);
-    if (s === 'today') today++;
-    if (s === 'upcoming') up++;
-    if (s === 'follow') follow++;
-    prom += (p.counts.pending_commitments || 0);
-    overdue += (p.counts.overdue_followups || 0);
-    if (p.last_missed || tkAnyStatus(p, 'missed')) missed++;
-  });
-  var tiles = [
-    { v: (tkData.counters && tkData.counters.today) || today, l: 'Today\u2019s Meetings', c: 'var(--mt-amber)' },
-    { v: up, l: 'Upcoming Meetings', c: 'var(--mt-violet)' },
-    { v: (tkData.counters && tkData.counters.pending_followups) || follow, l: 'Open Follow-ups', c: 'var(--mt-cyan)' },
-    { v: prom, l: 'Open Promises', c: 'var(--mt-teal)' },
-    { v: overdue, l: 'Overdue Items', c: 'var(--mt-red)' },
-    { v: missed, l: 'Missed Meetings', c: 'var(--mt-slate)' }
-  ];
-  var html = '';
-  for (var i = 0; i < tiles.length; i++) {
-    html += '<div class="mt-metric" style="--accent:' + tiles[i].c + ';--i:' + i + '">' +
-      '<div class="mt-m-num">' + tiles[i].v + '</div>' +
-      '<div class="mt-m-lbl"><i></i>' + tiles[i].l + '</div></div>';
-  }
-  $('mtMetrics').innerHTML = html;
-}
-
-/* ---------- Promises & follow-ups board ---------- */
-function mtOpenItem(it, ownerName) {
-  var ov = String(it.status || '').toUpperCase() === 'OVERDUE';
-  var done = String(it.status || '').toUpperCase() === 'COMPLETED' || String(it.status || '').toUpperCase() === 'DONE';
-  var col = ov ? 'var(--mt-amber)' : (done ? 'var(--mt-teal)' : 'var(--mt-violet)');
-  var typeTag = it.type === 'COMMITMENT' ? 'Promise' : 'Follow-up';
-  return '<div class="mt-open-item">' +
-    '<i class="mt-o-dot" style="background:' + col + '"></i>' +
-    '<div class="mt-o-text">' + escHtml(it.content || '') +
-    '<span class="mt-o-who">' + escHtml(ownerName || '') + ' \u00b7 ' + escHtml(typeTag) + '</span></div>' +
-    '<div class="mt-o-meta">' +
-    '<span class="mt-o-due' + (ov ? ' is-ov' : '') + '">' + (ov ? 'Overdue' : (it.due_at ? mtWhenTxt(it.due_at) : '\u2014')) + '</span>' +
-    mtChip(it.status) + '</div></div>';
-}
-function mtOpenRender() {
-  var pledges = [], follows = [];
-  (tkData.people || []).forEach(function (p) {
-    var nm = p.employee.name || '';
-    (p.open_items || []).forEach(function (it) {
-      var row = mtOpenItem(it, nm);
-      if (it.type === 'COMMITMENT') pledges.push(row); else follows.push(row);
+    })
+    .catch(function(err) {
+      console.error('Meeting dashboard load failed:', err);
+      showError(err.message);
     });
-  });
-  function sorter(a, b) {
-    var ma = a.match(/is-ov/i) ? 1 : 0;
-    var mb = b.match(/is-ov/i) ? 1 : 0;
-    if (ma !== mb) return mb - ma;
-    return 0;
-  }
-  pledges.sort(sorter); follows.sort(sorter);
-  $('mtPromises').innerHTML = pledges.length ? pledges.join('') : '<span class="mt-none">No open promises.</span>';
-  $('mtFollowups').innerHTML = follows.length ? follows.join('') : '<span class="mt-none">No follow-ups on the board.</span>';
-  var pn = $('mtPledgeCount'); if (pn) pn.textContent = pledges.length;
-  var fn = $('mtFollowCount'); if (fn) fn.textContent = follows.length;
-  var oc = $('mtOpenCount'); if (oc) oc.textContent = pledges.length + follows.length;
 }
 
-/* ---------- Board render ---------- */
-function mtRender() {
-  mtMetrics();
-  mtOpenRender();
-  var list = (tkData.people || []).filter(function (p) { return tkFitsFilter(p) && tkMatchesQuery(p); });
-  $('tkShown').textContent = list.length;
-  $('tkTotal').textContent = (tkData.people || []).length;
+// ── Modal machinery ──
+function openModal(html) {
+  var ov = $('mtModalOverlay');
+  if (!ov) return;
+  ov.innerHTML = html;
+  ov.classList.add('active');
+  var x = ov.querySelector('.mt-modal-x');
+  if (x) x.addEventListener('click', closeModal);
+  ov.addEventListener('click', function(ev){ if (ev.target === ov) closeModal(); });
+  document.addEventListener('keydown', mtEsc);
+}
+function closeModal() {
+  var ov = $('mtModalOverlay');
+  if (!ov) return;
+  ov.classList.remove('active');
+  document.removeEventListener('keydown', mtEsc);
+}
+function mtEsc(ev) { if (ev.key === 'Escape') closeModal(); }
 
-  if (!list.length) {
-    $('tkSections').innerHTML = '<div class="mt-state">' + TK_ICONS.list + '<h3>No meetings match here</h3><p>' +
-      (tkQuery ? 'No employee or meeting matches \u201c' + escHtml(tkQuery) + '\u201d.' : 'Nothing matches this filter yet.') + '</p></div>';
+function modalShell(title, sub) {
+  return (
+    '<div class="mt-modal">' +
+      '<div class="mt-modal-head"><div><div class="mt-modal-title">' + title + '</div>' + (sub ? '<div class="mt-modal-sub">' + sub + '</div>' : '') + '</div>' +
+      '<button class="mt-modal-x" type="button" title="Close">&times;</button></div>' +
+      '<div class="mt-modal-body protected-text" translate="no">' + '<div class="mt-state" style="margin:0;"><div class="mt-spinner"></div></div>' + '</div>' +
+    '</div>'
+  );
+}
+function fillModalBody(html) {
+  var body = document.querySelector('#mtModalOverlay .mt-modal-body');
+  if (body) body.innerHTML = html;
+}
+
+function badgeCls(status, type) {
+  if (type === 'NOTE') return 'mt-badge--saved';
+  var s = (status || '').toUpperCase();
+  if (s === 'USED') return 'mt-badge--used';
+  if (s === 'COMPLETED') return 'mt-badge--completed';
+  if (s === 'OVERDUE') return 'mt-badge--overdue';
+  return 'mt-badge--pending';
+}
+function badgeLabel(status) {
+  var s = (status || '').toUpperCase();
+  return { SAVED: 'Saved', USED: 'Used', PENDING: 'Pending', COMPLETED: 'Completed', OVERDUE: 'Overdue' }[s] || s;
+}
+
+function memoryBlock(title, items, emptyText) {
+  if (!items || !items.length) return '<div class="mt-d"><div class="mt-dtitle">' + title + '</div><div class="mt-none">' + emptyText + '</div></div>';
+  var rows = items.map(function(it){
+    return '<div class="mt-item"><span style="color:var(--ivory-faint);width:14px;flex-shrink:0;">' + mtStatusSym(it.status, it.type) + '</span>' +
+      '<div class="mt-itxt">' + escHtml(it.content) + '<div class="mt-usage">' + mtUsageText(it) + '</div></div>' +
+      '<div class="mt-idue">' + (it.due_at ? 'Due ' + fmtDate(new Date(it.due_at)) : '') + '</div>' +
+      '<span class="mt-badge ' + badgeCls(it.status, it.type) + '">' + badgeLabel(it.status) + '</span></div>';
+  }).join('');
+  return '<div class="mt-d"><div class="mt-dtitle">' + title + '</div>' + rows + '</div>';
+}
+
+// ── Deterministic surfacing helpers (BEFORE YOU START) ──
+function mtSurfaceLabel(it) {
+  if (it.type === 'COMMITMENT') return it.status === 'OVERDUE' ? 'Overdue commitment' : 'Promise';
+  if (it.type === 'FOLLOW_UP') return it.status === 'OVERDUE' ? 'Overdue follow-up' : 'Follow-up';
+  if (it.type === 'OPENER') return 'Opener';
+  if (it.type === 'QUESTION') return 'Question';
+  return 'Saved';
+}
+function mtSurfaceSym(it) {
+  if (it.type === 'COMMITMENT') return 'mt-bys-sym is-commit';
+  if (it.type === 'FOLLOW_UP') return 'mt-bys-sym is-follow';
+  if (it.type === 'OPENER') return 'mt-bys-sym is-opener';
+  return 'mt-bys-sym is-other';
+}
+// Status symbols shown next to a memory item: ✓ used/completed, ● pending, ○ not used
+function mtStatusSym(status, type) {
+  var s = (status || '').toUpperCase();
+  if (type === 'OPENER' || type === 'QUESTION') return s === 'USED' ? '\u2713' : '\u25CB';
+  if (type === 'COMMITMENT' || type === 'FOLLOW_UP') return s === 'COMPLETED' ? '\u2713' : (s === 'PENDING' ? '\u25CF' : (s === 'OVERDUE' ? '\u25C9' : '\u25CB'));
+  return s === 'SAVED' ? '\u25CB' : '\u2713';
+}
+function mtUsageText(it) {
+  if (!it || (it.type !== 'OPENER' && it.type !== 'QUESTION')) return '';
+  var n = it.usage_count || 0;
+  if (!n) return '';
+  var last = (it.usage && it.usage.length) ? it.usage[it.usage.length - 1].used_at : null;
+  var s = 'Used ' + n + (n === 1 ? ' time' : ' times');
+  if (last) s += ' \u00b7 Last used ' + fmtDate(new Date(last)) + ' ' + fmtTime(new Date(last));
+  return s;
+}
+function mtBeforeStart(p) {
+  var items = p.surfaced || [];
+  if (!items.length) return '';
+  var rows = items.slice(0, 4).map(function(it){
+    return '<div class="mt-bys-row"><span class="' + mtSurfaceSym(it) + '"></span>' +
+      '<span class="mt-bys-label">' + mtSurfaceLabel(it) + '</span>' +
+      '<span class="mt-bys-text">' + escHtml(it.content) + '</span></div>';
+  }).join('');
+  return '<div class="mt-beforestart"><span class="mt-bys-head">Before you start</span>' + rows + '</div>';
+}
+
+// ── View Meeting (current) detail ──
+function fmtFullDate(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  return fmtDate(d) + ' \u00b7 ' + fmtTime(d);
+}
+function mtBeforeMeeting(p) {
+  var items = p.surfaced || [];
+  if (!items.length) return '';
+  var rows = items.map(function(it){
+    return '<div class="mt-item"><span style="color:var(--ivory-faint);width:14px;flex-shrink:0;">' + mtStatusSym(it.status, it.type) + '</span>' +
+      '<div class="mt-itxt">' + escHtml(it.content) + '</div>' +
+      '<div class="mt-idue">' + mtSurfaceLabel(it) + (it.due_at ? ' \u00b7 Due ' + fmtDate(new Date(it.due_at)) : '') + '</div>' +
+      '<span class="mt-badge ' + badgeCls(it.status, it.type) + '">' + badgeLabel(it.status) + '</span></div>';
+  }).join('');
+  return '<div class="mt-d"><div class="mt-dtitle">Before this meeting</div>' + rows + '</div>';
+}
+function mtOpenDetail(eid) {
+  var p = mtByEmp[eid];
+  if (!p) return;
+  var name = p.employee.name, role = p.employee.position || 'HR';
+  // A missed meeting (no longer occupying next_meeting) is still shown and
+  // deletable, so stale records never linger unreachable in the DB.
+  var meet = p.next_meeting || p.last_missed || null;
+  var isMissed = !!(meet && meet.status === 'missed');
+  var meetTxt = 'No upcoming meeting scheduled', meetingInfo = '';
+  if (meet) {
+    meetingInfo =
+      '<div class="mt-d"><div class="mt-dtitle">' + (isMissed ? 'Missed meeting' : 'Meeting') + '</div>' +
+      '<div class="mt-meetinfo"><span><b>Date:</b> ' + (meet.scheduled_at ? fmtFullDate(meet.scheduled_at) : '\u2014') + '</span>' +
+      '<span><b>Title:</b> ' + escHtml(meet.title || '\u2014') + '</span></div>' +
+      '<div class="mt-delzone">' + mtDelTrigger(meet.id, isMissed ? 'Delete missed meeting' : 'Delete meeting', 'mtDeleteMeetingBtn') + '</div></div>';
+    meetTxt = (meet.title || 'Meeting') + ' \u00b7 ' + (meet.scheduled_at ? fmtFullDate(meet.scheduled_at) : '');
+  }
+  var prevInfo = '';
+  if (p.previous_session && p.previous_session.session_id) {
+    var pc = p.previous_session.created_at ? fmtFullDate(p.previous_session.created_at) : 'recorded earlier';
+    prevInfo =
+      '<div class="mt-d"><div class="mt-dtitle">Previous session</div>' +
+      '<div class="mt-meetinfo"><span><b>Date:</b> ' + pc + '</span></div></div>';
+  }
+  var sub = meetTxt;
+  openModal(modalShell(escHtml(name) + '<span style="color:var(--ivory-faint);font-weight:400;"> &mdash; ' + escHtml(role) + '</span>', escHtml(sub)));
+
+  // Bottom-of-popup delete: an explicit way to clear the meeting record this
+  // popup is showing — including stale/"overdue" entries whose document is
+  // already gone from the DB (the delete returns 404, which is treated as
+  // already-removed and just refreshes the board, dropping the ghost card).
+  var footerDeleteHtml = '';
+  if (meet) {
+    var delLabel = isMissed ? 'Delete this missed meeting' : 'Delete this meeting';
+    footerDeleteHtml =
+      '<div class="mt-d mt-del-bottom"><div class="mt-dtitle">Actions</div>' +
+      '<div class="mt-dfoot-note">Remove this ' + (isMissed ? 'missed meeting' : 'meeting') + ' from the tracker. This can\u2019t be undone.</div>' +
+      '<div class="mt-delzone">' + mtDelTrigger(meet.id, delLabel, 'mtDeleteMeetingBtnBottom') + '</div></div>';
+  }
+
+  var historyHtml = mtHistoryBlock(p);
+  var bodyHtml =
+    meetingInfo +
+    historyHtml +
+    mtBeforeMeeting(p) +
+    prevInfo +
+    '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Loading recorded items\u2026</div></div>' +
+    footerDeleteHtml;
+  fillModalBody(bodyHtml);
+  mtWireDeleteMeeting();
+
+  fetch('/api/conversation-memory?employee_id=' + encodeURIComponent(eid))
+    .then(function(r){ if (!r.ok) throw new Error('Failed (' + r.status + ')'); return r.json(); })
+    .then(function(data) {
+      var items = data.items || [];
+      var used = items.filter(function(m){ return m.type === 'OPENER' || m.type === 'QUESTION'; });
+      var commits = items.filter(function(m){ return m.type === 'COMMITMENT'; });
+      var follows = items.filter(function(m){ return m.type === 'FOLLOW_UP'; });
+      var notes = items.filter(function(m){ return m.type === 'NOTE'; });
+      var usedOpeners = used.filter(function(m){ return m.status === 'USED'; }).length;
+      var html =
+        memoryBlock('Openers &amp; Questions', used, 'No openers or questions recorded for this person.') +
+        memoryBlock('Commitments', commits, 'No commitments recorded.') +
+        memoryBlock('Follow-ups', follows, 'No follow-ups recorded.') +
+        memoryBlock('Notes', notes, 'No notes recorded.');
+      fillModalBody(bodyHtmlWithOverview(meetingInfo, prevInfo, p, usedOpeners, html, historyHtml) + footerDeleteHtml);
+      mtWireDeleteMeeting();
+    })
+    .catch(function(err){
+      fillModalBody(meetingInfo + historyHtml + '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Couldn\u2019t load items \u2014 ' + escHtml(err.message) + '</div></div>' + footerDeleteHtml);
+      mtWireDeleteMeeting();
+    });
+}
+// ── Delete-meeting wiring (generic: works for ANY meeting id, not just the
+//    next_meeting slot) ──
+function mtDelWarnIcon() {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+}
+function mtDelTrigger(mid, label, id) {
+  var idAttr = id ? ' id="' + id + '"' : '';
+  return '<button class="btn btn-danger btn-sm mt-deltbtn" type="button" data-meeting-id="' + escHtml(mid) + '" data-label="' + escHtml(label || 'Delete meeting') + '"' + idAttr + '>' + label + '</button>';
+}
+function mtDelConfirmHtml() {
+  return '<div class="mt-delconfirm">' +
+    '<span class="mt-delmsg">' + mtDelWarnIcon() + 'Delete this meeting? This can\u2019t be undone.</span>' +
+    '<button class="btn btn-outline btn-sm" type="button" data-mt-del-cancel>Cancel</button>' +
+    '<button class="btn btn-danger btn-sm" type="button" data-mt-del-confirm>Delete meeting</button>' +
+    '<div class="mt-formerr mt-delerr" data-mt-del-err role="alert"></div>' +
+  '</div>';
+}
+function mtDoDeleteMeeting(mid, zone) {
+  mtLog('delete: confirm received — sending DELETE /api/meetings/' + mid);
+  var confirmBtn = zone.querySelector('[data-mt-del-confirm]');
+  var errEl = zone.querySelector('[data-mt-del-err]');
+  var zoneEl = zone.querySelector('.mt-delconfirm');
+  if (errEl) errEl.textContent = '';
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = 'Deleting\u2026';
+  fetch('/api/meetings/' + encodeURIComponent(mid), { method: 'DELETE' })
+    .then(function(r) {
+      mtLog('delete: response status =', r.status);
+      if (!r.ok) { var err = new Error('Request failed (' + r.status + ')'); err.status = r.status; throw err; }
+      return r.json();
+    })
+    .then(function() {
+      mtLog('delete: SUCCESS — meeting', mid, 'removed. Re-fetching board…');
+      closeModal();
+      loadData();
+    })
+    .catch(function(err) {
+      if (err && err.status === 404) {
+        // The record is already gone (deleted elsewhere, or it never existed
+        // server-side): drop the ghost entry from the board instead of erroring.
+        mtLog('delete: 404 — record already gone; treating as removed and refreshing the board');
+        closeModal();
+        loadData();
+        return;
+      }
+      mtLog('delete: FAILED —', err);
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Delete meeting';
+      errEl.textContent = (err && err.status === 403)
+        ? 'You don\u2019t have access to delete this meeting.'
+        : 'Couldn\u2019t delete this meeting \u2014 ' + (err && err.message ? err.message : 'Request failed');
+      if (zoneEl) {
+        zoneEl.classList.remove('shake');
+        void zoneEl.offsetWidth; // restart the CSS animation
+        zoneEl.classList.add('shake');
+      }
+    });
+}
+function mtWireDeleteBtn(btn) {
+  if (!btn) return;
+  var mid = btn.getAttribute('data-meeting-id');
+  var zone = btn.parentNode;
+  if (!mid || !zone) return;
+  mtLog('delete: wiring "Delete meeting" trigger for meeting', mid);
+  var label = btn.getAttribute('data-label') || 'Delete meeting';
+  var btnId = btn.getAttribute('data-id') || '';
+  btn.addEventListener('click', function() {
+    mtLog('delete: first click on', mid, '— revealing confirm step (nothing deleted yet)');
+    zone.innerHTML = mtDelConfirmHtml();
+    var cancel = zone.querySelector('[data-mt-del-cancel]');
+    if (cancel) cancel.addEventListener('click', function() {
+      mtLog('delete: cancel clicked for', mid, '— restoring delete button');
+      zone.innerHTML = mtDelTrigger(mid, label, btnId);
+      mtWireDeleteBtn(zone.querySelector('.mt-deltbtn'));
+    });
+    var confirmBtn = zone.querySelector('[data-mt-del-confirm]');
+    if (confirmBtn) confirmBtn.addEventListener('click', function() { mtDoDeleteMeeting(mid, zone); });
+  });
+}
+function mtWireDeleteMeeting() {
+  var scope = $('mtModalOverlay');
+  if (!scope) return;
+  var btns = scope.querySelectorAll('.mt-delzone button.mt-deltbtn[data-meeting-id]');
+  [].slice.call(btns).forEach(mtWireDeleteBtn);
+}
+function memoryRow(it) {
+  return '<div class="mt-item"><span style="color:var(--ivory-faint);width:14px;flex-shrink:0;">' + mtStatusSym(it.status, it.type) + '</span>' +
+    '<div class="mt-itxt">' + escHtml(it.content) + '<div class="mt-usage">' + mtUsageText(it) + '</div></div>' +
+    '<div class="mt-idue">' + (it.due_at ? 'Due ' + fmtDate(new Date(it.due_at)) : '') + '</div>' +
+    '<span class="mt-badge ' + badgeCls(it.status, it.type) + '">' + badgeLabel(it.status) + '</span></div>';
+}
+function bodyHtmlWithOverview(meetingInfo, prevInfo, p, usedOpeners, memoryHtml, historyHtml) {
+  return (
+    meetingInfo +
+    (historyHtml || '') +
+    mtBeforeMeeting(p) +
+    '<div class="mt-d"><div class="mt-dtitle">Recorded this sync track</div>' +
+    '<div class="mt-meetinfo"><span><b>Open commitments:</b> ' + p.counts.pending_commitments + '</span>' +
+    '<span><b>Open follow-ups:</b> ' + p.counts.pending_followups + '</span>' +
+    '<span><b>Openers used:</b> ' + usedOpeners + '</span></div></div>' +
+    prevInfo + memoryHtml
+  );
+}
+
+// ── Meeting history (missed / completed / cancelled) — deletable past meetings ──
+function mtHistStatus(m) {
+  var s = (m.status || '').toUpperCase();
+  return { COMPLETED: 'Completed', MISSED: 'Missed', CANCELLED: 'Cancelled' }[s] || s.charAt(0) + s.slice(1).toLowerCase();
+}
+function mtHistBadge(s) {
+  var v = (s || '').toUpperCase();
+  if (v === 'COMPLETED') return 'mt-badge--completed';
+  if (v === 'MISSED') return 'mt-badge--missed';
+  if (v === 'CANCELLED') return 'mt-badge--cancelled';
+  return 'mt-badge--pending';
+}
+function mtHistoryBlock(p) {
+  var h = (p.meeting_history || []).filter(function(m){ return m && m.id; });
+  if (!h.length) return '';
+  var rows = h.map(function(m){
+    return '<div class="mt-hitem">' +
+      '<div class="mt-hinfo">' +
+        '<span class="mt-badge ' + mtHistBadge(m.status) + '">' + mtHistStatus(m) + '</span>' +
+        '<span class="mt-hmeta">' + escHtml(m.title || 'Meeting') + ' \u00b7 ' + (m.scheduled_at ? fmtFullDate(m.scheduled_at) : '\u2014') + '</span>' +
+      '</div>' +
+      '<div class="mt-delzone">' + mtDelTrigger(m.id, 'Delete') + '</div>' +
+    '</div>';
+  }).join('');
+  return '<div class="mt-d"><div class="mt-dtitle">Meeting history</div>' + rows + '</div>';
+}
+
+// ── View meeting history (past meetings only, each deletable) ──
+function mtOpenHistory(eid) {
+  var p = mtByEmp[eid];
+  if (!p) return;
+  var h = (p.meeting_history || []).filter(function(m){ return m && m.id; });
+  var name = p.employee.name, role = p.employee.position || 'HR';
+  openModal(modalShell(escHtml(name) + ' \u2014 Meeting History', escHtml(h.length + (h.length === 1 ? ' past meeting' : ' past meetings'))));
+  fillModalBody(h.length ? mtHistoryBlock(p) :
+    '<div class="mt-d"><div class="mt-dtitle">Meeting history</div><div class="mt-none">No past (missed / completed / cancelled) meetings for this person.</div></div>');
+  mtWireDeleteMeeting();
+}
+
+// ── View All Memory (full history, grouped by session) ──
+function mtOpenAllMemory(eid) {
+  var p = mtByEmp[eid];
+  if (!p) return;
+  var name = p.employee.name, role = p.employee.position || 'HR';
+  openModal(modalShell(escHtml(name) + ' \u2014 All Memory', escHtml(role)));
+  var bodyHtml = '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Loading\u2026</div></div>';
+  fillModalBody(bodyHtml);
+
+  fetch('/api/conversation-memory?employee_id=' + encodeURIComponent(eid))
+    .then(function(r){ if (!r.ok) throw new Error('Failed (' + r.status + ')'); return r.json(); })
+    .then(function(data) {
+      var items = data.items || [];
+      if (!items.length) {
+        fillModalBody('<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">No recorded items for this person.</div></div>');
+        return;
+      }
+      // Group by session id (full history trail, dates preserved).
+      var groups = {};
+      items.forEach(function(m){
+        var key = m.session_id || ('none_' + m.id);
+        (groups[key] = groups[key] || { sid: m.session_id, items: [] }).items.push(m);
+      });
+      var html = Object.keys(groups).map(function(key){
+        var g = groups[key];
+        var head = g.sid ? 'Session' : 'Unsaved';
+        return '<div class="mt-d"><div class="mt-dtitle">' + head + '</div>' + g.items.map(memoryRow).join('') + '</div>';
+      }).join('');
+      fillModalBody(html);
+    })
+    .catch(function(err){
+      fillModalBody('<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Couldn\u2019t load \u2014 ' + escHtml(err.message) + '</div></div>');
+    });
+}
+
+// ── View Previous Context detail ──
+function mtOpenPrevious(eid) {
+  var p = mtByEmp[eid];
+  if (!p || !p.previous_session || !p.previous_session.session_id) return;
+  var sid = p.previous_session.session_id;
+  var name = p.employee.name;
+  var created = p.previous_session.created_at ? fmtDate(new Date(p.previous_session.created_at)) : '';
+  openModal(modalShell(escHtml(name) + ' \u2014 Previous Session', escHtml('Session recorded ' + created)));
+  var bodyHtml = '<div class="mt-d"><div class="mt-dtitle">Items recorded in the previous session</div><div class="mt-none">Loading\u2026</div></div>';
+  fillModalBody(bodyHtml);
+
+  fetch('/api/conversation-memory?session_id=' + encodeURIComponent(sid))
+    .then(function(r){ if (!r.ok) throw new Error('Failed (' + r.status + ')'); return r.json(); })
+    .then(function(data) {
+      var items = data.items || [];
+      var used = items.filter(function(m){ return m.type === 'OPENER' || m.type === 'QUESTION'; });
+      var commits = items.filter(function(m){ return m.type === 'COMMITMENT'; });
+      var follows = items.filter(function(m){ return m.type === 'FOLLOW_UP'; });
+      var notes = items.filter(function(m){ return m.type === 'NOTE'; });
+      var html =
+        memoryBlock('Openers &amp; Questions', used, 'None recorded in that session.') +
+        memoryBlock('Commitments (from that session)', commits, 'None recorded.') +
+        memoryBlock('Follow-ups (from that session)', follows, 'None recorded.') +
+        memoryBlock('Notes', notes, 'None recorded.');
+      fillModalBody(html);
+    })
+    .catch(function(err){
+      fillModalBody('<div class="mt-d"><div class="mt-dtitle">Items recorded in the previous session</div><div class="mt-none">Couldn\u2019t load \u2014 ' + escHtml(err.message) + '</div></div>');
+    });
+}
+
+// ── Schedule Meeting ──
+var mtSelEmpId = null;   // real org-scoped employee id chosen for the meeting
+var mtSelEmpName = '';   // name shown in the field for the current selection
+var mtSchedActive = -1;  // highlighted dropdown row index
+
+function openSchedule() {
+  mtSelEmpId = null;
+  mtSelEmpName = '';
+  mtSchedActive = -1;
+  var shell =
+    '<div class="mt-modal">' +
+      '<div class="mt-modal-head"><div><div class="mt-modal-title">Schedule a 1:1</div>' +
+      '<div class="mt-modal-sub">Pick a real employee and a time \u2014 saved as a meeting</div></div>' +
+      '<button class="mt-modal-x" type="button" title="Close">&times;</button></div>' +
+      '<div class="mt-modal-body protected-text" translate="no">' +
+        '<form class="mt-form" id="mtScheduleForm">' +
+          '<div>' +
+            '<label class="form-label">Employee</label>' +
+            '<div class="mt-empsearch" id="mtSchedEmpWrap">' +
+              '<input class="mt-field" id="mtSchedEmp" type="text" placeholder="Search by name, role or department\u2026" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required>' +
+              '<button class="mt-empclear" type="button" id="mtSchedEmpClear" title="Clear selection" aria-label="Clear selection">&times;</button>' +
+              '<div class="mt-empdrop" id="mtSchedEmpDrop"></div>' +
+            '</div>' +
+            '<div class="mt-empnote" id="mtSchedEmpNote"></div>' +
+          '</div>' +
+          '<div><label class="form-label">Title</label><input class="mt-field" id="mtSchedTitle" type="text" placeholder="e.g. Weekly 1:1" required></div>' +
+          '<div><label class="form-label">Date &amp; time</label><input class="mt-field" id="mtSchedWhen" type="datetime-local" required></div>' +
+          '<div class="mt-formerr" id="mtSchedErr"></div>' +
+          '<div style="display:flex;justify-content:flex-end;gap:0.6rem;">' +
+            '<button class="btn btn-outline btn-sm" type="button" id="mtSchedCancel">Cancel</button>' +
+            '<button class="btn btn-primary btn-sm" type="submit" id="mtSchedSave">Schedule</button>' +
+          '</div>' +
+        '</form>' +
+      '</div>' +
+    '</div>';
+  openModal(shell);
+  $('mtSchedCancel').addEventListener('click', closeModal);
+  $('mtScheduleForm').addEventListener('submit', submitSchedule);
+  var empInput = $('mtSchedEmp');
+  var empDrop = $('mtSchedEmpDrop');
+  empInput.addEventListener('input', mtSchedOnInput);
+  empInput.addEventListener('keydown', mtSchedOnKey);
+  empInput.addEventListener('focus', function(){ if (this.value) mtSchedOnInput(); });
+  empInput.addEventListener('blur', function(){ setTimeout(mtSchedCloseDrop, 120); });
+  empDrop.addEventListener('mousedown', function(ev){ ev.preventDefault(); });
+  $('mtSchedEmpClear').addEventListener('click', mtSchedClearEmp);
+}
+
+// Real-time, in-memory filter over the employee list already loaded for the board.
+function mtSchedFilter(rawQ) {
+  var terms = String(rawQ || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return [];
+  return mtEmployees.filter(function(e){
+    var hay = [e.name, e.position, e.department, e.employee_id, e.email]
+      .filter(Boolean).join(' ').toLowerCase();
+    return terms.every(function(t){ return hay.indexOf(t) !== -1; });
+  });
+}
+
+function mtSchedOnInput() {
+  var inp = $('mtSchedEmp');
+  if (!inp) return;
+  var raw = inp.value.trim();
+  $('mtSchedEmpWrap').classList.toggle('has-val', !!raw);
+  if (!raw) {
+    mtSelEmpId = null; mtSelEmpName = '';
+    mtSchedNote('');
+    mtSchedCloseDrop();
     return;
   }
+  if (mtSelEmpId && raw === mtSelEmpName) { mtSchedCloseDrop(); return; }
+  if (mtSelEmpId) { mtSelEmpId = null; mtSelEmpName = ''; mtSchedNote(''); }
+  mtSchedRenderDrop(mtSchedFilter(raw), 0);
+}
 
-  var grouped = { today: [], upcoming: [], follow: [], history: [] };
-  list.forEach(function (p) { grouped[tkSection(p)].push(p); });
-  var named = ['today', 'upcoming', 'follow', 'history'];
-  var html = '';
-  var animCls = mtFirstRender ? ' mt-anim' : '';
-  var idx = 0;
-  for (var i = 0; i < named.length; i++) {
-    var key = named[i], grp = grouped[key];
-    if (!grp.length) continue;
-    grp.sort(function (a, b) { return String(a.employee.name || '').localeCompare(String(b.employee.name || '')); });
-    var cards = '';
-    for (var j = 0; j < grp.length; j++) cards += mtRow(grp[j], idx++);
-    html += '<section class="mt-sec" id="mtSec-' + key + '">' +
-      '<div class="mt-sec-head"><span class="mt-sec-eyebrow">' + MT_SECTION_META[key].title + '</span>' +
-      '<span class="mt-sec-rule"></span><span class="mt-sec-chip">' + grp.length + '</span></div>' +
-      '<div class="mt-dir protected-text' + animCls + '" translate="no">' + cards + '</div></section>';
+function mtSchedRenderDrop(results, activeIdx) {
+  var drop = $('mtSchedEmpDrop');
+  var wrap = $('mtSchedEmpWrap');
+  if (!drop || !wrap) return;
+  if (!mtEmployees.length) {
+    drop.innerHTML = '<div class="mt-empempty">Searching employees\u2026</div>';
+    drop.classList.add('show'); wrap.classList.add('open');
+    return;
   }
-  mtFirstRender = false;
-  $('tkSections').innerHTML = html;
-  mtWireDeleteMeeting(document);
-}
-
-/* ---------- Memory helpers ---------- */
-function mtMemKind(kind) {
-  var map = { COMMITMENT: 'Promise', FOLLOW_UP: 'Follow-up', OPENER: 'Opener', NOTE: 'Note', QUESTION: 'Question' };
-  return map[kind] || kind || 'Note';
-}
-function mtMemColor(kind) {
-  var map = { COMMITMENT: 'var(--mt-amber)', FOLLOW_UP: 'var(--mt-cyan)', OPENER: 'var(--mt-violet)', QUESTION: 'var(--mt-teal)', NOTE: 'var(--mt-slate)' };
-  return map[kind] || 'var(--mt-slate)';
-}
-function mtUsage(it) {
-  var u = it.usage;
-  if (typeof u === 'number') return u > 0 ? 'used ' + u + '\u00d7' : '';
-  if (u && typeof u === 'object' && typeof u.count === 'number') return u.count > 0 ? 'used ' + u.count + '\u00d7' : '';
-  return '';
-}
-function mtMemRows(items, activeSessionId) {
-  if (!items || !items.length) return '<span class="mt-none">No conversation memory on record yet.</span>';
-  var rows = '';
-  for (var i = 0; i < items.length; i++) {
-    var it = items[i];
-    var inSession = activeSessionId && it.session_id === activeSessionId;
-    var use = mtUsage(it);
-    rows += '<div class="mt-mem-item">' +
-      '<span class="mt-mem-kind" style="--kind:' + mtMemColor(it.type) + '">' + escHtml(mtMemKind(it.type)) + '</span>' +
-      '<div class="mt-mem-body"><div>' + escHtml(it.content || '') + '</div>' +
-      '<div class="mt-mem-meta"><span>' + escHtml(it.status || '') + '</span>' +
-      (it.due_at ? '<span>due ' + escHtml(mtWhenTxt(it.due_at)) + '</span>' : '') +
-      (use ? '<span>' + escHtml(use) + '</span>' : '') +
-      (it.session_id ? '<span>#' + escHtml(String(it.session_id).slice(0, 8)) + '</span>' : '') +
-      (inSession ? '<span class="mt-is-link">linked session</span>' : '') +
-      '</div></div></div>';
+  if (!results.length) {
+    drop.innerHTML = '<div class="mt-empempty">No employees found</div>';
+    drop.classList.add('show'); wrap.classList.add('open');
+    return;
   }
-  return '<div class="protected-text" translate="no">' + rows + '</div>';
-}
-function tkFetchMemory(eid, cb) {
-  fetch('/api/conversation-memory?employee_id=' + encodeURIComponent(eid), { credentials: 'same-origin' })
-    .then(function (res) { return res.json(); })
-    .then(function (d) { cb(d.items || []); })
-    .catch(function () { cb([]); });
-}
-
-/* ---------- View Meeting detail (drawer) ---------- */
-function mtOpenDetail(eid) {
-  var p = tkByEmp[eid];
-  if (!p) return;
-  var meet = p.next_meeting || p.last_missed || null;
-  var delMeet = meet;
-  if (!delMeet) {
-    var recOnly = (p.meeting_records || []).filter(function (m) { return m && m.id; });
-    recOnly.sort(function (a, b) {
-      var ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : 0;
-      var tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : 0;
-      return tb - ta;
-    });
-    delMeet = recOnly[0] || null;
-  }
-  var prev = p.previous_session || null;
-  var acc = tkAccent(p.id);
-  var name = p.employee.name, role = p.employee.position || 'HR';
-  var meetTxt = meet ? escHtml(mtWhenTxt(meet.scheduled_at) || '') : 'No upcoming meeting scheduled';
-
-  var meetBlock;
-  if (meet) {
-    meetBlock = '<div class="mt-block">' +
-      '<div class="mt-block-title">Meeting</div>' +
-      '<div class="mt-pr-label"><i></i>' + escHtml(mtPrimeLabel(p, meet, tkSection(p))) + '</div>' +
-      '<div class="mt-pr-title">' + escHtml(meet.title || '\u2014') + '</div>' +
-      '<div class="mt-pr-when">' + TK_ICONS.cal + '<span>' + escHtml(mtWhenTxt(meet.scheduled_at) || '\u2014') + '</span></div>' +
-      '<div class="mt-dgrid" style="margin-top:.9rem;">' +
-        '<div><b>Status</b><br>' + mtChip(meet.status) + '</div>' +
-        '<div><b>Employee ID</b><br>' + escHtml(p.employee.employee_id || '\u2014') + '</div>' +
-        '<div><b>Department</b><br>' + escHtml(p.employee.department || '\u2014') + '</div>' +
-        '<div><b>Owner</b><br>' + escHtml(tkOwner()) + '</div>' +
-        '<div><b>Manager</b><br>' + escHtml(tkManager(p)) + '</div>' +
-        '<div><b>Preparation</b><br>' + escHtml(String(meet.preparation_status || 'not_started').replace(/_/g, ' ')) + '</div>' +
-      '</div></div>';
-  } else {
-    meetBlock = '<div class="mt-block"><div class="mt-block-title">Meeting</div><span class="mt-none">No upcoming meeting scheduled.</span></div>';
-  }
-
-  var prevBlock = '';
-  if (prev && prev.session_id) {
-    prevBlock = '<div class="mt-block"><div class="mt-block-title">Previous Session</div>' +
-      '<div class="mt-mem-item"><span class="mt-mem-kind" style="--kind:var(--mt-slate)">Session</span>' +
-      '<div class="mt-mem-body"><div>' + escHtml(mtWhenTxt(prev.created_at) || 'Earlier session recorded') + '</div>' +
-      '<div class="mt-mem-meta"><span>#' + escHtml(String(prev.session_id).slice(0, 8)) + '</span></div></div></div></div>';
-  }
-
-  var meetingsBlock = mtCardMeetings(p);
-  var openBlock = '<div class="mt-block"><div class="mt-block-title">Open Promises &amp; Follow-ups</div>' + mtMemRows(p.open_items || [], null) + '</div>';
-
-  var danger = '<div class="mt-danger">' +
-    '<div class="mt-danger-title">Danger Zone</div>' +
-    '<p>' + (delMeet ? 'Permanently remove the meeting "' + escHtml(delMeet.title || '') + '" and its meeting record. This can\'t be undone.' : 'No meeting record is available to delete.') + '</p>' +
-    (delMeet ? mtDelTrigger(delMeet.id, 'Delete meeting', '', delMeet.title || '', mtWhenTxt(delMeet.scheduled_at)) : '') +
-    '</div>';
-
-  openModal(mtModalShell(
-    '<span class="mt-av" style="--a1:' + acc[0] + ';--a2:' + acc[1] + ';width:34px;height:34px;font-size:.72rem;display:inline-flex;vertical-align:middle;">' + escHtml(initials(name)) + '</span> ' + escHtml(name),
-    escHtml(role) + ' \u2014 ' + meetTxt
-  ) +
-    meetBlock +
-    '<div class="mt-block"><div class="mt-block-title">Conversation &amp; Memory Context</div><div id="tkMemHolder"><span class="mt-none">Loading memory…</span></div></div>' +
-    openBlock + prevBlock + meetingsBlock + danger +
-    mtModalClose(''), true);
-
-  var held = $('tkMemHolder');
-  tkFetchMemory(p.id, function (items) {
-    var activeSid = meet && meet.session_id ? meet.session_id : null;
-    var sorted = items.slice().sort(function (a, b) {
-      if ((a.status === 'OVERDUE') !== (b.status === 'OVERDUE')) return a.status === 'OVERDUE' ? -1 : 1;
-      return String(a.created_at || '').localeCompare(String(b.created_at || ''));
-    });
-    var filtered = [];
-    if (activeSid) {
-      filtered = sorted.filter(function (it) { return (it.session_id || null) === activeSid || !(it.session_id); });
-    } else {
-      filtered = sorted;
-    }
-    if (held) held.innerHTML = mtMemRows(filtered, activeSid);
-  });
-  mtWireDeleteMeeting(document);
-}
-
-/* ---------- All memory modal ---------- */
-function mtOpenAllMemory(eid) {
-  var p = tkByEmp[eid];
-  if (!p) return;
-  var name = p.employee.name;
-  openModal(mtModalShell(escHtml(name) + ' \u2014 All Memory', escHtml(p.employee.position || '')) +
-    '<div id="tkMemHolder"><span class="mt-none">Loading memory…</span></div>' + mtModalClose(''));
-  var held = $('tkMemHolder');
-  tkFetchMemory(p.id, function (items) {
-    if (held) held.innerHTML = mtMemRows(items.slice().sort(function (a, b) { return String(a.created_at || '').localeCompare(String(b.created_at || '')); }), null);
-  });
-}
-
-/* ---------- History modal ---------- */
-function mtOpenHistory(eid) {
-  var p = tkByEmp[eid];
-  if (!p) return;
-  var hist = p.meeting_history || [];
-  var rowWrap = '';
-  if (!hist.length) rowWrap = '<span class="mt-none">No past meetings on record.</span>';
-  for (var i = 0; i < hist.length; i++) {
-    var m = hist[i];
-    rowWrap += '<div class="mt-rec"><div class="mt-rec-main"><div class="mt-rec-title">' + escHtml(m.title || '\u2014') + '</div>' +
-      '<div class="mt-rec-when">' + escHtml(recordLabelOf(m.status)) + ' \u00b7 ' + escHtml(mtWhenTxt(m.scheduled_at) || '\u2014') + '</div></div>' +
-      mtChip(m.status) +
-      '<div class="mt-rec-action">' + mtDelTrigger(m.id, 'Delete', '', m.title || '', mtWhenTxt(m.scheduled_at)) + '</div></div>';
-  }
-  openModal(mtModalShell(escHtml(p.employee.name) + ' \u2014 Meeting History', escHtml(String(hist.length) + (hist.length === 1 ? ' past meeting' : ' past meetings'))) +
-    '<div class="protected-text" translate="no">' + rowWrap + '</div>' + mtModalClose(''));
-  mtWireDeleteMeeting(document);
-}
-
-/* ---------- Schedule Meeting (POST /api/meetings) ---------- */
-var mtSchedEmps = [];
-var mtSchedSelId = '';
-
-function mtSchedErr(msg) {
-  var el = $('mtSchedError');
-  if (!el) return;
-  if (msg) { el.textContent = msg; el.classList.add('is-on'); } else { el.textContent = ''; el.classList.remove('is-on'); }
-}
-function mtSchedChip() {
-  var el = $('mtSchedEmp');
-  if (!el) return;
-  var emp = null;
-  for (var i = 0; i < mtSchedEmps.length; i++) if (mtSchedEmps[i].id === mtSchedSelId) emp = mtSchedEmps[i];
-  if (!emp) { el.style.display = 'none'; el.innerHTML = ''; return; }
-  var acc = tkAccent(emp.id);
-  el.style.display = 'block';
-  el.innerHTML = '<div class="mt-sched-selected"><span class="mt-av" style="--a1:' + acc[0] + ';--a2:' + acc[1] + ';width:28px;height:28px;font-size:.6rem;">' + escHtml(initials(emp.name)) + '</span>' +
-    '<span>' + escHtml(emp.name) + ' <span style="font-family:var(--font-m);font-size:.58rem;color:var(--ivory-faint);text-transform:uppercase;letter-spacing:.06em;">\u00b7 ' + escHtml(emp.position || '') + '</span></span>' +
-    '<button type="button" class="tk-modal-x" style="margin-left:auto;" id="mtSchedClearEmp" aria-label="Clear employee">\u00d7</button></div>';
-  var clear = $('mtSchedClearEmp');
-  if (clear) clear.addEventListener('click', function () { mtSchedSelId = ''; mtSchedChip(); });
-}
-function mtFilterSchedule(q) {
-  var list = $('mtSchedList');
-  if (!list) return;
-  var ql = String(q || '').trim().toLowerCase();
-  var rows = '';
-  var shown = 0;
-  for (var i = 0; i < mtSchedEmps.length; i++) {
-    var e = mtSchedEmps[i];
-    var hay = String((e.name || '') + ' ' + (e.position || '') + ' ' + (e.department || '')).toLowerCase();
-    if (ql && hay.indexOf(ql) === -1) continue;
-    shown++;
-    var acc = tkAccent(e.id);
-    rows += '<div class="mt-pick-item' + (e.id === mtSchedSelId ? ' is-sel' : '') + '" data-eid="' + escHtml(e.id) + '">' +
-      '<span class="mt-av" style="--a1:' + acc[0] + ';--a2:' + acc[1] + ';width:26px;height:26px;font-size:.56rem;">' + escHtml(initials(e.name)) + '</span>' +
-      '<span style="flex:1;min-width:0;"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(e.name) + '</span>' +
-      '<span class="mt-pick-who">' + escHtml(e.position || '') + (e.department ? ' \u00b7 ' + escHtml(e.department) : '') + '</span></span>' +
+  mtSchedActive = activeIdx;
+  drop.innerHTML = results.map(function(e, i){
+    var acc = accentFor(e.id);
+    var meta = [e.position, e.department].filter(Boolean).join(' \u00b7 ');
+    return '<div class="mt-empopt' + (i === activeIdx ? ' active' : '') + '" data-idx="' + i + '" role="option" aria-selected="' + (i === activeIdx) + '">' +
+      '<div class="mt-empavatar" style="background:linear-gradient(135deg,' + acc[0] + ',' + acc[1] + ');">' + escHtml(initials(e.name)) + '</div>' +
+      '<div class="mt-epinfo"><div class="mt-epname">' + escHtml(e.name) + '</div>' +
+      '<div class="mt-epmeta">' + escHtml(meta || 'Employee') + '</div></div>' +
+      '<span class="mt-epid">' + (e.employee_id ? '#' + escHtml(e.employee_id) : '') + '</span>' +
       '</div>';
+  }).join('');
+  drop.classList.add('show'); wrap.classList.add('open');
+  var rows = drop.querySelectorAll('.mt-empopt');
+  for (var i = 0; i < rows.length; i++) {
+    (function(row){
+      row.addEventListener('click', function(){
+        var idx = +row.getAttribute('data-idx');
+        if (results[idx]) mtSchedSelect(results[idx]);
+      });
+    })(rows[i]);
   }
-  list.innerHTML = rows || '<div class="mt-pick-item" style="cursor:default;">No matches</div>';
-  list.style.display = shown ? 'block' : 'none';
 }
-function mtOpenSchedule() {
-  if (!tkData) return;
-  var list = $('mtSchedList');
-  var pick = {};
-  (tkData.people || []).forEach(function (p) { pick[p.id] = true; });
-  mtSchedEmps = (tkData.employees || []).filter(function (e) { return e && pick[e.id]; }).slice()
-    .sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); });
-  if (list) { list.innerHTML = ''; list.style.display = 'none'; }
-  mtSchedSelId = '';
-  mtSchedChip();
-  var sv = $('mtSchedSearch'); if (sv) { sv.value = ''; }
-  var er = $('mtSchedError'); if (er) er.classList.remove('is-on');
-  var dat = $('mtSchedWhen');
-  if (dat) {
-    var now = new Date();
-    now.setSeconds(0, 0);
-    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-    dat.min = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
-  }
-  var ov = $('mtScheduleOverlay');
-  ov.classList.add('is-open');
-  ov.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('tk-modal-open');
-  if (sv) sv.focus();
-}
-function mtCloseSchedule() {
-  var ov = $('mtScheduleOverlay');
-  ov.classList.remove('is-open');
-  ov.setAttribute('aria-hidden', 'true');
-  document.body.classList.remove('tk-modal-open');
-  mtSchedErr('');
-}
-function mtSchedFieldError(key) {
-  var map = {
-    employee_id_required: 'Choose an employee for this meeting.',
-    scheduled_at_required: 'Pick a date and time.',
-    title_too_long: 'Keep the meeting title under 200 characters.',
-    invalid_scheduled_at: 'That date and time is not valid.',
-    employee_not_found: 'That employee is no longer available.',
-    forbidden: 'You don\u2019t have permission to schedule a meeting for this employee.'
-  };
-  return map[key] || 'Could not schedule the meeting. Please try again.';
-}
-function mtScheduleMeeting() {
-  var err = $('mtSchedError');
-  if (!mtSchedSelId) { mtSchedErr('Choose an employee first.'); if (err) err.scrollIntoView({ block: 'nearest' }); return; }
-  var title = ($('mtSchedTitleInput').value || '').trim();
-  if (!title) { mtSchedErr('Give the meeting a title.'); return; }
-  var v = ($('mtSchedWhen').value || '').trim();
-  if (!v) { mtSchedErr('Pick a date and time.'); return; }
-  var mv = v.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
-  if (!mv) { mtSchedErr('That date and time is not valid.'); return; }
-  var dt = new Date(+mv[1], +mv[2] - 1, +mv[3], +mv[4], +mv[5], 0, 0);
-  if (isNaN(dt.getTime())) { mtSchedErr('That date and time is not valid.'); return; }
-  if (dt.getTime() < Date.now() - 60000) { mtSchedErr('Choose a time in the future.'); return; }
 
-  var btn = $('mtSchedSubmit');
-  if (btn) { btn.disabled = true; btn.textContent = 'Scheduling\u2026'; }
-  if (window.csrfTokenReady) { window.csrfTokenReady.catch(function () {}); }
+function mtSchedSelect(e) {
+  if (!e) return;
+  mtSelEmpId = e.id;
+  mtSelEmpName = e.name || '';
+  $('mtSchedEmp').value = mtSelEmpName;
+  $('mtSchedEmpWrap').classList.add('has-val');
+  var bits = [e.name];
+  if (e.position) bits.push(e.position);
+  if (e.department) bits.push(e.department);
+  if (e.employee_id) bits.push('ID #' + e.employee_id);
+  mtSchedNote(bits.map(function(b){ return escHtml(b); }).join(' \u00b7 '));
+  mtSchedCloseDrop();
+}
+
+function mtSchedNote(html) {
+  var n = $('mtSchedEmpNote');
+  if (!n) return;
+  n.innerHTML = html || '';
+  n.classList.toggle('show', !!html);
+}
+
+function mtSchedClearEmp() {
+  mtSelEmpId = null; mtSelEmpName = '';
+  var inp = $('mtSchedEmp');
+  if (inp) inp.value = '';
+  $('mtSchedEmpWrap').classList.remove('has-val');
+  mtSchedNote('');
+  mtSchedCloseDrop();
+  if (inp) inp.focus();
+}
+
+function mtSchedCloseDrop() {
+  var wrap = $('mtSchedEmpWrap');
+  var drop = $('mtSchedEmpDrop');
+  if (wrap) wrap.classList.remove('open');
+  if (drop) { drop.classList.remove('show'); drop.innerHTML = ''; }
+  mtSchedActive = -1;
+}
+
+function mtSchedOnKey(ev) {
+  var inp = $('mtSchedEmp');
+  if (!inp) return;
+  var raw = inp.value.trim();
+  if (ev.key === 'Escape') {
+    var drop = $('mtSchedEmpDrop');
+    if (drop && drop.classList.contains('show')) {
+      ev.stopPropagation();
+      mtSchedCloseDrop();
+    }
+    return;
+  }
+  if (!raw || (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp' && ev.key !== 'Enter')) return;
+  var results = mtSchedFilter(raw);
+  if (!results.length) return;
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault();
+    var dir = ev.key === 'ArrowDown' ? 1 : -1;
+    mtSchedActive = (mtSchedActive + dir + results.length) % results.length;
+    mtSchedRenderDrop(results, mtSchedActive);
+    var el = $('mtSchedEmpDrop').querySelector('.mt-empopt.active');
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  } else if (ev.key === 'Enter') {
+    if (mtSchedActive >= 0 && mtSchedActive < results.length) {
+      ev.preventDefault();
+      mtSchedSelect(results[mtSchedActive]);
+    } else {
+      ev.preventDefault();
+    }
+  }
+}
+function submitSchedule(ev) {
+  ev.preventDefault();
+  var errEl = $('mtSchedErr');
+  errEl.textContent = '';
+  var empId = mtSelEmpId;
+  var title = $('mtSchedTitle').value.trim();
+  var when = $('mtSchedWhen').value;
+  if (!empId) {
+    errEl.textContent = 'Please select a real employee from the list before scheduling.';
+    var inp = $('mtSchedEmp');
+    if (inp) inp.focus();
+    return;
+  }
+  if (!title || !when) { errEl.textContent = 'Please fill in the title and date &amp; time.'; return; }
+  try {
+    when = new Date(when).toISOString();
+  } catch (e) {
+    errEl.textContent = 'Please enter a valid date &amp; time.';
+    return;
+  }
+  var btn = $('mtSchedSave');
+  btn.disabled = true; btn.textContent = 'Saving\u2026';
   fetch('/api/meetings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'same-origin',
-    body: JSON.stringify({
-      employee_id: mtSchedSelId,
-      scheduled_at: dt.toISOString(),
-      title: title
+    body: JSON.stringify({ employee_id: empId, title: title, scheduled_at: when })
+  })
+    .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, d: d }; }); })
+    .then(function(res) {
+      if (!res.ok) throw new Error((res.d && res.d.error) || 'Request failed');
+      closeModal();
+      loadData();
     })
-  }).then(function (res) {
-    return res.json().catch(function () { return {}; }).then(function (body) { return { ok: res.ok, status: res.status, body: body }; });
-  }).then(function (res) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Schedule Meeting'; }
-    if (!res.ok) {
-      mtSchedErr(mtSchedFieldError(res.body && res.body.error));
-      return;
-    }
-    mtCloseSchedule();
-    VooVrUI.show('Meeting scheduled. It is now on the board.', { kind: 'success' });
-    loadData();
-  }).catch(function () {
-    if (btn) { btn.disabled = false; btn.textContent = 'Schedule Meeting'; }
-    mtSchedErr('Could not schedule the meeting. Check your connection and try again.');
-  });
-}
-function mtWireSchedule() {
-  var ship = $('mtScheduleOverlay');
-  if (!ship) return;
-  var search = $('mtSchedSearch'), list = $('mtSchedList');
-  if (search) {
-    search.addEventListener('focus', function () { mtFilterSchedule(search.value); });
-    search.addEventListener('input', function () { mtFilterSchedule(search.value); });
-    search.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter') { var el = list.querySelector('.mt-pick-item'); if (el && el.getAttribute('data-eid')) mtPickSchedule(el.getAttribute('data-eid')); }
-      if (ev.key === 'Escape') { list.style.display = 'none'; }
+    .catch(function(err) {
+      btn.disabled = false; btn.textContent = 'Schedule';
+      errEl.textContent = 'Couldn\u2019t schedule: ' + err.message;
     });
-  }
-  if (list) {
-    list.addEventListener('click', function (ev) {
-      var item = ev.target && ev.target.closest ? ev.target.closest('.mt-pick-item') : null;
-      if (item && item.getAttribute('data-eid')) mtPickSchedule(item.getAttribute('data-eid'));
-    });
-  }
-  var pick = function (eid) {
-    mtSchedSelId = eid;
-    mtFilterSchedule(search ? search.value : '');
-    mtSchedChip();
-    if (list) list.style.display = 'none';
-    var t = $('mtSchedTitleInput');
-    if (t && !t.value) t.focus();
-    mtSchedErr('');
-  };
-  window.mtPickSchedule = pick;
 }
 
-/* ---------- Shell wiring ---------- */
-function tkWireShell() {
-  if (tkMounted) return;
-  tkMounted = true;
-
-  var pills = document.querySelectorAll('#tkChips .mt-pill');
-  for (var i = 0; i < pills.length; i++) {
-    pills[i].addEventListener('click', function () {
-      tkFilter = this.getAttribute('data-filter');
-      for (var j = 0; j < pills.length; j++) {
-        pills[j].classList.toggle('active', pills[j] === this);
-        pills[j].setAttribute('aria-pressed', pills[j] === this ? 'true' : 'false');
-      }
-      mtRender();
+// ── Init ──
+(function init() {
+  var pills = document.querySelectorAll('.mt-pill');
+  pills.forEach(function(p){
+    p.addEventListener('click', function(){
+      pills.forEach(function(x){ x.classList.remove('active'); });
+      p.classList.add('active');
+      mtFilter = p.getAttribute('data-filter');
+      render();
     });
-  }
-  var search = $('tkSearch');
-  if (search) {
-    var t = null;
-    search.addEventListener('input', function () {
-      if (t) clearTimeout(t);
-      t = setTimeout(function () { tkQuery = search.value.trim(); mtRender(); }, 150);
-    });
-  }
-  document.addEventListener('click', function (ev) {
-    var el = ev.target;
-    if (!el || !el.closest) return;
-    var view = el.closest('.mt-view');
-    var mem = el.closest('.mt-mem');
-    var hist = el.closest('.mt-hist');
-    var syncNav = el.closest('.mt-sync-nav');
-    if (syncNav) { ev.preventDefault(); window.location.href = '/sync/room'; return; }
-    if (view) { ev.preventDefault(); mtOpenDetail(view.getAttribute('data-eid')); return; }
-    if (mem) { ev.preventDefault(); mtOpenAllMemory(mem.getAttribute('data-eid')); return; }
-    if (hist) { ev.preventDefault(); mtOpenHistory(hist.getAttribute('data-eid')); return; }
   });
-  document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape') { closeModal(); mtCloseSchedule(); }
+  $('mtSearch').addEventListener('input', function(){
+    mtQuery = this.value.trim().toLowerCase();
+    render();
   });
-  var ov = $('tkOverlay');
-  if (ov) {
-    ov.addEventListener('click', function (ev) { if (ev.target === ov) closeModal(); });
-    ov.addEventListener('click', function (ev) {
-      var x = ev.target && ev.target.closest ? ev.target.closest('.tk-modal-x') : null;
-      if (x) closeModal();
-    });
-  }
-  var ship = $('mtScheduleOverlay');
-  if (ship) {
-    ship.addEventListener('click', function (ev) { if (ev.target === ship) mtCloseSchedule(); });
-  }
-  var themeBtn = $('themeToggle');
-  if (themeBtn) {
-    themeBtn.addEventListener('click', function () {
-      if (window.voovrSetTheme) {
-        var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-        window.voovrSetTheme(next);
-        return;
-      }
-      var cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-      var nextTheme = cur === 'light' ? 'dark' : 'light';
-      if (nextTheme === 'dark') document.documentElement.removeAttribute('data-theme');
-      else document.documentElement.setAttribute('data-theme', 'light');
-      try { localStorage.setItem('voovr-theme', nextTheme); } catch (e) {}
-    });
-  }
-  var schedBtn = $('mtScheduleBtn');
-  if (schedBtn) schedBtn.addEventListener('click', mtOpenSchedule);
-  var schedClose = $('mtSchedClose');
-  if (schedClose) schedClose.addEventListener('click', mtCloseSchedule);
-  var schedCancel = $('mtSchedCancel');
-  if (schedCancel) schedCancel.addEventListener('click', mtCloseSchedule);
-  var schedSubmit = $('mtSchedSubmit');
-  if (schedSubmit) schedSubmit.addEventListener('click', mtScheduleMeeting);
-  mtWireSchedule();
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-  tkWireShell();
+  $('syncRoomBtn').addEventListener('click', function(){ window.location.href = '/sync/room'; });
+  $('scheduleMeetingBtn').addEventListener('click', openSchedule);
   loadData();
-  loadIdentity();
-  if (window.gsap && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    gsap.from('.mt-hero .mt-eyebrow', { opacity: 0, y: 16, duration: .7, ease: 'power3.out' });
-    gsap.from('.mt-hero-title span', { opacity: 0, y: 42, duration: .9, ease: 'power3.out', stagger: .14, delay: .1 });
-    gsap.from('.mt-hero-sub', { opacity: 0, y: 22, duration: .8, ease: 'power3.out', delay: .32 });
-    gsap.from('.mt-hero-actions', { opacity: 0, y: 16, duration: .7, ease: 'power3.out', delay: .45 });
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+  var sidebar = document.querySelector('.sidebar');
+  if (sidebar) {
+    sidebar.classList.remove('gsap-hidden');
+    if (window.gsap) {
+      gsap.set(sidebar, { x: -72, opacity: 0 });
+      gsap.to(sidebar, { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
+    } else {
+      sidebar.style.opacity = '1';
+    }
   }
 });
+</script>
+
+<!-- Theme toggle -->
+<script>
+(function() {
+  var btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    var next = current === 'light' ? 'dark' : 'light';
+    if (next === 'dark') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+    try { localStorage.setItem('voovr-theme', next); } catch (e) {}
+  });
+})();
 </script>
 </body>
 </html>
