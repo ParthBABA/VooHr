@@ -559,9 +559,15 @@ function mdCard(p) {
     ? '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenHistory(\'' + escHtml(p.id) + '\')" title="View &amp; delete past (missed / completed / cancelled) meetings for this person"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7.5 13l3 3 5-6"/></svg>History (' + histCount + ')</a>'
     : '';
 
-  // Card-level quick delete: lets the user remove the meeting this card is
-  // showing (scheduled, overdue or missed) without opening the detail modal.
+  // Card-level delete: "Delete Meeting" sits in the footer action row so the
+  // card body never exposes a records/"delete" info block. Uses the meeting
+  // this card is showing (next, missed) and otherwise the most recent
+  // meeting record, so every card keeps a delete option. Reuses the shared
+  // mtDelTrigger -> mtWireDeleteMeeting -> DELETE /api/meetings wiring.
   var meet = p.next_meeting || p.last_missed || null;
+  if (!meet && p.meeting_records && p.meeting_records.length) {
+    meet = p.meeting_records[p.meeting_records.length - 1];
+  }
   var quickDel = (meet && meet.id)
     ? '<span class="mt-delzone mt-carddel">' + mtDelTrigger(meet.id, 'Delete Meeting', '') + '</span>'
     : '';
