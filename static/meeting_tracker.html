@@ -203,6 +203,11 @@
   @keyframes mtDelIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
   @keyframes mtShake{0%,100%{transform:translateX(0);}15%{transform:translateX(-6px);}30%{transform:translateX(6px);}45%{transform:translateX(-4px);}60%{transform:translateX(4px);}75%{transform:translateX(-2px);}90%{transform:translateX(2px);}}
 
+  /* ── Bottom-of-popup delete action ── */
+  .mt-del-bottom{margin-top:1rem;border-top:1px solid var(--border);padding-top:0.9rem;}
+  .mt-del-bottom .mt-dtitle{font-family:var(--font-m);font-size:0.6rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--mt-violet);margin-bottom:0.5rem;}
+  .mt-del-bottom .mt-dfoot-note{font-size:0.72rem;color:var(--ivory-dim);line-height:1.5;margin-bottom:0.6rem;}
+
   /* ── Meeting history rows (non-scheduled meetings, deletable) ── */
   .mt-hitem{display:flex;align-items:center;justify-content:space-between;gap:0.8rem;padding:0.65rem 0.8rem;background:var(--elevated);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap;}
   .mt-hitem:hover{border-color:var(--border-lit);}
@@ -841,13 +846,27 @@ function mtOpenDetail(eid) {
   var sub = meetTxt;
   openModal(modalShell(escHtml(name) + '<span style="color:var(--ivory-faint);font-weight:400;"> &mdash; ' + escHtml(role) + '</span>', escHtml(sub)));
 
+  // Bottom-of-popup delete: an explicit way to clear the meeting record this
+  // popup is showing — including stale/"overdue" entries whose document is
+  // already gone from the DB (the delete returns 404, which is treated as
+  // already-removed and just refreshes the board, dropping the ghost card).
+  var footerDeleteHtml = '';
+  if (meet) {
+    var delLabel = isMissed ? 'Delete this missed meeting' : 'Delete this meeting';
+    footerDeleteHtml =
+      '<div class="mt-d mt-del-bottom"><div class="mt-dtitle">Actions</div>' +
+      '<div class="mt-dfoot-note">Remove this ' + (isMissed ? 'missed meeting' : 'meeting') + ' from the tracker. This can\u2019t be undone.</div>' +
+      '<div class="mt-delzone">' + mtDelTrigger(meet.id, delLabel, 'mtDeleteMeetingBtnBottom') + '</div></div>';
+  }
+
   var historyHtml = mtHistoryBlock(p);
   var bodyHtml =
     meetingInfo +
     historyHtml +
     mtBeforeMeeting(p) +
     prevInfo +
-    '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Loading recorded items\u2026</div></div>';
+    '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Loading recorded items\u2026</div></div>' +
+    footerDeleteHtml;
   fillModalBody(bodyHtml);
   mtWireDeleteMeeting();
 
@@ -865,11 +884,11 @@ function mtOpenDetail(eid) {
         memoryBlock('Commitments', commits, 'No commitments recorded.') +
         memoryBlock('Follow-ups', follows, 'No follow-ups recorded.') +
         memoryBlock('Notes', notes, 'No notes recorded.');
-      fillModalBody(bodyHtmlWithOverview(meetingInfo, prevInfo, p, usedOpeners, html, historyHtml));
+      fillModalBody(bodyHtmlWithOverview(meetingInfo, prevInfo, p, usedOpeners, html, historyHtml) + footerDeleteHtml);
       mtWireDeleteMeeting();
     })
     .catch(function(err){
-      fillModalBody(meetingInfo + historyHtml + '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Couldn\u2019t load items \u2014 ' + escHtml(err.message) + '</div></div>');
+      fillModalBody(meetingInfo + historyHtml + '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Couldn\u2019t load items \u2014 ' + escHtml(err.message) + '</div></div>' + footerDeleteHtml);
       mtWireDeleteMeeting();
     });
 }
@@ -910,6 +929,14 @@ function mtDoDeleteMeeting(mid, zone) {
       loadData();
     })
     .catch(function(err) {
+      if (err && err.status === 404) {
+        // The record is already gone (deleted elsewhere, or it never existed
+        // server-side): drop the ghost entry from the board instead of erroring.
+        mtLog('delete: 404 — record already gone; treating as removed and refreshing the board');
+        closeModal();
+        loadData();
+        return;
+      }
       mtLog('delete: FAILED —', err);
       confirmBtn.disabled = false;
       confirmBtn.textContent = 'Delete meeting';
