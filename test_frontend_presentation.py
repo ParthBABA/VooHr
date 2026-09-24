@@ -75,6 +75,39 @@ class PresentationTests(unittest.TestCase):
             self.assertNotIn("HR Copilot", source)
         self.assertNotIn(b"\x00", (ROOT / "static/style.css").read_bytes())
 
+    def test_meeting_tracker_delete_controls_on_card_and_detail(self):
+        source = (ROOT / "static/meeting_tracker.html").read_text(encoding="utf-8")
+        # ui-feedback must be loaded so the confirm dialog uses VooVrUI.ask.
+        self.assertIn('<script src="/ui-feedback.js"></script>', source)
+        # Every meeting_history row gets a delete control with the trash icon and
+        # an accessible label; titles/dates are escaped into data attributes.
+        self.assertIn('mtDelTrigger(m.id, \'Delete\', \'\', m.title || \'\', mtWhenTxt(m.scheduled_at))', source)
+        self.assertIn('aria-label="Delete meeting"', source)
+        self.assertRegex(source, r'data-title="\' \+ escHtml\(title \|\| \'\'\)')
+        # The person card renders upcoming / history / missed entries with deletes.
+        self.assertIn("mtCardMeetings(p)", source)
+        self.assertIn("mtCardMeetings", source)
+        # Cards are re-wired after every render.
+        self.assertIn("mtWireDeleteMeeting(document);", source)
+        # The confirm dialog gates the DELETE request: the ask must be awaited
+        # before fetch, and a cancel must not issue the request.
+        del_fn = source[source.index("function mtDeleteMeeting"):]
+        ask_pos = del_fn.find("VooVrUI.ask(")
+        fetch_pos = del_fn.find("fetch('/api/meetings/")
+        self.assertTrue(ask_pos != -1 and fetch_pos != -1 and ask_pos < fetch_pos)
+        self.assertIn("if (!confirmResult) return;", del_fn)
+        # The DELETE follows the repo CSRF pattern (headers + same-origin creds;
+        # csrf.js adds the X-CSRF-Token header automatically).
+        self.assertIn("method: 'DELETE'", del_fn)
+        self.assertIn("'Content-Type': 'application/json'", del_fn)
+        self.assertIn("credentials: 'same-origin'", del_fn)
+        # Mapped server feedback: 403 and 404 wording from the task spec.
+        self.assertIn("You don\\u2019t have permission to delete this meeting", del_fn)
+        self.assertIn("Meeting already deleted.", del_fn)
+        # The board is re-fetched (not a full page reload) after a successful delete.
+        self.assertTrue(re.search(r"closeModal\(\).*VooVrUI\.show\('Meeting deleted\..*loadData\(\)",
+                                  del_fn, re.S), "success path must close the modal, toast, and re-loadData")
+
 
 if __name__ == "__main__":
     unittest.main()

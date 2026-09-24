@@ -146,6 +146,52 @@ const failures = [];
     assert.equal(await page.locator('.recovery-code').count(), 2);
     await page.getByRole('button', {name:'Done', exact:true}).click();
     assert.equal(await page.locator('.recovery-dialog').count(), 0);
+
+    // Meeting Tracker delete flow: the confirm dialog must gate the DELETE.
+    const trackerPerson = {
+      id:'emp1', name:'Employee 1',
+      employee:{id:'emp1', name:'Employee 1', position:'Engineer'},
+      next_meeting:null,
+      last_missed:{id:'m99', status:'missed', title:'Missed <script> 1:1', scheduled_at:'2026-01-05T10:00:00Z'},
+      meeting_history:[{id:'m7', status:'missed', title:'Old sync <b>x</b>', scheduled_at:'2026-01-01T09:00:00Z'}],
+      open_items:[], previous_session:null, counts:{overdue_followups:0}
+    };
+    const deleteReq = [];
+    // Registered before the dashboard route, so it only sees real meeting deletes
+    // (the later dashboard route wins precedence for /api/meetings/dashboard).
+    await context.route('**/api/meetings/*', route => {
+      deleteReq.push({path:new URL(route.request().url()).pathname, csrf:route.request().headers()['x-csrf-token'] || ''});
+      return route.fulfill({json:{ok:true}});
+    });
+    await context.route('**/api/meetings/dashboard', route => route.fulfill({
+      json:{ok:true, employees:[trackerPerson.employee], people:[trackerPerson],
+            counters:{today:0,this_week:0,pending_followups:0,pending_commitments:0}}
+    }));
+    await page.goto(origin + '/preview/meeting_tracker.html');
+    await page.waitForSelector('.mt-card-meetings .mt-deltbtn');
+    const cardDel = page.locator('.mt-card-meetings .mt-deltbtn');
+    assert.equal(await cardDel.count(), 2, 'card must show a delete control for last_missed and every history row');
+    assert.equal(await cardDel.first().getAttribute('aria-label'), 'Delete meeting');
+    const escapedTitles = await page.evaluate(() =>
+      [...document.querySelectorAll('.mt-card-meetings .mt-deltbtn')].every(b =>
+        /^(this meeting|Missed <script> 1:1|Old sync <b>x<\/b>)$/.test(b.dataset.title) && b.querySelector('svg')));
+    assert.equal(escapedTitles, true, 'titles must be escaped, never injected as HTML');
+    await page.setViewportSize({width:480, height:900});
+    assert.equal(await cardDel.first().isVisible(), true, 'delete control must be tappable at 480px');
+    // Cancel (Escape) must NOT call DELETE.
+    await cardDel.first().click();
+    await page.locator('[data-accept]').waitFor();
+    await page.keyboard.press('Escape');
+    assert.equal(deleteReq.length, 0, 'cancelling the confirm dialog must not call DELETE');
+    // Accept must issue exactly one DELETE, carrying the CSRF header, then the board re-renders.
+    await cardDel.first().click();
+    await page.locator('[data-accept]').click();
+    await page.getByText('Meeting deleted.', {exact:true}).waitFor();
+    assert.equal(deleteReq.length, 1, 'confirming the dialog must call DELETE exactly once');
+    assert.match(deleteReq[0].path, /\/api\/meetings\/m7$/);
+    assert.equal(deleteReq[0].csrf, 'test-token', 'DELETE must carry the auto-added X-CSRF-Token header');
+    assert.equal(await cardDel.count(), 2, 'board must re-render after delete (no full page refresh)');
+
     console.log(JSON.stringify({pages:files.length+1,widths:[480,768,1024,1280],failures},null,2));
     if (failures.length) process.exitCode = 1;
   } finally { await browser.close(); }

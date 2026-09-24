@@ -12,6 +12,31 @@ from field_encryption import decrypt_fields
 notifications_bp = Blueprint("notifications", __name__)
 logger = logging.getLogger(__name__)
 
+# ── Notification categories ────────────────────────────────────────────
+# The Notifications page groups rows into three tabs. The tab is decided by
+# this explicit allowlist, never by "anything that isn't an activity", so a
+# new notification type can't silently land under Risk Signals.
+#   activity → background-job completions (translation / audio / dictation)
+#   meeting  → meeting-tracker reminders, meeting changes, overdue items and
+#              reminder-delivery problems
+#   risk     → genuine risk-drift signals (also the fallback for unknown
+#              types, which preserves the previous behaviour)
+ACTIVITY_NOTIFICATION_TYPES = frozenset({
+    "translation_ready", "audio_ready", "session_ready",
+})
+MEETING_NOTIFICATION_TYPES = frozenset({
+    "meeting_reminder", "meeting_event", "memory_overdue", "delivery_failed",
+})
+
+
+def _notification_category(notif_type) -> str:
+    """Map a notification ``type`` to its Notifications-page tab."""
+    if notif_type in ACTIVITY_NOTIFICATION_TYPES:
+        return "activity"
+    if notif_type in MEETING_NOTIFICATION_TYPES:
+        return "meeting"
+    return "risk"
+
 
 def _notification_scope_employee_ids(db, org_id: str):
     """Employee ObjectIds a manager may see notifications for.
@@ -65,6 +90,7 @@ def _notification_to_json(n, employee_name="") -> dict:
     return {
         "id": str(n["_id"]),
         "type": n.get("type", "risk_drift"),
+        "category": _notification_category(n.get("type", "risk_drift")),
         "headline": n.get("headline", ""),
         "summary": n.get("summary", ""),
         "confidence": n.get("confidence", 0),

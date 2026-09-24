@@ -45,6 +45,41 @@
 .hub-panel.active{display:block;}
 .hub-list{display:flex;flex-direction:column;gap:0.6rem;}
 .hub-list-empty{font-family:var(--font-m);font-size:0.78rem;line-height:1.6;color:var(--ivory-faint);text-align:center;padding:3rem 1.5rem;border:1px dashed var(--border);border-radius:10px;}
+/* ── Notification rows (hub + bell): stacked layout and readable type ──
+   The old rows put name / headline / summary / time in bare inline <span>s at
+   0.55–0.62rem, so they ran together on one line. Each piece is now its own
+   line, at a size that reads comfortably on the dark and light themes. */
+.hub-list .alert-item,.notif-dropdown-list .alert-item{width:100%;text-align:left;font:inherit;color:var(--ivory);align-items:flex-start;gap:.9rem;padding:1rem 1.15rem;border-radius:10px;}
+.notif-dropdown-list{display:flex;flex-direction:column;gap:.5rem;}
+.hub-list .alert-item .alert-severity,.notif-dropdown-list .alert-item .alert-severity{margin-top:.5rem;}
+.hub-list .alert-item .alert-body,.notif-dropdown-list .alert-item .alert-body{display:flex;flex-direction:column;gap:.3rem;overflow-wrap:anywhere;}
+.hub-list .alert-item .alert-top,.notif-dropdown-list .alert-item .alert-top{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;}
+.hub-list .alert-item .alert-name,.notif-dropdown-list .alert-item .alert-name{font-family:var(--font-d);font-size:1rem;font-weight:600;line-height:1.35;color:var(--ivory);margin:0;}
+.hub-list .alert-item .alert-top .alert-time,.notif-dropdown-list .alert-item .alert-top .alert-time{font-family:var(--font-d);font-size:.78rem;font-weight:400;letter-spacing:0;color:var(--ivory-dim);margin:0;white-space:nowrap;}
+.hub-list .alert-item .alert-stage,.notif-dropdown-list .alert-item .alert-stage{display:block;font-family:var(--font-d);font-size:.82rem;font-weight:500;line-height:1.4;letter-spacing:0;color:var(--amber);margin:0;}
+.hub-list .alert-item .alert-desc,.notif-dropdown-list .alert-item .alert-desc{display:block;font-family:var(--font-d);font-size:.82rem;font-weight:500;line-height:1.4;letter-spacing:0;color:var(--ivory-dim);margin:0;}
+.hub-list .alert-item .alert-detail,.hub-list .alert-item .alert-summary,.notif-dropdown-list .alert-item .alert-detail,.notif-dropdown-list .alert-item .alert-summary{display:block;font-family:var(--font-b);font-size:.94rem;font-weight:400;line-height:1.5;letter-spacing:0;color:var(--ivory);margin:0;}
+.hub-list .alert-item .alert-top .alert-summary,.notif-dropdown-list .alert-item .alert-top .alert-summary{font-size:.94rem;line-height:1.5;}
+.hub-list .alert-item .alert-meta,.notif-dropdown-list .alert-item .alert-meta{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .7rem;font-family:var(--font-d);font-size:.8rem;line-height:1.4;color:var(--ivory-dim);margin:0;}
+.alert-badge{display:inline-flex;align-items:center;font-family:var(--font-d);font-size:.74rem;font-weight:600;line-height:1;padding:.3rem .65rem;border:1px solid;border-radius:100px;white-space:nowrap;}
+.alert-badge.overdue{color:var(--red);border-color:rgba(232,69,69,.32);background:var(--red-soft);}
+.alert-badge.pending{color:var(--amber);border-color:rgba(212,136,74,.32);background:var(--amber-soft);}
+.alert-badge.neutral{color:var(--ivory-dim);border-color:var(--border-lit);background:var(--ivory-ghost);}
+.hub-list .alert-item.is-read .alert-name,.notif-dropdown-list .alert-item.is-read .alert-name{font-weight:500;color:var(--ivory-dim);}
+.hub-list .alert-item.is-read .alert-detail,.hub-list .alert-item.is-read .alert-summary,.notif-dropdown-list .alert-item.is-read .alert-detail,.notif-dropdown-list .alert-item.is-read .alert-summary{color:var(--ivory-dim);}
+.hub-list .alert-item .alert-action,.hub-list .alert-item .drift-conf{align-self:center;}
+.hub-list .alert-item .alert-action{font-size:.68rem;letter-spacing:.08em;padding:.5rem 1rem;border-radius:6px;}
+@media (max-width:560px){
+  /* Three tabs no longer fit side by side: keep one row and let it scroll. */
+  .hub-tabs{flex-wrap:nowrap;overflow-x:auto;gap:.25rem;-webkit-overflow-scrolling:touch;}
+  .hub-tab{flex-shrink:0;white-space:nowrap;padding:.6rem .75rem;letter-spacing:.08em;}
+  /* Body takes the full row; the confidence pill and View button wrap under it. */
+  .hub-list .alert-item{flex-wrap:wrap;gap:.6rem .7rem;padding:.9rem;}
+  .hub-list .alert-item .alert-body{flex:1 1 calc(100% - 1.6rem);}
+  .hub-list .alert-item .alert-top{flex-direction:column;align-items:flex-start;gap:.15rem;}
+  .hub-list .alert-item .alert-action,.hub-list .alert-item .drift-conf{margin-left:1.6rem;}
+  .hub-list .alert-item .drift-conf + .alert-action{margin-left:0;}
+}
 @media (prefers-reduced-motion: reduce){ .hub-tab,.hub-markall{transition:none;} }
 </style>
 </head>
@@ -160,7 +195,7 @@
             <div class="notif-dropdown-list" id="notifList"></div>
             <div class="notif-dropdown-empty" id="notifEmpty" style="display:none;">
               <span class="notif-dropdown-empty-title">No signals to review</span>
-              <span class="notif-dropdown-empty-body">Genuine risk patterns will appear here automatically.</span>
+              <span class="notif-dropdown-empty-body">Meeting reminders and genuine risk patterns will appear here automatically.</span>
             </div>
             <a class="notif-dropdown-footer" id="notifViewAll" href="/notifications">View all notifications</a>
           </div>
@@ -173,7 +208,7 @@
         <div>
           <div class="eyebrow">Alerts & Activity</div>
           <h2 class="drift-page-title">Notifications</h2>
-          <p class="dir-subtitle">Background job completions live under Activities; risk signals flagged across syncs live under Risk Signals.</p>
+          <p class="dir-subtitle">Job completions live under Activities, meeting reminders under Meetings, and risk signals flagged across syncs under Risk Signals.</p>
         </div>
         <button class="hub-markall" id="hubMarkAll" type="button">Mark all read</button>
       </div>
@@ -182,6 +217,10 @@
         <button class="hub-tab active" id="tabActivities" data-tab="activities" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           Activities <span class="hub-count" id="activityCount">0</span>
+        </button>
+        <button class="hub-tab" id="tabMeetings" data-tab="meeting" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Meetings <span class="hub-count" id="meetingCount">0</span>
         </button>
         <button class="hub-tab" id="tabRisk" data-tab="risk" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 8h8M8 12h8M8 16h4"/><path d="M4 4h16v13H8l-4 4z"/></svg>
@@ -193,6 +232,13 @@
         <div class="hub-list" id="activityList"></div>
         <div class="hub-list-empty" id="activityEmpty" style="display:none;">
           <b>No activity yet.</b><br>Completed translations and audio narrations will collect here.
+        </div>
+      </div>
+
+      <div class="hub-panel" id="panelMeetings">
+        <div class="hub-list" id="meetingList"></div>
+        <div class="hub-list-empty" id="meetingEmpty" style="display:none;">
+          <b>No meeting reminders.</b><br>Reminders for upcoming meetings, overdue commitments and follow-ups will appear here.
         </div>
       </div>
 
@@ -208,7 +254,7 @@
           <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
         </div>
         <h3 class="drift-empty-title">Nothing to review yet</h3>
-        <p class="drift-empty-body">Background job results and risk signals will both appear here automatically — there&rsquo;s nothing to configure or check back on.</p>
+        <p class="drift-empty-body">Job results, meeting reminders and risk signals will appear here automatically — there&rsquo;s nothing to configure or check back on.</p>
         <span class="drift-empty-meta">updates automatically</span>
       </div>
     </div>
@@ -230,6 +276,160 @@
     }
     try { localStorage.setItem('voovr-theme', next); } catch (e) {}
   });
+})();
+</script>
+
+<!-- ── SHARED NOTIFICATION HELPERS (used by the bell and the hub) ── -->
+<script>
+window.VooNotif = (function() {
+  var ACTIVITY_TYPES = ['translation_ready', 'audio_ready', 'session_ready'];
+  var MEETING_TYPES = ['meeting_reminder', 'meeting_event', 'memory_overdue', 'delivery_failed'];
+  var KIND_LABEL = { 'commitment': 'Commitment', 'follow-up': 'Follow-up', 'opener': 'Opener', 'question': 'Question', 'note': 'Note' };
+
+  // Which tab a notification belongs to. Trust the backend's `category`; fall
+  // back to the same allowlist for responses from an older backend. Unknown
+  // types stay under "risk" (the historical default).
+  function categoryOf(n) {
+    if (n && (n.category === 'activity' || n.category === 'meeting' || n.category === 'risk')) return n.category;
+    var t = n && n.type;
+    if (ACTIVITY_TYPES.indexOf(t) !== -1) return 'activity';
+    if (MEETING_TYPES.indexOf(t) !== -1) return 'meeting';
+    return 'risk';
+  }
+
+  function relTime(iso) {
+    if (!iso) return '';
+    var t = new Date(iso);
+    if (isNaN(t.getTime())) return '';
+    var diff = (Date.now() - t.getTime()) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function absTime(iso) {
+    var t = iso ? new Date(iso) : null;
+    return t && !isNaN(t.getTime()) ? t.toLocaleString() : '';
+  }
+
+  // "2026-09-22T18:29:59+00:00" → "22 Sep, 11:59 PM" in the viewer's timezone.
+  function formatDue(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso || '');
+    var opts = { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' };
+    if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+    return d.toLocaleString(undefined, opts);
+  }
+
+  // The backend writes reminder summaries as
+  //   "<kind> <status>: <content> · due <iso>"   (meeting_reminder)
+  //   "<kind>: <content>"                         (memory_overdue)
+  // Parse them into parts so the UI can show a badge and a readable due date
+  // instead of the raw string. Anything that doesn't match is shown verbatim.
+  function parseSummary(n) {
+    var text = String(n.summary || '');
+    var m = /^(commitment|follow-up|opener|question|note)\s+([a-z_ ]+?):\s*([\s\S]*?)(?:\s+\u00b7\s+due\s+(\S+))?\s*$/i.exec(text);
+    if (m) {
+      return { kind: KIND_LABEL[m[1].toLowerCase()] || m[1], status: m[2].toLowerCase().replace(/_/g, ' ').trim(), content: m[3], due: m[4] || null };
+    }
+    m = /^(commitment|follow-up|opener|question|note):\s*([\s\S]*?)\s*$/i.exec(text);
+    if (m) {
+      return { kind: KIND_LABEL[m[1].toLowerCase()] || m[1], status: null, content: m[2], due: null };
+    }
+    return { kind: null, status: null, content: text, due: null };
+  }
+
+  // The status badge for a meeting-category row, or null.
+  function meetingBadge(n, parsed) {
+    if (n.type === 'meeting_event') {
+      if (n.event_key === 'meeting_cancelled') return { text: 'Cancelled', cls: 'overdue' };
+      if (n.event_key === 'meeting_rescheduled') return { text: 'Rescheduled', cls: 'pending' };
+      return null;
+    }
+    if (n.type === 'delivery_failed') return { text: 'Delivery failed', cls: 'overdue' };
+    var st = n.type === 'memory_overdue' ? 'overdue' : parsed.status;
+    if (!st) return null;
+    var label = st.charAt(0).toUpperCase() + st.slice(1);
+    return { text: label, cls: st === 'overdue' ? 'overdue' : (st === 'pending' || st === 'in progress' ? 'pending' : 'neutral') };
+  }
+
+  function severityClass(n) {
+    if (n.read) return 'alert-severity read';
+    var cat = categoryOf(n);
+    if (n.type === 'translation_ready') return 'alert-severity translation';
+    if (cat === 'activity') return 'alert-severity audio';
+    if (cat === 'meeting') {
+      var b = meetingBadge(n, parseSummary(n));
+      return 'alert-severity ' + (b && b.cls === 'overdue' ? 'critical' : 'warning');
+    }
+    if (n.type === 'risk_drift') return 'alert-severity critical';
+    return 'alert-severity warning';
+  }
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+
+  function topLine(leftCls, leftText, n) {
+    var top = el('span', 'alert-top');
+    top.appendChild(el('span', leftCls, leftText));
+    var time = el('span', 'alert-time', relTime(n.created_at));
+    var abs = absTime(n.created_at);
+    if (abs) time.title = abs;
+    top.appendChild(time);
+    return top;
+  }
+
+  // Fill a row's text column. textContent only — never innerHTML.
+  function fillBody(body, n) {
+    var cat = categoryOf(n);
+    if (cat === 'activity') {
+      // The finishing line IS the notification text.
+      body.appendChild(topLine('alert-summary', n.summary || n.headline || 'Ready', n));
+      return;
+    }
+    body.appendChild(topLine('alert-name', n.employee_name || 'Employee', n));
+    if (cat === 'meeting') {
+      var parsed = parseSummary(n);
+      if (n.headline) body.appendChild(el('span', 'alert-stage', n.headline));
+      if (parsed.content) body.appendChild(el('span', 'alert-detail', parsed.content));
+      var badge = meetingBadge(n, parsed);
+      if (badge || parsed.kind || parsed.due) {
+        var meta = el('span', 'alert-meta');
+        if (badge) meta.appendChild(el('span', 'alert-badge ' + badge.cls, badge.text));
+        if (parsed.kind) meta.appendChild(el('span', 'alert-kind', parsed.kind));
+        if (parsed.due) meta.appendChild(el('span', 'alert-due', 'Due ' + formatDue(parsed.due)));
+        body.appendChild(meta);
+      }
+      return;
+    }
+    // risk
+    if (n.headline) body.appendChild(el('span', 'alert-desc', n.headline));
+    if (n.summary) body.appendChild(el('span', 'alert-summary', n.summary));
+  }
+
+  // Where "View" goes for each category.
+  function targetUrl(n) {
+    var cat = categoryOf(n);
+    if (cat === 'activity') {
+      var q = [];
+      if (n.source_session_id) q.push('session_id=' + encodeURIComponent(n.source_session_id));
+      if (n.employee_id) q.push('employee_id=' + encodeURIComponent(n.employee_id));
+      return '/workspace' + (q.length ? '?' + q.join('&') : '');
+    }
+    if (cat === 'meeting') return '/meeting-tracker';
+    return '/risk-drift?notification=' + encodeURIComponent(n.id);
+  }
+
+  return {
+    categoryOf: categoryOf, relTime: relTime, formatDue: formatDue, parseSummary: parseSummary,
+    meetingBadge: meetingBadge, severityClass: severityClass, fillBody: fillBody, targetUrl: targetUrl
+  };
 })();
 </script>
 
@@ -284,17 +484,10 @@
 
   function openNotification(n) {
     if (!n) return;
-    // Fire-and-forget: optimistically mark read, then route.
+    // Fire-and-forget: optimistically mark read, then route by category.
     fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
     closeDropdown();
-    if (n.type === 'translation_ready' || n.type === 'audio_ready' || n.type === 'session_ready') {
-      var q = [];
-      if (n.source_session_id) q.push('session_id=' + encodeURIComponent(n.source_session_id));
-      if (n.employee_id) q.push('employee_id=' + encodeURIComponent(n.employee_id));
-      window.location.href = '/workspace' + (q.length ? '?' + q.join('&') : '');
-      return;
-    }
-    window.location.href = '/risk-drift?notification=' + n.id;
+    window.location.href = window.VooNotif.targetUrl(n);
   }
 
   function renderList(items) {
@@ -311,51 +504,14 @@
       row.className = 'alert-item notif-item';
       row.setAttribute('data-id', n.id);
 
-      var sevClass = 'alert-severity ' + (n.read ? 'read' : 'critical');
-      if (!n.read && n.type === 'audio_ready') sevClass = 'alert-severity audio';
-      else if (!n.read && n.type === 'session_ready') sevClass = 'alert-severity audio';
-      else if (!n.read && n.type === 'translation_ready') sevClass = 'alert-severity translation';
+      if (n.read) row.classList.add('is-read');
       var sev = document.createElement('span');
-      sev.className = sevClass;
+      sev.className = window.VooNotif.severityClass(n);
 
       var body = document.createElement('span');
       body.className = 'alert-body protected-text';
       body.setAttribute('translate', 'no');
-      var isJobType = (n.type === 'translation_ready' || n.type === 'audio_ready' || n.type === 'session_ready');
-      if (isJobType) {
-        // Single-sentence layout: no headline bolted into a "name" slot — the
-        // finishing line IS the notification text, with the time on the right.
-        var top = document.createElement('span');
-        top.className = 'alert-top';
-        var punch = document.createElement('span');
-        punch.className = 'alert-summary';
-        punch.textContent = n.summary || n.headline || 'Ready';
-        var time = document.createElement('span');
-        time.className = 'alert-time';
-        time.textContent = relTime(n.created_at);
-        top.appendChild(punch);
-        top.appendChild(time);
-        body.appendChild(top);
-      } else {
-        var name = document.createElement('span');
-        name.className = 'alert-name';
-        name.textContent = n.employee_name || 'Employee';
-        var desc = document.createElement('span');
-        desc.className = 'alert-desc';
-        desc.textContent = n.headline || '';
-        var time = document.createElement('span');
-        time.className = 'alert-time';
-        time.textContent = relTime(n.created_at);
-        body.appendChild(name);
-        body.appendChild(desc);
-        if (n.summary) {
-          var summaryEl = document.createElement('span');
-          summaryEl.className = 'alert-summary';
-          summaryEl.textContent = n.summary;
-          body.appendChild(summaryEl);
-        }
-        body.appendChild(time);
-      }
+      window.VooNotif.fillBody(body, n);
 
       var action = document.createElement('span');
       action.className = 'alert-action';
@@ -433,120 +589,46 @@
 <!-- ── NOTIFICATIONS HUB LOGIC ── -->
 <script>
 window.voovrInitNotifications = function() {
+  var V = window.VooNotif;
   var pageMarkAll = document.getElementById('hubMarkAll');
   var tabs = document.getElementById('hubTabs');
-  var tabActivities = document.getElementById('tabActivities');
-  var tabRisk = document.getElementById('tabRisk');
-  var panelActivities = document.getElementById('panelActivities');
-  var panelRisk = document.getElementById('panelRisk');
-  var activityList = document.getElementById('activityList');
-  var riskList = document.getElementById('riskList');
-  var activityEmpty = document.getElementById('activityEmpty');
-  var riskEmpty = document.getElementById('riskEmpty');
   var hubNothing = document.getElementById('hubNothing');
-  var activityCount = document.getElementById('activityCount');
-  var riskCount = document.getElementById('riskCount');
 
-  var activities = [];
-  var risks = [];
-  var allUnread = 0;
-  var currentTab = 'activities';
+  // One entry per tab. Order here is the left-to-right tab order.
+  var ORDER = ['activity', 'meeting', 'risk'];
+  var cfg = {
+    activity: { tab: document.getElementById('tabActivities'), panel: document.getElementById('panelActivities'), list: document.getElementById('activityList'), empty: document.getElementById('activityEmpty'), count: document.getElementById('activityCount'), items: [] },
+    meeting:  { tab: document.getElementById('tabMeetings'),   panel: document.getElementById('panelMeetings'),   list: document.getElementById('meetingList'),  empty: document.getElementById('meetingEmpty'),  count: document.getElementById('meetingCount'),  items: [] },
+    risk:     { tab: document.getElementById('tabRisk'),       panel: document.getElementById('panelRisk'),       list: document.getElementById('riskList'),     empty: document.getElementById('riskEmpty'),     count: document.getElementById('riskCount'),     items: [] }
+  };
+  var currentTab = 'activity';
 
-  function esc(s) {
-    if (s === null || s === undefined) return '';
-    return String(s).replace(/[&<>"']/g, function(c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-
-  function relTime(iso) {
-    if (!iso) return '';
-    var t = new Date(iso);
-    if (isNaN(t.getTime())) return '';
-    var diff = (Date.now() - t.getTime()) / 1000;
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
-    return t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }
-
-  function isActivity(n) {
-    return n.type === 'translation_ready' || n.type === 'audio_ready' || n.type === 'session_ready';
-  }
-
-  // Verbatim dashboard.html openNotification behavior.
   function openNotification(n) {
     if (!n) return;
     fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
-    if (isActivity(n)) {
-      var q = [];
-      if (n.source_session_id) q.push('session_id=' + encodeURIComponent(n.source_session_id));
-      if (n.employee_id) q.push('employee_id=' + encodeURIComponent(n.employee_id));
-      window.location.href = '/workspace' + (q.length ? '?' + q.join('&') : '');
-      return;
-    }
-    window.location.href = '/risk-drift?notification=' + n.id;
-  }
-
-  function severityClass(n) {
-    if (n.read) return 'alert-severity read';
-    if (n.type === 'audio_ready') return 'alert-severity audio';
-    if (n.type === 'session_ready') return 'alert-severity audio';
-    if (n.type === 'translation_ready') return 'alert-severity translation';
-    if (n.type === 'risk_drift') return 'alert-severity critical';
-    return 'alert-severity warning';
+    window.location.href = V.targetUrl(n);
   }
 
   function buildRow(n) {
+    var cat = V.categoryOf(n);
     var row = document.createElement('button');
     row.type = 'button';
-    row.className = 'alert-item';
+    row.className = 'alert-item' + (n.read ? ' is-read' : '');
 
     var sev = document.createElement('span');
-    sev.className = severityClass(n);
+    sev.className = V.severityClass(n);
 
     var body = document.createElement('span');
     body.className = 'alert-body protected-text';
     body.setAttribute('translate', 'no');
-
-    if (isActivity(n)) {
-      var top = document.createElement('span');
-      top.className = 'alert-top';
-      var punch = document.createElement('span');
-      punch.className = 'alert-summary';
-      punch.textContent = n.summary || n.headline || 'Ready';
-      var time = document.createElement('span');
-      time.className = 'alert-time';
-      time.textContent = relTime(n.created_at);
-      top.appendChild(punch);
-      top.appendChild(time);
-      body.appendChild(top);
-    } else {
-      var name = document.createElement('span');
-      name.className = 'alert-name';
-      name.textContent = n.employee_name || 'Employee';
-      var desc = document.createElement('span');
-      desc.className = 'alert-desc';
-      desc.textContent = n.headline || '';
-      var time = document.createElement('span');
-      time.className = 'alert-time';
-      time.textContent = relTime(n.created_at);
-      body.appendChild(name);
-      body.appendChild(desc);
-      if (n.summary) {
-        var summaryEl = document.createElement('span');
-        summaryEl.className = 'alert-summary';
-        summaryEl.textContent = n.summary;
-        body.appendChild(summaryEl);
-      }
-      body.appendChild(time);
-    }
+    V.fillBody(body, n);
 
     row.appendChild(sev);
     row.appendChild(body);
 
-    if (!isActivity(n) && n.confidence != null) {
+    // A confidence score only means something for risk signals. Meeting
+    // reminders and job completions carry a placeholder 0, so no pill there.
+    if (cat === 'risk' && n.confidence != null) {
       var conf = document.createElement('span');
       var level = n.confidence >= 70 ? 'high' : (n.confidence >= 40 ? 'medium' : 'low');
       conf.className = 'drift-conf ' + level;
@@ -563,54 +645,56 @@ window.voovrInitNotifications = function() {
     return row;
   }
 
-  function renderTab(tab) {
-    var listEl = tab === 'activities' ? activityList : riskList;
-    var emptyEl = tab === 'activities' ? activityEmpty : riskEmpty;
-    var items = tab === 'activities' ? activities : risks;
-    listEl.innerHTML = '';
-    if (!items.length) { emptyEl.style.display = ''; return; }
-    emptyEl.style.display = 'none';
-    items.forEach(function(n) { listEl.appendChild(buildRow(n)); });
+  function renderTab(key) {
+    var c = cfg[key];
+    c.list.innerHTML = '';
+    if (!c.items.length) { c.empty.style.display = ''; return; }
+    c.empty.style.display = 'none';
+    c.items.forEach(function(n) { c.list.appendChild(buildRow(n)); });
     if (window.gsap) {
       gsap.fromTo('.hub-panel.active .alert-item', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.35, stagger: 0.03, ease: 'power3.out' });
     }
   }
 
-  function setTab(tab) {
-    currentTab = tab;
-    tabActivities.classList.toggle('active', tab === 'activities');
-    tabRisk.classList.toggle('active', tab === 'risk');
-    panelActivities.classList.toggle('active', tab === 'activities');
-    panelRisk.classList.toggle('active', tab === 'risk');
-    renderTab(tab);
+  function setTab(key) {
+    currentTab = key;
+    ORDER.forEach(function(k) {
+      cfg[k].tab.classList.toggle('active', k === key);
+      cfg[k].panel.classList.toggle('active', k === key);
+    });
+    renderTab(key);
+  }
+
+  function refreshCounts() {
+    ORDER.forEach(function(k) {
+      var c = cfg[k];
+      c.count.textContent = String(c.items.length);
+      c.count.classList.toggle('has-unread', c.items.some(function(n) { return !n.read; }));
+    });
   }
 
   function initHub(data) {
-    activities = (data.notifications || []).filter(isActivity);
-    risks = (data.notifications || []).filter(function(n) { return !isActivity(n); });
+    var all = data.notifications || [];
+    ORDER.forEach(function(k) {
+      cfg[k].items = all.filter(function(n) { return V.categoryOf(n) === k; });
+    });
+    refreshCounts();
 
-    activityCount.textContent = String(activities.length);
-    riskCount.textContent = String(risks.length);
-    activityCount.classList.toggle('has-unread', activities.some(function(n) { return !n.read; }));
-    riskCount.classList.toggle('has-unread', risks.some(function(n) { return !n.read; }));
-
-    if (!activities.length && !risks.length) {
+    if (!all.length) {
       tabs.style.display = 'none';
-      activityEmpty.style.display = 'none';
-      riskEmpty.style.display = 'none';
+      ORDER.forEach(function(k) { cfg[k].empty.style.display = 'none'; });
       hubNothing.style.display = '';
       return;
     }
 
-    // Default lens: unread activities first, else risk signals. Never default
-    // risk-drift as the primary view.
-    if (activities.some(function(n) { return !n.read; })) {
-      setTab('activities');
-    } else if (risks.length) {
-      setTab('risk');
-    } else {
-      setTab('activities');
-    }
+    // Open on the first tab (left to right) that has something unread; if
+    // everything is read, the first tab that has anything at all.
+    var first = null;
+    ORDER.forEach(function(k) {
+      if (!first && cfg[k].items.some(function(n) { return !n.read; })) first = k;
+    });
+    if (!first) ORDER.forEach(function(k) { if (!first && cfg[k].items.length) first = k; });
+    setTab(first || 'activity');
   }
 
   // The read-all endpoint has no type filter; it marks everything read. One
@@ -620,10 +704,8 @@ window.voovrInitNotifications = function() {
     fetch('/api/notifications/read-all', { method: 'PUT' })
       .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
       .then(function() {
-        activities.forEach(function(n) { n.read = true; });
-        risks.forEach(function(n) { n.read = true; });
-        activityCount.classList.remove('has-unread');
-        riskCount.classList.remove('has-unread');
+        ORDER.forEach(function(k) { cfg[k].items.forEach(function(n) { n.read = true; }); });
+        refreshCounts();
         renderTab(currentTab);
       })
       .catch(function() {})
@@ -631,8 +713,9 @@ window.voovrInitNotifications = function() {
   });
 
   function activateTabs() {
-    tabActivities.addEventListener('click', function() { setTab('activities'); });
-    tabRisk.addEventListener('click', function() { setTab('risk'); });
+    ORDER.forEach(function(k) {
+      cfg[k].tab.addEventListener('click', function() { setTab(k); });
+    });
   }
 
   // Gather up to 4 pages of 50 so the hub is a real "view all".
@@ -641,6 +724,7 @@ window.voovrInitNotifications = function() {
     var limit = 50;
     var maxPages = 4;
     var page = 1;
+    activateTabs();
     (function next() {
       fetch('/api/notifications?limit=' + limit + '&page=' + page)
         .then(function(r) { if (!r.ok) throw new Error('failed'); return r.json(); })
@@ -648,7 +732,6 @@ window.voovrInitNotifications = function() {
           var items = data.notifications || [];
           out = out.concat(items);
           var total = data.total || out.length;
-          activateTabs();
           if (items.length && out.length < total && page < maxPages) {
             page += 1;
             next();
@@ -656,7 +739,7 @@ window.voovrInitNotifications = function() {
           }
           initHub({ notifications: out, total: total, unread_count: data.unread_count || 0 });
         })
-        .catch(function() { activateTabs(); initHub({ notifications: out, total: out.length, unread_count: 0 }); });
+        .catch(function() { initHub({ notifications: out, total: out.length, unread_count: 0 }); });
     })();
   })();
 };
