@@ -89,6 +89,10 @@ class PresentationTests(unittest.TestCase):
         self.assertIn("mtCardMeetings", source)
         self.assertIn("meeting_records", source)
         self.assertIn("recordLabel", source)
+        # The detail popup's Danger Zone falls back to meeting_records too, so a
+        # record that only lives there (e.g. a legacy/unknown status no longer
+        # occupying the next/last/history slots) is still deletable.
+        self.assertRegex(source, r"var delMeet = meet[\s\S]*?p\.meeting_records")
         # Cards are re-wired after every render.
         self.assertIn("mtWireDeleteMeeting(document);", source)
         # The confirm dialog gates the DELETE request: the ask must be awaited

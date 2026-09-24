@@ -892,7 +892,9 @@ function mtOpenDetail(eid) {
   // Delete control for people whose current meeting was completed and moved to
   // history, where the popup would otherwise show no delete button at all.
   var footerDeleteHtml = '';
-  var delMeet = meet || ((p.meeting_history || []).filter(function(m){ return m && m.id; })[0] || null);
+  var delMeet = meet
+    || ((p.meeting_history || []).filter(function(m){ return m && m.id; })[0] || null)
+    || ((p.meeting_records || []).filter(function(m){ return m && m.id; })[0] || null);
   if (delMeet) {
     var delMissed = delMeet.status === 'missed';
     var delLabel = delMissed ? 'Delete this missed meeting' : 'Delete this meeting';

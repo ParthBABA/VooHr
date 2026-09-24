@@ -285,7 +285,15 @@ def meetings_dashboard():
         emp_filter["_id"] = {"$in": allowed_ids}
     employees = list(db.employees.find(emp_filter).sort("created_at", 1))
 
-    meeting_filter = {"org_id": org_oid, "status": {"$in": ["scheduled", "completed", "missed", "cancelled"]}}
+    # NOTE: no status gate on this fetch. Every meeting record for the org
+    # (any status, including legacy/unknown values) must reach the board so it
+    # is always reachable via meeting_records and deletable from the UI. The
+    # selectors below still filter by status for their semantics — the sweep
+    # only touches "scheduled", next_meeting requires scheduled, last_missed
+    # requires missed, and history only includes non-scheduled rows — but a
+    # record is never dropped wholesale just because its status is not in a
+    # hard-coded list.
+    meeting_filter = {"org_id": org_oid}
     if allowed_ids is not None:
         meeting_filter["employee_id"] = {"$in": allowed_ids}
     meetings = list(db.meetings.find(meeting_filter).sort("scheduled_at", 1))

@@ -571,6 +571,50 @@ def test_dashboard_meeting_history_lists_non_scheduled(client, fake):
     assert row["next_meeting"]["id"] == str(future_mid)
 
 
+def test_dashboard_always_surfaces_meeting_with_unknown_status(client, fake):
+    # Regression: the board previously fetched meetings with a hard-coded
+    # status allow-list; a record whose status fell outside it (a legacy or
+    # custom value) was silently dropped from every employee card — no
+    # "Meetings · Delete" section, no History link — even though the record
+    # existed and GET /api/meetings returned it. Every org meeting must stay
+    # reachable from the board so it is always deletable.
+    now = datetime.now(timezone.utc)
+    mid = _insert_meeting(fake, "banded record", now - timedelta(days=4), status="no_show")
+
+    d = client.get("/api/meetings/dashboard").get_json()
+    row = next(p for p in d["people"] if p["id"] == EMP_1)
+    # It is neither next nor last-missed, but it MUST be in meeting_records —
+    # the field that powers the card's "Meetings · Delete" section.
+    assert row["next_meeting"] is None
+    assert row["last_missed"] is None
+    assert [m["id"] for m in row["meeting_records"]] == [str(mid)]
+    assert row["meeting_records"][0]["status"] == "no_show"
+    # If a follow-up existed, the unknown-status record is not hidden in the
+    # detail popup either: it lands in history (anything non-scheduled).
+    assert str(mid) in [m["id"] for m in row["meeting_history"]]
+
+
+def test_dashboard_surfaces_meeting_with_missing_status(client, fake):
+    # A record with NO status field at all (e.g. imported/hand-seeded) must
+    # still surface on the board and be deletable.
+    now = datetime.now(timezone.utc)
+    r = fake.meetings.insert_one({
+        "org_id": ObjectId(ORG_A), "employee_id": ObjectId(EMP_1),
+        "title": "imported 1:1", "scheduled_at": now - timedelta(days=2),
+        "created_at": now, "updated_at": now,
+    })
+    mid = r.inserted_id
+
+    d = client.get("/api/meetings/dashboard").get_json()
+    row = next(p for p in d["people"] if p["id"] == EMP_1)
+    assert row["next_meeting"] is None
+    assert [m["id"] for m in row["meeting_records"]] == [str(mid)]
+    assert str(mid) in [m["id"] for m in row["meeting_history"]]
+    # The DELETE endpoint must accept it (no status-aware guard).
+    assert client.delete(f"/api/meetings/{mid}").status_code == 200
+    assert client.get(f"/api/meetings/{mid}").status_code == 404
+
+
 def test_dashboard_meeting_history_capped(client, fake):
     now = datetime.now(timezone.utc)
     for i in range(7):
