@@ -194,10 +194,12 @@
   .btn-danger:hover{color:var(--void);background:var(--mt-red);border-color:var(--mt-red);box-shadow:0 0 14px rgba(248,113,113,0.4);}
   .mt-delzone{display:flex;flex-direction:column;gap:0.6rem;}
 
-  /* ── Bottom-of-popup delete action ── */
-  .mt-del-bottom{margin-top:1rem;border-top:1px solid var(--border);padding-top:0.9rem;}
-  .mt-del-bottom .mt-dtitle{font-family:var(--font-m);font-size:0.6rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--mt-violet);margin-bottom:0.5rem;}
-  .mt-del-bottom .mt-dfoot-note{font-size:0.72rem;color:var(--ivory-dim);line-height:1.5;margin-bottom:0.6rem;}
+  /* ── Bottom-of-popup delete action (Danger Zone) ── */
+  .mt-del-bottom{margin-top:1rem;}
+  .mt-dangerzone{margin-top:1.1rem;border:1px solid rgba(248,113,113,0.35);border-radius:8px;background:rgba(248,113,113,0.05);padding:0.9rem 1rem;}
+  .mt-dangerzone .mt-dtitle{font-family:var(--font-m);font-size:0.62rem;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:var(--mt-red);margin-bottom:0.5rem;}
+  .mt-dangerzone .mt-dfoot-note{font-size:0.72rem;color:var(--ivory-dim);line-height:1.5;margin-bottom:0.6rem;}
+  .mt-dangerzone .mt-deltbtn{width:100%;justify-content:center;min-height:38px;font-weight:700;}
 
   /* ── Meeting history rows (non-scheduled meetings, deletable) ── */
   .mt-hitem{display:flex;align-items:center;justify-content:space-between;gap:0.8rem;padding:0.65rem 0.8rem;background:var(--elevated);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap;}
@@ -876,17 +878,20 @@ function mtOpenDetail(eid) {
   var sub = meetTxt;
   openModal(modalShell(escHtml(name) + '<span style="color:var(--ivory-faint);font-weight:400;"> &mdash; ' + escHtml(role) + '</span>', escHtml(sub)));
 
-  // Bottom-of-popup delete: an explicit way to clear the meeting record this
-  // popup is showing — including stale/"overdue" entries whose document is
-  // already gone from the DB (the delete returns 404, which is treated as
-  // already-removed and just refreshes the board, dropping the ghost card).
+  // Bottom-of-popup delete: a Danger Zone that always renders when there is a
+  // deletable meeting record for this person (the current slot, the missed
+  // slot, or the latest meeting_history entry). This keeps a clearly visible
+  // Delete control for people whose current meeting was completed and moved to
+  // history, where the popup would otherwise show no delete button at all.
   var footerDeleteHtml = '';
-  if (meet) {
-    var delLabel = isMissed ? 'Delete this missed meeting' : 'Delete this meeting';
+  var delMeet = meet || ((p.meeting_history || []).filter(function(m){ return m && m.id; })[0] || null);
+  if (delMeet) {
+    var delMissed = delMeet.status === 'missed';
+    var delLabel = delMissed ? 'Delete this missed meeting' : 'Delete this meeting';
     footerDeleteHtml =
-      '<div class="mt-d mt-del-bottom"><div class="mt-dtitle">Actions</div>' +
-      '<div class="mt-dfoot-note">Remove this ' + (isMissed ? 'missed meeting' : 'meeting') + ' from the tracker. This can\u2019t be undone.</div>' +
-      '<div class="mt-delzone">' + mtDelTrigger(meet.id, delLabel, 'mtDeleteMeetingBtnBottom', meet.title || '', mtWhenTxt(meet.scheduled_at)) + '</div></div>';
+      '<div class="mt-d mt-del-bottom mt-dangerzone"><div class="mt-dtitle">Danger Zone</div>' +
+      '<div class="mt-dfoot-note">Permanently remove this ' + (delMissed ? 'missed meeting' : 'scheduled meeting') + ' and its associated meeting record. This can\u2019t be undone.</div>' +
+      '<div class="mt-delzone">' + mtDelTrigger(delMeet.id, delLabel, 'mtDeleteMeetingBtnBottom', delMeet.title || '', mtWhenTxt(delMeet.scheduled_at)) + '</div></div>';
   }
 
   var historyHtml = mtHistoryBlock(p);
