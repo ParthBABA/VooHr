@@ -244,6 +244,12 @@
   .mt-empnote{font-family:var(--font-m);font-size:0.66rem;color:var(--mt-teal);margin-top:0.45rem;display:none;}
   .mt-empnote.show{display:block;}
 
+  /* ── Card-level quick delete (footer) ── */
+  .mt-carddel{flex-direction:row;}
+  .mt-carddel .mt-deltbtn{font-family:var(--font-m);font-weight:600;font-size:0.68rem;letter-spacing:0.01em;text-transform:none;padding:0.4rem 0.75rem;border-radius:100px;display:inline-flex;align-items:center;gap:0.4rem;}
+  .mt-carddel .mt-delconfirm{padding:0.55rem 0.7rem;}
+  .mt-carddel .mt-delmsg{font-size:0.68rem;min-width:150px;}
+
   /* ── Avatar accent palette (deterministic per person) ── */
   .mt-accents{display:none;}
 </style>
@@ -551,6 +557,13 @@ function mdCard(p) {
     ? '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenHistory(\'' + escHtml(p.id) + '\')" title="View &amp; delete past (missed / completed / cancelled) meetings for this person"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7.5 13l3 3 5-6"/></svg>History (' + histCount + ')</a>'
     : '';
 
+  // Card-level quick delete: lets the user remove the meeting this card is
+  // showing (scheduled, overdue or missed) without opening the detail modal.
+  var meet = p.next_meeting || p.last_missed || null;
+  var quickDel = (meet && meet.id)
+    ? '<span class="mt-delzone mt-carddel">' + mtDelTrigger(meet.id, 'Delete', '') + '</span>'
+    : '';
+
   return (
     '<div class="mt-card" data-seen="' + escHtml(p.id) + '">' +
       '<div class="mt-card-top">' +
@@ -578,6 +591,7 @@ function mdCard(p) {
           prevLink +
           histLink +
           '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenAllMemory(\'' + escHtml(p.id) + '\')" title="View all recorded memory for this person"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>All Memory</a>' +
+          quickDel +
         '</div>' +
       '</div>' +
     '</div>'
@@ -647,6 +661,7 @@ function render() {
   $('hdrFollow').style.display = follow.length ? '' : 'none';
 
   animateCards();
+  mtWireDeleteMeeting();
 }
 
 function animateCards() {
@@ -980,10 +995,12 @@ function mtWireDeleteBtn(btn) {
   });
 }
 function mtWireDeleteMeeting() {
-  var scope = $('mtModalOverlay');
-  if (!scope) return;
-  var btns = scope.querySelectorAll('.mt-delzone button.mt-deltbtn[data-meeting-id]');
-  [].slice.call(btns).forEach(mtWireDeleteBtn);
+  ['mtModalOverlay', 'contentArea'].forEach(function(id) {
+    var scope = $(id);
+    if (!scope) return;
+    var btns = scope.querySelectorAll('.mt-delzone button.mt-deltbtn[data-meeting-id]');
+    [].slice.call(btns).forEach(mtWireDeleteBtn);
+  });
 }
 function memoryRow(it) {
   return '<div class="mt-item"><span style="color:var(--ivory-faint);width:14px;flex-shrink:0;">' + mtStatusSym(it.status, it.type) + '</span>' +
