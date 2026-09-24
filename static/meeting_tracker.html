@@ -142,6 +142,8 @@
   @media (prefers-reduced-motion: reduce){
     .mt-card{transition:none;transform:none !important;}
     .mt-metric{transition:none;}
+    .mt-delconfirm{animation:none;}
+    .mt-delconfirm.shake{animation:none;}
   }
 
   /* ── Loading / error / notice states ── */
@@ -193,9 +195,22 @@
   .btn-danger{color:var(--mt-red);border-color:rgba(248,113,113,0.35);}
   .btn-danger:hover{color:var(--void);background:var(--mt-red);border-color:var(--mt-red);box-shadow:0 0 14px rgba(248,113,113,0.4);}
   .mt-delzone{display:flex;flex-direction:column;gap:0.6rem;}
-  .mt-delconfirm{display:flex;align-items:center;justify-content:flex-end;gap:0.6rem;flex-wrap:wrap;padding:0.7rem 0.85rem;background:var(--elevated);border:1px solid rgba(248,113,113,0.3);border-radius:8px;}
-  .mt-delmsg{font-family:var(--font-m);font-size:0.68rem;color:var(--ivory-dim);line-height:1.5;flex:1;min-width:180px;}
-  .mt-delconfirm .mt-formerr{flex-basis:100%;text-align:right;}
+  .mt-delconfirm{display:flex;align-items:center;justify-content:flex-end;gap:0.6rem;flex-wrap:wrap;padding:0.75rem 0.85rem;background:linear-gradient(135deg,rgba(248,113,113,0.15),rgba(248,113,113,0.05));border:1px solid rgba(248,113,113,0.55);border-left:3px solid rgba(248,113,113,0.9);border-radius:8px;animation:mtDelIn 0.18s ease-out;}
+  .mt-delmsg{font-family:var(--font-m);font-size:0.7rem;font-weight:700;color:var(--ivory);line-height:1.5;flex:1;min-width:180px;display:inline-flex;align-items:center;gap:0.45rem;}
+  .mt-delmsg svg{width:14px;height:14px;color:var(--mt-red);flex-shrink:0;}
+  .mt-delerr{flex-basis:100%;text-align:left;padding:0.45rem 0.6rem;border-radius:6px;background:rgba(248,113,113,0.14);border:1px solid rgba(248,113,113,0.5);color:var(--mt-red);font-weight:700;font-size:0.72rem;}
+  .mt-delconfirm.shake{animation:mtShake 0.45s ease-in-out;border-color:var(--mt-red);box-shadow:0 0 0 3px rgba(248,113,113,0.2);}
+  @keyframes mtDelIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes mtShake{0%,100%{transform:translateX(0);}15%{transform:translateX(-6px);}30%{transform:translateX(6px);}45%{transform:translateX(-4px);}60%{transform:translateX(4px);}75%{transform:translateX(-2px);}90%{transform:translateX(2px);}}
+
+  /* ── Meeting history rows (non-scheduled meetings, deletable) ── */
+  .mt-hitem{display:flex;align-items:center;justify-content:space-between;gap:0.8rem;padding:0.65rem 0.8rem;background:var(--elevated);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap;}
+  .mt-hitem:hover{border-color:var(--border-lit);}
+  .mt-hinfo{display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;min-width:0;}
+  .mt-hmeta{font-size:0.76rem;color:var(--ivory-dim);line-height:1.4;min-width:0;word-break:break-word;}
+  .mt-hitem .mt-delzone{margin-left:auto;}
+  .mt-badge--missed{color:#94A3B8;background:rgba(148,163,184,0.12);border:1px solid rgba(148,163,184,0.35);}
+  .mt-badge--cancelled{color:var(--mt-red);background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);}
 
   /* ── Schedule form · employee search (real-time, org-scoped) ── */
   .mt-empsearch{position:relative;}
@@ -359,6 +374,13 @@ var mtFilter = 'all';
 var mtQuery = '';
 
 // ── Small DOM helpers ──
+var MT_DEBUG = true; // flip to false to silence the [mt] debug logs below
+function mtLog() {
+  if (!MT_DEBUG || !window.console) return;
+  var a = Array.prototype.slice.call(arguments);
+  a.unshift('[mt]');
+  console.log.apply(console, a);
+}
 function escHtml(str) {
   if (str === null || str === undefined) return '';
   var d = document.createElement('div');
@@ -511,6 +533,11 @@ function mdCard(p) {
     prevLink = '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenPrevious(\'' + escHtml(p.id) + '\')" title="View previous session context"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.36 2.64L3 8"/><path d="M3 3v5h5"/></svg>Previous Context</a>';
   }
 
+  var histCount = (p.meeting_history || []).filter(function(m){ return m && m.id; }).length;
+  var histLink = histCount
+    ? '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenHistory(\'' + escHtml(p.id) + '\')" title="View &amp; delete past (missed / completed / cancelled) meetings for this person"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7.5 13l3 3 5-6"/></svg>History (' + histCount + ')</a>'
+    : '';
+
   return (
     '<div class="mt-card" data-seen="' + escHtml(p.id) + '">' +
       '<div class="mt-card-top">' +
@@ -536,6 +563,7 @@ function mdCard(p) {
         '<div class="mt-footer">' +
           '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenDetail(\'' + escHtml(p.id) + '\')" title="View full meeting &amp; recorded context"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>View Meeting</a>' +
           prevLink +
+          histLink +
           '<a class="mt-link" href="javascript:void(0)" onclick="mtOpenAllMemory(\'' + escHtml(p.id) + '\')" title="View all recorded memory for this person"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>All Memory</a>' +
         '</div>' +
       '</div>' +
@@ -800,7 +828,7 @@ function mtOpenDetail(eid) {
       '<div class="mt-d"><div class="mt-dtitle">' + (isMissed ? 'Missed meeting' : 'Meeting') + '</div>' +
       '<div class="mt-meetinfo"><span><b>Date:</b> ' + (meet.scheduled_at ? fmtFullDate(meet.scheduled_at) : '\u2014') + '</span>' +
       '<span><b>Title:</b> ' + escHtml(meet.title || '\u2014') + '</span></div>' +
-      '<div class="mt-delzone"><button class="btn btn-danger btn-sm" type="button" id="mtDeleteMeetingBtn" data-meeting-id="' + meet.id + '">' + (isMissed ? 'Delete missed meeting' : 'Delete meeting') + '</button></div></div>';
+      '<div class="mt-delzone">' + mtDelTrigger(meet.id, isMissed ? 'Delete missed meeting' : 'Delete meeting', 'mtDeleteMeetingBtn') + '</div></div>';
     meetTxt = (meet.title || 'Meeting') + ' \u00b7 ' + (meet.scheduled_at ? fmtFullDate(meet.scheduled_at) : '');
   }
   var prevInfo = '';
@@ -813,8 +841,10 @@ function mtOpenDetail(eid) {
   var sub = meetTxt;
   openModal(modalShell(escHtml(name) + '<span style="color:var(--ivory-faint);font-weight:400;"> &mdash; ' + escHtml(role) + '</span>', escHtml(sub)));
 
+  var historyHtml = mtHistoryBlock(p);
   var bodyHtml =
     meetingInfo +
+    historyHtml +
     mtBeforeMeeting(p) +
     prevInfo +
     '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Loading recorded items\u2026</div></div>';
@@ -835,60 +865,90 @@ function mtOpenDetail(eid) {
         memoryBlock('Commitments', commits, 'No commitments recorded.') +
         memoryBlock('Follow-ups', follows, 'No follow-ups recorded.') +
         memoryBlock('Notes', notes, 'No notes recorded.');
-      fillModalBody(bodyHtmlWithOverview(meetingInfo, prevInfo, p, usedOpeners, html));
+      fillModalBody(bodyHtmlWithOverview(meetingInfo, prevInfo, p, usedOpeners, html, historyHtml));
       mtWireDeleteMeeting();
     })
     .catch(function(err){
-      fillModalBody(meetingInfo + '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Couldn\u2019t load items \u2014 ' + escHtml(err.message) + '</div></div>');
+      fillModalBody(meetingInfo + historyHtml + '<div class="mt-d"><div class="mt-dtitle">Conversation memory</div><div class="mt-none">Couldn\u2019t load items \u2014 ' + escHtml(err.message) + '</div></div>');
       mtWireDeleteMeeting();
     });
 }
-function mtWireDeleteMeeting() {
-  var btn = $('mtDeleteMeetingBtn');
+// ── Delete-meeting wiring (generic: works for ANY meeting id, not just the
+//    next_meeting slot) ──
+function mtDelWarnIcon() {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+}
+function mtDelTrigger(mid, label, id) {
+  var idAttr = id ? ' id="' + id + '"' : '';
+  return '<button class="btn btn-danger btn-sm mt-deltbtn" type="button" data-meeting-id="' + escHtml(mid) + '" data-label="' + escHtml(label || 'Delete meeting') + '"' + idAttr + '>' + label + '</button>';
+}
+function mtDelConfirmHtml() {
+  return '<div class="mt-delconfirm">' +
+    '<span class="mt-delmsg">' + mtDelWarnIcon() + 'Delete this meeting? This can\u2019t be undone.</span>' +
+    '<button class="btn btn-outline btn-sm" type="button" data-mt-del-cancel>Cancel</button>' +
+    '<button class="btn btn-danger btn-sm" type="button" data-mt-del-confirm>Delete meeting</button>' +
+    '<div class="mt-formerr mt-delerr" data-mt-del-err role="alert"></div>' +
+  '</div>';
+}
+function mtDoDeleteMeeting(mid, zone) {
+  mtLog('delete: confirm received — sending DELETE /api/meetings/' + mid);
+  var confirmBtn = zone.querySelector('[data-mt-del-confirm]');
+  var errEl = zone.querySelector('[data-mt-del-err]');
+  var zoneEl = zone.querySelector('.mt-delconfirm');
+  if (errEl) errEl.textContent = '';
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = 'Deleting\u2026';
+  fetch('/api/meetings/' + encodeURIComponent(mid), { method: 'DELETE' })
+    .then(function(r) {
+      mtLog('delete: response status =', r.status);
+      if (!r.ok) { var err = new Error('Request failed (' + r.status + ')'); err.status = r.status; throw err; }
+      return r.json();
+    })
+    .then(function() {
+      mtLog('delete: SUCCESS — meeting', mid, 'removed. Re-fetching board…');
+      closeModal();
+      loadData();
+    })
+    .catch(function(err) {
+      mtLog('delete: FAILED —', err);
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Delete meeting';
+      errEl.textContent = (err && err.status === 403)
+        ? 'You don\u2019t have access to delete this meeting.'
+        : 'Couldn\u2019t delete this meeting \u2014 ' + (err && err.message ? err.message : 'Request failed');
+      if (zoneEl) {
+        zoneEl.classList.remove('shake');
+        void zoneEl.offsetWidth; // restart the CSS animation
+        zoneEl.classList.add('shake');
+      }
+    });
+}
+function mtWireDeleteBtn(btn) {
   if (!btn) return;
+  var mid = btn.getAttribute('data-meeting-id');
+  var zone = btn.parentNode;
+  if (!mid || !zone) return;
+  mtLog('delete: wiring "Delete meeting" trigger for meeting', mid);
+  var label = btn.getAttribute('data-label') || 'Delete meeting';
+  var btnId = btn.getAttribute('data-id') || '';
   btn.addEventListener('click', function() {
-    var mid = btn.getAttribute('data-meeting-id');
-    var zone = btn.parentNode;
-    var confirmHtml =
-      '<div class="mt-delconfirm">' +
-        '<span class="mt-delmsg">Delete this meeting? This can\u2019t be undone.</span>' +
-        '<button class="btn btn-outline btn-sm" type="button" id="mtDeleteCancel">Cancel</button>' +
-        '<button class="btn btn-danger btn-sm" type="button" id="mtDeleteConfirm">Delete meeting</button>' +
-        '<div class="mt-formerr" id="mtDeleteErr"></div>' +
-      '</div>';
-    zone.innerHTML = confirmHtml;
-    $('mtDeleteCancel').addEventListener('click', function() {
-      zone.innerHTML = '<button class="btn btn-danger btn-sm" type="button" id="mtDeleteMeetingBtn" data-meeting-id="' + mid + '">Delete meeting</button>';
-      mtWireDeleteMeeting();
+    mtLog('delete: first click on', mid, '— revealing confirm step (nothing deleted yet)');
+    zone.innerHTML = mtDelConfirmHtml();
+    var cancel = zone.querySelector('[data-mt-del-cancel]');
+    if (cancel) cancel.addEventListener('click', function() {
+      mtLog('delete: cancel clicked for', mid, '— restoring delete button');
+      zone.innerHTML = mtDelTrigger(mid, label, btnId);
+      mtWireDeleteBtn(zone.querySelector('.mt-deltbtn'));
     });
-    $('mtDeleteConfirm').addEventListener('click', function() {
-      var confirmBtn = $('mtDeleteConfirm');
-      var errEl = $('mtDeleteErr');
-      errEl.textContent = '';
-      confirmBtn.disabled = true;
-      confirmBtn.textContent = 'Deleting\u2026';
-      fetch('/api/meetings/' + encodeURIComponent(mid), { method: 'DELETE' })
-        .then(function(r) {
-          if (!r.ok) {
-            var err = new Error('Request failed (' + r.status + ')');
-            err.status = r.status;
-            throw err;
-          }
-          return r.json();
-        })
-        .then(function() {
-          closeModal();
-          loadData();
-        })
-        .catch(function(err) {
-          confirmBtn.disabled = false;
-          confirmBtn.textContent = 'Delete meeting';
-          errEl.textContent = (err && err.status === 403)
-            ? 'You don\u2019t have access to delete this meeting.'
-            : 'Couldn\u2019t delete this meeting \u2014 ' + (err && err.message ? err.message : 'Request failed');
-        });
-    });
+    var confirmBtn = zone.querySelector('[data-mt-del-confirm]');
+    if (confirmBtn) confirmBtn.addEventListener('click', function() { mtDoDeleteMeeting(mid, zone); });
   });
+}
+function mtWireDeleteMeeting() {
+  var scope = $('mtModalOverlay');
+  if (!scope) return;
+  var btns = scope.querySelectorAll('.mt-delzone button.mt-deltbtn[data-meeting-id]');
+  [].slice.call(btns).forEach(mtWireDeleteBtn);
 }
 function memoryRow(it) {
   return '<div class="mt-item"><span style="color:var(--ivory-faint);width:14px;flex-shrink:0;">' + mtStatusSym(it.status, it.type) + '</span>' +
@@ -896,9 +956,10 @@ function memoryRow(it) {
     '<div class="mt-idue">' + (it.due_at ? 'Due ' + fmtDate(new Date(it.due_at)) : '') + '</div>' +
     '<span class="mt-badge ' + badgeCls(it.status, it.type) + '">' + badgeLabel(it.status) + '</span></div>';
 }
-function bodyHtmlWithOverview(meetingInfo, prevInfo, p, usedOpeners, memoryHtml) {
+function bodyHtmlWithOverview(meetingInfo, prevInfo, p, usedOpeners, memoryHtml, historyHtml) {
   return (
     meetingInfo +
+    (historyHtml || '') +
     mtBeforeMeeting(p) +
     '<div class="mt-d"><div class="mt-dtitle">Recorded this sync track</div>' +
     '<div class="mt-meetinfo"><span><b>Open commitments:</b> ' + p.counts.pending_commitments + '</span>' +
@@ -906,6 +967,45 @@ function bodyHtmlWithOverview(meetingInfo, prevInfo, p, usedOpeners, memoryHtml)
     '<span><b>Openers used:</b> ' + usedOpeners + '</span></div></div>' +
     prevInfo + memoryHtml
   );
+}
+
+// ── Meeting history (missed / completed / cancelled) — deletable past meetings ──
+function mtHistStatus(m) {
+  var s = (m.status || '').toUpperCase();
+  return { COMPLETED: 'Completed', MISSED: 'Missed', CANCELLED: 'Cancelled' }[s] || s.charAt(0) + s.slice(1).toLowerCase();
+}
+function mtHistBadge(s) {
+  var v = (s || '').toUpperCase();
+  if (v === 'COMPLETED') return 'mt-badge--completed';
+  if (v === 'MISSED') return 'mt-badge--missed';
+  if (v === 'CANCELLED') return 'mt-badge--cancelled';
+  return 'mt-badge--pending';
+}
+function mtHistoryBlock(p) {
+  var h = (p.meeting_history || []).filter(function(m){ return m && m.id; });
+  if (!h.length) return '';
+  var rows = h.map(function(m){
+    return '<div class="mt-hitem">' +
+      '<div class="mt-hinfo">' +
+        '<span class="mt-badge ' + mtHistBadge(m.status) + '">' + mtHistStatus(m) + '</span>' +
+        '<span class="mt-hmeta">' + escHtml(m.title || 'Meeting') + ' \u00b7 ' + (m.scheduled_at ? fmtFullDate(m.scheduled_at) : '\u2014') + '</span>' +
+      '</div>' +
+      '<div class="mt-delzone">' + mtDelTrigger(m.id, 'Delete') + '</div>' +
+    '</div>';
+  }).join('');
+  return '<div class="mt-d"><div class="mt-dtitle">Meeting history</div>' + rows + '</div>';
+}
+
+// ── View meeting history (past meetings only, each deletable) ──
+function mtOpenHistory(eid) {
+  var p = mtByEmp[eid];
+  if (!p) return;
+  var h = (p.meeting_history || []).filter(function(m){ return m && m.id; });
+  var name = p.employee.name, role = p.employee.position || 'HR';
+  openModal(modalShell(escHtml(name) + ' \u2014 Meeting History', escHtml(h.length + (h.length === 1 ? ' past meeting' : ' past meetings'))));
+  fillModalBody(h.length ? mtHistoryBlock(p) :
+    '<div class="mt-d"><div class="mt-dtitle">Meeting history</div><div class="mt-none">No past (missed / completed / cancelled) meetings for this person.</div></div>');
+  mtWireDeleteMeeting();
 }
 
 // ── View All Memory (full history, grouped by session) ──

@@ -481,6 +481,20 @@ def test_dashboard_sweeps_stale_scheduled_to_missed(client, fake):
     assert doc["status"] == "missed"
 
 
+def test_dashboard_swept_meeting_in_history_same_load(client, fake):
+    # A stale *still-"scheduled"* meeting is swept to "missed" during this very
+    # request — and because history is computed after the sweep it becomes
+    # deletable immediately (no one-refresh lag before it appears).
+    now = datetime.now(timezone.utc)
+    stale_mid = _insert_meeting(fake, "stale yet scheduled", now - timedelta(days=7))
+
+    d = client.get("/api/meetings/dashboard").get_json()
+    row = next(p for p in d["people"] if p["id"] == EMP_1)
+    assert row["next_meeting"] is None
+    assert str(stale_mid) in [m["id"] for m in row["meeting_history"]]
+    assert all(m["status"] != "scheduled" for m in row["meeting_history"])
+
+
 def test_dashboard_no_next_meeting_when_only_past_scheduled(client, fake):
     now = datetime.now(timezone.utc)
     _insert_meeting(fake, "old 1:1", now - timedelta(days=7))
@@ -524,6 +538,38 @@ def test_dashboard_last_missed_never_masks_upcoming(client, fake):
     row = next(p for p in d["people"] if p["id"] == EMP_1)
     assert row["next_meeting"]["id"] == str(future_mid)
     assert row["last_missed"]["id"] == str(missed_mid)
+
+
+def test_dashboard_meeting_history_lists_non_scheduled(client, fake):
+    now = datetime.now(timezone.utc)
+    old_missed = _insert_meeting(fake, "old missed", now - timedelta(days=10), status="missed")
+    cancelled_mid = _insert_meeting(fake, "cancelled", now - timedelta(days=3), status="cancelled")
+    new_missed = _insert_meeting(fake, "recent missed", now - timedelta(days=2), status="missed")
+    completed_mid = _insert_meeting(fake, "done", now - timedelta(days=1), status="completed")
+    future_mid = _insert_meeting(fake, "upcoming", now + timedelta(days=3))
+
+    d = client.get("/api/meetings/dashboard").get_json()
+    row = next(p for p in d["people"] if p["id"] == EMP_1)
+    # Newest first, scheduled excluded — this is what powers the card/detail
+    # "Meeting history" delete list.
+    assert [m["id"] for m in row["meeting_history"]] == [
+        str(completed_mid), str(new_missed), str(cancelled_mid), str(old_missed),
+    ]
+    assert all(m["status"] != "scheduled" for m in row["meeting_history"])
+    assert str(future_mid) not in [m["id"] for m in row["meeting_history"]]
+    assert row["next_meeting"]["id"] == str(future_mid)
+
+
+def test_dashboard_meeting_history_capped(client, fake):
+    now = datetime.now(timezone.utc)
+    for i in range(7):
+        _insert_meeting(fake, f"old-{i}", now - timedelta(days=1 + i), status="missed")
+
+    d = client.get("/api/meetings/dashboard").get_json()
+    row = next(p for p in d["people"] if p["id"] == EMP_1)
+    assert len(row["meeting_history"]) == 5
+    titles = [m["title"] for m in row["meeting_history"]]
+    assert titles == ["old-0", "old-1", "old-2", "old-3", "old-4"]
 
 
 def test_delete_missed_meeting_via_api(client, fake):

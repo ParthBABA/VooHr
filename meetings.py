@@ -285,7 +285,7 @@ def meetings_dashboard():
         emp_filter["_id"] = {"$in": allowed_ids}
     employees = list(db.employees.find(emp_filter).sort("created_at", 1))
 
-    meeting_filter = {"org_id": org_oid, "status": {"$in": ["scheduled", "completed", "missed"]}}
+    meeting_filter = {"org_id": org_oid, "status": {"$in": ["scheduled", "completed", "missed", "cancelled"]}}
     if allowed_ids is not None:
         meeting_filter["employee_id"] = {"$in": allowed_ids}
     meetings = list(db.meetings.find(meeting_filter).sort("scheduled_at", 1))
@@ -309,6 +309,27 @@ def meetings_dashboard():
                 {"$set": {"status": "missed", "updated_at": now}},
             )
             mk["status"] = "missed"
+
+    # Meeting history: recent *non-scheduled* meetings per employee (missed /
+    # completed / cancelled), newest first. Computed AFTER the sweep above so a
+    # meeting that just crossed the grace boundary is already "missed" and
+    # deletable on this very load instead of lagging one refresh. These records
+    # no longer occupy next_meeting, so history is the only way the UI can
+    # reach and delete them. Cancelled rows are fetched too (they must be
+    # deletable), but they never match the next_meeting/last_missed selectors.
+    HISTORY_LIMIT = 5
+    _min_dt = datetime.min.replace(tzinfo=timezone.utc)
+    history_by_emp: dict = {}
+    for mk in meetings:
+        if mk.get("status") == "scheduled":
+            continue
+        history_by_emp.setdefault(str(mk["employee_id"]), []).append(mk)
+    for hist in history_by_emp.values():
+        hist.sort(
+            key=lambda x: _aware(x.get("scheduled_at")) if x.get("scheduled_at") else _min_dt,
+            reverse=True,
+        )
+        del hist[HISTORY_LIMIT:]
 
     session_filter = {"org_id": org_oid}
     if allowed_ids is not None:
@@ -415,6 +436,7 @@ def meetings_dashboard():
             "employee": _employee_to_json(e),
             "next_meeting": _meeting_to_json(next_meeting) if next_meeting else None,
             "last_missed": _meeting_to_json(last_missed) if last_missed else None,
+            "meeting_history": [_meeting_to_json(mk) for mk in history_by_emp.get(eid, [])],
             "previous_session": {
                 "session_id": str(prev["_id"]) if prev else None,
                 "created_at": prev["created_at"].isoformat() if prev else None,
