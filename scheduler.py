@@ -147,6 +147,8 @@ def run_reminder_sweep(db=None, now=None) -> dict:
         without doing any work.
     (b) If acquired, enumerate every org_id and call
         reminders.ensure_reminder_notifications(db, org_id, now) for each,
+        then reminders.retry_pending_deliveries(db, org_id, now) so earlier
+        failed deliveries are retried with bounded backoff on this same tick,
         catching and logging per-org exceptions so one broken org never stops
         the rest.
     (c) Let the lock expire naturally (timestamp staleness) — there is no
@@ -170,20 +172,25 @@ def run_reminder_sweep(db=None, now=None) -> dict:
             "reminder scheduler: skipped — lock held by pid=%s, waiting for next tick",
             holder or "another worker",
         )
-        return {"acquired": False, "orgs": 0, "created": 0}
+        return {"acquired": False, "orgs": 0, "created": 0, "retried": 0}
 
     org_ids = _enumerate_org_ids(db)
     created = 0
+    retried = 0
     for org_id in org_ids:
         try:
             created += reminders.ensure_reminder_notifications(db, org_id, now)
         except Exception:
             logger.exception("reminder scheduler: reminder generation failed org=%s", org_id)
+        try:
+            retried += reminders.retry_pending_deliveries(db, org_id, now)
+        except Exception:
+            logger.exception("reminder scheduler: retry_pending_deliveries failed org=%s", org_id)
     logger.info(
-        "reminder scheduler: lock acquired pid=%s orgs=%d created=%d",
-        os.getpid(), len(org_ids), created,
+        "reminder scheduler: lock acquired pid=%s orgs=%d created=%d retried=%d",
+        os.getpid(), len(org_ids), created, retried,
     )
-    return {"acquired": True, "orgs": len(org_ids), "created": created}
+    return {"acquired": True, "orgs": len(org_ids), "created": created, "retried": retried}
 
 
 def start_scheduler(app):

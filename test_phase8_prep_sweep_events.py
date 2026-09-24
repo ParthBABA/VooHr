@@ -559,7 +559,7 @@ def _seed_for_delivery(monkeypatch, success=True, status="failed", attempts=1):
                             delivery_status=status, attempts=attempts,
                             delivery_errors=[], next_attempt_at=NOW - timedelta(minutes=1))
     if success:
-        monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=None))
+        monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=True))
     else:
         monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(side_effect=RuntimeError("down")))
     return db, nid
@@ -629,6 +629,14 @@ def test_retry_claim_uses_cas_on_attempts(monkeypatch):
     assert stale.modified_count == 1
 
 
+def test_create_meeting_stores_authenticated_creator(admin_client, fake):
+    # create_meeting must persist the authenticated session user as the owner
+    # so reminder email delivery can resolve the recipient (owner) for it.
+    mid = _create_meeting(admin_client).get_json()["id"]
+    m = fake.meetings.find_one({"_id": ObjectId(mid)})
+    assert m["created_by"] == ObjectId(ADMIN_USER)
+
+
 def test_sweep_all_orgs_runs_generation_retry_and_due(monkeypatch):
     db = FakeDB()
     _seed_org(db)
@@ -653,7 +661,7 @@ def test_sweep_all_orgs_runs_generation_retry_and_due(monkeypatch):
                       delivery_status="failed", attempts=1,
                       delivery_errors=["whatsapp"], next_attempt_at=NOW - timedelta(minutes=1))
 
-    monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=None))
+    monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=True))
 
     result = rm_mod.sweep_all_orgs(db, NOW)
     assert result["orgs"] == 1

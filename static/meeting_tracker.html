@@ -514,6 +514,14 @@ function mtCardMeetings(p) {
       '</div>'
     );
   }
+  function recordLabel(m) {
+    if ((m.status || '').toLowerCase() === 'scheduled') return 'Upcoming';
+    if ((m.status || '').toLowerCase() === 'missed') return 'Missed';
+    return mtHistStatus(m);
+  }
+  // meeting_records includes scheduled records that are inside the missed
+  // grace window and therefore appear in none of the selector fields.
+  (p.meeting_records || []).forEach(function(m){ push(m, recordLabel(m)); });
   push(p.next_meeting, 'Upcoming');
   (p.meeting_history || []).forEach(function(m){ push(m, mtHistStatus(m)); });
   push(p.last_missed, 'Missed');

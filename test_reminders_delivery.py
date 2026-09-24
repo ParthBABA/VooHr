@@ -9,7 +9,11 @@ Verifies (hand-rolled in-memory Mongo facade + patched outbound channels):
   - WhatsApp is attempted when a phone_number is present (stub is invoked)
   - the user-level opt-out (notification_prefs.meeting_reminders=False)
     suppresses email/WhatsApp but STILL creates the in-app notification
+  - the send_reminder_email() return value is honored: a False result is
+    recorded as delivery_status=failed (not delivered) and is retried on a
+    later sweep; a skip/owner_unavailable is terminal and logged with reason
 """
+import logging
 from datetime import datetime, timedelta, timezone
 from unittest import mock
 
@@ -178,6 +182,9 @@ def test_email_sent_once_per_stage(monkeypatch):
         assert db.notifications.count_documents(
             {"type": "meeting_reminder", "stage": stage}
         ) == 1, stage
+        n = db.notifications.find_one({"type": "meeting_reminder", "stage": stage})
+        assert n["delivery_status"] == "delivered", stage
+        assert n["delivery_errors"] == [], stage
         # No phone number set → WhatsApp skipped.
         assert wa.call_count == 0, stage
 
@@ -273,4 +280,110 @@ def test_meeting_without_owner_skips_delivery(monkeypatch):
 
     assert created == 1
     assert send.call_count == 0
+    assert db.notifications.count_documents({"type": "meeting_reminder"}) == 1
+
+
+def test_email_false_is_recorded_failed_with_retry_ready(monkeypatch):
+    db = FakeDB()
+    _seed(db)
+    _add_memory(db)
+    _add_meeting(db, "2026-08-30T15:00:00")
+
+    monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=False))
+    monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", mock.Mock(return_value=False))
+
+    assert _generate(db) == 1
+    n = db.notifications.find_one({"type": "meeting_reminder"})
+    assert n is not None
+    assert n["delivery_status"] == "failed"
+    assert n["delivery_errors"] == ["email"]
+    assert n["next_attempt_at"] is not None
+    # The in-app notification itself is still created.
+    assert db.notifications.count_documents({"type": "meeting_reminder"}) == 1
+
+
+def test_failed_email_retried_and_delivered_on_next_sweep(monkeypatch):
+    db = FakeDB()
+    _seed(db)
+    _add_memory(db)
+    _add_meeting(db, "2026-08-30T15:00:00")
+
+    send = mock.Mock(side_effect=[False, True])
+    monkeypatch.setattr(email_mod, "send_reminder_email", send)
+    monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", mock.Mock(return_value=False))
+
+    assert _generate(db) == 1
+    n = db.notifications.find_one({"type": "meeting_reminder"})
+    assert n["delivery_status"] == "failed"
+    assert (n.get("attempts") or 0) == 0
+    assert send.call_count == 1
+
+    retried = rm_mod.retry_pending_deliveries(db, ORG_A, NOW + timedelta(minutes=6))
+    assert retried == 1
+    n = db.notifications.find_one({"type": "meeting_reminder"})
+    assert n["delivery_status"] == "delivered"
+    assert n["next_attempt_at"] is None
+    assert n["attempts"] == 1
+    assert n["delivery_errors"] == []
+    assert send.call_count == 2
+
+
+def test_send_reminder_email_missing_brevo_config_returns_false(monkeypatch):
+    monkeypatch.delenv("BREVO_API_KEY", raising=False)
+    monkeypatch.delenv("BREVO_SENDER_EMAIL", raising=False)
+    monkeypatch.setattr(
+        email_mod.requests,
+        "post",
+        mock.Mock(side_effect=AssertionError("network must not be called")),
+    )
+    ok = email_mod.send_reminder_email(
+        "owner@example.com", "Harshit Rana", NOW, "summary", "day_of"
+    )
+    assert ok is False
+    email_mod.requests.post.assert_not_called()
+
+
+def test_owner_not_found_logs_skip_reason(caplog, monkeypatch):
+    db = FakeDB()
+    _seed(db)
+    _add_memory(db)
+    r = _add_meeting(db, "2026-08-30T15:00:00")
+    db.meetings.update_one({"_id": r}, {"$set": {"created_by": None}})
+
+    monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=True))
+    monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", mock.Mock(return_value=False))
+
+    with caplog.at_level(logging.INFO, logger="reminders"):
+        assert _generate(db) == 1
+    assert any("reason=owner_not_found" in m for m in caplog.messages)
+
+
+def test_owner_email_unavailable_logs_skip_reason(caplog, monkeypatch):
+    db = FakeDB()
+    _seed(db, owner_email="")
+    _add_memory(db)
+    _add_meeting(db, "2026-08-30T15:00:00")
+
+    monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=True))
+    monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", mock.Mock(return_value=False))
+
+    with caplog.at_level(logging.INFO, logger="reminders"):
+        assert _generate(db) == 1
+    assert any("reason=email_unavailable" in m for m in caplog.messages)
+    # No email was attempted for a recipient we could not resolve.
+    assert email_mod.send_reminder_email.call_count == 0
+
+
+def test_opted_out_logs_skip_reason(caplog, monkeypatch):
+    db = FakeDB()
+    _seed(db, prefs={"meeting_reminders": False})
+    _add_memory(db)
+    _add_meeting(db, "2026-08-30T15:00:00")
+
+    monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=True))
+    monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", mock.Mock(return_value=False))
+
+    with caplog.at_level(logging.INFO, logger="reminders"):
+        assert _generate(db) == 1
+    assert any("reason=opted_out" in m for m in caplog.messages)
     assert db.notifications.count_documents({"type": "meeting_reminder"}) == 1

@@ -215,14 +215,20 @@ def _user_email(user) -> str | None:
     with a plain ``email`` fallback for fixtures/legacy docs)."""
     if not user:
         return None
-    email = user.get("email") or ""
-    if not email:
-        try:
-            pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
-            email = pii.get("email") or ""
-        except Exception:
-            email = ""
-    return email.strip() or None
+    email = (user.get("email") or "").strip()
+    if email:
+        return email or None
+    try:
+        pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
+        email = (pii.get("email") or "").strip()
+    except Exception:
+        logger.warning(
+            "meeting reminder email skipped: owner email could not be resolved "
+            "(decryption failed) user=%s",
+            user.get("_id"),
+        )
+        return None
+    return email or None
 
 
 def _meeting_reminders_enabled(user) -> bool:
@@ -298,12 +304,18 @@ def _deliver_reminder_channels(db, org_id, meeting, it, stage):
     """
     user = _meeting_owner(db, org_id, meeting)
     if not user:
+        logger.info(
+            "meeting_reminder_email status=skipped reason=owner_not_found "
+            "meeting_id=%s org_id=%s stage=%s",
+            meeting.get("_id"), org_id, stage,
+        )
         return {"ok": True, "wanted": 0, "email_sent": False,
                 "whatsapp_sent": False, "errors": []}
     if not _meeting_reminders_enabled(user):
-        logger.debug(
-            "reminder_email=skipped reason=opt_out user=%s meeting=%s stage=%s",
-            user.get("_id"), meeting.get("_id"), stage,
+        logger.info(
+            "meeting_reminder_email status=skipped reason=opted_out "
+            "meeting_id=%s org_id=%s stage=%s",
+            meeting.get("_id"), org_id, stage,
         )
         return {"ok": True, "wanted": 0, "email_sent": False,
                 "whatsapp_sent": False, "errors": []}
@@ -335,16 +347,28 @@ def _deliver_reminder_channels(db, org_id, meeting, it, stage):
     owner_email = _user_email(user)
     if owner_email:
         try:
-            email_service.send_reminder_email(
+            email_sent = bool(email_service.send_reminder_email(
                 owner_email, employee_name, meeting_time, summary, stage
-            )
-            email_sent = True
+            ))
         except Exception:
             logger.exception(
-                "reminder_email=failed meeting=%s stage=%s recipient=%s",
-                meeting.get("_id"), stage, owner_email,
+                "meeting_reminder_email status=failed stage=%s meeting_id=%s org_id=%s",
+                stage, meeting.get("_id"), org_id,
             )
+            email_sent = False
+        if email_sent:
+            logger.info(
+                "meeting_reminder_email status=sent stage=%s meeting_id=%s org_id=%s",
+                stage, meeting.get("_id"), org_id,
+            )
+        else:
             errors.append("email")
+    else:
+        logger.info(
+            "meeting_reminder_email status=skipped reason=email_unavailable "
+            "stage=%s meeting_id=%s org_id=%s",
+            stage, meeting.get("_id"), org_id,
+        )
 
     phone = _reminder_phone_number(user)
     if phone:

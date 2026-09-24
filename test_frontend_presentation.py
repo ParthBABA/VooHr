@@ -87,6 +87,8 @@ class PresentationTests(unittest.TestCase):
         # The person card renders upcoming / history / missed entries with deletes.
         self.assertIn("mtCardMeetings(p)", source)
         self.assertIn("mtCardMeetings", source)
+        self.assertIn("meeting_records", source)
+        self.assertIn("recordLabel", source)
         # Cards are re-wired after every render.
         self.assertIn("mtWireDeleteMeeting(document);", source)
         # The confirm dialog gates the DELETE request: the ask must be awaited

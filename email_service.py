@@ -410,17 +410,17 @@ def send_reminder_email(
     sender_email = os.environ.get("BREVO_SENDER_EMAIL", "")
     if not api_key or not sender_email:
         logger.error(
-            "email_failed=missing_config recipient=%s kind=meeting_reminder "
+            "email_failed=missing_config recipient_set=%s kind=meeting_reminder "
             "api_key_set=%s sender_email_set=%s",
-            to_email,
+            bool(to_email),
             bool(api_key),
             bool(sender_email),
         )
         return False
     if not _SENDER_RE.match(sender_email):
         logger.error(
-            "email_failed=invalid_sender_format recipient=%s sender=%s",
-            to_email,
+            "email_failed=invalid_sender_format recipient_set=%s sender=%s",
+            bool(to_email),
             sender_email,
         )
         return False
@@ -454,15 +454,15 @@ def send_reminder_email(
         )
     except requests.Timeout:
         logger.error(
-            "email_failed=timeout recipient=%s url=%s kind=meeting_reminder",
-            to_email,
+            "email_failed=timeout recipient_set=%s url=%s kind=meeting_reminder",
+            bool(to_email),
             BREVO_API_URL,
         )
         return False
     except requests.RequestException as exc:
         logger.error(
-            "email_failed=network recipient=%s url=%s error=%s",
-            to_email,
+            "email_failed=network recipient_set=%s url=%s error=%s",
+            bool(to_email),
             BREVO_API_URL,
             exc,
         )
@@ -470,17 +470,17 @@ def send_reminder_email(
 
     if not resp.ok:
         logger.error(
-            "email_failed=api_error status=%s recipient=%s kind=meeting_reminder body=%s",
+            "email_failed=api_error status=%s recipient_set=%s kind=meeting_reminder body=%s",
             resp.status_code,
-            to_email,
+            bool(to_email),
             _brevo_error_message(resp),
         )
         return False
 
     logger.info(
-        "email_sent provider=brevo status=%s recipient=%s kind=meeting_reminder stage=%s",
+        "email_sent provider=brevo status=%s recipient_set=%s kind=meeting_reminder stage=%s",
         resp.status_code,
-        to_email,
+        bool(to_email),
         stage,
     )
     return True

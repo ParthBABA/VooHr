@@ -495,6 +495,17 @@ def test_dashboard_swept_meeting_in_history_same_load(client, fake):
     assert all(m["status"] != "scheduled" for m in row["meeting_history"])
 
 
+def test_dashboard_exposes_scheduled_meeting_inside_missed_grace(client, fake):
+    now = datetime.now(timezone.utc)
+    mid = _insert_meeting(fake, "just ended 1:1", now - timedelta(minutes=10))
+
+    d = client.get("/api/meetings/dashboard").get_json()
+    row = next(p for p in d["people"] if p["id"] == EMP_1)
+    assert row["next_meeting"] is None
+    assert row["meeting_history"] == []
+    assert [m["id"] for m in row["meeting_records"]] == [str(mid)]
+
+
 def test_dashboard_no_next_meeting_when_only_past_scheduled(client, fake):
     now = datetime.now(timezone.utc)
     _insert_meeting(fake, "old 1:1", now - timedelta(days=7))

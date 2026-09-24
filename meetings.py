@@ -437,6 +437,15 @@ def meetings_dashboard():
             "next_meeting": _meeting_to_json(next_meeting) if next_meeting else None,
             "last_missed": _meeting_to_json(last_missed) if last_missed else None,
             "meeting_history": [_meeting_to_json(mk) for mk in history_by_emp.get(eid, [])],
+            # Keep every meeting record reachable from the board.  The
+            # selector fields above intentionally omit scheduled meetings in
+            # the missed grace window, but those records must still be
+            # visible and deletable.
+            "meeting_records": [
+                _meeting_to_json(mk)
+                for mk in meetings
+                if str(mk.get("employee_id")) == eid
+            ],
             "previous_session": {
                 "session_id": str(prev["_id"]) if prev else None,
                 "created_at": prev["created_at"].isoformat() if prev else None,
@@ -457,7 +466,10 @@ def meetings_dashboard():
         m = p["next_meeting"]
         return m is not None and m["scheduled_at"] is not None
 
-    people = [p for p in people if p["next_meeting"] or p["last_missed"] or has_followup(p)]
+    people = [
+        p for p in people
+        if p["meeting_records"] or p["next_meeting"] or p["last_missed"] or has_followup(p)
+    ]
     people.sort(key=lambda p: (p["employee"]["name"] or "").lower())
 
     # Deterministic memory surfacing: for each employee with an upcoming

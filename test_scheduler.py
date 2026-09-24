@@ -5,7 +5,7 @@ Uses the same hand-rolled in-memory Mongo facade idiom as the rest of the
 suite (no live DB). Verifies that run_reminder_sweep()
 
   - acquires the scheduler_locks lock and runs ensure_reminder_notifications()
-    for every org when no lock exists yet,
+    and retry_pending_deliveries() for every org when no lock exists yet,
   - skips cleanly (no reminder generation at all) when another process already
     holds a fresh lock, and
   - reclaims an expired/stale lock and runs the sweep again.
@@ -151,6 +151,10 @@ def _spy_generation(monkeypatch):
     monkeypatch.setattr(
         scheduler_mod.reminders, "ensure_reminder_notifications", fake_gen
     )
+    monkeypatch.setattr(
+        scheduler_mod.reminders, "retry_pending_deliveries",
+        lambda db, org_id, now=None: 0,
+    )
     return calls
 
 
@@ -159,7 +163,7 @@ def test_acquires_lock_and_sweeps_every_org(fake, monkeypatch):
 
     result = scheduler_mod.run_reminder_sweep(fake, NOW)
 
-    assert result == {"acquired": True, "orgs": 2, "created": 2}
+    assert result == {"acquired": True, "orgs": 2, "created": 2, "retried": 0}
     assert calls == [ORG_A, ORG_B]
 
     lock = fake.scheduler_locks.find_one({"job": scheduler_mod.JOB_RUN_KEY})
@@ -176,7 +180,7 @@ def test_skips_when_fresh_lock_held_by_another_process(fake, monkeypatch):
 
     result = scheduler_mod.run_reminder_sweep(fake, NOW + timedelta(minutes=1))
 
-    assert result == {"acquired": False, "orgs": 0, "created": 0}
+    assert result == {"acquired": False, "orgs": 0, "created": 0, "retried": 0}
     assert calls == []
 
     # The other worker's lock is untouched — we neither refreshed nor replaced it.
@@ -226,6 +230,36 @@ def test_single_broken_org_does_not_stop_the_sweep(fake, monkeypatch):
     assert result["orgs"] == 2
     assert result["created"] == 1
     assert calls == [ORG_A, ORG_B]
+
+
+def test_run_reminder_sweep_also_retries_failed_deliveries(fake, monkeypatch):
+    created = []
+
+    def fake_gen(db, org_id, now=None):
+        created.append(str(org_id))
+        return 1
+
+    retry_calls = []
+
+    def fake_retry(db, org_id, now=None):
+        retry_calls.append(str(org_id))
+        return 1
+
+    monkeypatch.setattr(
+        scheduler_mod.reminders, "ensure_reminder_notifications", fake_gen
+    )
+    monkeypatch.setattr(
+        scheduler_mod.reminders, "retry_pending_deliveries", fake_retry
+    )
+
+    result = scheduler_mod.run_reminder_sweep(fake, NOW)
+
+    assert result["acquired"] is True
+    assert result["orgs"] == 2
+    assert result["created"] == 2
+    assert result["retried"] == 2
+    assert created == [ORG_A, ORG_B]
+    assert retry_calls == [ORG_A, ORG_B]
 
 
 def test_start_scheduler_is_guarded_against_double_registration(monkeypatch):
