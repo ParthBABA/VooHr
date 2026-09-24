@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VooVr · Meeting Tracker</title>
+<!-- shared-head -->
+<style>
+  /* ─────────────────────────────────────────────────────────────
+     VooVr Meeting Tracker — rebuild (tk-*).
+     Uses only the shared design tokens from style.css.
+     ───────────────────────────────────────────────────────────── */
+  .tk-root{
+    --tk-violet:#8B5CF6;
+    --tk-cyan:#60A5FA;
+    --tk-teal:#34D399;
+    --tk-amber:#FBBF24;
+    --tk-red:#F87171;
+    --tk-slate:#94A3B8;
+    --tk-grad:linear-gradient(135deg,var(--tk-violet),var(--tk-cyan));
+  }
+
+  /* ── Summary metrics ─────────────────────────────────────── */
+  .tk-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0.8rem;margin:0 0 1.8rem;}
+  .tk-metric{position:relative;display:flex;align-items:center;gap:0.8rem;background:var(--ink);border:1px solid var(--border);border-radius:12px;padding:1rem 1.05rem;overflow:hidden;transition:border-color .25s ease,transform .25s ease;}
+  .tk-metric::before{content:'';position:absolute;inset:0 auto 0 0;width:3px;background:var(--tk-grad);opacity:.85;}
+  .tk-metric:hover{border-color:var(--border-lit);transform:translateY(-2px);}
+  .tk-m-ic{flex:0 0 auto;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--ivory);background:linear-gradient(135deg,rgba(139,92,246,.22),rgba(96,165,250,.18));border:1px solid var(--border-lit);}
+  .tk-m-ic svg{width:18px;height:18px;opacity:.9;}
+  .tk-m-val{font-family:var(--font-lato);font-weight:900;font-size:1.5rem;line-height:1;color:var(--ivory);letter-spacing:-0.02em;}
+  .tk-m-lbl{font-family:var(--font-lato);font-weight:700;font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ivory-dim);margin-top:.32rem;}
+  .tk-m--amber::before{background:linear-gradient(135deg,var(--tk-amber),#F97316);}
+  .tk-m--teal::before{background:linear-gradient(135deg,var(--tk-teal),#22D3EE);}
+  .tk-m--red::before{background:linear-gradient(135deg,var(--tk-red),#FB7185);}
+  .tk-m--slate::before{background:linear-gradient(135deg,var(--tk-slate),#A5B4FC);}
+
+  /* ── Toolbar ─────────────────────────────────────────────── */
+  .tk-toolbar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin:0 0 1.7rem;}
+  .tk-count{font-family:var(--font-m);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ivory-faint);margin-right:auto;}
+  .tk-count b{color:var(--ivory);font-weight:700;}
+  .tk-chips{display:flex;gap:.45rem;flex-wrap:wrap;}
+  .tk-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.48rem .85rem;background:var(--surface);border:1px solid var(--border);color:var(--ivory-dim);font-family:var(--font-m);font-size:.7rem;letter-spacing:.04em;cursor:pointer;border-radius:999px;transition:all .2s ease;white-space:nowrap;}
+  .tk-pill:hover{border-color:var(--border-lit);color:var(--ivory);}
+  .tk-pill.active{background:var(--tk-grad);border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(139,92,246,.28);}
+  .tk-pill.active .tk-dot{background:#fff;}
+  .tk-dot{width:6px;height:6px;border-radius:50%;background:var(--ivory-faint);}
+  .tk-search{display:flex;align-items:center;gap:.5rem;padding:.5rem .85rem;background:var(--surface);border:1px solid var(--border);border-radius:999px;min-width:220px;max-width:300px;transition:border-color .2s ease;}
+  .tk-search:focus-within{border-color:var(--border-lit);box-shadow:0 0 0 3px rgba(139,92,246,.12);}
+  .tk-search svg{opacity:.45;flex-shrink:0;}
+  .tk-search input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--ivory);font-family:var(--font-m);font-size:.75rem;}
+  .tk-search input::placeholder{color:var(--ivory-faint);}
+
+  /* ── Sections ────────────────────────────────────────────── */
+  .tk-sec{margin:0 0 2.4rem;}
+  .tk-sec-head{display:flex;align-items:center;gap:.75rem;margin:0 0 1rem;}
+  .tk-sec-eyebrow{font-family:var(--font-m);font-size:.62rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ivory-dim);}
+  .tk-sec-rule{flex:1;height:1px;background:var(--border);}
+  .tk-sec-chip{font-family:var(--font-m);font-size:.66rem;color:var(--ivory-faint);padding:.2rem .65rem;border:1px solid var(--border);border-radius:999px;}
+
+  /* ── Cards ───────────────────────────────────────────────── */
+  .tk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:.9rem;}
+  .tk-card{position:relative;display:flex;flex-direction:column;gap:.9rem;background:var(--ink);border:1px solid var(--border);border-radius:14px;padding:1.15rem 1.2rem 1.05rem;overflow:hidden;transition:border-color .25s ease,transform .25s ease,box-shadow .25s ease;animation:tkUp .35s ease both;}
+  @keyframes tkUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  .tk-card:hover{border-color:var(--border-lit);transform:translateY(-2px);box-shadow:var(--shadow-md);}
+  .tk-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--tk-grad);opacity:.8;}
+  .tk-card.tk--missed::before,.tk-card.tk--follow::before{background:linear-gradient(135deg,var(--tk-violet),var(--tk-cyan));}
+  .tk-card-head{display:flex;align-items:center;gap:.85rem;}
+  .tk-av{flex:0 0 auto;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-lato);font-weight:800;font-size:.92rem;color:var(--void);background:linear-gradient(135deg,var(--a1,#8B5CF6),var(--a2,#60A5FA));box-shadow:0 4px 12px rgba(0,0,0,.35);}
+  .tk-who{flex:1;min-width:0;}
+  .tk-name{font-family:var(--font-lato);font-weight:700;font-size:.98rem;color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tk-role{font-family:var(--font-m);font-size:.67rem;color:var(--ivory-faint);letter-spacing:.03em;margin-top:.14rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tk-pill-s{flex-shrink:0;display:inline-flex;align-items:center;gap:.45rem;font-family:var(--font-m);font-weight:700;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;padding:.28rem .7rem;border-radius:999px;white-space:nowrap;}
+  .tk--today .tk-pill-s{color:var(--tk-amber);background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);}
+  .tk--follow .tk-pill-s{color:var(--tk-violet);background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.35);}
+  .tk--hist .tk-pill-s{color:var(--tk-slate);background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.35);}
+  .tk--up .tk-pill-s{color:var(--tk-teal);background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.35);}
+
+  /* Primary meeting strip */
+  .tk-primary{padding:.85rem .95rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;gap:.45rem;}
+  .tk-primary--none{border-style:dashed;color:var(--ivory-faint);font-family:var(--font-m);font-size:.72rem;font-style:italic;flex-direction:row;}
+  .tk-pr-top{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;}
+  .tk-pr-label{font-family:var(--font-m);font-size:.56rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tk-cyan);}
+  .tk-pr-title{font-family:var(--font-lato);font-weight:700;font-size:.88rem;color:var(--ivory);line-height:1.4;}
+  .tk-pr-when{font-family:var(--font-m);font-size:.7rem;color:var(--ivory-dim);display:flex;align-items:center;gap:.4rem;}
+  .tk-pr-when svg{width:12px;height:12px;opacity:.55;}
+
+  /* Meta grid (Owner / Manager / Promises / Follow-ups) */
+  .tk-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem;}
+  .tk-cell{background:var(--elevated);border:1px solid var(--border);border-radius:10px;padding:.6rem .75rem;min-width:0;}
+  .tk-cell-lbl{font-family:var(--font-m);font-size:.54rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tk-cyan);margin-bottom:.3rem;display:flex;align-items:center;gap:.35rem;}
+  .tk-cell-lbl svg{width:11px;height:11px;opacity:.7;}
+  .tk-cell-val{font-family:var(--font-lato);font-weight:600;font-size:.78rem;color:var(--ivory);line-height:1.4;word-break:break-word;}
+  .tk-cell-val.tk-muted{color:var(--ivory-faint);}
+  .tk-cell .tk-cnum{color:var(--tk-teal);font-weight:900;font-size:.95rem;}
+  .tk-cell.tk-overdue .tk-cnum{color:var(--tk-red);}
+
+  /* Open promises / follow-ups preview */
+  .tk-open{display:flex;flex-direction:column;gap:.45rem;}
+  .tk-open-item{display:flex;align-items:flex-start;gap:.55rem;font-size:.75rem;line-height:1.45;color:var(--ivory);min-width:0;}
+  .tk-open-tag{flex:0 0 auto;font-family:var(--font-m);font-size:.52rem;font-weight:800;letter-spacing:.1em;padding:.18rem .45rem;border-radius:5px;margin-top:.1rem;}
+  .tk-open-tag--commit{color:var(--tk-amber);background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);}
+  .tk-open-tag--follow{color:#38BDF8;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);}
+  .tk-open-txt{min-width:0;word-break:break-word;}
+  .tk-open-due{flex:0 0 auto;font-family:var(--font-m);font-size:.6rem;color:var(--ivory-faint);white-space:nowrap;}
+  .tk-open-due.overdue{color:var(--tk-red);}
+  .tk-open-more{font-family:var(--font-m);font-size:.62rem;color:var(--ivory-faint);}
+
+  /* Meetings · delete block (one row per real meeting record) */
+  .tk-meetings{margin-top:.15rem;padding:.8rem .9rem;background:var(--elevated);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;gap:.55rem;}
+  .tk-meetings-head{font-family:var(--font-m);font-size:.58rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tk-violet);display:flex;align-items:center;gap:.4rem;margin-bottom:.1rem;}
+  .tk-meetings-head svg{width:12px;height:12px;}
+  .tk-rec{display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;background:var(--ink);border:1px solid var(--border);border-radius:9px;flex-wrap:wrap;}
+  .tk-rec:hover{border-color:var(--border-lit);}
+  .tk-rec-main{flex:1 1 220px;min-width:0;display:flex;flex-direction:column;gap:.18rem;}
+  .tk-rec-title{font-family:var(--font-lato);font-weight:600;font-size:.8rem;color:var(--ivory);line-height:1.35;word-break:break-word;}
+  .tk-rec-when{font-family:var(--font-m);font-size:.64rem;color:var(--ivory-faint);}
+  .tk-rec-action{flex:0 0 auto;}
+
+  /* Status chips (per record) */
+  .tk-chip{display:inline-flex;align-items:center;gap:.35rem;font-family:var(--font-m);font-weight:700;font-size:.52rem;letter-spacing:.1em;text-transform:uppercase;padding:.16rem .5rem;border-radius:999px;white-space:nowrap;}
+  .tk-chip i{width:5px;height:5px;border-radius:50%;}
+  .tk-chip--scheduled{color:var(--tk-cyan);background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.35);} .tk-chip--scheduled i{background:var(--tk-cyan);}
+  .tk-chip--missed{color:var(--tk-slate);background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.35);} .tk-chip--missed i{background:var(--tk-slate);}
+  .tk-chip--completed{color:var(--tk-teal);background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.35);} .tk-chip--completed i{background:var(--tk-teal);}
+  .tk-chip--cancelled{color:var(--tk-red);background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.35);} .tk-chip--cancelled i{background:var(--tk-red);}
+  .tk-chip--other{color:var(--ivory-dim);background:var(--ivory-ghost);border:1px solid var(--border);} .tk-chip--other i{background:var(--ivory-dim);}
+
+  /* Card footer actions */
+  .tk-foot{display:flex;align-items:center;justify-content:flex-end;gap:.55rem;padding-top:.6rem;border-top:1px solid var(--border);flex-wrap:wrap;}
+
+  /* Delete button */
+  button.tk-del,.tk-del{display:inline-flex;align-items:center;gap:.45rem;font-weight:700;color:var(--tk-red);border-color:rgba(248,113,113,.35);}
+  button.tk-del:hover,.tk-del:hover{background:var(--tk-red);border-color:var(--tk-red);color:var(--void);box-shadow:0 0 14px rgba(248,113,113,.35);}
+  .tk-del svg{width:13px;height:13px;flex-shrink:0;}
+  .tk-del.is-busy{pointer-events:none;opacity:.75;}
+
+  /* Empty / loading / error */
+  .tk-state{padding:3rem 1.5rem;text-align:center;border:1px dashed var(--border);border-radius:14px;color:var(--ivory-faint);font-family:var(--font-m);font-size:.76rem;}
+  .tk-state svg{width:38px;height:38px;opacity:.4;margin-bottom:.8rem;}
+  .tk-state h3{font-family:var(--font-lato);font-weight:700;font-size:.9rem;color:var(--ivory);margin-bottom:.35rem;letter-spacing:0;text-transform:none;}
+  .tk-state p{font-size:.7rem;color:var(--ivory-faint);margin-bottom:1rem;}
+  .tk-spinner{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--tk-violet);border-radius:50%;margin:0 auto .9rem;animation:tkSpin .8s linear infinite;}
+  @keyframes tkSpin{to{transform:rotate(360deg);}}
+  .tk-hidden{display:none !important;}
+
+  /* Modal */
+  .tk-overlay{position:fixed;inset:0;background:rgba(6,8,12,.74);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:300;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .22s ease;}
+  .tk-overlay.is-open{opacity:1;pointer-events:all;}
+  .tk-modal{background:var(--ink);border:1px solid var(--border-lit);border-radius:16px;width:100%;max-width:660px;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);transform:translateY(10px) scale(.98);transition:transform .22s var(--ease-out);}
+  .tk-overlay.is-open .tk-modal{transform:none;}
+  .tk-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1.2rem 1.4rem;border-bottom:1px solid var(--border);}
+  .tk-modal-title{font-family:var(--font-lato);font-weight:800;font-size:1.08rem;color:var(--ivory);line-height:1.3;}
+  .tk-modal-sub{font-family:var(--font-m);font-size:.66rem;color:var(--ivory-faint);margin-top:.25rem;}
+  .tk-modal-x{background:transparent;border:1px solid var(--border);color:var(--ivory-dim);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:1.05rem;line-height:1;flex:0 0 auto;}
+  .tk-modal-x:hover{color:var(--ivory);border-color:var(--border-lit);}
+  .tk-modal-body{padding:1.3rem 1.4rem 1.4rem;overflow-y:auto;display:flex;flex-direction:column;gap:1.15rem;}
+  .tk-block{display:flex;flex-direction:column;gap:.55rem;}
+  .tk-block-title{font-family:var(--font-m);font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tk-cyan);}
+  .tk-dgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem .9rem;font-size:.78rem;color:var(--ivory-dim);line-height:1.6;}
+  .tk-dgrid b{color:var(--ivory);font-family:var(--font-lato);font-weight:600;}
+  .tk-mem-item{display:flex;gap:.65rem;align-items:flex-start;padding:.65rem .8rem;background:var(--surface);border:1px solid var(--border);border-radius:9px;font-size:.78rem;color:var(--ivory);line-height:1.5;word-break:break-word;}
+  .tk-mem-kind{flex:0 0 auto;font-family:var(--font-m);font-size:.5rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:.16rem .42rem;border-radius:5px;margin-top:.1rem;}
+  .tk-mem-kind--commit{color:var(--tk-amber);background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);}
+  .tk-mem-kind--follow{color:#38BDF8;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);}
+  .tk-mem-kind--opener{color:var(--tk-violet);background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);}
+  .tk-mem-kind--note{color:#A5B4FC;background:rgba(165,180,252,.12);border:1px solid rgba(165,180,252,.3);}
+  .tk-mem-kind--question{color:var(--tk-teal);background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);}
+  .tk-mem-body{flex:1;min-width:0;}
+  .tk-mem-meta{font-family:var(--font-m);font-size:.6rem;color:var(--ivory-faint);margin-top:.25rem;display:flex;gap:.5rem;flex-wrap:wrap;}
+  .tk-none{font-family:var(--font-m);font-size:.72rem;color:var(--ivory-faint);font-style:italic;}
+  .tk-danger{margin-top:.4rem;border:1px solid rgba(248,113,113,.4);border-radius:12px;background:rgba(248,113,113,.06);padding:1rem 1.05rem;display:flex;flex-direction:column;gap:.55rem;}
+  .tk-danger-title{font-family:var(--font-m);font-size:.62rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--tk-red);}
+  .tk-danger p{font-size:.72rem;color:var(--ivory-dim);line-height:1.55;}
+  .tk-danger .tk-del{width:100%;justify-content:center;min-height:40px;}
+
+  @media (prefers-reduced-motion: reduce){
+    .tk-card{animation:none;transition:none;}
+    .tk-modal,.tk-overlay{transition:none;}
+  }
+  @media (max-width:1280px){ .tk-metrics{grid-template-columns:repeat(3,minmax(0,1fr));} }
+  @media (max-width:900px){ .tk-grid{grid-template-columns:minmax(0,1fr);} }
+  @media (max-width:700px){
+    .tk-metrics{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .tk-search{min-width:100%;max-width:100%;order:99;}
+    .tk-meta{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+  }
+  @media (max-width:480px){
+    .tk-metrics{grid-template-columns:minmax(0,1fr);}
+    .tk-meta{grid-template-columns:minmax(0,1fr);}
+    .tk-dgrid{grid-template-columns:minmax(0,1fr);}
+  }
+</style>
+</head>
+<body>
+<div style="display:flex;min-height:100vh;">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar icon-only">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <span class="logo-mark">HR</span>
+        <span>VooVr</span>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Command Center</div>
+      <a href="/dashboard" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="/sync" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14"/></svg>
+        <span>Sync</span>
+      </a>
+      <a href="/sync/room" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+        <span>Sync Room</span>
+      </a>
+      <a href="/meeting-tracker" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="16" cy="18" r="1"/><circle cx="8" cy="18" r="1"/></svg>
+        <span>Meeting Tracker</span>
+      </a>
+      <a href="/settings" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span>Settings</span>
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar" id="userAvatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">User</div>
+        <div class="user-role" id="userRole">Admin</div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div>
+          <div class="page-title" id="pageTitle">Meeting Tracker</div>
+          <div class="breadcrumb" id="breadcrumbRow"><span>Dashboard</span> / <span>Meeting Tracker</span></div>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <button class="btn btn-gradient btn-sm" id="syncRoomBtn" title="Open Sync Room">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+          Sync Room
+        </button>
+        <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle light/dark theme" aria-label="Toggle theme">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="content-area tk-root" id="contentArea">
+      <div class="tk-metrics" id="tkMetrics"></div>
+
+      <div class="tk-toolbar">
+        <div class="tk-count">Showing <b id="tkShown">0</b> of <b id="tkTotal">0</b> people</div>
+        <div class="tk-chips" id="tkChips">
+          <button class="tk-pill active" data-filter="all">All</button>
+          <button class="tk-pill" data-filter="today"><i class="tk-dot" style="background:var(--tk-amber)"></i>Today</button>
+          <button class="tk-pill" data-filter="upcoming"><i class="tk-dot" style="background:var(--tk-cyan)"></i>Upcoming</button>
+          <button class="tk-pill" data-filter="follow"><i class="tk-dot" style="background:var(--tk-violet)"></i>Follow-ups</button>
+          <button class="tk-pill" data-filter="overdue"><i class="tk-dot" style="background:var(--tk-red)"></i>Overdue</button>
+          <button class="tk-pill" data-filter="missed"><i class="tk-dot" style="background:var(--tk-slate)"></i>Missed</button>
+          <button class="tk-pill" data-filter="completed"><i class="tk-dot" style="background:var(--tk-teal)"></i>Completed</button>
+        </div>
+        <div class="tk-search">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="tkSearch" placeholder="Search people, topics, promises…" autocomplete="off">
+        </div>
+      </div>
+
+      <div id="tkState"></div>
+
+      <div id="tkSections"></div>
+    </div>
+  </main>
+</div>
+
+<div id="tkOverlay" class="tk-overlay" aria-hidden="true"></div>
+
+<script src="/csrf.js"></script>
+<script src="/ui-feedback.js"></script>
+<script>
+'use strict';
+/* ─────────────────────────────────────────────────────────────────────
+   VooVr Meeting Tracker — rebuilt frontend.
+   Serves from the existing backend contract only:
+     • GET  /api/meetings/dashboard          → board (people/counters)
+     • GET  /api/me                          → signed-in user (identity)
+     • GET  /api/conversation-memory?emp/…   → memory context on demand
+     • DELETE /api/meetings/<id>             → delete an exact meeting
+   No new endpoints are introduced.
+   ───────────────────────────────────────────────────────────────────── */
+
+var tkData = null;        // raw dashboard payload
+var tkPeople = [];        // filtered/rendered people list
+var tkByEmp = {};         // emp id -> person
+var tkEmpById = {};       // emp id -> employee json (manager lookup)
+var tkUser = null;        // GET /api/me result (identity / owner)
+var tkFilter = 'all';
+var tkQuery = '';
+var tkMounted = false;
+
+/* ── Small helpers ─────────────────────────────────────────────── */
+function escHtml(str) {
+  if (str === null || str === undefined) return '';
+  var d = document.createElement('div');
+  d.appendChild(document.createTextNode(String(str)));
+  return d.innerHTML;
+}
+function $(id) { return document.getElementById(id); }
+function tkPad(n) { return (n < 10 ? '0' : '') + n; }
+var TK_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function tkTime(d) {
+  var h = d.getHours(), m = d.getMinutes(), ap = h < 12 ? 'AM' : 'PM';
+  h = h % 12; if (h === 0) h = 12;
+  return h + ':' + tkPad(m) + ' ' + ap;
+}
+function mtWhenTxt(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.getDate() + ' ' + TK_MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ' · ' + tkTime(d);
+}
+function tkDayLbl(iso) {
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  var now = new Date();
+  var same = now.getFullYear() === d.getFullYear() && now.getMonth() === d.getMonth() && now.getDate() === d.getDate();
+  var y = new Date(now); y.setDate(now.getDate() - 1);
+  var wasY = y.getFullYear() === d.getFullYear() && y.getMonth() === d.getMonth() && y.getDate() === d.getDate();
+  return same ? 'Today' : (wasY ? 'Yesterday' : TK_MONTHS[d.getMonth()] + ' ' + d.getDate());
+}
+function initials(name) {
+  return String(name || '?').trim().split(/\s+/).map(function (w) { return w.charAt(0); }).join('').slice(0, 2).toUpperCase() || '?';
+}
+var TK_ACCENTS = [
+  ['#8B5CF6', '#60A5FA'], ['#FBBF24', '#F97316'], ['#34D399', '#22D3EE'],
+  ['#F87171', '#FB7185'], ['#60A5FA', '#A78BFA'], ['#22D3EE', '#34D399'],
+  ['#A78BFA', '#F472B6'], ['#F97316', '#FBBF24'], ['#8B5CF6', '#34D399'],
+  ['#FB7185', '#FBBF24']
+];
+function tkAccent(id) {
+  var hash = 0, s = String(id || '');
+  for (var i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+  return TK_ACCENTS[hash % TK_ACCENTS.length];
+}
+function recordLabel(status) {
+  var s = String(status || 'scheduled').toLowerCase();
+  var map = { scheduled: 'Scheduled', missed: 'Missed', completed: 'Completed', cancelled: 'Cancelled' };
+  return map[s] || 'Record';
+}
+function tkStatusClass(status) {
+  var s = String(status || '').toLowerCase();
+  return { scheduled: 'tk-chip--scheduled', missed: 'tk-chip--missed', completed: 'tk-chip--completed', cancelled: 'tk-chip--cancelled' }[s] || 'tk-chip--other';
+}
+function tkStatusPill(status) {
+  return '<span class="tk-chip ' + tkStatusClass(status) + '"><i></i>' + escHtml(recordLabel(status)) + '</span>';
+}
+var TK_ICONS = {
+  cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
+  bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>'
+};
+
+/* ── Modal ─────────────────────────────────────────────────────── */
+function openModal(html) {
+  var ov = $('tkOverlay');
+  ov.innerHTML = '<div class="tk-modal" role="dialog" aria-modal="true" aria-labelledby="tkModalTitle">' + html + '</div>';
+  ov.setAttribute('aria-hidden', 'false');
+  ov.classList.add('is-open');
+  document.body.classList.add('tk-modal-open');
+  var x = ov.querySelector('.tk-modal-x');
+  if (x) x.focus();
+}
+function closeModal() {
+  var ov = $('tkOverlay');
+  if (!ov) return;
+  ov.classList.remove('is-open');
+  ov.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('tk-modal-open');
+  ov.innerHTML = '';
+}
+function tkModalShell(title, sub) {
+  return '<div class="tk-modal-head"><div><div id="tkModalTitle" class="tk-modal-title">' + title + '</div>' +
+    (sub ? '<div class="tk-modal-sub">' + sub + '</div>' : '') + '</div>' +
+    '<button type="button" class="tk-modal-x" aria-label="Close dialog">\u00d7</button></div>' +
+    '<div class="tk-modal-body">';
+}
+function tkModalClose(html) {
+  return html + '</div>';
+}
+
+/* ── Dashboard load ────────────────────────────────────────────── */
+function renderState(kind, title, msg) {
+  var box = $('tkState');
+  if (kind === 'loading') {
+    box.innerHTML = '<div class="tk-state"><div class="tk-spinner"></div><h3>Loading Meeting Tracker…</h3><p>' + escHtml(msg || '') + '</p></div>';
+  } else if (kind === 'error') {
+    box.innerHTML = '<div class="tk-state">' + TK_ICONS.alert + '<h3>' + escHtml(title || 'Something went wrong') + '</h3>' +
+      '<p>' + escHtml(msg || '') + '</p><button type="button" class="btn btn-outline btn-sm" id="tkRetry">Retry</button></div>';
+    var retry = $('tkRetry');
+    if (retry) retry.addEventListener('click', loadData);
+  } else {
+    box.innerHTML = '';
+  }
+}
+
+function loadData() {
+  renderState('loading', '', 'Fetching your meeting board…');
+  fetch('/api/meetings/dashboard', { credentials: 'same-origin' })
+    .then(function (res) {
+      if (res.status === 401) { window.location.href = '/signin'; throw new Error('unauthorized'); }
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function (data) {
+      tkData = data;
+      tkByEmp = {};
+      tkEmpById = {};
+      (data.people || []).forEach(function (p) { tkByEmp[p.id] = p; });
+      (data.employees || []).forEach(function (e) { tkEmpById[e.id] = e; });
+      tkRender();
+      $('tkSections').style.display = '';
+      if (!$('tkEmpty')) { /* guard */ }
+    })
+    .catch(function (err) {
+      if (err && err.message === 'unauthorized') return;
+      renderState('error', 'Could not load meetings', 'The board could not be fetched from the server. Check your connection and try again.');
+    });
+}
+
+function loadIdentity() {
+  fetch('/api/me', { credentials: 'same-origin' })
+    .then(function (res) { return res.ok ? res.json() : null; })
+    .then(function (data) {
+      if (!data) return;
+      tkUser = data;
+      var av = $('userAvatar'), nm = $('userName'), rl = $('userRole');
+      if (nm) nm.textContent = data.name || 'User';
+      if (rl) rl.textContent = (data.role === 'admin' ? 'Admin' : data.role === 'manager' ? 'Manager' : 'Member');
+      if (av) av.textContent = initials(data.name || 'U');
+    })
+    .catch(function () {});
+}
+
+/* ── Section classification ──────────────────────────────────── */
+function tkSection(p) {
+  var nm = p.next_meeting;
+  if (nm && nm.scheduled_at) {
+    var d = new Date(nm.scheduled_at);
+    if (!isNaN(d.getTime())) {
+      var today = new Date();
+      var same = today.getFullYear() === d.getFullYear() && today.getMonth() === d.getMonth() && today.getDate() === d.getDate();
+      if (same) return 'today';
+      if (d.getTime() >= Date.now()) return 'upcoming';
+    }
+  }
+  if ((p.counts.pending_followups || 0) > 0 || (p.counts.pending_commitments || 0) > 0 || (p.counts.overdue_followups || 0) > 0) return 'follow';
+  if (p.last_missed) return 'history';
+  if ((p.meeting_history || []).length > 0) return 'history';
+  if ((p.meeting_records || []).length > 0) return 'history';
+  return 'follow';
+}
+function tkOwner() {
+  return tkUser && tkUser.name ? tkUser.name : (tkUser && tkUser.email ? tkUser.email : 'HR owner');
+}
+function tkManager(p) {
+  var rid = p.employee.reports_to;
+  if (rid && tkEmpById[rid]) return tkEmpById[rid].name || '—';
+  return '—';
+}
+
+/* ── Card pieces ──────────────────────────────────────────────── */
+function tkPrimaryBlock(p, sec) {
+  var nm = p.next_meeting;
+  if (sec === 'follow' || (!nm && !p.last_missed)) {
+    return '<div class="tk-primary tk-primary--none">No upcoming meeting scheduled</div>';
+  }
+  var meet = nm || p.last_missed;
+  var label = sec === 'today' ? 'Today\u2019s meeting' : (meet.status === 'missed' ? 'Missed meeting' : 'Upcoming meeting');
+  return '<div class="tk-primary">' +
+    '<div class="tk-pr-top"><span class="tk-pr-label">' + escHtml(label) + '</span>' + tkStatusPill(meet.status) + '</div>' +
+    '<div class="tk-pr-title">' + escHtml(meet.title || '\u2014') + '</div>' +
+    '<div class="tk-pr-when">' + TK_ICONS.cal + '<span>' + escHtml(mtWhenTxt(meet.scheduled_at) || '\u2014') + '</span></div></div>';
+}
+function tkOpenPreview(p) {
+  var items = p.open_items || [];
+  if (!items.length) return '';
+  var rows = '';
+  for (var i = 0; i < Math.min(3, items.length); i++) {
+    var it = items[i];
+    var ov = it.status === 'OVERDUE';
+    rows += '<div class="tk-open-item">' +
+      '<span class="tk-open-tag tk-open-tag--' + (it.type === 'COMMITMENT' ? 'commit' : 'follow') + '">' + (it.type === 'COMMITMENT' ? 'Promise' : 'FU') + '</span>' +
+      '<span class="tk-open-txt">' + escHtml(it.content || '') + '</span>' +
+      '<span class="tk-open-due' + (ov ? ' overdue' : '') + '">' + (ov ? 'Overdue' : (it.due_at ? tkDayLbl(it.due_at) : '')) + '</span></div>';
+  }
+  var more = items.length > 3 ? '<span class="tk-open-more">+' + (items.length - 3) + ' more</span>' : '';
+  return '<div class="tk-open">' + rows + more + '</div>';
+}
+function mtCardMeetings(p) {
+  var recs = (p.meeting_records || []).slice().sort(function (a, b) {
+    var ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : 0;
+    var tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : 0;
+    return tb - ta;
+  });
+  if (!recs.length) return '';
+  var rows = '';
+  for (var i = 0; i < recs.length; i++) {
+    var m = recs[i];
+    var recordLabel = recordLabelOf(m.status);
+    rows += '<div class="tk-rec">' +
+      '<div class="tk-rec-main"><div class="tk-rec-title">' + escHtml(m.title || '\u2014') + '</div>' +
+      '<div class="tk-rec-when">' + escHtml(recordLabel) + ' · ' + escHtml(mtWhenTxt(m.scheduled_at) || '\u2014') + '</div></div>' +
+      '<div class="tk-rec-action">' + mtDelTrigger(m.id, 'Delete', '', m.title || '', mtWhenTxt(m.scheduled_at)) + '</div></div>';
+  }
+  return '<div class="tk-meetings"><div class="tk-meetings-head">' + TK_ICONS.list + 'Meetings</div>' + rows + '</div>';
+}
+function recordLabelOf(status) {
+  return recordLabel(status);
+}
+function tkCard(p) {
+  var sec = tkSection(p);
+  var acc = tkAccent(p.id);
+  var nc = p.counts || {};
+  var prom = nc.pending_commitments || 0;
+  var fu = nc.pending_followups || 0;
+  var ov = nc.overdue_followups || 0;
+  var histCount = (p.meeting_history || []).length;
+  var openItems = p.open_items || [];
+  var memBtn = '<button type="button" class="btn btn-outline btn-sm tk-mem" data-eid="' + escHtml(p.id) + '">All Memory</button>';
+  var histBtn = histCount > 0 ? '<button type="button" class="btn btn-outline btn-sm tk-hist" data-eid="' + escHtml(p.id) + '">History (' + histCount + ')</button>' : '';
+  return '<article class="tk-card tk--' + sec + '" data-eid="' + escHtml(p.id) + '">' +
+    '<div class="tk-card-head">' +
+      '<div class="tk-av" style="--a1:' + acc[0] + ';--a2:' + acc[1] + ';">' + escHtml(initials(p.employee.name)) + '</div>' +
+      '<div class="tk-who"><div class="tk-name">' + escHtml(p.employee.name) + '</div>' +
+      '<div class="tk-role">' + escHtml(p.employee.position || 'Position unknown') + (p.employee.department ? ' · ' + escHtml(p.employee.department) : '') + '</div></div>' +
+      '<span class="tk-pill-s">' + ({ today: 'Today', upcoming: 'Upcoming', follow: 'Follow-up', history: 'Missed / Completed' }[sec] || 'Upcoming') + '</span>' +
+    '</div>' +
+    tkPrimaryBlock(p, sec) +
+    '<div class="tk-meta">' +
+      '<div class="tk-cell"><div class="tk-cell-lbl">' + TK_ICONS.user + 'Owner</div><div class="tk-cell-val">' + escHtml(tkOwner()) + '</div></div>' +
+      '<div class="tk-cell"><div class="tk-cell-lbl">' + TK_ICONS.users + 'Manager</div><div class="tk-cell-val">' + escHtml(tkManager(p)) + '</div></div>' +
+      '<div class="tk-cell"><div class="tk-cell-lbl">' + TK_ICONS.check + 'Promises</div><div class="tk-cell-val' + (prom ? '' : ' tk-muted') + '"><span class="tk-cnum">' + prom + '</span>' + (prom ? ' open' : ' none open') + '</div></div>' +
+      '<div class="tk-cell' + (ov ? ' tk-overdue' : '') + '"><div class="tk-cell-lbl">' + TK_ICONS.chat + 'Follow-ups</div><div class="tk-cell-val' + (fu ? '' : ' tk-muted') + '"><span class="tk-cnum">' + fu + '</span>' + (ov ? ' (' + ov + ' overdue)' : ' open') + '</div></div>' +
+    '</div>' +
+    tkOpenPreview(p) +
+    mtCardMeetings(p) +
+    '<footer class="tk-foot">' +
+      '<button type="button" class="btn btn-gradient btn-sm tk-view" data-eid="' + escHtml(p.id) + '">View Meeting</button>' +
+      memBtn + histBtn +
+    '</footer>' +
+  '</article>';
+}
+
+/* ── Filters & matching ───────────────────────────────────────── */
+function tkAnyRecordToday(p) {
+  var recs = (p.meeting_records || []).concat(p.next_meeting ? [p.next_meeting] : []);
+  for (var i = 0; i < recs.length; i++) {
+    var m = recs[i];
+    if (m && m.scheduled_at) {
+      var d = new Date(m.scheduled_at);
+      if (!isNaN(d.getTime())) {
+        var now = new Date();
+        if (now.getFullYear() === d.getFullYear() && now.getMonth() === d.getMonth() && now.getDate() === d.getDate()) return true;
+      }
+    }
+  }
+  return false;
+}
+function tkAnyUpcoming(p) {
+  var recs = (p.meeting_records || []).concat(p.next_meeting ? [p.next_meeting] : []);
+  for (var i = 0; i < recs.length; i++) {
+    var m = recs[i];
+    if (m && m.scheduled_at) {
+      var d = new Date(m.scheduled_at);
+      if (!isNaN(d.getTime()) && d.getTime() >= Date.now()) return true;
+    }
+  }
+  return false;
+}
+function tkAnyStatus(p, status) {
+  var recs = (p.meeting_records || []).concat(p.next_meeting ? [p.next_meeting] : [], p.last_missed ? [p.last_missed] : []);
+  for (var i = 0; i < recs.length; i++) {
+    if (recs[i] && recs[i].status === status) return true;
+  }
+  return false;
+}
+function tkFitsFilter(p) {
+  if (tkFilter === 'all') return true;
+  switch (tkFilter) {
+    case 'today': return tkAnyRecordToday(p);
+    case 'upcoming': return tkAnyUpcoming(p);
+    case 'follow': return ((p.counts.pending_followups || 0) + (p.counts.pending_commitments || 0)) > 0;
+    case 'overdue': return (p.counts.overdue_followups || 0) > 0;
+    case 'missed': return !!(p.last_missed) || tkAnyStatus(p, 'missed');
+    case 'completed': return tkAnyStatus(p, 'completed');
+    default: return true;
+  }
+}
+function tkMatchesQuery(p) {
+  if (!tkQuery) return true;
+  var q = tkQuery.toLowerCase();
+  var hay = [p.employee.name, p.employee.position, p.employee.department, p.employee.employee_id, tkManager(p), tkOwner()];
+  var recs = (p.meeting_records || []).concat(p.next_meeting ? [p.next_meeting] : [], p.last_missed ? [p.last_missed] : []);
+  for (var i = 0; i < recs.length; i++) { if (recs[i]) hay.push(recs[i].title, recs[i].status || ''); }
+  var items = p.open_items || [];
+  for (var j = 0; j < items.length; j++) { hay.push(items[j].content || '', items[j].status || ''); }
+  for (var k = 0; k < hay.length; k++) {
+    if (hay[k] && String(hay[k]).toLowerCase().indexOf(q) !== -1) return true;
+  }
+  return false;
+}
+
+/* ── Board render ─────────────────────────────────────────────── */
+var TK_SECMETA = {
+  today: { title: 'Today\u2019s Meetings', cls: '' },
+  upcoming: { title: 'Upcoming Meetings', cls: '' },
+  follow: { title: 'Follow-ups &amp; Promises', cls: '' },
+  history: { title: 'Missed / Completed', cls: '' }
+};
+function tkMetrics() {
+  var today = 0, up = 0, follow = 0, prom = 0, overdue = 0, missed = 0;
+  (tkData.people || []).forEach(function (p) {
+    var s = tkSection(p);
+    if (s === 'today') today++;
+    if (s === 'upcoming') up++;
+    if (s === 'follow') follow++;
+    if ((p.counts.pending_followups || 0) > 0 || (p.counts.pending_commitments || 0) > 0) prom = prom; /* follow hub counted by pledges below */
+    prom += (p.counts.pending_commitments || 0);
+    overdue += (p.counts.overdue_followups || 0);
+    if (p.last_missed || tkAnyStatus(p, 'missed')) missed++;
+  });
+  var tiles = [
+    { v: (tkData.counters && tkData.counters.today) || today, l: 'Today\u2019s Meetings', c: '', i: TK_ICONS.cal },
+    { v: up, l: 'Upcoming Meetings', c: 'tk-m--teal', i: TK_ICONS.clock },
+    { v: (tkData.counters && tkData.counters.pending_followups) || follow, l: 'Open Follow-ups', c: 'tk-m--amber', i: TK_ICONS.chat },
+    { v: prom, l: 'Open Promises', c: 'tk-m--teal', i: TK_ICONS.check },
+    { v: overdue, l: 'Overdue Items', c: 'tk-m--red', i: TK_ICONS.alert },
+    { v: missed, l: 'Missed Meetings', c: 'tk-m--slate', i: TK_ICONS.bell }
+  ];
+  var html = '';
+  for (var i = 0; i < tiles.length; i++) {
+    html += '<div class="tk-metric ' + tiles[i].c + '"><div class="tk-m-ic">' + tiles[i].i + '</div>' +
+      '<div><div class="tk-m-val">' + tiles[i].v + '</div><div class="tk-m-lbl">' + tiles[i].l + '</div></div></div>';
+  }
+  $('tkMetrics').innerHTML = html;
+}
+function tkRender() {
+  tkMetrics();
+  tkPeople = (tkData.people || []).filter(function (p) { return tkFitsFilter(p) && tkMatchesQuery(p); });
+  $('tkShown').textContent = tkPeople.length;
+  $('tkTotal').textContent = (tkData.people || []).length;
+
+  if (!tkPeople.length) {
+    $('tkSections').innerHTML = '<div class="tk-state">' + TK_ICONS.list + '<h3>No people match here</h3><p>' +
+      (tkQuery ? 'No employee or meeting matches “' + escHtml(tkQuery) + '”.' : 'Nothing matches this filter yet.') + '</p></div>';
+    return;
+  }
+
+  var grouped = { today: [], upcoming: [], follow: [], history: [] };
+  tkPeople.forEach(function (p) { grouped[tkSection(p)].push(p); });
+  var order = { today: 0, upcoming: 1, follow: 2, history: 3 };
+  var named = ['today', 'upcoming', 'follow', 'history'].sort(function (a, b) { return order[a] - order[b]; });
+
+  var html = '';
+  for (var i = 0; i < named.length; i++) {
+    var key = named[i], list = grouped[key];
+    if (!list.length) continue;
+    list.sort(function (a, b) { return String(a.employee.name || '').localeCompare(String(b.employee.name || '')); });
+    var cards = '';
+    for (var j = 0; j < list.length; j++) cards += tkCard(list[j]);
+    html += '<section class="tk-sec" id="tkSec-' + key + '">' +
+      '<div class="tk-sec-head"><span class="tk-sec-eyebrow">' + TK_SECMETA[key].title + '</span>' +
+      '<span class="tk-sec-rule"></span><span class="tk-sec-chip">' + list.length + '</span></div>' +
+      '<div class="tk-grid protected-text">' + cards + '</div></section>';
+  }
+  $('tkSections').innerHTML = html;
+  mtWireDeleteMeeting(document);
+}
+
+/* ── Delete flow (existing DELETE /api/meetings/<id>) ─────────── */
+function mtDelTrigger(mid, label, cls, title, when) {
+  return '<button type="button" class="btn btn-outline btn-sm tk-del ' + (cls || '') + '" ' +
+    'data-mid="' + escHtml(mid) + '" data-title="' + escHtml(title || '') + '" data-when="' + escHtml(when || '') + '" ' +
+    'aria-label="Delete meeting" title="Delete meeting: ' + escHtml(title || '') + '">' +
+    TK_ICONS.trash + '<span>Delete Meeting</span></button>';
+}
+function mtDeleteMeeting(mid, btn) {
+  if (!mid) return;
+  var title = btn ? (btn.getAttribute('data-title') || '') : '';
+  var confirmResult = false;
+  if (window.VooVrUI) {
+    VooVrUI.ask('Delete this meeting' + (title ? ' "' + title + '"' : '') + '? This permanently removes the meeting record and cannot be undone.', {
+      title: 'Delete meeting',
+      accept: 'Delete'
+    }).then(function (ok) {
+      confirmResult = !!ok;
+      if (!confirmResult) return;
+      mtDoDeleteMeeting(mid, btn);
+    });
+  } else {
+    confirmResult = true;
+    if (!confirmResult) return;
+    mtDoDeleteMeeting(mid, btn);
+  }
+}
+function mtDoDeleteMeeting(mid, btn) {
+  if (btn) {
+    btn.classList.add('is-busy');
+    btn.disabled = true;
+    var span = btn.querySelector('span');
+    if (span) span.textContent = 'Deleting\u2026';
+  }
+  if (window.csrfTokenReady) {
+    window.csrfTokenReady.catch(function () {});
+  }
+  fetch('/api/meetings/' + encodeURIComponent(mid), {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin'
+  }).then(function (res) {
+    if (res.ok) {
+      closeModal();
+      VooVrUI.show('Meeting deleted.', { kind: 'success' });
+      loadData();
+      return;
+    }
+    var restore = function () {
+      if (btn) { btn.classList.remove('is-busy'); btn.disabled = false; var sp = btn.querySelector('span'); if (sp) sp.textContent = 'Delete Meeting'; }
+    };
+    if (res.status === 403) {
+      restore();
+      VooVrUI.show('You don\u2019t have permission to delete this meeting', { kind: 'error' });
+    } else if (res.status === 404) {
+      restore();
+      VooVrUI.show('Meeting already deleted.', { kind: 'error' });
+      loadData();
+    } else {
+      restore();
+      VooVrUI.show('Could not delete this meeting. Please try again.', { kind: 'error' });
+    }
+  }).catch(function () {
+    var restore = function () {
+      if (btn) { btn.classList.remove('is-busy'); btn.disabled = false; var sp = btn.querySelector('span'); if (sp) sp.textContent = 'Delete Meeting'; }
+    };
+    restore();
+    VooVrUI.show('Could not delete this meeting. Please try again.', { kind: 'error' });
+  });
+}
+function mtWireDeleteMeeting(scope) {
+  if (!scope || scope.__tkDelWired) return;
+  scope.__tkDelWired = 1;
+  scope.addEventListener('click', function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest('[data-mid]') : null;
+    if (!btn) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    mtDeleteMeeting(btn.getAttribute('data-mid'), btn);
+  });
+}
+
+/* ── Memory helpers ───────────────────────────────────────────── */
+function tkMemIcon(kind) {
+  return 'tk-mem-kind--' + String(kind || '').toLowerCase().replace(/[^a-z]/g, '') || 'tk-mem-kind--note';
+}
+function tkMemKind(kind) {
+  var map = { COMMITMENT: 'Promise', FOLLOW_UP: 'Follow-up', OPENER: 'Opener', NOTE: 'Note', QUESTION: 'Question' };
+  return map[kind] || kind;
+}
+function tkMemRows(items, activeSessionId) {
+  if (!items || !items.length) return '<span class="tk-none">No conversation memory on record yet.</span>';
+  var rows = '';
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    var inSession = activeSessionId && it.session_id === activeSessionId;
+    rows += '<div class="tk-mem-item">' +
+      '<span class="tk-mem-kind ' + tkMemIcon(it.type) + '">' + escHtml(tkMemKind(it.type)) + '</span>' +
+      '<div class="tk-mem-body"><div>' + escHtml(it.content || '') + '</div>' +
+      '<div class="tk-mem-meta"><span>' + escHtml(it.status || '') + '</span>' +
+      (it.due_at ? '<span>due ' + escHtml(mtWhenTxt(it.due_at)) + '</span>' : '') +
+      (inSession ? '<span style="color:var(--tk-violet)">linked session</span>' : '') +
+      '</div></div></div>';
+  }
+  return rows;
+}
+function tkFetchMemory(eid, cb) {
+  fetch('/api/conversation-memory?employee_id=' + encodeURIComponent(eid), { credentials: 'same-origin' })
+    .then(function (res) { return res.json(); })
+    .then(function (d) { cb(d.items || []); })
+    .catch(function () { cb([]); });
+}
+
+/* ── View Meeting detail modal ────────────────────────────────── */
+function mtOpenDetail(eid) {
+  var p = tkByEmp[eid];
+  if (!p) return;
+  var meet = p.next_meeting || p.last_missed || null;
+  var delMeet = meet;
+  if (!delMeet) {
+    var recOnly = (p.meeting_records || []).filter(function (m) { return m && m.id; });
+    recOnly.sort(function (a, b) {
+      var ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : 0;
+      var tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : 0;
+      return tb - ta;
+    });
+    delMeet = recOnly[0] || null;
+  }
+  var prev = p.previous_session || null;
+  var acc = tkAccent(p.id);
+  var name = p.employee.name, role = p.employee.position || 'HR';
+  var meetTxt = meet ? (meet.title || 'Meeting') + ' · ' + (meet.scheduled_at ? mtWhenTxt(meet.scheduled_at) : '') : 'No upcoming meeting';
+
+  var meetBlock = '';
+  if (meet) {
+    meetBlock =
+      '<div class="tk-block">' +
+        '<div class="tk-block-title">Meeting</div>' +
+        '<div class="tk-pr-top">' + tkStatusPill(meet.status) + '<span class="tk-pr-label">' + escHtml(meet.status === 'missed' ? 'Missed' : (meet.scheduled_at && tkDayLbl(meet.scheduled_at) === 'Today' ? 'Today' : 'Scheduled')) + '</span></div>' +
+        '<div class="tk-pr-title">' + escHtml(meet.title || '\u2014') + '</div>' +
+        '<div class="tk-pr-when">' + TK_ICONS.cal + '<span>' + escHtml(mtWhenTxt(meet.scheduled_at) || '\u2014') + '</span></div>' +
+        '<div class="tk-dgrid">' +
+          '<div><b>Employee ID</b><br>' + escHtml(p.employee.employee_id || '\u2014') + '</div>' +
+          '<div><b>Department</b><br>' + escHtml(p.employee.department || '\u2014') + '</div>' +
+          '<div><b>Owner</b><br>' + escHtml(tkOwner()) + '</div>' +
+          '<div><b>Manager</b><br>' + escHtml(tkManager(p)) + '</div>' +
+          '<div><b>Preparation</b><br>' + escHtml((meet.preparation_status || 'not_started').replace(/_/g, ' ')) + '</div>' +
+          '<div><b>Recorded</b><br>' + escHtml(mtWhenTxt(meet.created_at) || '\u2014') + '</div>' +
+        '</div>' +
+      '</div>';
+  } else {
+    meetBlock = '<div class="tk-block"><div class="tk-block-title">Meeting</div><span class="tk-none">No upcoming meeting scheduled.</span></div>';
+  }
+
+  var prevBlock = '';
+  if (prev && prev.session_id) {
+    prevBlock = '<div class="tk-block"><div class="tk-block-title">Previous Session</div>' +
+      '<div class="tk-mem-item"><span class="tk-mem-kind tk-mem-kind--note">Session</span>' +
+      '<div class="tk-mem-body"><div>' + escHtml(mtWhenTxt(prev.created_at) || 'Earlier session recorded') + '</div>' +
+      '<div class="tk-mem-meta"><span>#' + escHtml(String(prev.session_id).slice(0, 8)) + '</span></div></div></div></div>';
+  }
+
+  var meetingsBlock = mtCardMeetings(p);
+  var openBlock = '<div class="tk-block"><div class="tk-block-title">Open Promises &amp; Follow-ups</div>' + tkMemRows(p.open_items || []) + '</div>';
+
+  var danger = '<div class="tk-danger">' +
+    '<div class="tk-danger-title">Danger Zone</div>' +
+    '<p>' + (delMeet ? 'Permanently remove the meeting "' + escHtml(delMeet.title || '') + '" and its meeting record. This can\'t be undone.' : 'No meeting record is available to delete.') + '</p>' +
+    (delMeet ? mtDelTrigger(delMeet.id, 'Delete meeting', '', delMeet.title || '', mtWhenTxt(delMeet.scheduled_at)) : '') +
+    '</div>';
+
+  openModal(tkModalShell(
+    '<span class="tk-av" style="--a1:' + acc[0] + ';--a2:' + acc[1] + ';width:34px;height:34px;font-size:.72rem;display:inline-flex;vertical-align:middle;">' + escHtml(initials(name)) + '</span> ' + escHtml(name),
+    escHtml(role) + ' \u2014 ' + escHtml(meetTxt)
+  ) +
+    meetBlock +
+    '<div class="tk-block"><div class="tk-block-title">Conversation &amp; Memory Context</div><div id="tkMemHolder"><span class="tk-none">Loading memory…</span></div></div>' +
+    openBlock + prevBlock + meetingsBlock + danger +
+    tkModalClose(''));
+
+  var held = $('tkMemHolder');
+  tkFetchMemory(p.id, function (items) {
+    var activeSid = meet && meet.session_id ? meet.session_id : null;
+    var sorted = items.slice().sort(function (a, b) {
+      if ((a.status === 'OVERDUE') !== (b.status === 'OVERDUE')) return a.status === 'OVERDUE' ? -1 : 1;
+      return String(a.created_at || '').localeCompare(String(b.created_at || ''));
+    });
+    var filtered = [];
+    if (activeSid) {
+      filtered = sorted.filter(function (it) { return (it.session_id || null) === activeSid || !(it.session_id); });
+    } else {
+      filtered = sorted;
+    }
+    if (held) held.innerHTML = tkMemRows(filtered, activeSid);
+  });
+  mtWireDeleteMeeting(document);
+}
+
+/* ── All memory modal ─────────────────────────────────────────── */
+function mtOpenAllMemory(eid) {
+  var p = tkByEmp[eid];
+  if (!p) return;
+  var name = p.employee.name;
+  openModal(tkModalShell(escHtml(name) + ' \u2014 All Memory', escHtml(p.employee.position || '')) +
+    '<div id="tkMemHolder"><span class="tk-none">Loading memory…</span></div>' + tkModalClose(''));
+  var held = $('tkMemHolder');
+  tkFetchMemory(p.id, function (items) {
+    if (held) held.innerHTML = tkMemRows(items.slice().sort(function (a, b) { return String(a.created_at || '').localeCompare(String(b.created_at || '')); }), null);
+  });
+}
+
+/* ── History modal (non-scheduled meetings, deletable) ────────── */
+function mtOpenHistory(eid) {
+  var p = tkByEmp[eid];
+  if (!p) return;
+  var hist = p.meeting_history || [];
+  var rowWrap = '';
+  if (!hist.length) rowWrap = '<span class="tk-none">No past meetings on record.</span>';
+  for (var i = 0; i < hist.length; i++) {
+    var m = hist[i];
+    rowWrap += '<div class="tk-rec"><div class="tk-rec-main"><div class="tk-rec-title">' + escHtml(m.title || '\u2014') + '</div>' +
+      '<div class="tk-rec-when">' + escHtml(recordLabelOf(m.status)) + ' · ' + escHtml(mtWhenTxt(m.scheduled_at) || '\u2014') + '</div></div>' +
+      '<div class="tk-rec-action">' + mtDelTrigger(m.id, 'Delete', '', m.title || '', mtWhenTxt(m.scheduled_at)) + '</div></div>';
+  }
+  openModal(tkModalShell(escHtml(p.employee.name) + ' \u2014 Meeting History', escHtml(String(hist.length) + (hist.length === 1 ? ' past meeting' : ' past meetings'))) +
+    '<div class="tk-block">' + rowWrap + '</div>' + tkModalClose(''));
+  mtWireDeleteMeeting(document);
+}
+
+/* ── Shell wiring ─────────────────────────────────────────────── */
+function tkWireShell() {
+  if (tkMounted) return;
+  tkMounted = true;
+
+  var pills = document.querySelectorAll('#tkChips .tk-pill');
+  for (var i = 0; i < pills.length; i++) {
+    pills[i].addEventListener('click', function () {
+      tkFilter = this.getAttribute('data-filter');
+      for (var j = 0; j < pills.length; j++) pills[j].classList.toggle('active', pills[j] === this);
+      tkRender();
+    });
+  }
+  var search = $('tkSearch');
+  if (search) {
+    var t = null;
+    search.addEventListener('input', function () {
+      if (t) clearTimeout(t);
+      t = setTimeout(function () { tkQuery = search.value.trim(); tkRender(); }, 150);
+    });
+  }
+  document.addEventListener('click', function (ev) {
+    var t = ev.target;
+    var view = t && t.closest ? t.closest('.tk-view') : null;
+    var mem = t && t.closest ? t.closest('.tk-mem') : null;
+    var hist = t && t.closest ? t.closest('.tk-hist') : null;
+    if (view) { ev.preventDefault(); mtOpenDetail(view.getAttribute('data-eid')); return; }
+    if (mem) { ev.preventDefault(); mtOpenAllMemory(mem.getAttribute('data-eid')); return; }
+    if (hist) { ev.preventDefault(); mtOpenHistory(hist.getAttribute('data-eid')); return; }
+  });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') closeModal();
+  });
+  var ov = $('tkOverlay');
+  if (ov) {
+    ov.addEventListener('click', function (ev) { if (ev.target === ov) closeModal(); });
+    ov.addEventListener('click', function (ev) {
+      var x = ev.target.closest ? ev.target.closest('.tk-modal-x') : null;
+      if (x) closeModal();
+    });
+  }
+  var themeBtn = $('themeToggle');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+      var next = cur === 'light' ? 'dark' : 'light';
+      if (next === 'dark') document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.setAttribute('data-theme', 'light');
+      try { localStorage.setItem('voovr-theme', next); } catch (e) {}
+    });
+  }
+  var syncBtn = $('syncRoomBtn');
+  if (syncBtn) syncBtn.addEventListener('click', function () { window.location.href = '/sync/room'; });
+}
+document.addEventListener('DOMContentLoaded', function () {
+  tkWireShell();
+  loadData();
+  loadIdentity();
+});
+</script>
+</body>
+</html>
