@@ -72,6 +72,39 @@
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   }
 
+  // Swap an avatar back to its initials. Keeps the unread dot (it is a sibling
+  // of the image inside the avatar, and `textContent =` would wipe it).
+  function showInitials(avatar, n) {
+    var dot = avatar.querySelector('.notif-row__unread-dot');
+    avatar.textContent = initials(n);
+    if (dot) avatar.appendChild(dot);
+  }
+
+  // The 34px circular slot: the employee's real photo when the API supplied
+  // one, initials otherwise. The unread dot is always the last child so it
+  // stacks on top of whichever is showing.
+  function buildAvatar(n) {
+    var avatar = el('span', 'notif-row__avatar');
+    var photo = String((n && n.employee_photo) || '').trim();
+    if (photo) {
+      var img = document.createElement('img');
+      img.className = 'notif-row__photo';
+      // The name is already spelled out beside the row, so the picture is
+      // decorative — keep it out of the accessibility tree.
+      img.setAttribute('alt', '');
+      img.setAttribute('aria-hidden', 'true');
+      // A data-URL that fails to decode would otherwise leave a broken-image
+      // glyph in the slot; fall back to initials instead.
+      img.addEventListener('error', function () { showInitials(avatar, n); });
+      img.src = photo;
+      avatar.appendChild(img);
+    } else {
+      avatar.textContent = initials(n);
+    }
+    if (!n.read) avatar.appendChild(el('span', 'notif-row__unread-dot'));
+    return avatar;
+  }
+
   // The sentence shown next to the name.
   //   activity — the finishing line IS the message; there's no headline to lead
   //              with, and there may be no employee name at all.
@@ -105,8 +138,7 @@
     row.type = 'button';
     row.setAttribute('data-id', n.id);
 
-    var avatar = el('span', 'notif-row__avatar', initials(n));
-    if (!n.read) avatar.appendChild(el('span', 'notif-row__unread-dot'));
+    var avatar = buildAvatar(n);
     row.appendChild(avatar);
 
     var body = el('span', 'notif-row__body protected-text');
@@ -162,6 +194,7 @@
   var V = window.VooNotif;
   V.relTime = V.relTime || relTime;
   V.initials = initials;
+  V.buildNotifAvatar = buildAvatar;
   V.messageOf = messageOf;
   V.dayGroup = dayGroup;
   V.buildNotifRow = buildRow;

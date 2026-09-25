@@ -107,3 +107,82 @@ def test_notifications_page_no_longer_treats_non_activity_as_risk():
 def test_meeting_notifications_route_to_the_meeting_tracker():
     html = _page()
     assert "'/meeting-tracker'" in html
+
+
+# ── Employee photo on notification rows ────────────────────────────────────
+# The bell panel shows the employee's real avatar. Photos are inline base64
+# data-URLs, so the list endpoint only ships them when the caller opts in —
+# otherwise the hub's 200-row pages would carry megabytes they never render.
+
+PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD"
+
+
+def test_serializer_carries_the_employee_photo():
+    doc = {"_id": ObjectId(), "employee_id": ObjectId()}
+    out = notif_mod._notification_to_json(doc, "harshit rana", PHOTO)
+    assert out["employee_photo"] == PHOTO
+
+
+def test_serializer_photo_defaults_to_none_so_callers_are_unchanged():
+    """The two-argument call sites keep working and get no photo."""
+    out = notif_mod._notification_to_json({"_id": ObjectId()}, "harshit rana")
+    assert out["employee_photo"] is None
+
+
+def test_employee_identity_returns_name_and_photo_together(monkeypatch):
+    class _Employees:
+        def find_one(self, query):
+            return {"encrypted": b"blob", "wrapped_dek": "dek", "photo": PHOTO}
+
+    class _DB:
+        employees = _Employees()
+
+    monkeypatch.setattr(notif_mod, "decrypt_fields",
+                        lambda blob, dek: {"name": "harshit rana"})
+    name, photo = notif_mod._employee_identity(_DB(), str(ObjectId()), ObjectId())
+    assert name == "harshit rana"
+    assert photo == PHOTO
+
+
+def test_employee_identity_is_empty_without_an_employee():
+    """System notifications carry no employee_id — no lookup, no crash."""
+    assert notif_mod._employee_identity(None, str(ObjectId()), None) == ("", None)
+
+
+BELL_PAGES = (
+    "dashboard.html",
+    "notifications.html",
+    "conversation-workspace.html",
+    "risk-drift.html",
+)
+
+
+@pytest.mark.parametrize("page", BELL_PAGES)
+def test_bell_requests_photos_from_the_notifications_endpoint(page):
+    html = (ROOT / "static" / page).read_text(encoding="utf-8")
+    assert "/api/notifications?limit=5&include_photo=1" in html
+
+
+@pytest.mark.parametrize("page", BELL_PAGES)
+def test_bell_uses_the_shared_panel_renderer(page):
+    html = (ROOT / "static" / page).read_text(encoding="utf-8")
+    assert "VooNotif.renderNotifRows(" in html
+
+
+def test_panel_renderer_builds_an_img_with_an_initials_fallback():
+    js = (ROOT / "static" / "notification-routing.js").read_text(encoding="utf-8")
+    # An <img> fills the avatar slot, and the initials path is still there for
+    # employees with no photo (and for an image that fails to decode).
+    assert "'notif-row__photo'" in js
+    assert "showInitials(" in js
+    assert "addEventListener('error'" in js
+
+
+def test_panel_avatar_slot_is_styled_for_a_photo():
+    css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
+    assert ".notif-row__photo{" in css
+    assert "object-fit:cover" in css
+    # The unread dot is positioned outside the 34px box, so the avatar must
+    # never get overflow:hidden or it would clip the badge.
+    avatar_rule = css.split(".notif-row__avatar{")[1].split("}")[0]
+    assert "overflow:hidden" not in avatar_rule

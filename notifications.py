@@ -81,11 +81,16 @@ def _scoped_notification_filter(db, org_id, base):
     return base
 
 
-def _notification_to_json(n, employee_name="") -> dict:
+def _notification_to_json(n, employee_name="", employee_photo=None) -> dict:
     """Serialize a notifications doc for API responses.
 
     Includes everything a list row needs to render without a second call.
     `employee_name` is decrypted separately (PII fields can't be queried).
+
+    `employee_photo` is the employee's base64 data-URL avatar, passed in only by
+    callers that opt in (the bell panel, which renders at most a handful of
+    rows). The list endpoint leaves it None unless `include_photo` is set, so
+    the hub's 200-row pages don't carry megabytes of inline images.
     """
     return {
         "id": str(n["_id"]),
@@ -96,6 +101,7 @@ def _notification_to_json(n, employee_name="") -> dict:
         "confidence": n.get("confidence", 0),
         "employee_id": str(n["employee_id"]) if n.get("employee_id") else None,
         "employee_name": employee_name or "",
+        "employee_photo": employee_photo or None,
         "source_session_id": str(n["source_session_id"]) if n.get("source_session_id") else None,
         "meeting_id": str(n["meeting_id"]) if n.get("meeting_id") else None,
         "memory_id": str(n["memory_id"]) if n.get("memory_id") else None,
@@ -114,15 +120,20 @@ def _notification_to_json(n, employee_name="") -> dict:
     }
 
 
-def _employee_name(db, org_id, employee_id) -> str:
-    """Decrypt an employee's name the same way _employee_to_json does."""
+def _employee_identity(db, org_id, employee_id) -> tuple:
+    """Resolve an employee's display name and avatar photo in one lookup.
+
+    The name lives in the encrypted PII blob; the photo is a plain field, so a
+    single find_one covers both. Returns ("", None) when there is no employee
+    (system notifications have no employee_id) or the row has gone away.
+    """
     if not employee_id:
-        return ""
+        return "", None
     emp = db.employees.find_one({"_id": employee_id, "org_id": ObjectId(org_id)})
     if not emp:
-        return ""
+        return "", None
     pii = decrypt_fields(emp.get("encrypted"), emp.get("wrapped_dek", ""))
-    return pii.get("name", "")
+    return pii.get("name", ""), emp.get("photo")
 
 
 @notifications_bp.route("/notifications")
@@ -139,21 +150,37 @@ def list_notifications():
     page = max(page, 1)
     skip = (page - 1) * limit
 
+    # Photos are inline base64 data-URLs (~20-40 KB each), so they are opt-in:
+    # the bell panel asks for them to fill its avatars, while the hub pages
+    # through up to 200 rows and would otherwise ship megabytes it never uses.
+    include_photo = request.args.get("include_photo", "").lower() in ("1", "true", "yes")
+
     query = _scoped_notification_filter(db, org_id, {"org_id": ObjectId(org_id)})
     notifications = list(
         db.notifications.find(query).sort("created_at", -1).skip(skip).limit(limit)
     )
 
     # Resolve employee names in a single pass — encrypted PII can't be queried
-    # directly, so decrypt each matching employee once.
+    # directly, so decrypt each matching employee once. Photos ride along on
+    # the same documents, so this costs no extra round trip.
     emp_ids = {n.get("employee_id") for n in notifications if n.get("employee_id")}
     emp_names = {}
+    emp_photos = {}
     if emp_ids:
         for emp in db.employees.find({"_id": {"$in": list(emp_ids)}, "org_id": ObjectId(org_id)}):
             pii = decrypt_fields(emp.get("encrypted"), emp.get("wrapped_dek", ""))
             emp_names[emp["_id"]] = pii.get("name", "")
+            if include_photo:
+                emp_photos[emp["_id"]] = emp.get("photo")
 
-    result = [_notification_to_json(n, emp_names.get(n.get("employee_id"), "")) for n in notifications]
+    result = [
+        _notification_to_json(
+            n,
+            emp_names.get(n.get("employee_id"), ""),
+            emp_photos.get(n.get("employee_id")),
+        )
+        for n in notifications
+    ]
 
     unread_query = _scoped_notification_filter(
         db, org_id, {"org_id": ObjectId(org_id), "read": False}
@@ -191,9 +218,9 @@ def get_notification(notification_id: str):
     if not n:
         return jsonify({"error": "not_found"}), 404
 
-    employee_name = _employee_name(db, org_id, n.get("employee_id"))
+    employee_name, employee_photo = _employee_identity(db, org_id, n.get("employee_id"))
 
-    data = _notification_to_json(n, employee_name)
+    data = _notification_to_json(n, employee_name, employee_photo)
     data["drift_explanation"] = n.get("drift_explanation", {})
     data["sessions_window"] = n.get("sessions_window", [])
 

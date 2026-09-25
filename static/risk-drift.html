@@ -312,7 +312,7 @@
   }
 
   function loadNotifications() {
-    fetch('/api/notifications?limit=5')
+    fetch('/api/notifications?limit=5&include_photo=1')
       .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
       .then(function(data) {
         updateBadge(data.unread_count || 0);

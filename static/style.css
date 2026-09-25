@@ -304,12 +304,15 @@ h1,h2,h3,h4,h5,h6{font-family:var(--font-d);font-weight:600;text-transform:upper
 .notif-row--unread:hover{background:var(--notif-row-unread);filter:brightness(1.08);}
 html[data-theme="light"] .notif-row--unread:hover{filter:brightness(0.98);}
 
+/* NOTE: deliberately no overflow:hidden here — the unread dot is positioned
+   at top:-1px/right:-1px, outside the 34px box, and clipping would eat it. */
 .notif-row__avatar{
   position:relative;flex:none;display:flex;align-items:center;justify-content:center;
   width:34px;height:34px;border-radius:50%;
   background:linear-gradient(135deg,var(--amber),var(--amber-deep));
   color:var(--amber-ink);font-family:var(--font-d);font-size:0.81rem;font-weight:700;letter-spacing:0.02em;
 }
+.notif-row__photo{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover;}
 .notif-row__unread-dot{position:absolute;top:-1px;right:-1px;width:9px;height:9px;border-radius:50%;background:var(--notif-unread);border:2px solid var(--ink);}
 .notif-row--unread .notif-row__unread-dot{border-color:var(--notif-row-unread);}
 
