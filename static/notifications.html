@@ -45,28 +45,30 @@
 .hub-panel.active{display:block;}
 .hub-list{display:flex;flex-direction:column;gap:0.6rem;}
 .hub-list-empty{font-family:var(--font-m);font-size:0.78rem;line-height:1.6;color:var(--ivory-faint);text-align:center;padding:3rem 1.5rem;border:1px dashed var(--border);border-radius:10px;}
-/* ── Notification rows (hub + bell): stacked layout and readable type ──
-   The old rows put name / headline / summary / time in bare inline <span>s at
-   0.55–0.62rem, so they ran together on one line. Each piece is now its own
-   line, at a size that reads comfortably on the dark and light themes. */
-.hub-list .alert-item,.notif-dropdown-list .alert-item{width:100%;text-align:left;font:inherit;color:var(--ivory);align-items:flex-start;gap:.9rem;padding:1rem 1.15rem;border-radius:10px;}
-.notif-dropdown-list{display:flex;flex-direction:column;gap:.5rem;}
-.hub-list .alert-item .alert-severity,.notif-dropdown-list .alert-item .alert-severity{margin-top:.5rem;}
-.hub-list .alert-item .alert-body,.notif-dropdown-list .alert-item .alert-body{display:flex;flex-direction:column;gap:.3rem;overflow-wrap:anywhere;}
-.hub-list .alert-item .alert-top,.notif-dropdown-list .alert-item .alert-top{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;}
-.hub-list .alert-item .alert-name,.notif-dropdown-list .alert-item .alert-name{font-family:var(--font-d);font-size:1rem;font-weight:600;line-height:1.35;color:var(--ivory);margin:0;}
-.hub-list .alert-item .alert-top .alert-time,.notif-dropdown-list .alert-item .alert-top .alert-time{font-family:var(--font-d);font-size:.78rem;font-weight:400;letter-spacing:0;color:var(--ivory-dim);margin:0;white-space:nowrap;}
-.hub-list .alert-item .alert-stage,.notif-dropdown-list .alert-item .alert-stage{display:block;font-family:var(--font-d);font-size:.82rem;font-weight:500;line-height:1.4;letter-spacing:0;color:var(--amber);margin:0;}
-.hub-list .alert-item .alert-desc,.notif-dropdown-list .alert-item .alert-desc{display:block;font-family:var(--font-d);font-size:.82rem;font-weight:500;line-height:1.4;letter-spacing:0;color:var(--ivory-dim);margin:0;}
-.hub-list .alert-item .alert-detail,.hub-list .alert-item .alert-summary,.notif-dropdown-list .alert-item .alert-detail,.notif-dropdown-list .alert-item .alert-summary{display:block;font-family:var(--font-b);font-size:.94rem;font-weight:400;line-height:1.5;letter-spacing:0;color:var(--ivory);margin:0;}
-.hub-list .alert-item .alert-top .alert-summary,.notif-dropdown-list .alert-item .alert-top .alert-summary{font-size:.94rem;line-height:1.5;}
-.hub-list .alert-item .alert-meta,.notif-dropdown-list .alert-item .alert-meta{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .7rem;font-family:var(--font-d);font-size:.8rem;line-height:1.4;color:var(--ivory-dim);margin:0;}
+/* ── Notification rows (hub only) ──
+   The bell dropdown renders its own `.notif-row` structure from
+   notification-routing.js — see the .notif-panel block in style.css.
+   These rules are the hub's list only. The old rows put name / headline /
+   summary / time in bare inline <span>s at 0.55–0.62rem, so they ran together
+   on one line. Each piece is now its own line, at a size that reads
+   comfortably on the dark and light themes. */
+.hub-list .alert-item{width:100%;text-align:left;font:inherit;color:var(--ivory);align-items:flex-start;gap:.9rem;padding:1rem 1.15rem;border-radius:10px;}
+.hub-list .alert-item .alert-severity{margin-top:.5rem;}
+.hub-list .alert-item .alert-body{display:flex;flex-direction:column;gap:.3rem;overflow-wrap:anywhere;}
+.hub-list .alert-item .alert-top{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;}
+.hub-list .alert-item .alert-name{font-family:var(--font-d);font-size:1rem;font-weight:600;line-height:1.35;color:var(--ivory);margin:0;}
+.hub-list .alert-item .alert-top .alert-time{font-family:var(--font-d);font-size:.78rem;font-weight:400;letter-spacing:0;color:var(--ivory-dim);margin:0;white-space:nowrap;}
+.hub-list .alert-item .alert-stage{display:block;font-family:var(--font-d);font-size:.82rem;font-weight:500;line-height:1.4;letter-spacing:0;color:var(--amber);margin:0;}
+.hub-list .alert-item .alert-desc{display:block;font-family:var(--font-d);font-size:.82rem;font-weight:500;line-height:1.4;letter-spacing:0;color:var(--ivory-dim);margin:0;}
+.hub-list .alert-item .alert-detail,.hub-list .alert-item .alert-summary{display:block;font-family:var(--font-b);font-size:.94rem;font-weight:400;line-height:1.5;letter-spacing:0;color:var(--ivory);margin:0;}
+.hub-list .alert-item .alert-top .alert-summary{font-size:.94rem;line-height:1.5;}
+.hub-list .alert-item .alert-meta{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .7rem;font-family:var(--font-d);font-size:.8rem;line-height:1.4;color:var(--ivory-dim);margin:0;}
 .alert-badge{display:inline-flex;align-items:center;font-family:var(--font-d);font-size:.74rem;font-weight:600;line-height:1;padding:.3rem .65rem;border:1px solid;border-radius:100px;white-space:nowrap;}
 .alert-badge.overdue{color:var(--red);border-color:rgba(232,69,69,.32);background:var(--red-soft);}
 .alert-badge.pending{color:var(--amber);border-color:rgba(212,136,74,.32);background:var(--amber-soft);}
 .alert-badge.neutral{color:var(--ivory-dim);border-color:var(--border-lit);background:var(--ivory-ghost);}
-.hub-list .alert-item.is-read .alert-name,.notif-dropdown-list .alert-item.is-read .alert-name{font-weight:500;color:var(--ivory-dim);}
-.hub-list .alert-item.is-read .alert-detail,.hub-list .alert-item.is-read .alert-summary,.notif-dropdown-list .alert-item.is-read .alert-detail,.notif-dropdown-list .alert-item.is-read .alert-summary{color:var(--ivory-dim);}
+.hub-list .alert-item.is-read .alert-name{font-weight:500;color:var(--ivory-dim);}
+.hub-list .alert-item.is-read .alert-detail,.hub-list .alert-item.is-read .alert-summary{color:var(--ivory-dim);}
 .hub-list .alert-item .alert-action,.hub-list .alert-item .drift-conf{align-self:center;}
 .hub-list .alert-item .alert-action{font-size:.68rem;letter-spacing:.08em;padding:.5rem 1rem;border-radius:6px;}
 @media (max-width:560px){
@@ -187,17 +189,17 @@
             <span class="notif-dot" id="notifDot" style="display:none;"></span>
             <span class="notif-count" id="notifCount"></span>
           </button>
-          <div class="notif-dropdown" id="notifDropdown">
-            <div class="notif-dropdown-head">
-              <span class="notif-dropdown-title">Notifications</span>
-              <button class="notif-mark-all" id="notifMarkAll" type="button">Mark all read</button>
+          <div class="notif-panel" id="notifPanel">
+            <div class="notif-panel__header">
+              <p class="notif-panel__title">Notifications</p>
+              <button class="notif-panel__mark-all" id="notifMarkAll" type="button">Mark all read</button>
             </div>
-            <div class="notif-dropdown-list" id="notifList"></div>
-            <div class="notif-dropdown-empty" id="notifEmpty" style="display:none;">
-              <span class="notif-dropdown-empty-title">No signals to review</span>
-              <span class="notif-dropdown-empty-body">Meeting reminders and genuine risk patterns will appear here automatically.</span>
+            <div class="notif-panel__list" id="notifList"></div>
+            <div class="notif-panel__empty" id="notifEmpty" style="display:none;">
+              <span class="notif-panel__empty-title">No signals to review</span>
+              <span class="notif-panel__empty-body">Meeting reminders and genuine risk patterns will appear here automatically.</span>
             </div>
-            <a class="notif-dropdown-footer" id="notifViewAll" href="/notifications">View all notifications</a>
+            <a class="notif-panel__footer" id="notifViewAll" href="/notifications">View all notifications</a>
           </div>
         </div>
       </div>
@@ -439,7 +441,7 @@ window.VooNotif = (function() {
 (function() {
   var wrap = document.getElementById('notifWrap');
   var btn = document.getElementById('notifBtn');
-  var dropdown = document.getElementById('notifDropdown');
+  var dropdown = document.getElementById('notifPanel');
   var dot = document.getElementById('notifDot');
   var count = document.getElementById('notifCount');
   var list = document.getElementById('notifList');
@@ -463,18 +465,6 @@ window.VooNotif = (function() {
     }
   }
 
-  function relTime(iso) {
-    if (!iso) return '';
-    var t = new Date(iso);
-    if (isNaN(t.getTime())) return '';
-    var diff = (Date.now() - t.getTime()) / 1000;
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
-    return t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }
-
   function updateBadge(unread) {
     if (dot) dot.style.display = unread > 0 ? '' : 'none';
     if (count) {
@@ -492,38 +482,9 @@ window.VooNotif = (function() {
   }
 
   function renderList(items) {
-    if (!list) return;
-    list.innerHTML = '';
-    if (!items || !items.length) {
-      if (empty) empty.style.display = '';
-      return;
-    }
-    if (empty) empty.style.display = 'none';
-    items.forEach(function(n) {
-      var row = document.createElement('button');
-      row.type = 'button';
-      row.className = 'alert-item notif-item';
-      row.setAttribute('data-id', n.id);
-
-      if (n.read) row.classList.add('is-read');
-      var sev = document.createElement('span');
-      sev.className = window.VooNotif.severityClass(n);
-
-      var body = document.createElement('span');
-      body.className = 'alert-body protected-text';
-      body.setAttribute('translate', 'no');
-      window.VooNotif.fillBody(body, n);
-
-      var action = document.createElement('span');
-      action.className = 'alert-action';
-      action.textContent = 'View';
-
-      row.appendChild(sev);
-      row.appendChild(body);
-      row.appendChild(action);
-      row.addEventListener('click', function() { openNotification(n); });
-      list.appendChild(row);
-    });
+    // Row markup is shared with the other pages' bells — see
+    // VooNotif.renderNotifRows() in notification-routing.js.
+    window.VooNotif.renderNotifRows(list, items, openNotification, empty);
   }
 
   function openDropdown() {

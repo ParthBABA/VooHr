@@ -134,17 +134,17 @@
             <span class="notif-dot" id="notifDot" style="display:none;"></span>
             <span class="notif-count" id="notifCount"></span>
           </button>
-          <div class="notif-dropdown" id="notifDropdown">
-            <div class="notif-dropdown-head">
-              <span class="notif-dropdown-title">Notifications</span>
-              <button class="notif-mark-all" id="notifMarkAll" type="button">Mark all read</button>
+          <div class="notif-panel" id="notifPanel">
+            <div class="notif-panel__header">
+              <p class="notif-panel__title">Notifications</p>
+              <button class="notif-panel__mark-all" id="notifMarkAll" type="button">Mark all read</button>
             </div>
-            <div class="notif-dropdown-list protected-text" id="notifList" translate="no"></div>
-            <div class="notif-dropdown-empty" id="notifEmpty" style="display:none;">
-              <span class="notif-dropdown-empty-title">No signals to review</span>
-              <span class="notif-dropdown-empty-body">Genuine risk patterns will appear here automatically.</span>
+            <div class="notif-panel__list" id="notifList"></div>
+            <div class="notif-panel__empty" id="notifEmpty" style="display:none;">
+              <span class="notif-panel__empty-title">No signals to review</span>
+              <span class="notif-panel__empty-body">Genuine risk patterns will appear here automatically.</span>
             </div>
-            <a class="notif-dropdown-footer" id="notifViewAll" href="/notifications">View all notifications</a>
+            <a class="notif-panel__footer" id="notifViewAll" href="/notifications">View all notifications</a>
           </div>
         </div>
       </div>
@@ -208,7 +208,7 @@
         </div>
         <h3 class="drift-empty-title" id="driftNoneTitle">No risk signal selected</h3>
         <p class="drift-empty-body" id="driftNoneBody">Open a flagged risk signal from the Notifications hub to see its full analysis &mdash; the sync-by-sync session window, escalation evidence, and a suggested opening for your next sync.</p>
-        <a class="notif-dropdown-footer" href="/notifications" style="display:inline-block;border:none;margin-top:1.5rem;">Open Notifications</a>
+        <a class="notif-panel__footer" href="/notifications" style="display:inline-block;border:none;margin-top:1.5rem;">Open Notifications</a>
       </div>
     </div>
   </main>
@@ -237,7 +237,7 @@
 (function() {
   var wrap = document.getElementById('notifWrap');
   var btn = document.getElementById('notifBtn');
-  var dropdown = document.getElementById('notifDropdown');
+  var dropdown = document.getElementById('notifPanel');
   var dot = document.getElementById('notifDot');
   var count = document.getElementById('notifCount');
   var list = document.getElementById('notifList');
@@ -261,18 +261,6 @@
     }
   }
 
-  function relTime(iso) {
-    if (!iso) return '';
-    var t = new Date(iso);
-    if (isNaN(t.getTime())) return '';
-    var diff = (Date.now() - t.getTime()) / 1000;
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
-    return t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }
-
   function updateBadge(unread) {
     if (dot) dot.style.display = unread > 0 ? '' : 'none';
     if (count) {
@@ -282,75 +270,9 @@
   }
 
   function renderList(items) {
-    if (!list) return;
-    list.innerHTML = '';
-    if (!items || !items.length) {
-      if (empty) empty.style.display = '';
-      return;
-    }
-    if (empty) empty.style.display = 'none';
-    items.forEach(function(n) {
-      var row = document.createElement('button');
-      row.type = 'button';
-      row.className = 'alert-item notif-item';
-      row.setAttribute('data-id', n.id);
-
-      var sevClass = 'alert-severity ' + (n.read ? 'read' : 'critical');
-      if (!n.read && n.type === 'audio_ready') sevClass = 'alert-severity audio';
-      else if (!n.read && n.type === 'session_ready') sevClass = 'alert-severity audio';
-      else if (!n.read && n.type === 'translation_ready') sevClass = 'alert-severity translation';
-      var sev = document.createElement('span');
-      sev.className = sevClass;
-
-      var body = document.createElement('span');
-      body.className = 'alert-body';
-      var isJobType = (n.type === 'translation_ready' || n.type === 'audio_ready' || n.type === 'session_ready');
-      if (isJobType) {
-        // Single-sentence layout: no headline bolted into a "name" slot — the
-        // finishing line IS the notification text, with the time on the right.
-        var top = document.createElement('span');
-        top.className = 'alert-top';
-        var punch = document.createElement('span');
-        punch.className = 'alert-summary';
-        punch.textContent = n.summary || n.headline || 'Ready';
-        var time = document.createElement('span');
-        time.className = 'alert-time';
-        time.textContent = relTime(n.created_at);
-        top.appendChild(punch);
-        top.appendChild(time);
-        body.appendChild(top);
-      } else {
-        var name = document.createElement('span');
-        name.className = 'alert-name';
-        name.textContent = n.employee_name || 'Employee';
-        var desc = document.createElement('span');
-        desc.className = 'alert-desc';
-        desc.textContent = n.headline || '';
-        var time = document.createElement('span');
-        time.className = 'alert-time';
-        time.textContent = relTime(n.created_at);
-        body.appendChild(name);
-        body.appendChild(desc);
-        var isMeetingType = n.type === 'meeting_reminder' || n.type === 'meeting_event' || n.type === 'memory_overdue' || n.type === 'delivery_failed';
-        if (n.summary && !isMeetingType) {
-          var summaryEl = document.createElement('span');
-          summaryEl.className = 'alert-summary';
-          summaryEl.textContent = n.summary;
-          body.appendChild(summaryEl);
-        }
-        body.appendChild(time);
-      }
-
-      var action = document.createElement('span');
-      action.className = 'alert-action';
-      action.textContent = 'View';
-
-      row.appendChild(sev);
-      row.appendChild(body);
-      row.appendChild(action);
-      row.addEventListener('click', function() { openNotification(n); });
-      list.appendChild(row);
-    });
+    // Row markup is shared with the other pages' bells — see
+    // VooNotif.renderNotifRows() in notification-routing.js.
+    window.VooNotif.renderNotifRows(list, items, openNotification, empty);
   }
 
   function openNotification(n) {
