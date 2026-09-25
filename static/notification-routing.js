@@ -18,7 +18,7 @@
       if (n.employee_id) query.push('employee_id=' + encodeURIComponent(n.employee_id));
       return '/workspace' + (query.length ? '?' + query.join('&') : '');
     }
-    if (category === 'meeting') return '/meeting-tracker';
+    if (category === 'meeting') return '/meeting-tracker' + (n.employee_id ? '?employee_id=' + encodeURIComponent(n.employee_id) : '');
     return '/risk-drift?notification=' + encodeURIComponent(n.id);
   }
 

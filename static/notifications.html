@@ -397,7 +397,6 @@ window.VooNotif = (function() {
     if (cat === 'meeting') {
       var parsed = parseSummary(n);
       if (n.headline) body.appendChild(el('span', 'alert-stage', n.headline));
-      if (parsed.content) body.appendChild(el('span', 'alert-detail', parsed.content));
       var badge = meetingBadge(n, parsed);
       if (badge || parsed.kind || parsed.due) {
         var meta = el('span', 'alert-meta');
@@ -422,7 +421,7 @@ window.VooNotif = (function() {
       if (n.employee_id) q.push('employee_id=' + encodeURIComponent(n.employee_id));
       return '/workspace' + (q.length ? '?' + q.join('&') : '');
     }
-    if (cat === 'meeting') return '/meeting-tracker';
+    if (cat === 'meeting') return '/meeting-tracker' + (n.employee_id ? '?employee_id=' + encodeURIComponent(n.employee_id) : '');
     return '/risk-drift?notification=' + encodeURIComponent(n.id);
   }
 

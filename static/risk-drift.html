@@ -331,8 +331,8 @@
         time.textContent = relTime(n.created_at);
         body.appendChild(name);
         body.appendChild(desc);
-        // Job notifications carry a genuinely descriptive summary line.
-        if (n.summary) {
+        var isMeetingType = n.type === 'meeting_reminder' || n.type === 'meeting_event' || n.type === 'memory_overdue' || n.type === 'delivery_failed';
+        if (n.summary && !isMeetingType) {
           var summaryEl = document.createElement('span');
           summaryEl.className = 'alert-summary';
           summaryEl.textContent = n.summary;
@@ -357,6 +357,11 @@
     if (!n) return;
     fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
     closeDropdown();
+    var isMeetingType = n.type === 'meeting_reminder' || n.type === 'meeting_event' || n.type === 'memory_overdue' || n.type === 'delivery_failed';
+    if (isMeetingType && n.employee_id) {
+      window.location.href = '/meeting-tracker?employee_id=' + encodeURIComponent(n.employee_id);
+      return;
+    }
     window.location.href = window.VooNotif.targetUrl(n);
   }
 
