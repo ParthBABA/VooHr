@@ -24,6 +24,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
 <script src="/csrf.js" defer></script>
+<script src="/notification-routing.js"></script>
 <style>
 .page-skeleton{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--void);transition:opacity .3s var(--ease-out);}
 .page-skeleton-spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--ink);border-top-color:var(--amber);animation:page-skeleton-spin .8s linear infinite;}
@@ -1618,14 +1619,7 @@ function escHtml(str) {
     // Fire-and-forget: optimistically mark read, then route.
     fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
     closeDropdown();
-    if (n.type === 'translation_ready' || n.type === 'audio_ready' || n.type === 'session_ready') {
-      var q = [];
-      if (n.source_session_id) q.push('session_id=' + encodeURIComponent(n.source_session_id));
-      if (n.employee_id) q.push('employee_id=' + encodeURIComponent(n.employee_id));
-      window.location.href = '/workspace' + (q.length ? '?' + q.join('&') : '');
-      return;
-    }
-    window.location.href = '/risk-drift?notification=' + n.id;
+    window.location.href = window.VooNotif.targetUrl(n);
   }
 
   function openDropdown() {

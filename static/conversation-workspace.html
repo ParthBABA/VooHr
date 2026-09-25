@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <script src="/csrf.js" defer></script>
+<script src="/notification-routing.js"></script>
 <script src="transcript-parser.js"></script>
 <script src="narration-stream.js"></script>
 <style>
@@ -2210,14 +2211,7 @@ window.voovrInitWorkspace = function() {
     // Fire-and-forget: optimistically mark read, then route.
     fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
     closeDropdown();
-    if (n.type === 'translation_ready' || n.type === 'audio_ready' || n.type === 'session_ready') {
-      var q = [];
-      if (n.source_session_id) q.push('session_id=' + encodeURIComponent(n.source_session_id));
-      if (n.employee_id) q.push('employee_id=' + encodeURIComponent(n.employee_id));
-      window.location.href = '/workspace' + (q.length ? '?' + q.join('&') : '');
-      return;
-    }
-    window.location.href = '/risk-drift?notification=' + n.id;
+    window.location.href = window.VooNotif.targetUrl(n);
   }
 
   function openDropdown() {
