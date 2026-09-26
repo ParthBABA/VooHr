@@ -3,8 +3,8 @@ Phase — bulk org-chart `reports_to` CSV support.
 
 Verifies (via a hand-rolled in-memory Mongo facade + Flask test client, no
 live DB):
-  - csv-template exposes the `reports_to_email` column
-  - import resolves `reports_to_email` to a manager's _id, both when the
+   - export-csv's header exposes the `reports_to_email` column
+   - import resolves `reports_to_email` to a manager's _id, both when the
     manager shares the same file (before or after the report) and when the
     manager already exists in the org
   - unresolved managers produce a `warnings` entry (employee still created),
@@ -160,9 +160,30 @@ def _find_emp(db, employee_id):
     return None
 
 
-def test_template_has_reports_to_email_column(client):
-    body = client.get("/api/employees/csv-template").get_data(as_text=True)
-    assert "reports_to_email" in body
+def test_export_header_has_reports_to_email_column(client):
+    """Header-column coverage, repointed from the removed /csv-template route.
+
+    export-csv calls writeheader() unconditionally, so this holds even for an
+    org with no employees yet — which is exactly what the old template route
+    was documenting: the expected column order for a bulk import."""
+    body = client.get("/api/employees/export-csv").get_data(as_text=True)
+    header = body.strip().splitlines()[0]
+    assert "reports_to_email" in header
+
+
+def test_csv_template_route_is_gone(client):
+    """The standalone template download was removed; export-csv is the only
+    CSV download left. Guarded so it can't quietly come back (and so no
+    front-end link is left pointing at a dead route).
+
+    Note the status is 400, not 404: with the literal route gone, the path now
+    falls through to /employees/<emp_id>, where ObjectId("csv-template") raises
+    InvalidId. Either way no template is served and no employee is exposed."""
+    r = client.get("/api/employees/csv-template")
+    assert r.status_code in (400, 404)
+    body = r.get_data(as_text=True)
+    assert "reports_to_email" not in body
+    assert "text/csv" not in r.headers.get("Content-Type", "")
 
 
 def test_import_same_file_manager_below_report(client):
@@ -336,4 +357,10 @@ def test_data_privacy_csv_section_wires_the_real_endpoints():
     assert "getElementById('settingsImportCsvInput')" in SETTINGS_HTML
     assert "/api/employees/export-csv" in SETTINGS_HTML
     assert "/api/employees/import" in SETTINGS_HTML
-    assert 'href="/api/employees/csv-template"' in SETTINGS_HTML
+
+
+def test_no_frontend_link_points_at_the_removed_template_route():
+    """The Download Template affordance was removed everywhere, so no page can
+    link at a route that now 404s."""
+    assert "csv-template" not in SETTINGS_HTML
+    assert "csv-template" not in DASHBOARD_HTML

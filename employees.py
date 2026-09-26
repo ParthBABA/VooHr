@@ -397,8 +397,8 @@ def list_employees():
 # NOTE: these bulk routes are registered deliberately BEFORE the
 # /employees/<emp_id> routes below.  Flask matches route patterns in
 # registration order, and "<emp_id>" (default string converter) would swallow
-# the literal path segments "import" / "export-csv" / "csv-template" if they
-# were registered after it.
+# the literal path segments "import" / "export-csv" if they were registered
+# after it.
 
 
 def _validate_import_row(name, email, phone, department, position,
@@ -662,25 +662,6 @@ def export_employees_csv():
     resp = make_response(buf.getvalue())
     resp.headers["Content-Type"] = "text/csv; charset=utf-8"
     resp.headers["Content-Disposition"] = 'attachment; filename="employees_export.csv"'
-    return resp
-
-
-@employees_bp.route("/employees/csv-template")
-def employee_csv_template():
-    """Download a CSV template (just the header row) so users know the exact
-    expected column order for the bulk import."""
-    org_id = _require_auth()
-    if not org_id:
-        return jsonify({"error": "not_authenticated"}), 401
-
-    buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=CSV_COLUMNS)
-    writer.writeheader()
-    buf.seek(0)
-
-    resp = make_response(buf.getvalue())
-    resp.headers["Content-Type"] = "text/csv; charset=utf-8"
-    resp.headers["Content-Disposition"] = 'attachment; filename="employees_import_template.csv"'
     return resp
 
 

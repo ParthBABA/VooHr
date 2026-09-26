@@ -114,6 +114,69 @@ class PresentationTests(unittest.TestCase):
         self.assertTrue(re.search(r"closeModal\(\).*VooVrUI\.show\('Meeting deleted\..*loadData\(\)",
                                   del_fn, re.S), "success path must close the modal, toast, and re-loadData")
 
+    # ── Signed-in identity actually reaches the sidebar footer ────────────
+    #
+    # Every page ships the same #userName / #userRole / #userAvatar markup
+    # pre-filled with placeholder text. Those values are only real if a script
+    # overwrites them from /api/me. meeting_tracker.html shipped the markup
+    # with no such script, so its footer read "U / User / Admin" for every
+    # logged-in user. These tests check the *write*, not just the presence of
+    # the id, so the markup can't quietly revert to dead placeholders.
+
+    IDENTITY_IDS = ("userName", "userRole", "userAvatar")
+
+    def _is_written(self, source, el_id):
+        """True when something assigns to the element's text/HTML/value.
+
+        Handles the two real shapes in this codebase: a direct chained write
+        (`getElementById('x').textContent = ...`) and the far more common
+        cached-variable form (`var x = getElementById('x'); x.textContent =`).
+        """
+        chained = re.search(
+            r"getElementById\(['\"]" + el_id + r"['\"]\)\s*\.\s*"
+            r"(?:textContent|innerHTML|value)\s*=[^=]", source)
+        if chained:
+            return True
+        for var in re.findall(
+                r"(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*"
+                r"(?:document\.)?getElementById\(\s*['\"]" + el_id + r"['\"]\s*\)", source):
+            if re.search(r"\b" + re.escape(var) + r"\s*\.\s*"
+                         r"(?:textContent|innerHTML|value)\s*=[^=]", source):
+                return True
+        return bool(re.search(
+            r"querySelector\(\s*['\"]#" + el_id + r"['\"]\s*\)\s*\.\s*"
+            r"(?:textContent|innerHTML|value)\s*=[^=]", source))
+
+    def test_every_page_with_identity_markup_overwrites_it_from_the_api(self):
+        pages = []
+        for path in sorted((ROOT / "static").glob("*.html")):
+            source = path.read_text(encoding="utf-8")
+            if not all(f'id="{el}"' in source for el in self.IDENTITY_IDS):
+                continue
+            pages.append(path.name)
+            with self.subTest(page=path.name):
+                self.assertIn("fetch('/api/me')", source,
+                              f"{path.name} ships identity markup but never fetches /api/me")
+                for el in self.IDENTITY_IDS:
+                    self.assertTrue(
+                        self._is_written(source, el),
+                        f"{path.name}: #{el} is never written — the hardcoded "
+                        f"placeholder would stay on screen")
+        # The audit is only meaningful if it actually found the known pages.
+        self.assertIn("meeting_tracker.html", pages)
+        self.assertGreaterEqual(len(pages), 9)
+
+    def test_meeting_tracker_shows_the_real_logged_in_user(self):
+        """Specific regression: the tracker had the markup but no script."""
+        source = (ROOT / "static" / "meeting_tracker.html").read_text(encoding="utf-8")
+        self.assertIn("fetch('/api/me')", source)
+        for el in self.IDENTITY_IDS:
+            self.assertTrue(self._is_written(source, el), f"#{el} never written")
+        # Role label matches the rest of the app, and a failed profile call
+        # degrades silently instead of blocking or bouncing the user.
+        self.assertIn("me.role === 'admin' ? 'HR Admin'", source)
+        self.assertIn(".catch(function() { return null; })", source)
+
 
 if __name__ == "__main__":
     unittest.main()

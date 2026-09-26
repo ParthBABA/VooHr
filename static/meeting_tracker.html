@@ -1407,6 +1407,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 });
+// ── Signed-in HR identity for the sidebar footer (replaces placeholder) ──
+// This page shipped the same #userName / #userRole / #userAvatar markup as the
+// rest of the app but no script to fill it, so the footer always read
+// "U / User / Admin" regardless of who was logged in. Same /api/me pattern as
+// sync_room.html; degrades silently so a slow or failed profile call can never
+// block the tracker itself.
+fetch('/api/me').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }).then(function(me) {
+  if (!me) return;
+  var nameEl = document.getElementById('userName');
+  var roleEl = document.getElementById('userRole');
+  var avatarEl = document.getElementById('userAvatar');
+  if (nameEl && me.name) nameEl.textContent = me.name;
+  if (roleEl) roleEl.textContent = me.role === 'admin' ? 'HR Admin' : (me.role || 'HR');
+  if (avatarEl) {
+    if (me.picture) avatarEl.innerHTML = '<img src="' + escHtml(me.picture) + '" alt="">';
+    else avatarEl.textContent = (me.name || 'U').trim().charAt(0).toUpperCase();
+  }
+});
 </script>
 
 <!-- Theme toggle -->
