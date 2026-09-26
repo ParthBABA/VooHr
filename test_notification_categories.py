@@ -164,6 +164,24 @@ def test_bell_requests_photos_from_the_notifications_endpoint(page):
 
 
 @pytest.mark.parametrize("page", BELL_PAGES)
+def test_bell_only_asks_for_unread_notifications(page):
+    """The dropdown must not re-show read rows on every poll — that was the
+    'seen notifications keep coming back' bug. unread_only makes the endpoint
+    filter, so the panel empties out once everything has been viewed."""
+    html = (ROOT / "static" / page).read_text(encoding="utf-8")
+    assert "/api/notifications?limit=5&include_photo=1&unread_only=true" in html
+
+
+def test_notifications_hub_keeps_showing_read_and_unread():
+    """The hub's paginated list is an intentional full history — it must not
+    gain unread_only, or read rows would vanish from the page itself."""
+    html = (ROOT / "static" / "notifications.html").read_text(encoding="utf-8")
+    hub_fetch = "/api/notifications?limit=' + limit + '&page=' + page"
+    assert hub_fetch in html
+    assert f"{hub_fetch}&unread_only" not in html
+
+
+@pytest.mark.parametrize("page", BELL_PAGES)
 def test_bell_uses_the_shared_panel_renderer(page):
     html = (ROOT / "static" / page).read_text(encoding="utf-8")
     assert "VooNotif.renderNotifRows(" in html

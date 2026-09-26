@@ -779,3 +779,69 @@ def test_admin_sees_all_and_read_all_scoped_for_manager(client, fake):
     set_user(client, ADMIN_USER)
     d = client.get("/api/notifications").get_json()
     assert d["total"] == 2
+
+
+# ── unread_only on the bell dropdown ───────────────────────────────────
+
+def test_list_keeps_read_rows_by_default(client, fake):
+    """The /notifications hub is a full history: read and unread together."""
+    _add_notification(fake, headline="still unread", employee_id=ObjectId(REP_A1))
+    _add_notification(fake, headline="already read", employee_id=ObjectId(REP_A1),
+                      read=True)
+
+    set_user(client, ADMIN_USER)
+    d = client.get("/api/notifications").get_json()
+    assert {n["headline"] for n in d["notifications"]} == {"still unread", "already read"}
+    assert d["unread_count"] == 1
+
+
+def test_unread_only_drops_read_rows_from_the_list(client, fake):
+    _add_notification(fake, headline="still unread", employee_id=ObjectId(REP_A1))
+    _add_notification(fake, headline="already read", employee_id=ObjectId(REP_A1),
+                      read=True)
+
+    set_user(client, ADMIN_USER)
+    d = client.get("/api/notifications?unread_only=true").get_json()
+    assert [n["headline"] for n in d["notifications"]] == ["still unread"]
+    # The badge is still the true unread total, not the filtered row count.
+    assert d["unread_count"] == 1
+
+
+@pytest.mark.parametrize("value", ["1", "true", "yes", "TRUE", "Yes"])
+def test_unread_only_accepts_the_truthy_spellings(client, fake, value):
+    _add_notification(fake, headline="read one", employee_id=ObjectId(REP_A1), read=True)
+    set_user(client, ADMIN_USER)
+    d = client.get(f"/api/notifications?unread_only={value}").get_json()
+    assert d["notifications"] == []
+
+
+@pytest.mark.parametrize("value", ["", "0", "false", "no", "off"])
+def test_unread_only_off_or_unchanged_keeps_read_rows(client, fake, value):
+    _add_notification(fake, headline="read one", employee_id=ObjectId(REP_A1), read=True)
+    set_user(client, ADMIN_USER)
+    d = client.get(f"/api/notifications?unread_only={value}").get_json()
+    assert [n["headline"] for n in d["notifications"]] == ["read one"]
+
+
+def test_bell_empties_out_once_everything_is_read(client, fake):
+    """The regression this param exists for: mark-all-read, then reload."""
+    for tag in ("one", "two", "three"):
+        _add_notification(fake, headline=tag, employee_id=ObjectId(REP_A1))
+
+    set_user(client, ADMIN_USER)
+    assert len(client.get("/api/notifications?limit=5&unread_only=true").get_json()["notifications"]) == 3
+
+    assert client.put("/api/notifications/read-all").status_code == 200
+    d = client.get("/api/notifications?limit=5&unread_only=true").get_json()
+    assert d["notifications"] == []
+    assert d["unread_count"] == 0
+
+
+def test_unread_only_is_still_scoped_for_managers(client, fake):
+    _add_notification(fake, headline="a unread", employee_id=ObjectId(REP_A1))
+    _add_notification(fake, headline="b unread", employee_id=ObjectId(REP_B1))
+
+    set_user(client, MANAGER_A)
+    d = client.get("/api/notifications?unread_only=true").get_json()
+    assert [n["headline"] for n in d["notifications"]] == ["a unread"]
+    assert d["unread_count"] == 1

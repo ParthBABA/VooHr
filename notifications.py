@@ -155,7 +155,18 @@ def list_notifications():
     # through up to 200 rows and would otherwise ship megabytes it never uses.
     include_photo = request.args.get("include_photo", "").lower() in ("1", "true", "yes")
 
-    query = _scoped_notification_filter(db, org_id, {"org_id": ObjectId(org_id)})
+    # unread_only narrows the returned rows to unread notifications. The bell
+    # dropdown asks for it so a notification the user has already opened (or
+    # cleared with "Mark all read") stops reappearing on every poll. The
+    # /notifications hub deliberately omits it: that page is a full history and
+    # must keep showing read rows too. Only the row filter changes — unread_count
+    # below is always the org-wide unread total, either way.
+    unread_only = request.args.get("unread_only", "").lower() in ("1", "true", "yes")
+
+    base_filter = {"org_id": ObjectId(org_id)}
+    if unread_only:
+        base_filter["read"] = False
+    query = _scoped_notification_filter(db, org_id, base_filter)
     notifications = list(
         db.notifications.find(query).sort("created_at", -1).skip(skip).limit(limit)
     )

@@ -1574,7 +1574,7 @@ function escHtml(str) {
   }
 
   function loadNotifications() {
-    fetch('/api/notifications?limit=5&include_photo=1')
+    fetch('/api/notifications?limit=5&include_photo=1&unread_only=true')
       .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
       .then(function(data) {
         updateBadge(data.unread_count || 0);
