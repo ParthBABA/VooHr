@@ -245,39 +245,8 @@
 
 <div class="page-wrapper">
   <!-- SIDEBAR -->
-  <nav class="sidebar">
-    <div class="sidebar-header">
-      <div class="sidebar-logo">
-        <img src="voovr-logo-full.png" alt="VOOVR" class="sidebar-logo-img">
-      </div>
-    </div>
-    <div class="sidebar-nav">
-      <div class="nav-section">Command Center</div>
-      <a href="dashboard.html" class="nav-item active">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        Dashboard
-      </a>
-      <a href="/sync" class="nav-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14"/></svg>
-        Sync
-      </a>
-      <a href="/meeting-tracker" class="nav-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="16" cy="18" r="1"/><circle cx="8" cy="18" r="1"/></svg>
-        Meeting Tracker
-      </a>
-      <a href="settings.html" class="nav-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-        Settings
-      </a>
-    </div>
-    <div class="sidebar-footer">
-      <div class="avatar" id="userAvatar">U</div>
-      <div class="user-info">
-        <div class="user-name" id="userName">User</div>
-        <div class="user-role" id="userRole">Admin</div>
-      </div>
-    </div>
-  </nav>
+  {% set nav_active = 'dashboard.html' %}
+  {% include 'partials/sidebar.html' %}
 
   <!-- MAIN -->
   <main class="main-content">
@@ -293,24 +262,7 @@
           <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         </button>
-        <div class="notif-wrap" id="notifWrap">
-          <button class="icon-btn" id="notifBtn" title="Notifications">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-            <span class="notif-dot" id="notifDot" style="display:none;"></span>
-            <span class="notif-count" id="notifCount"></span>
-          </button>
-          <div class="notif-panel" id="notifPanel">
-            <div class="notif-panel__header">
-              <p class="notif-panel__title">Notifications</p>
-              <button class="notif-panel__mark-all" id="notifMarkAll" type="button">Mark all read</button>
-            </div>
-            <div class="notif-panel__list" id="notifList"></div>
-            <div class="notif-panel__empty" id="notifEmpty" style="display:none;">
-              <span class="notif-panel__empty-title">No signals to review</span>
-              <span class="notif-panel__empty-body">Genuine risk patterns will appear here automatically.</span>
-            </div>
-            <a class="notif-panel__footer" id="notifViewAll" href="/notifications">View all notifications</a>
-          </div>
+        {% include 'partials/notification_bell.html' %}
         </div>
       </div>
     </div>
@@ -652,7 +604,13 @@
 </div>
 
 <script>
-// Unified directory table: live search + department/status filters
+// Unified directory table: server-side search, filters and pagination.
+//
+// This used to recursively download every page of /api/employees and then
+// filter + paginate the resulting DOM rows, so the browser held the entire
+// org just to show 20 rows. The server now applies the search (name/email are
+// encrypted, so it cannot be done in the query) and the derived wellness
+// status, and this module only tracks the filter state and renders the pager.
 (function() {
   var search = document.getElementById('dashDirSearch');
   var deptFilter = document.getElementById('dashDeptFilter');
@@ -661,49 +619,59 @@
   var table = document.getElementById('dashEmpTable');
   var countBadge = document.getElementById('dashEmpCount');
   var footerText = document.getElementById('dashEmpFooterText');
-  var currentPage = 1;
-  var pageSize = 20;
+  var pageNumber = document.getElementById('dashPageNumber');
   var previous = document.getElementById('dashPrevPage');
   var next = document.getElementById('dashNextPage');
   if (!table) return;
 
-  window.dashApplyFilters = function(keepPage) {
-    if (keepPage !== true) currentPage = 1;
-    var allRows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
-    var total = allRows.length;
-    var q = (search && search.value || '').trim().toLowerCase();
-    var dept = deptFilter && deptFilter.value || '';
-    var status = statusFilter && statusFilter.value || '';
-    var matches = [];
+  var PAGE_SIZE = 20;
+  var dir = { page: 1, pageSize: PAGE_SIZE, total: 0, pages: 1,
+              search: '', department: '', wellness: '' };
+  window.__voovrDir = dir;
 
-    allRows.forEach(function(row) {
-      var name = (row.querySelector('.emp-name') || {}).textContent || '';
-      var rowDept = (row.querySelector('.emp-dept') || {}).textContent || '';
-      var rowStatus = row.getAttribute('data-status') || '';
-
-      var matchesQuery = !q || name.toLowerCase().indexOf(q) !== -1 || rowDept.toLowerCase().indexOf(q) !== -1;
-      var matchesDept = !dept || rowDept === dept;
-      var matchesStatus = !status || rowStatus === status;
-      var show = matchesQuery && matchesDept && matchesStatus;
-
-      row.style.display = 'none';
-      if (show) matches.push(row);
-    });
-
-    var pages = Math.max(1, Math.ceil(matches.length / pageSize));
-    currentPage = Math.min(currentPage, pages);
-    var start = (currentPage - 1) * pageSize;
-    matches.slice(start, start + pageSize).forEach(function(row) { row.style.display = ''; });
-    previous.disabled = currentPage === 1;
-    next.disabled = currentPage === pages;
-    document.getElementById('dashPageNumber').textContent = currentPage + ' / ' + pages;
-    if (footerText) footerText.textContent = 'Showing ' + (matches.length ? start + 1 : 0) + ' to ' + Math.min(start + pageSize, matches.length) + ' of ' + matches.length + ' employees';
-    if (countBadge) { var lbl = countBadge.querySelector('span'); if (lbl) lbl.textContent = total + ' Employees'; }
+  // Pager/footer text from the last server response. The badge keeps showing
+  // the UNFILTERED scoped headcount (as it did when the whole roster was in
+  // the DOM); the footer describes the filtered result set.
+  window.dashRenderDirMeta = function() {
+    var start = dir.total === 0 ? 0 : (dir.page - 1) * dir.pageSize + 1;
+    var end = Math.min(dir.page * dir.pageSize, dir.total);
+    if (pageNumber) pageNumber.textContent = dir.page + ' / ' + dir.pages;
+    if (previous) previous.disabled = dir.page <= 1;
+    if (next) next.disabled = dir.page >= dir.pages;
+    if (footerText) {
+      footerText.textContent = 'Showing ' + start + ' to ' + end + ' of ' + dir.total + ' employees';
+    }
+    if (countBadge) {
+      var badgeTotal = (window.__voovrScopedTotal != null) ? window.__voovrScopedTotal : dir.total;
+      var lbl = countBadge.querySelector('span');
+      if (lbl) lbl.textContent = badgeTotal + ' Employees';
+    }
   };
 
-  if (search) search.addEventListener('input', window.dashApplyFilters);
-  previous.addEventListener('click', function() { currentPage--; window.dashApplyFilters(true); });
-  next.addEventListener('click', function() { currentPage++; window.dashApplyFilters(true); });
+  // Any filter change restarts at page 1; pager clicks pass keepPage=true.
+  window.dashApplyFilters = function(keepPage) {
+    if (keepPage !== true) dir.page = 1;
+    dir.search = (search && search.value || '').trim();
+    dir.department = (deptFilter && deptFilter.value) || '';
+    dir.wellness = (statusFilter && statusFilter.value) || '';
+    if (typeof window.loadEmployees === 'function') window.loadEmployees();
+  };
+
+  var debounce = null;
+  if (search) search.addEventListener('input', function() {
+    if (debounce) clearTimeout(debounce);
+    debounce = setTimeout(window.dashApplyFilters, 250);
+  });
+  if (previous) previous.addEventListener('click', function() {
+    if (dir.page <= 1) return;
+    dir.page--;
+    window.dashApplyFilters(true);
+  });
+  if (next) next.addEventListener('click', function() {
+    if (dir.page >= dir.pages) return;
+    dir.page++;
+    window.dashApplyFilters(true);
+  });
   if (deptFilter) deptFilter.addEventListener('change', window.dashApplyFilters);
   if (statusFilter) statusFilter.addEventListener('change', window.dashApplyFilters);
   if (clearBtn) clearBtn.addEventListener('click', function() {
@@ -712,6 +680,28 @@
     if (statusFilter) statusFilter.value = '';
     window.dashApplyFilters();
   });
+
+  // The department options were a hardcoded list, so any department outside it
+  // could never be selected. Populate them from the caller's scope instead,
+  // leaving the hardcoded options intact if the request fails.
+  fetch('/api/employees/departments').then(function(response) {
+    return response.ok ? response.json() : null;
+  }).then(function(data) {
+    if (!data || !deptFilter) return;
+    var current = deptFilter.value;
+    deptFilter.innerHTML = '';
+    var all = document.createElement('option');
+    all.value = '';
+    all.textContent = 'All Departments';
+    deptFilter.appendChild(all);
+    (data.departments || []).forEach(function(name) {
+      var opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      deptFilter.appendChild(opt);
+    });
+    deptFilter.value = current;
+  }).catch(function() {});
 })();
 
 function animateStat(el, target, suffix) {
@@ -730,50 +720,25 @@ function animateStat(el, target, suffix) {
 }
 
 // Wire the four stat cards to real API data (no fabricated numbers).
-var rosterRequest = null;
-function fetchEmployeeRoster() {
-  if (rosterRequest) return rosterRequest;
-  var employees = [];
-  function loadPage(page) {
-    return fetch('/api/employees?limit=200&page=' + page).then(function(response) {
-      if (!response.ok) throw new Error('Could not load employees');
-      return response.json();
-    }).then(function(data) {
-      employees = employees.concat(data.employees || []);
-      if (data.has_more) return loadPage(page + 1);
-      return {employees: employees, total: employees.length};
-    });
-  }
-  rosterRequest = loadPage(1).finally(function() { rosterRequest = null; });
-  return rosterRequest;
-}
+//
+// The aggregates are computed server-side (/api/employees/stats) over the
+// caller's role-scoped employee set. Previously the browser recursively
+// fetched the entire roster and reduced it here; the arithmetic is unchanged.
 function loadDashboardStats() {
   Promise.all([
-    fetchEmployeeRoster().catch(function() { return null; }),
+    fetch('/api/employees/stats').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
     fetch('/api/sessions').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
   ]).then(function(res) {
-    var employees = (res[0] && res[0].employees) || [];
+    var stats = res[0] || {};
     var sessions = (res[1] && res[1].sessions) || [];
 
-    var active = employees.filter(function(e) { return e.status === 'active'; });
+    // Exposed so the directory badge and the manager empty-state can show the
+    // UNFILTERED scoped headcount even while a filter is active.
+    window.__voovrScopedTotal = (typeof stats.total === 'number') ? stats.total : null;
 
-    // Only delta we can derive from stored data: employees created this week.
-    var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    var newThisWeek = 0;
-    active.forEach(function(e) {
-      var created = Date.parse(e.created_at || '');
-      if (!isNaN(created) && created >= weekAgo) newThisWeek++;
-    });
-
-    // Wellness average: null scores excluded from both average and denominator.
-    var scores = employees
-      .filter(function(e) { return e.wellness_score !== null && e.wellness_score !== undefined; })
-      .map(function(e) { return e.wellness_score; });
-
-    // Unknown burnout (null/undefined) is not counted as risk.
-    var burnout = employees.filter(function(e) {
-      return e.burnout_index != null && e.burnout_index >= 70;
-    }).length;
+    var active = typeof stats.active === 'number' ? stats.active : 0;
+    var burnout = stats.burnout_count || 0;
+    var avg = stats.avg_wellness_score;
 
     var pending = 0;
     sessions.forEach(function(s) {
@@ -781,11 +746,11 @@ function loadDashboardStats() {
       if (st === 'draft' || st === 'transcribed' || st === 'processing') pending++;
     });
 
-    updateBurnoutRing(burnout, active.length);
+    updateBurnoutRing(burnout, active);
 
     var wellnessEl = document.querySelector('.stat-card[data-stat="wellness"] .stat-value');
-    if (scores.length) {
-      var avg = scores.reduce(function(a, b) { return a + b; }, 0) / scores.length;
+    // Null average (nobody scored yet) must render as "—", never as 0.
+    if (typeof avg === 'number' && !isNaN(avg)) {
       animateStat(wellnessEl, Math.round(avg), '%');
       updateWellnessHeart(avg);
     } else {
@@ -793,15 +758,18 @@ function loadDashboardStats() {
       updateWellnessHeart(null);
     }
 
-    animateStat(document.querySelector('.stat-card[data-stat="active"] .stat-value'), active.length, '');
+    animateStat(document.querySelector('.stat-card[data-stat="active"] .stat-value'), active, '');
     animateStat(document.querySelector('.stat-card[data-stat="burnout"] .stat-value'), burnout, '');
     animateStat(document.querySelector('.stat-card[data-stat="pending"] .stat-value'), pending, '');
 
     var change = document.getElementById('statActiveChange');
     if (change) {
       var label = change.querySelector('span');
-      if (label) label.textContent = '+' + newThisWeek + ' this week';
+      // Only delta we can derive from stored data: employees created this week.
+      if (label) label.textContent = '+' + (stats.new_this_week || 0) + ' this week';
     }
+
+    if (window.dashRenderDirMeta) window.dashRenderDirMeta();
   });
 }
 
@@ -859,7 +827,13 @@ function updateWellnessHeart(score) {
 
 // Populate the reporting-manager dropdown (value = employee _id) from the
 // same employee list the directory table uses.
-function populateManagerDropdown(employees) {
+// The "reports to" dropdown needs every scoped employee as a candidate, which
+// is a different question from "which 20 rows does the directory show". It is
+// fetched once from a dedicated minimal endpoint (id/name/position only) rather
+// than reusing the directory page, so filtering or paging the directory no
+// longer empties the dropdown.
+var managerOptionsLoaded = false;
+function populateManagerDropdown(options) {
   var sel = document.getElementById('empManager');
   if (!sel) return;
   var current = sel.value;
@@ -868,15 +842,28 @@ function populateManagerDropdown(employees) {
   empty.value = '';
   empty.textContent = 'No manager / Top of hierarchy';
   sel.appendChild(empty);
-  (employees || []).forEach(function(emp) {
+  (options || []).forEach(function(emp) {
     if (!emp.id) return;
     var opt = document.createElement('option');
     opt.value = emp.id;
-    var label = [emp.name, emp.position].filter(Boolean).join(' — ');
+    var label = [emp.name, emp.position].filter(Boolean).join(' - ');
     opt.textContent = label || emp.id;
     sel.appendChild(opt);
   });
   if (current) sel.value = current;
+}
+function loadManagerOptions() {
+  if (managerOptionsLoaded) return;
+  managerOptionsLoaded = true;
+  fetch('/api/employees/manager-options').then(function(response) {
+    return response.ok ? response.json() : null;
+  }).then(function(data) {
+    if (data) populateManagerDropdown(data.options || []);
+  }).catch(function() {
+    // A failed lookup must not break the invite form; the dropdown keeps its
+    // "No manager / Top of hierarchy" option.
+    managerOptionsLoaded = false;
+  });
 }
 
 // Part 2 — detect whether the selected manager already has login access.
@@ -1025,25 +1012,50 @@ function sendManagerInvite(empId) {
 // Load employees from API and render table
 function loadEmployees(opts) {
   opts = opts || {};
-  fetchEmployeeRoster()
+  var dir = window.__voovrDir || { page: 1, pageSize: 20, search: '', department: '', wellness: '' };
+  var params = new URLSearchParams();
+  params.set('page', dir.page);
+  params.set('limit', dir.pageSize);
+  if (dir.search) params.set('search', dir.search);
+  if (dir.department) params.set('department', dir.department);
+  if (dir.wellness) params.set('wellness_status', dir.wellness);
+
+  fetch('/api/employees?' + params.toString())
+    .then(function(response) {
+      if (!response.ok) throw new Error('Could not load employees');
+      return response.json();
+    })
     .then(function(data) {
       var tbody = document.querySelector('#dashEmpTable tbody');
       if (!tbody) return;
       tbody.innerHTML = '';
 
+      // Pager/footer now come from the server's filtered total, not the row count.
+      dir.total = (typeof data.total === 'number') ? data.total : 0;
+      dir.page = (typeof data.page === 'number') ? data.page : dir.page;
+      dir.pages = Math.max(1, Math.ceil(dir.total / dir.pageSize));
+      // A stale page (e.g. filters shrank the result set) must not strand the user.
+      if (dir.page > dir.pages) {
+        dir.page = dir.pages;
+        return loadEmployees(opts);
+      }
+
       // Part 5: a manager sees the directory or the "No one reports to you
-      // yet" empty-state based on their *actual* scoped report count, derived
-      // here from the single employee-list request (so the directory and the
-      // Active Employees stat card can never disagree). Admin sessions are
-      // unaffected — the directory always shows for them.
+      // yet" empty-state based on their *actual* scoped report count. The
+      // unfiltered count comes from /api/employees/stats (set above by
+      // loadDashboardStats) so an active directory filter can never make the
+      // directory and the Active Employees stat card disagree.
       if (window.__voovrRole === 'manager' && typeof window.applyManagerEmptyState === 'function') {
+        var scopedTotal = (window.__voovrScopedTotal != null)
+          ? window.__voovrScopedTotal
+          : dir.total;
         window.applyManagerEmptyState(
           window.__voovrMeData || { role: 'manager' },
-          data.total || (data.employees || []).length
+          scopedTotal
         );
       }
 
-      populateManagerDropdown(data.employees || []);
+      loadManagerOptions();
 
       (data.employees || []).forEach(function(emp) {
         var name = emp.name || '';
@@ -1074,7 +1086,10 @@ function loadEmployees(opts) {
         tbody.appendChild(tr);
       });
 
-      if (window.dashApplyFilters) window.dashApplyFilters();
+      // Rows already reflect the server's filters and page, so only the
+      // pager/footer text needs updating (it used to be recomputed by
+      // dashApplyFilters walking the DOM).
+      if (window.dashRenderDirMeta) window.dashRenderDirMeta();
       if (opts.noAnimate) {
         document.querySelectorAll('.emp-table tbody tr').forEach(function(r) {
           r.style.opacity = '';
@@ -1121,22 +1136,7 @@ function escHtml(str) {
   return d.innerHTML;
 }
 
-// Light/dark theme toggle
-(function() {
-  var btn = document.getElementById('themeToggle');
-  if (!btn) return;
-  btn.addEventListener('click', function() {
-    var current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-    var next = current === 'light' ? 'dark' : 'light';
-    if (next === 'dark') {
-      document.documentElement.removeAttribute('data-theme');
-    } else {
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
-    try { localStorage.setItem('voovr-theme', next); } catch (e) {}
-  });
-})();
-
+{% include 'partials/theme_toggle_js.html' %}
 // ── ADD EMPLOYEE PANEL ──
 (function() {
   var panel = document.getElementById('addEmpPanel');
@@ -1435,18 +1435,7 @@ function escHtml(str) {
     window.VooNotif.renderNotifRows(list, items, openNotification, empty);
   }
 
-  function openNotification(n) {
-    if (!n) return;
-    // Fire-and-forget: optimistically mark read, then route.
-    fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
-    closeDropdown();
-    var isMeetingType = n.type === 'meeting_reminder' || n.type === 'meeting_event' || n.type === 'memory_overdue' || n.type === 'delivery_failed';
-    if (isMeetingType && n.employee_id) {
-      window.location.href = '/meeting-tracker?employee_id=' + encodeURIComponent(n.employee_id);
-      return;
-    }
-    window.location.href = window.VooNotif.targetUrl(n);
-  }
+  {% include 'partials/notification_bell_js.html' %}
 
   function openDropdown() {
     if (!dropdown || open) return;

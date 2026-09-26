@@ -1,0 +1,26 @@
+{# Notification bell: button + dropdown panel.
+
+   Extracted from the three pages that carried a byte-identical copy
+   (dashboard, conversation-workspace, risk-drift). The ids are load-bearing —
+   notification-routing.js wires #notifBtn / #notifPanel / #notifList /
+   #notifDot / #notifCount / #notifMarkAll / #notifViewAll / #notifEmpty — so they
+   are reproduced exactly. #notifViewAll is already root-absolute. #}
+<div class="notif-wrap" id="notifWrap">
+          <button class="icon-btn" id="notifBtn" title="Notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span class="notif-dot" id="notifDot" style="display:none;"></span>
+            <span class="notif-count" id="notifCount"></span>
+          </button>
+          <div class="notif-panel" id="notifPanel">
+            <div class="notif-panel__header">
+              <p class="notif-panel__title">Notifications</p>
+              <button class="notif-panel__mark-all" id="notifMarkAll" type="button">Mark all read</button>
+            </div>
+            <div class="notif-panel__list" id="notifList"></div>
+            <div class="notif-panel__empty" id="notifEmpty" style="display:none;">
+              <span class="notif-panel__empty-title">No signals to review</span>
+              <span class="notif-panel__empty-body">Genuine risk patterns will appear here automatically.</span>
+            </div>
+            <a class="notif-panel__footer" id="notifViewAll" href="/notifications">View all notifications</a>
+          </div>
+        </div>

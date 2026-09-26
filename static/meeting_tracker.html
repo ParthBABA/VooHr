@@ -1429,20 +1429,7 @@ fetch('/api/me').then(function(r) { return r.ok ? r.json() : null; }).catch(func
 
 <!-- Theme toggle -->
 <script>
-(function() {
-  var btn = document.getElementById('themeToggle');
-  if (!btn) return;
-  btn.addEventListener('click', function() {
-    var current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-    var next = current === 'light' ? 'dark' : 'light';
-    if (next === 'dark') {
-      document.documentElement.removeAttribute('data-theme');
-    } else {
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
-    try { localStorage.setItem('voovr-theme', next); } catch (e) {}
-  });
-})();
+{% include 'partials/theme_toggle_js.html' %}
 </script>
 </body>
 </html>

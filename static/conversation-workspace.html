@@ -224,24 +224,7 @@ withTimeout(fetch('/api/me').then(function(res){
             <span class="ws-job-pill-text">Translating&hellip;</span>
           </span>
         </span>
-        <div class="notif-wrap" id="notifWrap">
-          <button class="icon-btn" id="notifBtn" title="Notifications">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-            <span class="notif-dot" id="notifDot" style="display:none;"></span>
-            <span class="notif-count" id="notifCount"></span>
-          </button>
-          <div class="notif-panel" id="notifPanel">
-            <div class="notif-panel__header">
-              <p class="notif-panel__title">Notifications</p>
-              <button class="notif-panel__mark-all" id="notifMarkAll" type="button">Mark all read</button>
-            </div>
-            <div class="notif-panel__list" id="notifList"></div>
-            <div class="notif-panel__empty" id="notifEmpty" style="display:none;">
-              <span class="notif-panel__empty-title">No signals to review</span>
-              <span class="notif-panel__empty-body">Genuine risk patterns will appear here automatically.</span>
-            </div>
-            <a class="notif-panel__footer" id="notifViewAll" href="/notifications">View all notifications</a>
-          </div>
+        {% include 'partials/notification_bell.html' %}
         </div>
       </div>
     </div>
@@ -1568,20 +1551,7 @@ window.voovrInitWorkspace = function() {
 </script>
 
 <script>
-(function() {
-  var btn = document.getElementById('themeToggle');
-  if (!btn) return;
-  btn.addEventListener('click', function() {
-    var current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-    var next = current === 'light' ? 'dark' : 'light';
-    if (next === 'dark') {
-      document.documentElement.removeAttribute('data-theme');
-    } else {
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
-    try { localStorage.setItem('voovr-theme', next); } catch (e) {}
-  });
-})();
+{% include 'partials/theme_toggle_js.html' %}
 </script>
 
 <script>
@@ -2128,18 +2098,7 @@ window.voovrInitWorkspace = function() {
     window.VooNotif.renderNotifRows(list, items, openNotification, empty);
   }
 
-  function openNotification(n) {
-    if (!n) return;
-    // Fire-and-forget: optimistically mark read, then route.
-    fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
-    closeDropdown();
-    var isMeetingType = n.type === 'meeting_reminder' || n.type === 'meeting_event' || n.type === 'memory_overdue' || n.type === 'delivery_failed';
-    if (isMeetingType && n.employee_id) {
-      window.location.href = '/meeting-tracker?employee_id=' + encodeURIComponent(n.employee_id);
-      return;
-    }
-    window.location.href = window.VooNotif.targetUrl(n);
-  }
+  {% include 'partials/notification_bell_js.html' %}
 
   function openDropdown() {
     if (!dropdown || open) return;

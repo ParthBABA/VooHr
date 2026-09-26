@@ -586,29 +586,25 @@ class TestBlindIndexHotPath:
         code_body = "\n".join(code_lines)
         assert "load_dotenv" not in code_body
 
-    def test_get_secret_still_returns_valid_secret(self):
+    def test_get_secret_still_returns_valid_secret(self, monkeypatch):
         """_get_secret should still return a valid secret from environment."""
         import blind_index
-        import os
-        os.environ["HASH_INDEX_SECRET"] = "test-secret-123"
-        try:
-            secret = blind_index._get_secret()
-            assert secret == "test-secret-123"
-        finally:
-            del os.environ["HASH_INDEX_SECRET"]
+        # monkeypatch restores the exact prior value (or absence) afterwards.
+        # A bare `del os.environ[...]` in a finally block would destroy a real
+        # secret loaded from .env for the rest of the pytest session, silently
+        # flipping every later blind_index() call onto the JWT_SECRET fallback.
+        monkeypatch.setenv("HASH_INDEX_SECRET", "test-secret-123")
+        secret = blind_index._get_secret()
+        assert secret == "test-secret-123"
 
-    def test_blind_index_still_works(self):
+    def test_blind_index_still_works(self, monkeypatch):
         """blind_index() should still produce deterministic HMAC output."""
         import blind_index
-        import os
-        os.environ["HASH_INDEX_SECRET"] = "test-secret-123"
-        try:
-            result1 = blind_index.blind_index("test@example.com")
-            result2 = blind_index.blind_index("test@example.com")
-            assert result1 == result2
-            assert len(result1) == 64
-        finally:
-            del os.environ["HASH_INDEX_SECRET"]
+        monkeypatch.setenv("HASH_INDEX_SECRET", "test-secret-123")
+        result1 = blind_index.blind_index("test@example.com")
+        result2 = blind_index.blind_index("test@example.com")
+        assert result1 == result2
+        assert len(result1) == 64
 
 
 # ---------------------------------------------------------------------------

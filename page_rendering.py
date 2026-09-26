@@ -26,6 +26,19 @@ def _read_page(path, modified):
     return Path(path).read_text(encoding="utf-8")
 
 
+@lru_cache(maxsize=64)
+def _compile_page(path, modified):
+    """Compile a static page as a Jinja template, cached by mtime.
+
+    The pages in static/ are served only through render_page() (never as raw
+    static files), so they double as templates. That is what lets them pull in
+    shared markup with {% include 'partials/...' %} instead of each carrying its
+    own copy of the sidebar / notification bell / theme-toggle handler.
+    """
+    source = Path(path).read_text(encoding="utf-8")
+    return current_app.jinja_env.from_string(source)
+
+
 class _RootAssetParser(HTMLParser):
     """Normalize actual markup, never JavaScript template strings or CSS."""
     def __init__(self, source):
@@ -57,7 +70,8 @@ class _RootAssetParser(HTMLParser):
 
 def render_page(filename):
     path = Path(current_app.static_folder) / filename
-    source = _read_page(str(path), path.stat().st_mtime_ns)
+    modified = path.stat().st_mtime_ns
+    source = _read_page(str(path), modified)
     title = re.search(r"<title>(.*?)</title>", source, re.S).group(1)
     head = render_template("shared-head.html", **metadata(
         title, public=filename in {
@@ -66,9 +80,13 @@ def render_page(filename):
             "status.html"
         }
     ))
+    # Expand {% include %} first, then substitute the head, so the injected
+    # markup is never re-parsed as template syntax.
+    page = _compile_page(str(path), modified).render(**metadata(title))
+    page = page.replace("<!-- shared-head -->", head, 1)
     # Clean routes can be nested (/sync/room). Local assets and page links
     # were authored relative to the static root, not the current URL folder.
-    response = make_response(_RootAssetParser(
-        source.replace("<!-- shared-head -->", head, 1)).normalized())
+    # This runs after rendering so partials get the same treatment.
+    response = make_response(_RootAssetParser(page).normalized())
     response.headers["Cache-Control"] = "no-store"
     return response

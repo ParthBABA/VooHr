@@ -326,6 +326,14 @@ def create_employee():
 DEFAULT_PAGE_LIMIT = 50    # employees per page
 MAX_PAGE_LIMIT = 200       # hard upper bound, clamps any larger request
 
+# Upper bound on how many scoped employees a single search request will decrypt
+# and scan. Search cannot run in Mongo (the name/email fields are encrypted), so
+# it is a linear scan; this ceiling stops a very large org from pulling an
+# unbounded number of documents into memory on one request. Exceeding it logs a
+# warning rather than silently returning partial results. See the KNOWN LIMIT
+# comment in list_employees() for the scalable alternative.
+SEARCH_SCAN_LIMIT = 5000
+
 
 @employees_bp.route("/employees")
 def list_employees():
@@ -344,6 +352,14 @@ def list_employees():
     search = (request.args.get("search") or "").strip().lower()
     dept = (request.args.get("department") or "").strip()
     emp_status = (request.args.get("status") or "").strip()
+    # Wellness status is DERIVED (ai_wellness.status, else computed from HR
+    # signals, else "not_assessed"), so it is not a plain stored field and
+    # cannot be matched by Mongo. It is filtered in the same Python pass as
+    # search rather than with a query on ai_wellness.status, which would
+    # silently drop employees whose status comes from signals.
+    wellness_filter = (request.args.get("wellness_status") or "").strip().lower()
+    if wellness_filter == "all":
+        wellness_filter = ""
 
     # Pagination params: page (1-based) and limit.  limit is clamped to
     # [1, MAX_PAGE_LIMIT]; page is >= 1.
@@ -362,43 +378,221 @@ def list_employees():
     if emp_status:
         query["status"] = emp_status
 
-    # Base total across the (pre-search) filters, for pagination metadata.
-    base_total = db.employees.count_documents(query)
-
-    cursor = db.employees.find(query).sort("created_at", -1).skip((page - 1) * limit).limit(limit)
-    employees = list(cursor)
-
-    # Client-side name/email search (fields are encrypted, can't query
-    # directly).
-    result = []
-    # When a name/email search is supplied we cannot paginate inside MongoDB
-    # (the fields are encrypted), so we over-fetch one page and filter.
-    for emp in employees:
-        item = _employee_to_json(emp)
-        if search:
-            if search not in item["name"].lower() and search not in item["email"].lower() and search not in item.get("department", "").lower():
-                continue
-        result.append(item)
-
-    # For pagination metadata we reflect the effective (filtered) page size.
-    page_size = len(result)
     offset = (page - 1) * limit
-    has_more = base_total > (offset + page_size)
+
+    if search or wellness_filter:
+        # Name/email are encrypted and wellness status is derived, so Mongo
+        # cannot filter either one. Paginating first and filtering the returned
+        # page (the old behaviour) meant a search only ever matched employees
+        # that happened to land on the current page, and reported pagination
+        # metadata derived from the UNFILTERED total.
+        #
+        # Instead we filter the whole scoped result set first, then paginate the
+        # already-filtered list, so `total` and `has_more` describe the matches.
+        #
+        # KNOWN LIMIT: this is O(n) per request in the size of the scoped
+        # employee set — every candidate is decrypted and string-matched. That
+        # is fine at current org sizes (hundreds to low thousands) but becomes
+        # the bottleneck past a few thousand employees. The scalable follow-up is
+        # a blind-index-backed prefix/substring field (e.g. name_search_tokens)
+        # computed on create/update and queried in Mongo before pagination, so
+        # filtering never has to touch plaintext.
+        scoped = list(db.employees.find(query).sort("created_at", -1).limit(SEARCH_SCAN_LIMIT))
+        if db.employees.count_documents(query) > SEARCH_SCAN_LIMIT:
+            logger.warning(
+                "Employee search scanned only the first %d of the scoped set; "
+                "results may be incomplete for this org. Add a blind-index "
+                "search field to make search scale.",
+                SEARCH_SCAN_LIMIT,
+            )
+
+        matched = []
+        for emp in scoped:
+            item = _employee_to_json(emp)
+            if search:
+                haystack = (
+                    (item.get("name") or ""),
+                    (item.get("email") or ""),
+                    (item.get("department") or ""),
+                )
+                if not any(search in field.lower() for field in haystack):
+                    continue
+            if wellness_filter:
+                if (item.get("wellness_status") or "").lower() != wellness_filter:
+                    continue
+            matched.append(item)
+
+        total = len(matched)
+        result = matched[offset:offset + limit]
+        has_more = offset + len(result) < total
+    else:
+        # No search: the plaintext fields are irrelevant, so let MongoDB page
+        # the scoped set directly (unchanged behaviour, no decryption overhead).
+        total = db.employees.count_documents(query)
+        cursor = db.employees.find(query).sort("created_at", -1).skip(offset).limit(limit)
+        result = [_employee_to_json(emp) for emp in cursor]
+        has_more = offset + len(result) < total
 
     return jsonify({
         "employees": result,
-        "total": base_total,
+        "total": total,
         "page": page,
         "limit": limit,
         "has_more": has_more,
     })
 
 
+# ---------------------------------------------------------------------------
+# Read-only aggregate / lookup endpoints.
+#
+# These exist so the dashboard can render its stat cards, department filter and
+# manager dropdown from the server instead of recursively fetching every
+# employee page and aggregating/filtering in the browser.
+#
+# Like search, all three are DERIVED-data endpoints and therefore do a bounded
+# linear scan of the caller's SCOPED employee set: role scoping is applied
+# first, so a manager only ever aggregates their own direct reports.
+# ---------------------------------------------------------------------------
+
+
+@employees_bp.route("/employees/stats")
+def employee_stats():
+    """Org-wide (role-scoped) aggregates for the dashboard stat cards.
+
+    Mirrors exactly what the dashboard used to compute client-side from the
+    full roster, so the numbers do not change when the fetch is removed:
+      - total / active counts
+      - distinct department count
+      - average wellness score (null scores excluded from BOTH sum and count)
+      - burnout count (burnout_index >= 70; unknown burnout is not risk)
+      - employees created in the last 7 days (the "+N this week" delta)
+    """
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    query: dict = {"org_id": ObjectId(org_id)}
+    query.update(_employee_scope_filter(db, org_id))
+
+    total_scoped = db.employees.count_documents(query)
+
+    # The dashboard's "this week" delta is measured against the client clock;
+    # the server clock is the only trustworthy value available here.
+    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+
+    scanned = db.employees.find(query).limit(SEARCH_SCAN_LIMIT)
+    if total_scoped > SEARCH_SCAN_LIMIT:
+        logger.warning(
+            "employee_stats scanned only the first %d of %d scoped employees; "
+            "aggregates may be incomplete for this org.",
+            SEARCH_SCAN_LIMIT,
+            total_scoped,
+        )
+
+    active = 0
+    new_this_week = 0
+    departments = set()
+    score_sum = 0
+    score_count = 0
+    burnout = 0
+
+    for emp in scanned:
+        item = _employee_to_json(emp)
+        if item.get("status") == "active":
+            active += 1
+
+        dept = item.get("department")
+        if dept:
+            departments.add(dept)
+
+        created = emp.get("created_at")
+        if created is not None and created >= week_ago:
+            new_this_week += 1
+
+        score = item.get("wellness_score")
+        if score is not None:
+            score_sum += score
+            score_count += 1
+
+        idx = item.get("burnout_index")
+        if idx is not None and idx >= 70:
+            burnout += 1
+
+    return jsonify({
+        "total": total_scoped,
+        "active": active,
+        "department_count": len(departments),
+        "avg_wellness_score": (score_sum / score_count) if score_count else None,
+        "scored_count": score_count,
+        "burnout_count": burnout,
+        "new_this_week": new_this_week,
+        "truncated": total_scoped > SEARCH_SCAN_LIMIT,
+    })
+
+
+@employees_bp.route("/employees/departments")
+def employee_departments():
+    """Distinct department names in the caller's scope, for the filter dropdown.
+
+    Department is a plaintext field, so this aggregates in Mongo rather than
+    scanning/decrypting documents.
+    """
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    query: dict = {"org_id": ObjectId(org_id)}
+    query.update(_employee_scope_filter(db, org_id))
+
+    names = db.employees.distinct("department", query)
+    return jsonify({
+        "departments": sorted({n for n in names if n}),
+    })
+
+
+@employees_bp.route("/employees/manager-options")
+def employee_manager_options():
+    """Minimal id/name/position list for the "reports to" dropdown.
+
+    Name is encrypted, so this is a bounded scan; only three fields are
+    returned, keeping the payload small.
+    """
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    query: dict = {"org_id": ObjectId(org_id)}
+    query.update(_employee_scope_filter(db, org_id))
+
+    total_scoped = db.employees.count_documents(query)
+    if total_scoped > SEARCH_SCAN_LIMIT:
+        logger.warning(
+            "employee_manager_options scanned only the first %d of %d scoped "
+            "employees; the manager dropdown may be incomplete.",
+            SEARCH_SCAN_LIMIT,
+            total_scoped,
+        )
+
+    options = []
+    for emp in db.employees.find(query).sort("created_at", -1).limit(SEARCH_SCAN_LIMIT):
+        item = _employee_to_json(emp)
+        options.append({
+            "id": item["id"],
+            "name": item.get("name") or "",
+            "position": item.get("position") or "",
+        })
+
+    return jsonify({"options": options, "truncated": total_scoped > SEARCH_SCAN_LIMIT})
+
+
 # NOTE: these bulk routes are registered deliberately BEFORE the
 # /employees/<emp_id> routes below.  Flask matches route patterns in
 # registration order, and "<emp_id>" (default string converter) would swallow
-# the literal path segments "import" / "export-csv" if they were registered
-# after it.
+# the literal path segments "stats" / "departments" / "manager-options" /
+# "import" / "export-csv" if they were registered after it.
 
 
 def _validate_import_row(name, email, phone, department, position,

@@ -1,0 +1,22 @@
+{# openNotification: shared by dashboard, conversation-workspace and risk-drift.
+
+   These three carried the same handler; risk-drift's copy was missing only the
+   explanatory comment, which this partial restores. Behaviour is unchanged:
+   mark-as-read is fire-and-forget, meeting-family notifications route to the
+   meeting tracker for the related employee, and everything else falls through
+   to the shared window.VooNotif.targetUrl().
+
+   notifications.html is deliberately NOT served from this partial: it always
+   routes via VooNotif.targetUrl and has no meeting-tracker special case. #}
+function openNotification(n) {
+    if (!n) return;
+    // Fire-and-forget: optimistically mark read, then route.
+    fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
+    closeDropdown();
+    var isMeetingType = n.type === 'meeting_reminder' || n.type === 'meeting_event' || n.type === 'memory_overdue' || n.type === 'delivery_failed';
+    if (isMeetingType && n.employee_id) {
+      window.location.href = '/meeting-tracker?employee_id=' + encodeURIComponent(n.employee_id);
+      return;
+    }
+    window.location.href = window.VooNotif.targetUrl(n);
+  }

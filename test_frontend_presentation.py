@@ -148,9 +148,18 @@ class PresentationTests(unittest.TestCase):
             r"(?:textContent|innerHTML|value)\s*=[^=]", source))
 
     def test_every_page_with_identity_markup_overwrites_it_from_the_api(self):
+        """Audited against the RENDERED page, not the static source.
+
+        The identity markup (#userName / #userRole / #userAvatar) now reaches
+        dashboard.html and settings.html through the shared sidebar partial, so
+        scanning static/*.html alone would miss exactly the pages most likely to
+        regress. Rendering first keeps the audit honest — and stricter, since it
+        now sees the markup each page actually ships.
+        """
         pages = []
         for path in sorted((ROOT / "static").glob("*.html")):
-            source = path.read_text(encoding="utf-8")
+            with self.app.test_request_context("/page", base_url="https://example.test"):
+                source = render_page(path.name).get_data(as_text=True)
             if not all(f'id="{el}"' in source for el in self.IDENTITY_IDS):
                 continue
             pages.append(path.name)
@@ -164,6 +173,12 @@ class PresentationTests(unittest.TestCase):
                         f"placeholder would stay on screen")
         # The audit is only meaningful if it actually found the known pages.
         self.assertIn("meeting_tracker.html", pages)
+        # dashboard.html and settings.html must still be covered even though the
+        # markup now arrives via {% include 'partials/sidebar.html' %}.
+        for expected in ("dashboard.html", "settings.html"):
+            self.assertIn(expected, pages,
+                          f"{expected} renders the sidebar identity markup but "
+                          f"was not audited")
         self.assertGreaterEqual(len(pages), 9)
 
     def test_meeting_tracker_shows_the_real_logged_in_user(self):
@@ -230,6 +245,234 @@ class PresentationTests(unittest.TestCase):
         py = (ROOT / "employees.py").read_text(encoding="utf-8")
         self.assertIn("MAX_PHOTO_BYTES", py)
         self.assertIn('"photo": photo or None', py)
+
+    def test_dashboard_does_not_recursively_fetch_every_employee(self):
+        """The directory must page server-side.
+
+        It used to walk /api/employees page by page until has_more was false,
+        downloading the whole org, and then filter/paginate the DOM. That made
+        the browser hold every employee just to draw 20 rows, and it silently
+        truncated large orgs. Search and the derived wellness status now run on
+        the server, so no page-walking loop may come back.
+        """
+        source = (ROOT / "static" / "dashboard.html").read_text(encoding="utf-8")
+        self.assertNotIn("fetchEmployeeRoster", source)
+        self.assertNotIn("has_more", source)
+        self.assertIsNone(re.search(r"function\s+loadPage\s*\(", source),
+                          "a recursive page loader is back")
+
+    def test_dashboard_sends_filters_to_the_server(self):
+        """Filtering must reach the API, not just hide rows already in the DOM.
+
+        search/name is the one that matters most: it is matched against
+        encrypted name/email, so it cannot work unless the server does it.
+        """
+        source = (ROOT / "static" / "dashboard.html").read_text(encoding="utf-8")
+        for param in ("search", "department", "wellness_status", "page", "limit"):
+            with self.subTest(param=param):
+                self.assertIn(f"params.set('{param}'", source,
+                              f"#{param} is never sent to /api/employees")
+        # And the server must actually accept the derived-status filter.
+        py = (ROOT / "employees.py").read_text(encoding="utf-8")
+        self.assertIn('request.args.get("wellness_status")', py)
+        self.assertIn('request.args.get("search")', py)
+
+    def test_dashboard_stats_and_lookups_hit_dedicated_endpoints(self):
+        """Stat cards, the department filter and the manager dropdown each need
+        the full scoped set, which is why the recursion existed. They must read
+        it from the server-side aggregate/lookup endpoints instead."""
+        source = (ROOT / "static" / "dashboard.html").read_text(encoding="utf-8")
+        for endpoint in ("/api/employees/stats",
+                         "/api/employees/departments",
+                         "/api/employees/manager-options"):
+            with self.subTest(endpoint=endpoint):
+                self.assertIn(endpoint, source)
+        py = (ROOT / "employees.py").read_text(encoding="utf-8")
+        for route in ('@employees_bp.route("/employees/stats")',
+                      '@employees_bp.route("/employees/departments")',
+                      '@employees_bp.route("/employees/manager-options")'):
+            with self.subTest(route=route):
+                self.assertIn(route, py)
+
+    def test_static_routes_still_precede_employee_id_route(self):
+        """The literal sub-paths must be registered before /employees/<id>,
+        whose string converter would otherwise swallow them."""
+        py = (ROOT / "employees.py").read_text(encoding="utf-8")
+        for literal in ("/employees/stats", "/employees/departments",
+                        "/employees/manager-options"):
+            with self.subTest(literal=literal):
+                self.assertLess(py.index(f'route("{literal}")'),
+                                py.index('route("/employees/<emp_id>")'),
+                                f"{literal} is shadowed by the <emp_id> route")
+
+    # ── Shared Jinja partials ─────────────────────────────────────────────
+    #
+    # The sidebar / notification bell / theme-toggle markup used to be copied
+    # into each page, so a fix had to be applied N times and drifted. These pages
+    # are served only through render_page(), so they double as Jinja templates
+    # and pull the shared parts from templates/partials/. The tests below pin
+    # both halves: the includes resolve, and the duplication does not return.
+
+    PARTIALS = ("sidebar.html", "notification_bell.html",
+                "notification_bell_js.html", "theme_toggle_js.html")
+
+    def _render(self, page):
+        with self.app.test_request_context("/page", base_url="https://example.test"):
+            return render_page(page).get_data(as_text=True)
+
+    def test_every_partial_exists_and_is_referenced(self):
+        for name in self.PARTIALS:
+            with self.subTest(partial=name):
+                self.assertTrue((ROOT / "templates" / "partials" / name).is_file(),
+                                f"templates/partials/{name} is missing")
+                needle = f"{{% include 'partials/{name}' %}}"
+                users = [p.name for p in sorted((ROOT / "static").glob("*.html"))
+                         if needle in p.read_text(encoding="utf-8")]
+                self.assertTrue(users, f"no page includes {name}")
+
+    def test_render_page_expands_includes(self):
+        """render_page() must render pages as templates, or every {% include %}
+        would ship to the browser as literal text."""
+        html = self._render("dashboard.html")
+        self.assertNotIn("{% include", html)
+        self.assertNotIn("{{", html)
+        # The sidebar only reaches dashboard.html through the partial.
+        self.assertIn('<nav class="sidebar">', html)
+
+    def test_partial_markup_is_normalized_like_page_markup(self):
+        """The sidebar's logo is authored relative to the static root, so it must
+        be rewritten to /voovr-logo-full.png even though it now comes from a
+        template in templates/."""
+        for page in ("dashboard.html", "settings.html"):
+            with self.subTest(page=page):
+                self.assertIn('src="/voovr-logo-full.png"', self._render(page))
+                self.assertNotIn('src="voovr-logo-full.png"', self._render(page))
+
+    def test_sidebar_marks_exactly_its_own_nav_item_active(self):
+        """nav_active drives the highlight; getting it wrong silently breaks
+        "where am I" on two pages.
+
+        The partial matches on the authored (relative) href, but the rendered
+        page has been normalized to root-absolute by _RootAssetParser, so the
+        expected hrefs here are the normalized ones. Asserting them doubles as a
+        check that normalization still reaches markup that came from a partial.
+        """
+        for page, active_href in (("dashboard.html", "/dashboard.html"),
+                                  ("settings.html", "/settings.html")):
+            with self.subTest(page=page):
+                nav = re.search(r'<nav class="sidebar">.*?</nav>',
+                                self._render(page), re.S).group(0)
+                actives = re.findall(r'<a href="([^"]+)" class="nav-item active"', nav)
+                self.assertEqual(actives, [active_href],
+                                 f"{page} highlights {actives}, expected [{active_href}]")
+                # Every other item must be plain — no second highlight.
+                self.assertEqual(nav.count("nav-item active"), 1)
+
+    def test_notification_bell_markup_is_not_duplicated(self):
+        """The three bell pages must share one copy of the markup."""
+        pages = ("dashboard.html", "conversation-workspace.html", "risk-drift.html")
+        for page in pages:
+            with self.subTest(page=page):
+                source = (ROOT / "static" / page).read_text(encoding="utf-8")
+                self.assertIn("{% include 'partials/notification_bell.html' %}", source)
+                self.assertNotIn('id="notifPanel"', source,
+                                 f"{page} still carries its own bell markup")
+        for page in pages:
+            with self.subTest(rendered=page):
+                self.assertEqual(self._render(page).count('id="notifPanel"'), 1)
+
+    def test_pages_without_a_bell_did_not_gain_one(self):
+        """Only the three original bell pages have a bell. A partial include
+        must not be added to the others as a side effect."""
+        for page in ("meeting_tracker.html", "settings.html",
+                     "sync.html", "sync_room.html"):
+            with self.subTest(page=page):
+                self.assertNotIn("id='notifBtn'", (ROOT / "static" / page).read_text(encoding="utf-8"))
+                self.assertNotIn('id="notifBtn"', self._render(page))
+
+    def test_pages_without_a_sidebar_did_not_gain_one(self):
+        for page in ("conversation-workspace.html", "risk-drift.html",
+                     "meeting_tracker.html", "sync.html", "sync_room.html"):
+            with self.subTest(page=page):
+                self.assertNotIn("partials/sidebar.html",
+                                 (ROOT / "static" / page).read_text(encoding="utf-8"))
+                self.assertNotIn('<nav class="sidebar">', self._render(page))
+
+    def test_bell_routing_behavior_is_preserved(self):
+        """Meeting-family notifications must still deep-link to the meeting
+        tracker, and everything else must still fall through to the shared
+        router. notifications.html is intentionally not on this partial."""
+        partial = (ROOT / "templates" / "partials" / "notification_bell_js.html").read_text(
+            encoding="utf-8")
+        self.assertIn("function openNotification(n)", partial)
+        for notification_type in ("meeting_reminder", "meeting_event",
+                                  "memory_overdue", "delivery_failed"):
+            with self.subTest(type=notification_type):
+                self.assertIn(f"n.type === '{notification_type}'", partial)
+        self.assertIn("'/meeting-tracker?employee_id=' + encodeURIComponent(n.employee_id)",
+                      partial)
+        self.assertIn("window.VooNotif.targetUrl(n)", partial)
+        # Mark-as-read must stay fire-and-forget.
+        self.assertIn("fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' })",
+                      partial)
+        for page in ("dashboard.html", "conversation-workspace.html", "risk-drift.html"):
+            with self.subTest(page=page):
+                html = self._render(page)
+                self.assertIn("'/meeting-tracker?employee_id='", html)
+
+    def test_theme_toggle_handler_is_deduplicated_where_it_is_safe(self):
+        """There are two different theme handlers in this app.
+
+        Six pages read/write localStorage['voovr-theme'] themselves; two
+        (settings.html, activity-log.html) instead delegate to the shared
+        window.voovrGetTheme/voovrSetTheme API. The partial carries the
+        localStorage variant, so only pages using THAT variant and whose IIFE
+        contains nothing else may be collapsed onto it — otherwise a page's
+        other initialisation would move or change order.
+        """
+        partial = (ROOT / "templates" / "partials" / "theme_toggle_js.html").read_text(
+            encoding="utf-8")
+        self.assertIn("localStorage.setItem('voovr-theme', next)", partial)
+        self.assertIn("document.documentElement.setAttribute('data-theme', 'light')", partial)
+
+        # localStorage variant, standalone IIFE -> use the partial.
+        standalone = ("dashboard.html", "conversation-workspace.html", "risk-drift.html",
+                      "meeting_tracker.html", "sync.html")
+        for page in standalone:
+            with self.subTest(page=page):
+                source = (ROOT / "static" / page).read_text(encoding="utf-8")
+                self.assertIn("{% include 'partials/theme_toggle_js.html' %}", source)
+                self.assertNotIn("localStorage.setItem('voovr-theme'", source,
+                                 f"{page} still has an inline copy")
+                self.assertIn("localStorage.setItem('voovr-theme'", self._render(page))
+
+        # localStorage variant, but the IIFE also wires syncAnalysisLang, so
+        # splitting it would reorder initialisation. Left inline on purpose.
+        with self.subTest(page="sync_room.html", note="shared IIFE, left inline"):
+            source = (ROOT / "static" / "sync_room.html").read_text(encoding="utf-8")
+            self.assertNotIn("partials/theme_toggle_js.html", source)
+            self.assertIn("localStorage.setItem('voovr-theme'", self._render("sync_room.html"))
+
+        # A different handler entirely: must be left alone.
+        for page in ("settings.html", "activity-log.html"):
+            with self.subTest(page=page, note="delegating handler, not the partial's"):
+                source = (ROOT / "static" / page).read_text(encoding="utf-8")
+                self.assertNotIn("partials/theme_toggle_js.html", source)
+                html = self._render(page)
+                self.assertIn("voovrSetTheme", html)
+                self.assertNotIn("localStorage.setItem('voovr-theme'", html)
+
+    def test_every_theme_toggle_button_is_wired_to_a_handler(self):
+        """A #themeToggle button with no handler is a dead control. The handler
+        may be either of the two styles above, so accept both."""
+        for path in sorted((ROOT / "static").glob("*.html")):
+            if 'id="themeToggle"' not in path.read_text(encoding="utf-8"):
+                continue
+            with self.subTest(page=path.name):
+                html = self._render(path.name)
+                self.assertTrue(
+                    "voovr-theme" in html or "voovrSetTheme" in html,
+                    f"{path.name} renders a #themeToggle button but no theme handler")
 
 
 if __name__ == "__main__":
