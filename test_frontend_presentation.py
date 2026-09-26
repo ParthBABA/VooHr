@@ -177,6 +177,60 @@ class PresentationTests(unittest.TestCase):
         self.assertIn("me.role === 'admin' ? 'HR Admin'", source)
         self.assertIn(".catch(function() { return null; })", source)
 
+    # ── No dead buttons, no title-attribute wiring ────────────────────────
+    #
+    # The directory header shipped a "Filters" button with no id and no
+    # handler anywhere in the file — a control that looked live and did
+    # nothing. "Add Employee" worked, but only because it was found via
+    # querySelector('[title="Add a new employee"]'), so a copy tweak would
+    # have broken it silently. These guard both halves.
+
+    def test_dashboard_header_buttons_are_all_id_addressable(self):
+        source = (ROOT / "static" / "dashboard.html").read_text(encoding="utf-8")
+        block = source.split('<div class="card-header-actions">', 1)[1]
+        block = block.split("</div>", 1)[0]
+        buttons = re.findall(r"<button\b[^>]*>", block)
+        self.assertTrue(buttons, "card-header-actions should still hold its buttons")
+        for tag in buttons:
+            with self.subTest(button=tag[:70]):
+                self.assertIn('id="', tag,
+                              "header buttons must carry an id so JS can reach them")
+                # And the id must actually be used.
+                el_id = re.search(r'id="([^"]+)"', tag).group(1)
+                self.assertIn(f"getElementById('{el_id}')", source,
+                              f"#{el_id} is declared but never read — dead UI")
+
+    def test_no_element_is_located_by_its_title_attribute(self):
+        """Title text is a tooltip, not an API — a copy or i18n change would
+        break the lookup with no error anywhere."""
+        pattern = re.compile(r"querySelector(?:All)?\(\s*['\"]\[title")
+        for path in sorted((ROOT / "static").glob("*.html")):
+            source = path.read_text(encoding="utf-8")
+            with self.subTest(page=path.name):
+                self.assertIsNone(pattern.search(source),
+                                  f"{path.name} locates an element by its title attribute")
+
+    def test_add_employee_panel_is_opened_by_id(self):
+        source = (ROOT / "static" / "dashboard.html").read_text(encoding="utf-8")
+        panel = source.split("// \u2500\u2500 ADD EMPLOYEE PANEL", 1)[1]
+        self.assertIn("getElementById('dashAddEmployeeBtn')", panel)
+        self.assertNotIn('[title="Add a new employee"]', panel)
+        # The button still exists in the markup, so the id has a target.
+        self.assertIn('id="dashAddEmployeeBtn"', source)
+        self.assertIn("if (openBtn) openBtn.addEventListener('click', openPanel)", panel)
+
+    def test_directory_photo_is_sent_on_create(self):
+        """Employee photos are a real, wired feature: the upload is resized to
+        a 256px JPEG data-URL client-side and posted to /api/employees, which
+        validates and stores it. Guards against anyone "fixing" a phantom
+        preview-only bug by stripping the field from the request."""
+        source = (ROOT / "static" / "dashboard.html").read_text(encoding="utf-8")
+        self.assertIn("photo: currentPhotoData", source)
+        self.assertIn("canvas.toDataURL('image/jpeg'", source)
+        py = (ROOT / "employees.py").read_text(encoding="utf-8")
+        self.assertIn("MAX_PHOTO_BYTES", py)
+        self.assertIn('"photo": photo or None', py)
+
 
 if __name__ == "__main__":
     unittest.main()

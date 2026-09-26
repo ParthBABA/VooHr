@@ -430,11 +430,7 @@
               <div class="ffolder big pink" id="dashEmpCount"><span>Loading...</span></div>
             </div>
             <div class="card-header-actions">
-              <button class="btn btn-sm btn-outline" type="button" title="Filter options">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
-                Filters
-              </button>
-              <button class="btn btn-sm btn-gradient admin-only" type="button" title="Add a new employee">
+              <button class="btn btn-sm btn-gradient admin-only" type="button" id="dashAddEmployeeBtn" title="Add a new employee">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Add Employee
               </button>
@@ -1155,7 +1151,7 @@ function escHtml(str) {
   var currentStep = 1;
   var totalSteps = 3;
   var currentPhotoData = null;
-  var openBtn = document.querySelector('[title="Add a new employee"]');
+  var openBtn = document.getElementById('dashAddEmployeeBtn');
 
   if (!panel || !overlay) return;
 
