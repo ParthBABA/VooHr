@@ -81,12 +81,40 @@ class _FakeCollection:
         self.docs.append(doc)
         return mock.Mock(inserted_id=doc["_id"])
 
+    def _set_path(self, doc, path, value):
+        """Apply a (possibly dotted) $set path the way MongoDB does.
+
+        Sessions store per-language analyses under ``analyses.<language>``, so a
+        flat ``doc.update()`` would create a literal ``"analyses.japanese"`` key
+        and the tests would pass while production stored a nested document.
+        """
+        parts = path.split(".")
+        node = doc
+        for part in parts[:-1]:
+            nxt = node.get(part)
+            if not isinstance(nxt, dict):
+                nxt = {}
+                node[part] = nxt
+            node = nxt
+        node[parts[-1]] = value
+
     def update_one(self, q, update, upsert=False):
         matches = [d for d in self.docs if self._match(d, q)]
         if not matches or "$set" not in update:
             return mock.Mock(matched_count=len(matches))
         matched = matches[0]
-        matched.update(update["$set"])
+        for path, value in update["$set"].items():
+            self._set_path(matched, path, value)
+        for path in update.get("$unset") or {}:
+            parts = path.split(".")
+            node = matched
+            for part in parts[:-1]:
+                node = node.get(part)
+                if not isinstance(node, dict):
+                    node = None
+                    break
+            if isinstance(node, dict):
+                node.pop(parts[-1], None)
         return mock.Mock(matched_count=1)
 
     def create_index(self, *a, **k):
@@ -227,7 +255,11 @@ class TestTranslationJobs:
         assert job["status"] == "done"
         s = db.sessions.find_one({"_id": ObjectId(_SESSION)})
         assert s["analysis_language"] == "japanese"
-        assert "Summary in japanese" in s["analysis"]["summary"]
+        # Result lives under analyses.<language>, not a flat top-level field.
+        assert "Summary in japanese" in s["analyses"]["japanese"]["summary"]
+        assert s["analyses"]["japanese"]["generated_at"] is not None
+        # The legacy flat field is dropped so there is only one source of truth.
+        assert "analysis" not in s
         assert s["status"] == "completed"
 
         n = db.notifications.find_one({"type": "translation_ready"})

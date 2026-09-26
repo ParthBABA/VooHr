@@ -44,6 +44,104 @@ def _check_api_rate_limit(user_id_str: str, endpoint: str, max_events: int) -> t
 # Detection check fires. New employees with fewer analyzed syncs are skipped.
 DRIFT_WINDOW_SIZE = 3
 
+# ── Per-language analysis storage ────────────────────────────────────────
+# A session keeps ONE analysis per output language under ``analyses``, keyed by
+# language code (e.g. ``analyses["japanese"]``). ``analysis_language`` is only a
+# POINTER to the entry currently being viewed, never the sole copy of the data —
+# so switching languages cannot destroy a previously generated result, and
+# switching back can serve it without re-running the LLM.
+#
+# Documents written before this shape existed carry a single flat ``analysis``
+# plus ``analysis_language``. Every read goes through the helpers below, which
+# present a legacy document as a single-entry map, so old rows keep working
+# without a bulk migration.
+_ANALYSES_FIELD = "analyses"
+_DEFAULT_ANALYSIS_LANGUAGE = "en"
+
+
+def analysis_key(language) -> str:
+    """Normalize *language* into a usable ``analyses`` map key.
+
+    MongoDB forbids ``.`` in field names and a leading ``$``, and a bad key
+    raises at write time (taking the whole background job down with it), so an
+    unusable value degrades to the default English key instead.
+    """
+    if not isinstance(language, str):
+        return _DEFAULT_ANALYSIS_LANGUAGE
+    key = language.strip().lower()
+    if not key or key.startswith("$") or "." in key:
+        return _DEFAULT_ANALYSIS_LANGUAGE
+    return key
+
+
+def session_analyses(s) -> dict:
+    """Return the session's per-language analyses as ``{language: analysis}``.
+
+    Backward compatibility: a legacy document (flat ``analysis``, no
+    ``analyses`` map) is presented as a single-entry map keyed by its own
+    ``analysis_language``, so callers never need to know which shape they hold.
+    An empty ``analyses`` map also falls through to a legacy ``analysis``,
+    covering documents that were partially migrated.
+    """
+    if not isinstance(s, dict):
+        return {}
+    analyses = s.get(_ANALYSES_FIELD)
+    if isinstance(analyses, dict) and analyses:
+        return {k: v for k, v in analyses.items() if isinstance(v, dict)}
+    legacy = s.get("analysis")
+    if isinstance(legacy, dict) and legacy:
+        pointer = s.get("analysis_language")
+        return {analysis_key(pointer if pointer else _DEFAULT_ANALYSIS_LANGUAGE): legacy}
+    return {}
+
+
+def resolve_analysis_language(s):
+    """Return the language whose analysis should be displayed, or None.
+
+    ``analysis_language`` wins when it points at a real entry. Otherwise fall
+    back to English and then to the first available language, so a pointer that
+    disagrees with ``analyses`` can never blank out the workspace.
+    """
+    analyses = session_analyses(s)
+    if not analyses:
+        return None
+    pointer = s.get("analysis_language") if isinstance(s, dict) else None
+    if isinstance(pointer, str) and pointer.strip():
+        key = analysis_key(pointer)
+        if key in analyses:
+            return key
+    if _DEFAULT_ANALYSIS_LANGUAGE in analyses:
+        return _DEFAULT_ANALYSIS_LANGUAGE
+    return next(iter(analyses))
+
+
+def session_analysis(s, language=None):
+    """Return the stored analysis for *language*.
+
+    Defaults to the language currently being viewed (see
+    :func:`resolve_analysis_language`). Returns None when the session has no
+    analysis for that language.
+    """
+    analyses = session_analyses(s)
+    if not analyses:
+        return None
+    if language is None:
+        key = resolve_analysis_language(s)
+    else:
+        key = analysis_key(language)
+    return analyses.get(key)
+
+
+def session_risks(s) -> dict:
+    """Return the ``risks`` block of the viewed analysis, always as a dict.
+
+    The LLM occasionally returns "risks" as a list instead of an object, so
+    the shape is never trusted blindly.
+    """
+    analysis = session_analysis(s) or {}
+    risks = analysis.get("risks") or {}
+    return risks if isinstance(risks, dict) else {}
+
 # Image OCR: only raster formats the vision provider understands, and a
 # ~10MB cap so a huge screenshot/photo can't blow up the request buffer.
 IMAGE_CONTENT_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
@@ -116,6 +214,12 @@ def _validate_image_magic_bytes(image_bytes: bytes) -> str | None:
 
 
 def _session_to_json(s) -> dict:
+    # Resolve through the per-language map so a session analyzed in several
+    # languages reports the one currently being viewed, while
+    # available_analysis_languages lets the workspace offer the rest instantly
+    # from cache instead of re-running the LLM.
+    analyses = session_analyses(s)
+    viewed = resolve_analysis_language(s)
     return {
         "id": str(s["_id"]),
         "employee_id": str(s["employee_id"]) if s.get("employee_id") else None,
@@ -127,8 +231,9 @@ def _session_to_json(s) -> dict:
         "recording_type": s.get("recording_type", "webm"),
         "audio": s.get("audio"),
         "transcript": s.get("transcript", {"raw": "", "edited": "", "word_count": 0}),
-        "analysis": s.get("analysis"),
-        "analysis_language": s.get("analysis_language", "en"),
+        "analysis": analyses.get(viewed) if viewed else None,
+        "analysis_language": viewed or s.get("analysis_language", _DEFAULT_ANALYSIS_LANGUAGE),
+        "available_analysis_languages": sorted(analyses),
         "analysis_version": s.get("analysis_version", 0),
         "phrasing_analysis": s.get("phrasing_analysis"),
         "phrasing_analysis_version": s.get("phrasing_analysis_version", 0),
@@ -206,7 +311,7 @@ def _insert_session_doc(
             "edited": edited_text or raw_text,
             "word_count": len(raw_text.split()),
         },
-        "analysis": None,
+        "analyses": {},
         "analysis_version": 0,
         "last_transcript_update": now,
         "last_analyzed_at": None,
@@ -444,22 +549,29 @@ def analyze_session(session_id: str):
         analysis = llm.analyze(llm_transcript, language=language)
 
         now = datetime.now(timezone.utc)
+        # Store under analyses.<language> rather than a single flat slot, so a
+        # re-analyze in one language never discards another language's result.
+        key = analysis_key(language)
         db.sessions.update_one(
             {"_id": ObjectId(session_id)},
             {
                 "$set": {
                     "status": "completed",
-                    "analysis": {
+                    f"{_ANALYSES_FIELD}.{key}": {
                         "model_used": f"{llm.model}",
                         **analysis,
                         "approved": False,
                         "approved_at": None,
+                        "generated_at": now,
                     },
-                    "analysis_language": language,
+                    "analysis_language": key,
                     "analysis_version": (s.get("analysis_version", 0) + 1),
                     "last_analyzed_at": now,
                     "updated_at": now,
-                }
+                },
+                # Drop the legacy single-slot field so a migrated document
+                # never carries a stale second copy of the analysis.
+                "$unset": {"analysis": ""},
             },
         )
 
@@ -505,17 +617,36 @@ def analyze_session(session_id: str):
         # update that already succeeded.
         try:
             # 1. Last N completed sessions (oldest-first) with a real analysis
-            #    and a non-empty transcript.
+            #    and a non-empty transcript. The analysis filter accepts both
+            #    the per-language `analyses` map and the legacy flat `analysis`.
+            #    Two independent `$or` clauses cannot share one query document
+            #    (a repeated key would silently drop the first), so they are
+            #    nested under `$and`. `$exists` is required on `analyses`
+            #    because `$nin` alone also matches documents missing the field.
             qualifying_sessions = list(
                 db.sessions.find(
                     {
                         "employee_id": s["employee_id"],
                         "org_id": ObjectId(org_id),
                         "status": "completed",
-                        "analysis": {"$ne": None},
-                        "$or": [
-                            {"transcript.edited": {"$nin": [None, ""]}},
-                            {"transcript.raw": {"$nin": [None, ""]}},
+                        "$and": [
+                            {
+                                "$or": [
+                                    {"analysis": {"$ne": None}},
+                                    {
+                                        "analyses": {
+                                            "$exists": True,
+                                            "$nin": [None, {}],
+                                        }
+                                    },
+                                ]
+                            },
+                            {
+                                "$or": [
+                                    {"transcript.edited": {"$nin": [None, ""]}},
+                                    {"transcript.raw": {"$nin": [None, ""]}},
+                                ]
+                            },
                         ],
                     }
                 ).sort("created_at", -1).limit(DRIFT_WINDOW_SIZE)
@@ -536,8 +667,8 @@ def analyze_session(session_id: str):
                     sessions_payload = [
                         {
                             "date": sess["created_at"].isoformat() if sess.get("created_at") else None,
-                            "attrition_risk_pct": (sess["analysis"] or {}).get("risks", {}).get("attrition_risk_pct"),
-                            "burnout_index": (sess["analysis"] or {}).get("risks", {}).get("burnout_index"),
+                            "attrition_risk_pct": session_risks(sess).get("attrition_risk_pct"),
+                            "burnout_index": session_risks(sess).get("burnout_index"),
                             "transcript": ((sess.get("transcript") or {}).get("edited") or (sess.get("transcript") or {}).get("raw", ""))[:MAX_LLM_TRANSCRIPT_CHARS],
                         }
                         for sess in qualifying_sessions
@@ -582,14 +713,14 @@ def analyze_session(session_id: str):
                                         "confidence": drift.get("confidence", 0),
                                         "source_session_id": s["_id"],
                                         "drift_explanation": drift,
-                                        "sessions_window": [
-                                            {
-                                                "date": sess["created_at"].isoformat() if sess.get("created_at") else None,
-                                                "attrition_risk_pct": (sess["analysis"] or {}).get("risks", {}).get("attrition_risk_pct"),
-                                                "burnout_index": (sess["analysis"] or {}).get("risks", {}).get("burnout_index"),
-                                            }
-                                            for sess in qualifying_sessions
-                                        ],
+                        "sessions_window": [
+                            {
+                                "date": sess["created_at"].isoformat() if sess.get("created_at") else None,
+                                "attrition_risk_pct": session_risks(sess).get("attrition_risk_pct"),
+                                "burnout_index": session_risks(sess).get("burnout_index"),
+                            }
+                            for sess in qualifying_sessions
+                        ],
                                         "read": False,
                                         "created_at": now,
                                     }

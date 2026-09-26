@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 
 # Reuse the same truncation the synchronous analysis path applies, so the
 # background re-run feeds the LLM the exact same (bounded) input.
-from sessions import MAX_LLM_TRANSCRIPT_CHARS  # noqa: E402
+from sessions import MAX_LLM_TRANSCRIPT_CHARS, analysis_key, session_analyses  # noqa: E402
 
 # Same ceiling the synchronous /tts/synthesize route enforces.
 _MAX_TTS_TEXT_CHARS = 50_000
@@ -262,6 +262,12 @@ def _run_translation_job(db, job_id, llm, org_id, language: str) -> None:
     The workspace "Translate" control re-analyzes the transcript with an
     output-language instruction; that is what this job reproduces in the
     background, reusing the provider's translate/analyze logic verbatim.
+
+    Results are cached per language on the session document
+    (``analyses.<language>``). Re-selecting a language that was already analyzed
+    for this exact transcript repoints the session at the stored result instead
+    of paying for an identical LLM call, so switching back and forth is free
+    and never destroys the other language's analysis.
     """
     collection = _TRANSLATION_COLLECTION
     job = db[collection].find_one({"_id": job_id})
@@ -269,6 +275,7 @@ def _run_translation_job(db, job_id, llm, org_id, language: str) -> None:
         return
     session_id = job.get("session_id")
     employee_id = job.get("employee_id")
+    key = analysis_key(language)
 
     _set_status(db, collection, job_id, "processing")
     try:
@@ -277,36 +284,63 @@ def _run_translation_job(db, job_id, llm, org_id, language: str) -> None:
             _set_status(db, collection, job_id, "failed", error="session_not_found")
             return
 
-        transcript = (s.get("transcript") or {}).get("edited") or (s.get("transcript") or {}).get("raw", "")
-        if not transcript:
-            _set_status(db, collection, job_id, "failed", error="no_transcript_to_analyze")
-            return
+        # Cache hit? analyses.<language> already holds this transcript's result.
+        cached = session_analyses(s).get(key)
+        served_from_cache = isinstance(cached, dict) and bool(cached)
 
-        # Same truncation as the synchronous /analyze path.
-        analysis = llm.analyze(transcript[:MAX_LLM_TRANSCRIPT_CHARS], language=language)
+        if served_from_cache:
+            # No LLM call. analysis_version is deliberately NOT bumped and
+            # last_analyzed_at is left alone: nothing new was generated, so the
+            # stored generated_at is still the honest "analyzed at" timestamp.
+            now = _now()
+            db.sessions.update_one(
+                {"_id": session_id, "org_id": org_id},
+                {
+                    "$set": {
+                        "status": "completed",
+                        "analysis_language": key,
+                        "updated_at": now,
+                    }
+                },
+            )
+            analysis = cached
+        else:
+            transcript = (s.get("transcript") or {}).get("edited") or (s.get("transcript") or {}).get("raw", "")
+            if not transcript:
+                _set_status(db, collection, job_id, "failed", error="no_transcript_to_analyze")
+                return
 
-        now = _now()
-        db.sessions.update_one(
-            {"_id": session_id, "org_id": org_id},
-            {
-                "$set": {
-                    "status": "completed",
-                    "analysis": {
-                        "model_used": f"{llm.model}",
-                        **analysis,
-                        "approved": False,
-                        "approved_at": None,
+            # Same truncation as the synchronous /analyze path.
+            analysis = llm.analyze(transcript[:MAX_LLM_TRANSCRIPT_CHARS], language=language)
+
+            now = _now()
+            db.sessions.update_one(
+                {"_id": session_id, "org_id": org_id},
+                {
+                    "$set": {
+                        "status": "completed",
+                        f"analyses.{key}": {
+                            "model_used": f"{llm.model}",
+                            **analysis,
+                            "approved": False,
+                            "approved_at": None,
+                            "generated_at": now,
+                        },
+                        "analysis_language": key,
+                        "analysis_version": (s.get("analysis_version", 0) + 1),
+                        "last_analyzed_at": now,
+                        "updated_at": now,
                     },
-                    "analysis_language": language,
-                    "analysis_version": (s.get("analysis_version", 0) + 1),
-                    "last_analyzed_at": now,
-                    "updated_at": now,
-                }
-            },
-        )
+                    # Drop the legacy single-slot field so a migrated document
+                    # never carries a stale second copy of the analysis.
+                    "$unset": {"analysis": ""},
+                },
+            )
 
         # Mirror the wellness roll-up the synchronous analyze does, so an
         # output-language re-run leaves dashboard/directory scores consistent.
+        # Driven off whichever language is now in view, cached or freshly
+        # generated, exactly as before.
         risks = analysis.get("risks") or {}
         if not isinstance(risks, dict):
             risks = {}
@@ -336,7 +370,8 @@ def _run_translation_job(db, job_id, llm, org_id, language: str) -> None:
 
         result = {
             "session_id": str(session_id),
-            "analysis_language": language,
+            "analysis_language": key,
+            "cached": served_from_cache,
         }
         _set_status(db, collection, job_id, "done", result=result)
         _notify_ready(
@@ -345,8 +380,8 @@ def _run_translation_job(db, job_id, llm, org_id, language: str) -> None:
             job,
             notif_type="translation_ready",
             headline="Translation ready",
-            summary=f"Translation for {_language_display(language) or 'the selected language'} finished.",
-            dedup_key=f"translate:{language}",
+            summary=f"Translation for {_language_display(key) or 'the selected language'} finished.",
+            dedup_key=f"translate:{key}",
         )
     except Exception:
         logger.exception("Translation job failed (job=%s)", job_id)

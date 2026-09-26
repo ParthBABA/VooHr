@@ -233,6 +233,19 @@ class _FakeCursor:
         return iter(self._docs)
 
 
+def _set_dotted(doc, path, value):
+    """Write *value* at a dotted *path*, creating intermediate dicts."""
+    parts = path.split(".")
+    node = doc
+    for part in parts[:-1]:
+        nxt = node.get(part)
+        if not isinstance(nxt, dict):
+            nxt = {}
+            node[part] = nxt
+        node = nxt
+    node[parts[-1]] = value
+
+
 class _FakeCollection:
     def __init__(self, docs=None):
         self._docs = list(docs or [])
@@ -254,7 +267,23 @@ class _FakeCollection:
             if _match(d, filt):
                 for op, fields in update.items():
                     if op == "$set":
-                        d.update(fields)
+                        # Honour dotted paths the way MongoDB does: analyses are
+                        # stored per language under `analyses.<language>`, and a
+                        # flat update() would instead create a literal
+                        # "analyses.<language>" key, hiding the real shape.
+                        for path, value in fields.items():
+                            _set_dotted(d, path, value)
+                    elif op == "$unset":
+                        for path in fields:
+                            parts = path.split(".")
+                            node = d
+                            for part in parts[:-1]:
+                                node = node.get(part)
+                                if not isinstance(node, dict):
+                                    node = None
+                                    break
+                            if isinstance(node, dict):
+                                node.pop(parts[-1], None)
                 return SimpleNamespace(matched_count=1)
         return SimpleNamespace(matched_count=0)
 
