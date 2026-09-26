@@ -1343,6 +1343,40 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
               </div>
             </div>
           </div>
+
+          <!-- EMPLOYEE DIRECTORY (CSV) — org-wide admin action. Deliberately a
+               sibling of #dangerZoneCard, not a child: that card holds only
+               personal "Your Data" / "Data We Store" content available to every
+               user, whereas this exports/imports the whole workforce. -->
+          <div class="st-section st-card admin-only" style="display:none;">
+            <div class="st-sec-head">
+              <h3 class="st-sec-title">Employee directory</h3>
+              <span class="st-sec-desc">Organization-wide. Visible to admins only.</span>
+            </div>
+            <p class="st-data-intro">Export the full employee directory as a CSV file, or add employees in bulk by importing a CSV in the same format. These actions cover everyone in your organization &mdash; unlike the personal exports above, they are limited to admins.</p>
+
+            <div class="st-row">
+              <div class="st-row-main">
+                <div class="st-row-title"><span class="st-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>Export employee directory</div>
+                <div class="st-row-desc">Download the full workforce list as a CSV file.</div>
+              </div>
+              <div class="st-row-actions">
+                <button class="btn btn-sm btn-primary" id="settingsExportCsvBtn" type="button">Export CSV</button>
+              </div>
+            </div>
+
+            <div class="st-row">
+              <div class="st-row-main">
+                <div class="st-row-title"><span class="st-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>Bulk import employees</div>
+                <div class="st-row-desc">Add employees in bulk from a CSV in the same format.</div>
+              </div>
+              <div class="st-row-actions">
+                <button class="btn btn-sm btn-outline" id="settingsImportCsvBtn" type="button">Import CSV</button>
+                <a class="btn btn-sm btn-outline" href="/api/employees/csv-template" title="Download a CSV template with the expected column headers">Download Template</a>
+              </div>
+            </div>
+            <input type="file" id="settingsImportCsvInput" accept=".csv,text/csv" style="display:none;">
+          </div>
         </div>
 
       </section>
@@ -1400,16 +1434,23 @@ function escapeHtml(s){
   });
 }
 
-function showToast(msg) {
+function showToast(msg, isError) {
   var t = document.createElement('div');
   t.className = 'toast-notification';
   t.textContent = msg;
+  // Optional error styling. A fresh node is built per call, so the red state
+  // never leaks into a later toast.
+  if (isError) {
+    t.style.borderColor = 'var(--red-glow)';
+    t.style.color = 'var(--red)';
+    t.style.background = 'var(--red-soft)';
+  }
   document.body.appendChild(t);
   gsap.set(t, { y: 60, opacity: 0 });
   gsap.to(t, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
   setTimeout(function() {
     gsap.to(t, { y: 60, opacity: 0, duration: 0.3, ease: 'power3.in', onComplete: function() { t.remove(); } });
-  }, 4000);
+  }, isError ? 6000 : 4000);
 }
 
 document.getElementById('signOutBtn').addEventListener('click', async function(){
@@ -2771,6 +2812,76 @@ window.addEventListener('load', function() {
   }
 
   window.loadManagerRolesOverview = loadManagerRolesOverview;
+})();
+</script>
+
+<!-- ── EMPLOYEE DIRECTORY CSV IMPORT + EXPORT (admin-only, org-wide) ──
+     Moved here from the dashboard's Employee Directory header: this is a
+     data-handling action, so it belongs with Data & Privacy rather than
+     alongside the everyday org profile fields. The endpoints are unchanged
+     and remain admin-guarded server-side; .admin-only just keeps the card
+     hidden for non-admins. -->
+<script>
+(function() {
+  var exportBtn = document.getElementById('settingsExportCsvBtn');
+  var importBtn = document.getElementById('settingsImportCsvBtn');
+  var importInput = document.getElementById('settingsImportCsvInput');
+  if (!exportBtn && !importBtn) return;
+
+  var IMPORT_LABEL = 'Import CSV';
+
+  function resetImportBtn() {
+    importBtn.disabled = false;
+    importBtn.textContent = IMPORT_LABEL;
+  }
+
+  // Export → trigger the same-origin CSV attachment download.
+  if (exportBtn) {
+    exportBtn.addEventListener('click', function() {
+      var a = document.createElement('a');
+      a.href = '/api/employees/export-csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('Employee directory CSV export started');
+    });
+  }
+
+  if (importBtn && importInput) {
+    importBtn.addEventListener('click', function() { importInput.click(); });
+    importInput.addEventListener('change', function() {
+      var file = importInput.files && importInput.files[0];
+      importInput.value = '';
+      if (!file) return;
+      var form = new FormData();
+      form.append('file', file);
+      importBtn.disabled = true;
+      importBtn.textContent = 'Importing…';
+      fetch('/api/employees/import', { method: 'POST', body: form })
+        .then(function(res) { return res.json().catch(function() { return {}; }).then(function(b) { return { ok: res.ok, body: b }; }); })
+        .then(function(r) {
+          resetImportBtn();
+          if (!r.ok) {
+            var code = r.body && r.body.error;
+            var msg = code === 'file_required' ? 'Choose a CSV file to import'
+                    : code === 'file_too_large' ? 'File is too large — max 50 MB'
+                    : code === 'invalid_csv' ? 'The file is not a valid CSV'
+                    : code === 'invalid_encoding' ? 'The file must be UTF-8 encoded'
+                    : 'Import failed. Please try again.';
+            showToast(msg, true);
+            return;
+          }
+          var created = r.body.created || 0;
+          var failed = r.body.failed || [];
+          showToast('Import complete — ' + created + ' created' +
+            (failed.length ? ', ' + failed.length + ' failed' : ''));
+        })
+        .catch(function() {
+          resetImportBtn();
+          showToast('Network error during import', true);
+        });
+    });
+  }
 })();
 </script>
 </body>

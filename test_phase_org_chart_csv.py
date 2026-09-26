@@ -14,6 +14,7 @@ live DB):
 import io
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 from bson import ObjectId
@@ -286,3 +287,53 @@ def test_export_round_trips_reports_to_email(client):
     assert lines[0].endswith("reports_to_email")
     rana_row = next(L for L in lines[1:] if "rana@corp.com" in L)
     assert rana_row.rstrip().endswith("hr@corp.com")
+
+
+# ── Frontend placement: CSV lives in Settings > Data & Privacy ──────────
+#
+# The employee-directory CSV buttons used to sit in the dashboard's Employee
+# Directory header. They are org-wide admin data-handling actions, so they
+# were relocated to the admin-only card in the Data & Privacy tab. This
+# guards both halves of that move: present in settings, gone from dashboard.
+
+SETTINGS_HTML = (Path(__file__).parent / "static" / "settings.html").read_text(encoding="utf-8")
+DASHBOARD_HTML = (Path(__file__).parent / "static" / "dashboard.html").read_text(encoding="utf-8")
+
+# Split on the panel <div>, not the nav <a> — both carry data-panel="data-privacy",
+# and only the former bounds the panel's own content.
+PANEL = SETTINGS_HTML.split('<div class="settings-panel" data-panel="data-privacy">', 1)[1]
+
+
+def test_csv_zone_lives_in_the_data_privacy_panel():
+    for el_id in ("settingsExportCsvBtn", "settingsImportCsvBtn", "settingsImportCsvInput"):
+        assert el_id in PANEL, f"{el_id} is not in the Data & Privacy panel"
+
+
+def test_csv_card_is_admin_only_and_outside_the_personal_zone():
+    """It must be a sibling of #dangerZoneCard, not a child: that div holds
+    only personal Your Data / Data We Store content shown to every user,
+    while CSV export/import is an org-wide admin action."""
+    danger_zone, after = PANEL.split('id="dangerZoneCard"', 1)[1].split(
+        "<!-- EMPLOYEE DIRECTORY (CSV)", 1
+    )
+    assert 'id="settingsExportCsvBtn"' in after
+    assert 'id="settingsExportCsvBtn"' not in danger_zone
+    # Admin-only + hidden until the role check reveals it.
+    assert 'class="st-section st-card admin-only" style="display:none;">' in PANEL
+
+
+def test_csv_buttons_are_gone_from_the_dashboard():
+    for el_id in ("dashExportCsvBtn", "dashImportCsvBtn", "dashImportCsvInput"):
+        assert el_id not in DASHBOARD_HTML
+    assert "/api/employees/import" not in DASHBOARD_HTML
+
+
+def test_data_privacy_csv_section_wires_the_real_endpoints():
+    # The ids above are only useful if the script binds them to the same
+    # endpoints the old dashboard buttons used.
+    assert "getElementById('settingsExportCsvBtn')" in SETTINGS_HTML
+    assert "getElementById('settingsImportCsvBtn')" in SETTINGS_HTML
+    assert "getElementById('settingsImportCsvInput')" in SETTINGS_HTML
+    assert "/api/employees/export-csv" in SETTINGS_HTML
+    assert "/api/employees/import" in SETTINGS_HTML
+    assert 'href="/api/employees/csv-template"' in SETTINGS_HTML
