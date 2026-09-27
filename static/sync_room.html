@@ -1212,6 +1212,16 @@
     aspect-ratio: 1 / 1;
     margin: 0 auto;
     flex: 0 0 auto;
+    transition: width .35s ease, max-width .35s ease;
+  }
+  /* Extend view: grow the radar itself (not just the bullet list below it).
+     aspect-ratio keeps it square, so a wider box is also a taller box. */
+  #stepContent2 .step2-pane--meaning:has(.step2-meaning-extra.is-open) .step2-radar{
+    width: 84%;
+    max-width: 820px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    #stepContent2 .step2-radar{ transition: none; }
   }
   #stepContent2 .step2-radar svg{
     display: block;
