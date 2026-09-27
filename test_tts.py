@@ -5,6 +5,7 @@ Provider HTTP calls (Google/Deepgram) and SDK calls (Gemini) are all mocked —
 no real APIs are contacted.
 """
 
+import base64
 import io
 import os
 import sys
@@ -21,8 +22,8 @@ from flask import Flask
 from unittest.mock import patch
 
 import tts as tts_mod
-from providers.deepgram_tts import DeepgramTTS
-from providers.google_tts import GoogleNeural2TTS
+from providers.deepgram_tts import DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE, DeepgramTTS
+from providers.google_tts import GoogleNeural2TTS, _resolve_google_locale
 from providers.storage import LocalStorage
 from providers.tts import BaseTTS
 from providers.tts_cache import TTSCache
@@ -67,6 +68,45 @@ def _make_wav(frames):
         w.setframerate(24000)
         w.writeframes(frames)
     return out.getvalue()
+
+
+def _capture_google_post(tts, monkeypatch):
+    """Replace requests.post in providers.google_tts with a recorder.
+
+    Returns the list that collects each outgoing request's JSON payload. The
+    fake response satisfies the provider's success path (HTTP 200 + base64
+    audioContent) so synthesize() runs to completion.
+    """
+    sent = []
+
+    def fake_post(url, params=None, json=None, timeout=None):
+        sent.append(json)
+        return types.SimpleNamespace(
+            status_code=200,
+            json=lambda: {"audioContent": base64.b64encode(b"google-audio").decode()},
+            text="",
+        )
+
+    monkeypatch.setattr("providers.google_tts.requests.post", fake_post)
+    return sent
+
+
+def _capture_deepgram_post(tts, monkeypatch):
+    """Replace requests.post in providers.deepgram_tts with a recorder.
+
+    Returns the list that collects each outgoing request's query params (where
+    the chosen model lives). The fake response carries a valid WAV so the
+    provider's success path completes.
+    """
+    sent = []
+    frames = b"\x01\x02" * 50
+
+    def fake_post(url, params=None, headers=None, json=None, timeout=None):
+        sent.append(params)
+        return types.SimpleNamespace(status_code=200, content=_make_wav(frames), text="")
+
+    monkeypatch.setattr("providers.deepgram_tts.requests.post", fake_post)
+    return sent
 
 
 # ── content_type selection ───────────────────────────────────────────────
@@ -193,6 +233,118 @@ def test_google_cache_key_distinguishes_voice_tier(tmp_path, monkeypatch):
     assert len(calls) == 2  # keys differ, no false cache hit
 
 
+# ── Google TTS: locale aliases (Google's catalog != incoming BCP-47) ─────
+
+
+@pytest.mark.parametrize(
+    "incoming,expected_locale",
+    [
+        ("zh-CN", "cmn-CN"),  # Google has no zh-* voices, only cmn-CN/cmn-TW
+        ("ar-SA", "ar-XA"),   # Google has no ar-SA voice
+        ("bn-BD", "bn-IN"),   # Google only ships Bengali (India)
+    ],
+)
+def test_google_sends_real_locale_for_aliased_languages(
+    incoming, expected_locale, tmp_path, monkeypatch
+):
+    tts = _cached(GoogleNeural2TTS, "google", tmp_path)
+    tts.api_key = "fake-key"
+    sent = _capture_google_post(tts, monkeypatch)
+
+    tts.synthesize("hello", incoming)
+
+    assert len(sent) == 1
+    voice = sent[0]["voice"]
+    assert voice["languageCode"] == expected_locale
+    assert voice["name"].startswith(expected_locale + "-")
+
+
+def test_google_aliased_locale_drives_constructed_voice_name(tmp_path, monkeypatch):
+    """The generated voice name must use Google's locale, not the client's."""
+    tts = _cached(GoogleNeural2TTS, "google", tmp_path)
+    tts.api_key = "fake-key"
+    sent = _capture_google_post(tts, monkeypatch)
+
+    tts.synthesize("hello again", "zh-CN")
+
+    assert sent[0]["voice"]["name"] == "cmn-CN-%s-%s" % (
+        tts.default_tier,
+        tts.default_variant,
+    )
+
+
+def test_google_aliased_locale_honours_explicit_voice_tier(tmp_path, monkeypatch):
+    tts = _cached(GoogleNeural2TTS, "google", tmp_path)
+    tts.api_key = "fake-key"
+    sent = _capture_google_post(tts, monkeypatch)
+
+    tts.synthesize("tiered", "bn-BD", voice_tier="Studio")
+
+    assert sent[0]["voice"]["languageCode"] == "bn-IN"
+    assert sent[0]["voice"]["name"] == "bn-IN-Studio-%s" % tts.default_variant
+
+
+def test_google_passes_through_unaliased_language_unchanged(tmp_path, monkeypatch):
+    """A language with no alias (here Japanese) is sent exactly as received."""
+    tts = _cached(GoogleNeural2TTS, "google", tmp_path)
+    tts.api_key = "fake-key"
+    sent = _capture_google_post(tts, monkeypatch)
+
+    tts.synthesize("konnichiwa", "ja-JP")
+
+    assert sent[0]["voice"]["languageCode"] == "ja-JP"
+    assert sent[0]["voice"]["name"] == "ja-JP-%s-%s" % (
+        tts.default_tier,
+        tts.default_variant,
+    )
+
+
+def test_google_explicit_voice_name_keeps_resolved_language_code(tmp_path, monkeypatch):
+    tts = _cached(GoogleNeural2TTS, "google", tmp_path)
+    tts.api_key = "fake-key"
+    sent = _capture_google_post(tts, monkeypatch)
+
+    tts.synthesize("explicit", "ar-SA", voice_name="ar-XA-Standard-C")
+
+    assert sent[0]["voice"] == {
+        "languageCode": "ar-XA",
+        "name": "ar-XA-Standard-C",
+    }
+
+
+def test_google_cache_key_uses_resolved_locale(tmp_path, monkeypatch):
+    """zh-CN and cmn-CN describe the same audio, so they must share one cache
+    entry rather than synthesizing (and storing) the same voice twice."""
+    tts = _cached(GoogleNeural2TTS, "google", tmp_path)
+    tts.api_key = "fake-key"
+    sent = _capture_google_post(tts, monkeypatch)
+
+    tts.synthesize("shared text", "zh-CN")
+    tts.synthesize("shared text", "cmn-CN")
+
+    assert len(sent) == 1  # second call resolved to the same key -> cache hit
+
+
+def test_resolve_google_locale_is_case_and_region_insensitive():
+    assert _resolve_google_locale("zh-CN") == "cmn-CN"
+    assert _resolve_google_locale("zh-TW") == "cmn-CN"
+    assert _resolve_google_locale("ZH-cn") == "cmn-CN"
+    assert _resolve_google_locale("ar") == "ar-XA"
+    assert _resolve_google_locale("bn-BD") == "bn-IN"
+    # Unaliased codes come back byte-for-byte unchanged.
+    assert _resolve_google_locale("en-US") == "en-US"
+    assert _resolve_google_locale("ja-JP") == "ja-JP"
+    assert _resolve_google_locale("pt-BR") == "pt-BR"
+    assert _resolve_google_locale("") == ""
+
+
+def test_google_aliases_do_not_change_supported_languages():
+    """Routing must keep matching the original base codes, unchanged."""
+    assert {"zh", "ar", "bn"} <= GoogleNeural2TTS.SUPPORTED_LANGUAGES
+    assert "cmn" not in GoogleNeural2TTS.SUPPORTED_LANGUAGES
+    assert "bn-IN" not in GoogleNeural2TTS.SUPPORTED_LANGUAGES
+
+
 # ── Gemini TTS: parallel chunk synthesis + content type ──────────────────
 
 
@@ -274,6 +426,105 @@ def test_deepgram_synthesize_and_stream_use_cache(tmp_path, monkeypatch):
 
     assert streamed == [expected]
     m_connect.assert_not_called()
+
+
+# ── Deepgram TTS: language-appropriate default voice ─────────────────────
+
+
+def test_deepgram_uses_language_specific_default_voice(tmp_path, monkeypatch):
+    """With no voice_name from the UI, Japanese must not be read by an English
+    Aura-2 voice."""
+    tts = _cached(DeepgramTTS, "deepgram", tmp_path)
+    tts.api_key = "fake-key"
+    sent = _capture_deepgram_post(tts, monkeypatch)
+
+    tts.synthesize("こんにちは", "ja-JP")
+
+    assert len(sent) == 1
+    assert sent[0]["model"] == "aura-2-izanami-ja"
+    assert sent[0]["model"] != tts.default_model
+
+
+def test_deepgram_english_default_voice_is_unchanged(tmp_path, monkeypatch):
+    tts = _cached(DeepgramTTS, "deepgram", tmp_path)
+    tts.api_key = "fake-key"
+    sent = _capture_deepgram_post(tts, monkeypatch)
+
+    tts.synthesize("hello there", "en-US")
+
+    assert sent[0]["model"] == "aura-2-thalia-en"
+    assert sent[0]["model"] == tts.default_model
+
+
+@pytest.mark.parametrize("language_code", sorted(DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE))
+def test_deepgram_every_supported_language_has_a_matching_voice(
+    language_code, tmp_path, monkeypatch
+):
+    """Each supported base language resolves to a voice whose model ID ends in
+    that language code — i.e. the voice can actually speak it."""
+    tts = _cached(DeepgramTTS, "deepgram", tmp_path)
+    tts.api_key = "fake-key"
+    sent = _capture_deepgram_post(tts, monkeypatch)
+
+    tts.synthesize("sample", language_code + "-XX")
+
+    model = sent[0]["model"]
+    assert model == DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE[language_code]
+    assert model.endswith("-" + language_code)
+    assert model.startswith("aura-2-")
+
+
+def test_deepgram_voice_map_covers_all_supported_languages():
+    """No supported language may fall through to the English default, which is
+    the exact bug this map fixes."""
+    assert DeepgramTTS.SUPPORTED_LANGUAGES <= set(DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE)
+
+
+def test_deepgram_explicit_voice_name_overrides_language_default(tmp_path, monkeypatch):
+    tts = _cached(DeepgramTTS, "deepgram", tmp_path)
+    tts.api_key = "fake-key"
+    sent = _capture_deepgram_post(tts, monkeypatch)
+
+    tts.synthesize("override", "ja-JP", voice_name="aura-2-fujin-ja")
+
+    assert sent[0]["model"] == "aura-2-fujin-ja"
+    assert sent[0]["model"] != DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE["ja"]
+
+
+def test_deepgram_explicit_voice_name_wins_for_english_too(tmp_path, monkeypatch):
+    tts = _cached(DeepgramTTS, "deepgram", tmp_path)
+    tts.api_key = "fake-key"
+    sent = _capture_deepgram_post(tts, monkeypatch)
+
+    tts.synthesize("override", "en-US", voice_name="aura-2-apollo-en")
+
+    assert sent[0]["model"] == "aura-2-apollo-en"
+
+
+def test_deepgram_unmapped_language_falls_back_to_default_model(tmp_path, monkeypatch):
+    """Behaviour outside the map is unchanged: self.default_model is used, which
+    is still env-overridable via DEEPGRAM_TTS_MODEL."""
+    tts = _cached(DeepgramTTS, "deepgram", tmp_path)
+    tts.api_key = "fake-key"
+    tts.default_model = "aura-2-odysseus-en"  # stands in for the env override
+    sent = _capture_deepgram_post(tts, monkeypatch)
+
+    tts.synthesize("outside the map", "pt-BR")
+
+    assert "pt" not in DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE
+    assert sent[0]["model"] == "aura-2-odysseus-en"
+
+
+def test_deepgram_cache_key_distinguishes_voice_per_language(tmp_path, monkeypatch):
+    """Same text in two languages must not collide on one cache entry."""
+    tts = _cached(DeepgramTTS, "deepgram", tmp_path)
+    tts.api_key = "fake-key"
+    sent = _capture_deepgram_post(tts, monkeypatch)
+
+    tts.synthesize("identical text", "en-US")
+    tts.synthesize("identical text", "ja-JP")
+
+    assert [p["model"] for p in sent] == ["aura-2-thalia-en", "aura-2-izanami-ja"]
 
 
 # ── Route: streaming response, fallback, mimetype, validation ────────────

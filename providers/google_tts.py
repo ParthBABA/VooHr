@@ -24,6 +24,25 @@ _SENTENCE_BOUNDARIES = ".!?\u0964"
 
 _VALID_VOICE_TIERS = frozenset({"Neural2", "Studio", "Wavenet", "Standard"})
 
+# Base language codes where Google Cloud TTS uses a different locale
+# code than the BCP-47 code this app receives from the client. Applied
+# once at the top of synthesize() so every downstream use (the API
+# payload's languageCode, the constructed voice name, and the cache
+# key) is consistent and always a real Google locale.
+_GOOGLE_LOCALE_ALIASES = {
+    "zh": "cmn-CN",   # Mandarin — Google has no "zh-*" voices, only cmn-CN/cmn-TW
+    "ar": "ar-XA",    # Modern Standard Arabic — Google has no "ar-SA" voice
+    "bn": "bn-IN",    # Google only ships Bengali (India), no "bn-BD"
+}
+
+
+def _resolve_google_locale(language_code: str) -> str:
+    """Map an incoming BCP-47 code to the locale Google Cloud TTS
+    actually serves, when they differ. Falls back to the original code
+    unchanged for every language not in the alias map."""
+    base = (language_code or "").split("-")[0].strip().lower()
+    return _GOOGLE_LOCALE_ALIASES.get(base, language_code)
+
 
 class GoogleNeural2TTS(BaseTTS):
     """Google Cloud Text-to-Speech provider using the REST API directly.
@@ -145,6 +164,13 @@ class GoogleNeural2TTS(BaseTTS):
         text = (text or "").strip()
         if not text:
             return b""
+
+        # Google serves Mandarin, Arabic and Bengali under locale codes that
+        # differ from the BCP-47 code the client sent. Resolved once, up front,
+        # so the cache key, the constructed voice name and the API payload all
+        # agree on a locale that actually exists in Google's catalog. Routing
+        # (SUPPORTED_LANGUAGES) still matches the original base codes.
+        language_code = _resolve_google_locale(language_code)
 
         if not voice_name:
             tier = voice_tier if (voice_tier and voice_tier in _VALID_VOICE_TIERS) else self.default_tier
