@@ -114,8 +114,6 @@ function loadEmployee() {
       if (!emp) return;
       document.getElementById('sessionEmployeeName').textContent = emp.name;
       document.getElementById('sessionBreadcrumb').textContent = emp.employee_id + ' — ' + (emp.department || '');
-      var el = document.getElementById('sessionAvatar');
-      if (el) el.textContent = initials;
     });
 }
 

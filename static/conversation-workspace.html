@@ -49,6 +49,16 @@
 .ws-lang-label{font-size:12px;color:inherit;opacity:.65;}
 #wsAnalysisLang{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:transparent;color:inherit;outline:none;cursor:pointer;}
 #wsAnalysisLang:disabled{opacity:.55;cursor:default;}
+/* Native <select> popups are painted by the user agent, not by our CSS, so they
+   stay light in dark mode unless the page declares a color scheme. Dark is the
+   app default (light is opt-in via [data-theme="light"] on <html>). */
+html{color-scheme:dark;}
+html[data-theme="light"]{color-scheme:light;}
+
+/* Belt-and-braces for the option list itself, in case color-scheme is ignored
+   (older WebKit): both vars flip with the theme, so no extra rules needed. */
+#wsAnalysisLang option,#wsGateLang option,.ws-tool-select option{background:var(--surface);color:var(--ivory);}
+
 .ws-gate-lang{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
 .ws-gate-lang .ws-lang-label{font-size:12px;color:inherit;opacity:.65;margin:0;}
 #wsGateLang{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:transparent;color:inherit;outline:none;cursor:pointer;}
@@ -282,20 +292,6 @@ withTimeout(fetch('/api/me').then(function(res){
           <div class="ws-lines protected-text" id="wsLines" translate="no"></div>
 
           <div class="ws-disclaimer" id="wsDisclaimer">Speaker labels are inferred and may not reflect who actually spoke.</div>
-
-          <!-- Sticky audio player (disabled: no stored recording) -->
-          <div class="ws-audio disabled" id="wsAudio">
-            <button class="ws-audio-btn" disabled title="No recording available">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            </button>
-            <div class="ws-audio-times">--:-- / --:--</div>
-            <div class="ws-audio-track"><div class="ws-audio-fill" style="width:0%;"></div></div>
-            <select class="ws-audio-speed" disabled><option>1x</option></select>
-            <div class="ws-audio-vol" title="Volume">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>
-            </div>
-            <span class="ws-audio-msg">No recording available for this session</span>
-          </div>
         </section>
 
         <!-- RIGHT: CONVERSATION INTELLIGENCE -->
