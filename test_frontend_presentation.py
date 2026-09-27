@@ -446,9 +446,9 @@ class PresentationTests(unittest.TestCase):
                                  f"{page} still has an inline copy")
                 self.assertIn("localStorage.setItem('voovr-theme'", self._render(page))
 
-        # localStorage variant, but the IIFE also wires syncAnalysisLang, so
-        # splitting it would reorder initialisation. Left inline on purpose.
-        with self.subTest(page="sync_room.html", note="shared IIFE, left inline"):
+        # localStorage variant, standalone IIFE with no other wiring, but kept
+        # inline rather than swapped for the partial (out of scope here).
+        with self.subTest(page="sync_room.html", note="inline IIFE, left as-is"):
             source = (ROOT / "static" / "sync_room.html").read_text(encoding="utf-8")
             self.assertNotIn("partials/theme_toggle_js.html", source)
             self.assertIn("localStorage.setItem('voovr-theme'", self._render("sync_room.html"))
