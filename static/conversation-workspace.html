@@ -1615,6 +1615,18 @@ window.voovrInitWorkspace = function() {
     setPill(pill, '', text || '');
   }
 
+  // Hide a pill completely and drop any click handler. Used to retire the
+  // green "Audio ready" affordance after a TTS job finishes: the speaker-icon
+  // button is the only playback control, so there is nothing left to show.
+  function clearPill(pill) {
+    if (!pill) return;
+    setPill(pill, '', '');
+    pill.style.display = 'none';
+    pill.style.cursor = '';
+    pill.onclick = null;
+    pill.removeAttribute('title');
+  }
+
   // status polling with cancellation
   var pollTimers = {};
   function pollJob(kind, jobId, onDoc, onTransport) {
@@ -1685,7 +1697,7 @@ window.voovrInitWorkspace = function() {
       btns[i].classList.remove('playing', 'loading', 'error');
     }
     if (currentPill) {
-      setPill(currentPill, 'done', 'Audio ready');
+      clearPill(currentPill);
       currentPill = null;
     }
   }
@@ -1724,19 +1736,19 @@ window.voovrInitWorkspace = function() {
     if (!job || !narrPlayer || !job.id) return;
     var wrap = job.wrap;
     if (currentPill && currentPill !== job.pill) {
-      setPill(currentPill, 'done', 'Audio ready');
+      clearPill(currentPill);
     }
     currentPill = job.pill;
-    job.pill.style.display = 'none';
+    clearPill(job.pill);
     narrPlayer.onDone = function() {
-      if (currentPill === job.pill) { job.pill.style.display = ''; setPill(job.pill, 'done', 'Audio ready'); currentPill = null; }
+      if (currentPill === job.pill) { clearPill(job.pill); currentPill = null; }
     };
     narrPlayer.onError = function() {
       if (currentPill === job.pill) { job.pill.style.display = ''; setPill(job.pill, 'failed', 'Retry'); currentPill = null; }
       setState(job.btn, 'error');
     };
     narrPlayer.play({ audio_url: '/api/tts-jobs/' + job.id + '/audio' }, wrap).catch(function() {
-      if (currentPill === job.pill) { job.pill.style.display = ''; setPill(job.pill, 'done', 'Audio ready'); currentPill = null; }
+      if (currentPill === job.pill) { clearPill(job.pill); currentPill = null; }
     });
   }
 
@@ -1785,10 +1797,9 @@ window.voovrInitWorkspace = function() {
           job.status = 'done';
           if (sel) sel.disabled = false;
           setState(btn, '');
-          setPill(job.pill, 'done', 'Audio ready');
-          job.pill.title = (lang.label) + ' \u2014 click to listen';
-          job.pill.style.cursor = 'pointer';
-          job.pill.onclick = function(e) { e.stopPropagation(); playAudio(block); };
+          // No green "Audio ready" pill — playback is driven by the
+          // speaker-icon button's own playing state, and audio starts here.
+          clearPill(job.pill);
           playAudio(block);
         } else if (doc.status === 'failed') {
           job.status = 'failed';
@@ -1952,9 +1963,7 @@ window.voovrInitWorkspace = function() {
               setState(btn, '');
               if (doc.status === 'done') {
                 job.status = 'done';
-                setPill(job.pill, 'done', 'Audio ready');
-                job.pill.style.cursor = 'pointer';
-                job.pill.onclick = function(e) { e.stopPropagation(); playAudio(block); };
+                clearPill(job.pill);
               } else if (doc.status === 'failed') {
                 job.status = 'failed';
                 setPill(job.pill, 'failed', 'Retry');
@@ -1971,10 +1980,10 @@ window.voovrInitWorkspace = function() {
               setPill(job.pill, 'failed', 'Retry');
             });
           } else if (j.status === 'done') {
+            // A job finished in a previous visit: keep it replayable from the
+            // speaker icon, but don't re-announce it with a green pill.
             job.status = 'done';
-            setPill(job.pill, 'done', 'Audio ready');
-            job.pill.style.cursor = 'pointer';
-            job.pill.onclick = function(e) { e.stopPropagation(); playAudio(block); };
+            clearPill(job.pill);
           } else if (j.status === 'failed') {
             job.status = 'failed';
             setPill(job.pill, 'failed', 'Retry');
@@ -2018,16 +2027,15 @@ window.voovrInitWorkspace = function() {
         if (!lang) return;
         // Cached-job reuse. Manual test: generate audio for a language, then
         // pick the SAME language again in this dropdown (after navigating away
-        // and returning, or immediately) — it must flash "Playing cached
-        // audio" and replay the completed job instead of starting a fresh
-        // full generation. Picking a different language must still generate.
+        // and returning, or immediately) — it must replay the completed job
+        // instead of starting a fresh full generation. Picking a different
+        // language must still generate.
         var block = wrap.getAttribute('data-narr-target') || 'section';
         var cached = ttsJobs[block];
         if (cached && cached.status === 'done' && cached.lang &&
             cached.lang.languageCode === lang.languageCode &&
             (cached.id || cached.pill)) {
-          setPill(cached.pill, 'done', 'Playing cached audio');
-          setTimeout(function() { playAudio(block); }, 350);
+          playAudio(block);
           return;
         }
         startNarrationJob(btn, wrap, sel, lang);
