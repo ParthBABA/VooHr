@@ -1088,6 +1088,9 @@
     box-shadow: var(--step-shadow);
   }
   #stepContent2 .step2-pane--meaning{
+    /* This pane carries only the label, lead line and radar — let it size to
+       its own content instead of stretching to the taller patterns feed. */
+    align-self: start;
     background:
       radial-gradient(120% 130% at 100% 0%, rgba(139,92,246,0.07), transparent 55%),
       var(--step-surface);
@@ -1330,6 +1333,72 @@
     text-align: center;
     margin: 1rem 0 0.5rem;
     font-style: italic;
+  }
+
+  /* ---------- 3b. What This Could Mean — driver summary disclosure ---------- */
+  /* Same visual language as the .step2-timeline footer action in the left pane,
+     kept under its own class so that button is untouched. */
+  #stepContent2 .step2-extend-btn{
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.9rem;
+    padding: 0.85rem 0 0;
+    border: none;
+    border-top: 1px dashed var(--step-border-strong);
+    background: none;
+    font-family: var(--step-body-font);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--step-text-muted);
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+  #stepContent2 .step2-extend-btn:hover{ color: var(--step-primary-soft); }
+  #stepContent2 .step2-extend-btn:focus-visible{
+    outline: 2px solid var(--step-primary-soft);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  #stepContent2 .step2-extend-btn svg{
+    width: 13px; height: 13px;
+    flex: 0 0 auto;
+    transition: transform 0.2s ease;
+  }
+  /* The panel follows the button in the DOM, so drive the chevron off the
+     container state (with the mirrored class on the button as a fallback). */
+  #stepContent2 .step2-pane--meaning:has(.step2-meaning-extra.is-open) .step2-extend-btn svg,
+  #stepContent2 .step2-extend-btn.is-open svg{ transform: rotate(90deg); }
+
+  #stepContent2 .step2-meaning-extra{
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    margin-top: 0;
+    transition: max-height .35s ease, opacity .25s ease, margin-top .35s ease;
+  }
+  #stepContent2 .step2-meaning-extra.is-open{
+    max-height: 1000px;
+    opacity: 1;
+    margin-top: 1rem;
+  }
+  #stepContent2 .step2-meaning-extra ul{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  #stepContent2 .step2-meaning-extra .analysis-list-item b{
+    font-family: var(--step-heading-font);
+    font-weight: 600;
+    color: var(--step-text);
+  }
+  #stepContent2 .step2-meaning-extra .analysis-list-item.is-note{
+    margin-top: 0.45rem;
+    color: var(--step-text-muted);
+    font-style: italic;
+  }
+  @media (prefers-reduced-motion: reduce){
+    #stepContent2 .step2-meaning-extra,
+    #stepContent2 .step2-extend-btn svg{ transition: none; }
   }
 
   /* ---------- 4. Deeper probe suggestions ---------- */
@@ -3754,6 +3823,11 @@
                 <div class="step2-radar-wrap" id="step2RadarWrap">
                   <div class="step2-radar" id="step2Radar" role="img" aria-label="Underlying driver radar profile"></div>
                 </div>
+                <button type="button" class="step2-extend-btn" id="step2ExtendBtn" aria-expanded="false" aria-controls="step2MeaningExtra">
+                  <span class="step2-extend-label">Extend view</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9,18 15,12 9,6"/></svg>
+                </button>
+                <div class="step2-meaning-extra" id="step2MeaningExtra"></div>
               </div>
             </section>
 
@@ -4887,6 +4961,34 @@ function driverLevelLabel(raw) {
   return 'Low';
 }
 
+/* "Extend view" summary for the What This Could Mean pane.
+   Every value, level and driver name comes from the radar `items` built in
+   renderStep2Radar — nothing about a driver is hardcoded here. Bullets are
+   ranked by strength and reuse the .analysis-list-item treatment already
+   used across #stepContent2, with a closing line that keeps the same
+   hypothesis-not-conclusion tone as .step2-pane-lead. */
+function buildStep2MeaningSummary(items) {
+  var ranked = (items || []).filter(function(it) {
+    return it && it.value != null;
+  }).slice().sort(function(a, b) {
+    return b.value - a.value;
+  });
+
+  var bullets = ranked.map(function(it) {
+    var level = it.level || driverLevelLabel(it.value) || '—';
+    return '<li class="analysis-list-item">• <b>' + escHtml(it.name) + '</b> &mdash; ' +
+      escHtml(level) + ' (' + Math.round(it.value) + '%)</li>';
+  });
+
+  if (!bullets.length) {
+    bullets.push('<li class="analysis-list-item">• No per-driver strength has come back from the analysis yet &mdash; the five axes above are the drivers under review.</li>');
+  }
+
+  bullets.push('<li class="analysis-list-item is-note">• These are hypotheses to explore with the employee, not conclusions.</li>');
+
+  return '<ul class="analysis-list">' + bullets.join('') + '</ul>';
+}
+
 function renderStep2Radar(d) {
   var host = document.getElementById('step2Radar');
   if (!host) return;
@@ -4915,6 +5017,12 @@ function renderStep2Radar(d) {
     return { name: name, value: null, level: null, accent: accent };
   });
   var hasData = items.some(function(it) { return it.value != null; });
+
+  // Keep the plotted driver set around so the "Extend view" summary always
+  // reflects the latest API payload rather than a hardcoded list.
+  window.__step2DriverItems = items;
+  var meaningExtra = document.getElementById('step2MeaningExtra');
+  if (meaningExtra) meaningExtra.innerHTML = buildStep2MeaningSummary(items);
 
   var n = items.length;
   var W = 460, H = 460, cx = W / 2, cy = H / 2;
@@ -5927,6 +6035,23 @@ sessionPromise.then(function(s) {
     var expanded = feed.classList.toggle('step2-feed-expanded');
     var label = btn.querySelector('.step2-timeline-label');
     if (label) label.textContent = expanded ? 'Hide extra detail' : 'View full behavioral timeline';
+  });
+})();
+</script>
+<script>
+(function() {
+  var btn = document.getElementById('step2ExtendBtn');
+  var extra = document.getElementById('step2MeaningExtra');
+  if (!btn || !extra) return;
+  btn.addEventListener('click', function() {
+    var open = extra.classList.toggle('is-open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.classList.toggle('is-open', open);
+    var label = btn.querySelector('.step2-extend-label');
+    if (label) label.textContent = open ? 'Collapse view' : 'Extend view';
+    if (open) {
+      extra.innerHTML = buildStep2MeaningSummary(window.__step2DriverItems);
+    }
   });
 })();
 </script>
