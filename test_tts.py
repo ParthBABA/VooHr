@@ -22,7 +22,7 @@ from flask import Flask
 from unittest.mock import patch
 
 import tts as tts_mod
-from providers.deepgram_tts import DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE, DeepgramTTS
+from providers.deepgram_tts import DeepgramTTS
 from providers.google_tts import GoogleNeural2TTS, _resolve_google_locale
 from providers.storage import LocalStorage
 from providers.tts import BaseTTS
@@ -456,7 +456,7 @@ def test_deepgram_english_default_voice_is_unchanged(tmp_path, monkeypatch):
     assert sent[0]["model"] == tts.default_model
 
 
-@pytest.mark.parametrize("language_code", sorted(DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE))
+@pytest.mark.parametrize("language_code", sorted(DeepgramTTS._DEFAULT_VOICE_BY_LANGUAGE))
 def test_deepgram_every_supported_language_has_a_matching_voice(
     language_code, tmp_path, monkeypatch
 ):
@@ -469,7 +469,7 @@ def test_deepgram_every_supported_language_has_a_matching_voice(
     tts.synthesize("sample", language_code + "-XX")
 
     model = sent[0]["model"]
-    assert model == DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE[language_code]
+    assert model == DeepgramTTS._DEFAULT_VOICE_BY_LANGUAGE[language_code]
     assert model.endswith("-" + language_code)
     assert model.startswith("aura-2-")
 
@@ -477,7 +477,7 @@ def test_deepgram_every_supported_language_has_a_matching_voice(
 def test_deepgram_voice_map_covers_all_supported_languages():
     """No supported language may fall through to the English default, which is
     the exact bug this map fixes."""
-    assert DeepgramTTS.SUPPORTED_LANGUAGES <= set(DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE)
+    assert DeepgramTTS.SUPPORTED_LANGUAGES <= set(DeepgramTTS._DEFAULT_VOICE_BY_LANGUAGE)
 
 
 def test_deepgram_explicit_voice_name_overrides_language_default(tmp_path, monkeypatch):
@@ -488,7 +488,7 @@ def test_deepgram_explicit_voice_name_overrides_language_default(tmp_path, monke
     tts.synthesize("override", "ja-JP", voice_name="aura-2-fujin-ja")
 
     assert sent[0]["model"] == "aura-2-fujin-ja"
-    assert sent[0]["model"] != DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE["ja"]
+    assert sent[0]["model"] != DeepgramTTS._DEFAULT_VOICE_BY_LANGUAGE["ja"]
 
 
 def test_deepgram_explicit_voice_name_wins_for_english_too(tmp_path, monkeypatch):
@@ -511,7 +511,7 @@ def test_deepgram_unmapped_language_falls_back_to_default_model(tmp_path, monkey
 
     tts.synthesize("outside the map", "pt-BR")
 
-    assert "pt" not in DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE
+    assert "pt" not in DeepgramTTS._DEFAULT_VOICE_BY_LANGUAGE
     assert sent[0]["model"] == "aura-2-odysseus-en"
 
 

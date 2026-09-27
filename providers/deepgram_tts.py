@@ -30,25 +30,6 @@ _SENTENCE_BOUNDARIES = ".!?\u0964"
 # state or the clicks/pops that splicing independent mp3 streams produces.
 _SAMPLE_RATE = 24000
 
-# Deepgram Aura-2 model IDs follow "<family>-<voice>-<language>", e.g.
-# "aura-2-thalia-en". The app's UI never sends an explicit voice_name, so this
-# map is what decides the default voice per language — without it, every
-# language would be synthesized with the English default below.
-# All entries are Aura-2 voices taken from Deepgram's Voices & Languages table
-# (https://developers.deepgram.com/docs/tts-models) at implementation time, and
-# are the voices Deepgram lists as *featured* for that language. "en" keeps the
-# pre-existing default. Any base language missing from this map falls back to
-# self.default_model (i.e. DEEPGRAM_TTS_MODEL).
-DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE = {
-    "en": "aura-2-thalia-en",      # featured, en-us, feminine, clear/confident
-    "es": "aura-2-celeste-es",     # featured, es-co, feminine, clear/energetic
-    "nl": "aura-2-rhea-nl",        # featured, nl-nl, feminine, caring/positive
-    "de": "aura-2-viktoria-de",    # featured, de-de, feminine, charismatic
-    "fr": "aura-2-agathe-fr",      # featured, fr-fr, feminine, charismatic
-    "it": "aura-2-livia-it",       # featured, it-it, feminine, approachable
-    "ja": "aura-2-izanami-ja",     # featured, ja-jp, feminine, approachable
-}
-
 
 class DeepgramTTS(BaseTTS):
     """Deepgram Aura Text-to-Speech provider using the REST API directly.
@@ -64,6 +45,27 @@ class DeepgramTTS(BaseTTS):
     # this set MUST be routed elsewhere — forcing it through the default English
     # model produces garbled, mispronounced audio.
     SUPPORTED_LANGUAGES = frozenset({"en", "es", "nl", "de", "fr", "it", "ja"})
+
+    # Aura-2 model IDs follow "<family>-<voice>-<language>", e.g.
+    # "aura-2-thalia-en". The UI never sends an explicit voice_name, so this
+    # map is what decides the default voice per language — without it, every
+    # request would be read by the English model above, which is the whole
+    # anti-garbe failure this provider exists to prevent.
+    #
+    # Every entry is a real Aura-2 voice taken from Deepgram's Voices &
+    # Languages table (https://developers.deepgram.com/docs/tts-models), and
+    # each is the voice Deepgram lists as *featured* for that language, so the
+    # set is consistent (all feminine) with the pre-existing "en" default.
+    # Any base language missing here falls back to self.default_model.
+    _DEFAULT_VOICE_BY_LANGUAGE = {
+        "en": "aura-2-thalia-en",    # featured, en-us, clear/confident
+        "es": "aura-2-celeste-es",   # featured, es-co, clear/energetic
+        "nl": "aura-2-rhea-nl",      # featured, nl-nl, caring/positive
+        "de": "aura-2-viktoria-de",  # featured, de-de, charismatic
+        "fr": "aura-2-agathe-fr",    # featured, fr-fr, charismatic
+        "it": "aura-2-livia-it",     # featured, it-it, approachable
+        "ja": "aura-2-izanami-ja",   # featured, ja-jp — verified real Aura-2 voice
+    }
 
     def __init__(self):
         self.api_key = (
@@ -238,14 +240,14 @@ class DeepgramTTS(BaseTTS):
 
         # Pick the default voice that actually speaks the requested language.
         # The UI never passes a voice_name, so without this every language would
-        # be synthesized with the English default. An explicit voice_name always
+        # be synthesized with the English model. An explicit voice_name always
         # wins; a base language with no entry here falls back to the
         # env-overridable self.default_model, unchanged from before.
         if voice_name:
             model = voice_name
         else:
             base = (language_code or "").split("-")[0].strip().lower()
-            model = DEEPGRAM_DEFAULT_VOICE_BY_LANGUAGE.get(base, self.default_model)
+            model = self._DEFAULT_VOICE_BY_LANGUAGE.get(base, self.default_model)
 
         cache_key = self._tts_cache.build_key(
             text, language_code, model, voice_tier

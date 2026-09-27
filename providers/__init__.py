@@ -54,11 +54,24 @@ def get_tts_provider():
 # market set, so it is tried first.
 _TTS_LANGUAGE_FALLBACK_ORDER = ("google", "deepgram")
 
+# Languages Deepgram Aura-2 actually voices AND that Voovr currently
+# offers in the UI. For these, always use Deepgram — it's the better
+# model for them and there's no reason to route through Google.
+#
+# This is exactly the intersection of DeepgramTTS.SUPPORTED_LANGUAGES
+# ({en, es, nl, de, fr, it, ja}) and the NARRATION_LANGUAGES offered by
+# static/sync_room.html and static/conversation-workspace.html
+# ({en, ja, th, ar, zh, id, vi, ko, bn, tr, pt}) — Deepgram's es/nl/de/fr/it
+# are not user-selectable, and every other UI language is outside Aura-2.
+_DEEPGRAM_PREFERRED_LANGUAGES = frozenset({"en", "ja"})
+
 
 def get_tts_provider_for(language_code: str = None):
     """Return a TTS provider able to voice *language_code*.
 
-    The configured provider (``TTS_PROVIDER``) is used whenever its
+    Languages in ``_DEEPGRAM_PREFERRED_LANGUAGES`` (en, ja) always resolve to
+    Deepgram, overriding ``TTS_PROVIDER``. For every other language the
+    configured provider (``TTS_PROVIDER``) is used whenever its
     ``SUPPORTED_LANGUAGES`` includes the request's base language. Otherwise we
     route to the first provider in ``_TTS_LANGUAGE_FALLBACK_ORDER`` that DOES
     support it — the core anti-garbe: a language is never silently forced
@@ -87,6 +100,12 @@ def get_tts_provider_for(language_code: str = None):
     base = base_language(language_code)
     if not base:
         return _tts_provider_class(candidates[0])()
+
+    # Preferred languages bypass TTS_PROVIDER entirely. Both en and ja are
+    # voiced by both Google and Deepgram, so the generic loop below would
+    # just hand them to whichever provider happens to be configured.
+    if base in _DEEPGRAM_PREFERRED_LANGUAGES:
+        return _tts_provider_class("deepgram")()
 
     for candidate in candidates:
         cls = _tts_provider_class(candidate)
