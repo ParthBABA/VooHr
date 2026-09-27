@@ -4587,6 +4587,26 @@ function calcTenure(joinDate) {
 // ── Global analysis data store ──
 var analysisData = null;
 
+// ── Analysis language (bilingual content) ──
+// The wizard contains paired English/Hinglish [data-lang] blocks. The global
+// style.css hides [data-lang="hi"] by default (a dashboard helper), so this
+// drives visibility purely with inline styles. The top-bar picker is gone
+// (redundant with the per-step Listen control), so the language is now read
+// from and written to localStorage only.
+var WS_BLOCK_TAGS = 'DIV P H1 H2 H3 H4 H5 H6 LI SECTION ARTICLE HEADER FOOTER'.split(' ');
+function applySyncLanguage(lang) {
+  if (lang !== 'hi' && lang !== 'en') lang = 'en';
+  localStorage.setItem('voovr-analysis-lang', lang);
+  document.querySelectorAll('[data-lang]').forEach(function(el) {
+    if (el.getAttribute('data-lang') === lang) {
+      el.style.display = WS_BLOCK_TAGS.indexOf(el.tagName) > -1 ? 'block' : 'inline';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+applySyncLanguage(localStorage.getItem('voovr-analysis-lang') || 'en');
+
 // ── Step navigation ──
 var currentStep = 1;
 function goToStep(n) {
@@ -4621,6 +4641,8 @@ function goToStep(n) {
   });
   currentStep = n;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Newly revealed step content must respect the stored language choice.
+  applySyncLanguage(localStorage.getItem('voovr-analysis-lang') || 'en');
   // Populate step if analysis available
   if (analysisData) populateStep(n);
 }
