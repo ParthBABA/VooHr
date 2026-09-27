@@ -203,14 +203,6 @@ withTimeout(fetch('/api/me').then(function(res){
         </div>
       </div>
       <div class="top-bar-right">
-        <button class="btn btn-sm btn-outline" id="exportBtn" title="Download transcript">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Export
-        </button>
-        <button class="btn btn-sm btn-outline" id="shareBtn" title="Copy link to this workspace">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          Share
-        </button>
         <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle light/dark theme">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
         </button>
@@ -1182,26 +1174,6 @@ window.voovrInitWorkspace = function() {
     renderAsk(a);
   }
 
-  // ── Export / Share ──
-  function exportTranscript() {
-    if (!state.transcriptText) { showToast('No transcript to export'); return; }
-    var blob = new Blob([state.transcriptText], { type: 'text/plain;charset=utf-8' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'transcript-' + sessionId + '.txt';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 100);
-    showToast('Transcript downloaded');
-  }
-
-  function shareLink() {
-    var link = window.location.href;
-    navigator.clipboard && navigator.clipboard.writeText(link);
-    showToast('Workspace link copied');
-  }
-
   // ── Analysis-View nudge (shown once, only for first-time prep) ──
   function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
   function lsSet(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
@@ -1542,8 +1514,6 @@ window.voovrInitWorkspace = function() {
   });
 
   document.getElementById('wsLines').addEventListener('click', onLineClick);
-  document.getElementById('exportBtn').addEventListener('click', exportTranscript);
-  document.getElementById('shareBtn').addEventListener('click', shareLink);
 
   init();
 };

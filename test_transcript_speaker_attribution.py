@@ -444,10 +444,6 @@ class TestWorkspaceIntegration:
         assert "explicit_label" in src
         assert "semantic" in src
 
-    def test_export_preserves_raw_transcript_text(self):
-        src = _read(_WORKSPACE_HTML)
-        assert "new Blob([state.transcriptText]" in src
-
     def test_moments_still_map_via_raw_transcript_index(self):
         src = _read(_WORKSPACE_HTML)
         assert "state.transcriptText.toLowerCase()" in src
