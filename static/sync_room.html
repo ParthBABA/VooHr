@@ -4877,6 +4877,146 @@ function populateStep2(d) {
   if (mn) mn.textContent = d.manager_notes || '';
 
   renderStep2Radar(d);
+
+  // Keep the curated narration script in lockstep with the analysis payload
+  // that was just rendered, so the Listen button never has to scrape the DOM.
+  window.__step2NarrationScript = buildStep2NarrationScript(d);
+}
+
+/* ── Step 2 narration script (curated, data-driven) ──
+   The Step 2 Listen button used to hand readBlockText() the whole
+   #stepContent2 subtree. Cloning that subtree and taking .textContent pulls
+   in every card label, confidence badge, signal meter, radar axis label and
+   probe-question button, then collapses the lot into one run-on string with
+   no sentence punctuation between fields — inflating the payload and leaving
+   the translation/TTS chunkers (_split_translation_text, _split_chunks), which
+   split on sentence boundaries, almost nothing to split on.
+
+   This builds the spoken script from the analysis payload instead, so only
+   meaningful content is read aloud and every part is a punctuated sentence.
+   Fields that are missing, or that still hold a UI placeholder, are skipped —
+   nothing is ever narrated that the analyst has not actually written.
+
+   Deliberately NOT narrated: card/section labels, d.title_question,
+   d.supporting_evidence, d.alternative_interpretation,
+   d.conversation_direction, d.manager_notes, the deeper-probe suggestion
+   buttons, and radar axis label text. */
+
+var STEP2_NARRATION_PLACEHOLDERS = {
+  'loading analysis...': 1,
+  'limited transcript evidence.': 1
+};
+
+/* Normalize one narration fragment: collapse whitespace, reject empty values
+   and UI placeholders, and never speak a raw object. Returns '' when the
+   fragment carries nothing worth saying. */
+function step2NarrationUsable(value) {
+  if (value == null || typeof value === 'object') return '';
+  var s = String(value).replace(/\s+/g, ' ').trim();
+  if (!s) return '';
+  if (STEP2_NARRATION_PLACEHOLDERS[s.toLowerCase()]) return '';
+  if (/^loading\b/i.test(s)) return '';
+  return s;
+}
+
+/* Guarantee a sentence terminator so two adjacent parts can never run together.
+   Closing quotes/brackets are skipped when checking so a value ending in `."` or
+   `.)` is still recognised as punctuated. */
+function step2NarrationSentence(text) {
+  var s = step2NarrationUsable(text);
+  if (!s) return '';
+  var last = s.replace(/[)"'’”\]]+$/, '').slice(-1);
+  if (last !== '.' && last !== '!' && last !== '?' && last !== '…') s += '.';
+  return s;
+}
+
+/* "Recommended next steps include X and Y." / "Avoid X and Y." — at most the
+   first two items, trailing punctuation stripped from each so the join never
+   produces "X. and Y.". Returns '' when there is nothing to list. */
+function step2NarrationList(list, lead) {
+  var items = asList(list)
+    .map(function(it) {
+      // d.avoid_actions items already open with "Avoid ..." in the UI, so drop
+      // that lead before re-prefixing, otherwise it is spoken back twice.
+      return step2NarrationUsable(it)
+        .replace(/^avoid\s+/i, '')
+        .replace(/[.!?,;:]+$/, '');
+    })
+    .filter(function(it) { return it.length; })
+    .slice(0, 2);
+  if (!items.length) return '';
+  return step2NarrationSentence(lead + ' ' + items.join(' and ') + '.');
+}
+
+function buildStep2NarrationScript(d) {
+  d = d || {};
+  var parts = [];
+
+  // a) The manager's opening script, when there is one.
+  var script = step2NarrationSentence(d.suggested_script);
+  if (script) parts.push(script);
+
+  // b) The four signal-map cards. These are static HTML rather than payload
+  //    fields, so they are read from their own known selectors only — never
+  //    via a panel-wide scrape.
+  var cards = document.querySelectorAll('#stepContent2 .step2-signal');
+  for (var i = 0; i < cards.length; i++) {
+    var nameEl = cards[i].querySelector('.step2-signal-name');
+    var valueEl = cards[i].querySelector('.step2-signal-value');
+    var descEl = cards[i].querySelector('.step2-signal-desc');
+    var name = step2NarrationUsable(nameEl && nameEl.textContent);
+    var value = step2NarrationUsable(valueEl && valueEl.textContent);
+    var desc = step2NarrationUsable(descEl && descEl.textContent);
+    if (!value || !desc) continue;
+    // Sentence-case the label so it reads as prose, not a UI heading:
+    // "Emotional Tone" -> "Emotional tone". The description is lower-cased at
+    // the front and stripped of its own period, because it follows an em dash
+    // and the sentence terminator is added once, at the end.
+    if (name) name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    desc = desc.charAt(0).toLowerCase() + desc.slice(1).replace(/[.!?…]+$/, '');
+    var lead = name ? name + ' is ' + value.toLowerCase() : 'Signal is ' + value.toLowerCase();
+    var said = step2NarrationSentence(lead + ' — ' + desc);
+    if (said) parts.push(said);
+  }
+
+  // c) The narrative findings, each as its own sentence.
+  var prose = ['behaviour_summary', 'observed_behaviour', 'ai_interpretation', 'key_takeaway'];
+  for (var p = 0; p < prose.length; p++) {
+    var sentence = step2NarrationSentence(d[prose[p]]);
+    if (sentence) parts.push(sentence);
+  }
+
+  // d) The two strongest underlying drivers behind the radar. Reuses
+  //    collectStep2Drivers() so the spoken ranking can never drift from the
+  //    plotted one, and only drivers the API actually scored are named.
+  var drivers = collectStep2Drivers(d);
+  if (drivers) {
+    var ranked = drivers
+      .filter(function(it) { return it && it.value != null; })
+      .slice()
+      .sort(function(a, b) { return b.value - a.value; })
+      .slice(0, 2)
+      .map(function(it) { return step2NarrationUsable(it.name).toLowerCase(); })
+      .filter(function(n) { return !!n; });
+    if (ranked.length) {
+      var strongest = ranked.length === 1
+        ? 'The strongest likely driver is ' + ranked[0] + '.'
+        : 'The strongest likely drivers are ' + ranked.join(' and ') + '.';
+      parts.push(step2NarrationSentence(strongest));
+    }
+  }
+
+  // e) The guideline lists, capped at two items each.
+  var rec = step2NarrationList(d.recommended_actions, 'Recommended next steps include');
+  if (rec) parts.push(rec);
+  var avoid = step2NarrationList(d.avoid_actions, 'Avoid');
+  if (avoid) parts.push(avoid);
+
+  return parts.join(' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\.{4,}/g, '...')   // keep a real ellipsis
+    .replace(/\.{2}(?!\.)/g, '.') // collapse doubled periods
+    .trim();
 }
 
 /* ── Step 2 "What This Could Mean" — SVG radar (data-driven) ──
@@ -6442,7 +6582,16 @@ sessionPromise.then(function(s) {
   }
 
   function synthesizeAndPlay(btn, wrap, lang) {
-    var text = readBlockText(wrap.getAttribute('data-narr-target'));
+    var target = wrap.getAttribute('data-narr-target');
+    var text = '';
+    // Step 2 ships a curated, data-driven script (buildStep2NarrationScript),
+    // so its narration isn't a scrape of every card label, badge, meter and
+    // radar axis label in the panel. Every other step keeps the DOM-scrape
+    // path below, unchanged.
+    if (target === 'stepContent2' && typeof window.__step2NarrationScript === 'string') {
+      text = window.__step2NarrationScript.trim();
+    }
+    if (!text) text = readBlockText(target);
     if (!text) {
       console.warn('Narration: block has no text to read', wrap);
       setState(btn, 'error');
