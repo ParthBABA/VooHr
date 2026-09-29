@@ -475,11 +475,16 @@ window.VooNotif = (function() {
 
   function openNotification(n) {
     if (!n) return;
-    // Fire-and-forget: optimistically mark read, then route by category.
-    fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
+    var url = window.VooNotif.targetUrl(n);
+    if (!n.read) {
+      n.read = true;
+      var current = count ? parseInt(count.textContent, 10) : NaN;
+      if (!isNaN(current)) updateBadge(Math.max(current - 1, 0));
+    }
     closeDropdown();
-    window.location.href = window.VooNotif.targetUrl(n);
+    window.VooNotif.markRead(n.id).then(function() { window.location.href = url; });
   }
+  window.addEventListener('pageshow', function(e) { if (e.persisted) loadNotifications(); });
 
   function renderList(items) {
     // Row markup is shared with the other pages' bells — see
@@ -567,8 +572,8 @@ window.voovrInitNotifications = function() {
 
   function openNotification(n) {
     if (!n) return;
-    fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
-    window.location.href = V.targetUrl(n);
+    var url = V.targetUrl(n);
+    V.markRead(n.id).then(function() { window.location.href = url; });
   }
 
   function buildRow(n) {

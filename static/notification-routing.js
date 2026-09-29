@@ -22,9 +22,30 @@
     return '/risk-drift?notification=' + encodeURIComponent(n.id);
   }
 
+  // Mark a notification read and resolve once the server has (very likely)
+  // received it. Callers navigate AFTER this resolves; a bare fire-and-forget
+  // fetch followed by location.href is cancelled by the browser, which left
+  // the red badge on. Waits for the CSRF token (the PUT is rejected without
+  // it), uses keepalive so it survives a navigation, and never blocks the
+  // caller for more than ~1.5s.
+  function markRead(id) {
+    if (!id) return Promise.resolve();
+    var ready = window.csrfTokenReady ? window.csrfTokenReady.catch(function () {}) : Promise.resolve();
+    var req = ready.then(function () {
+      return fetch('/api/notifications/' + encodeURIComponent(id) + '/read', {
+        method: 'PUT',
+        keepalive: true,
+        credentials: 'same-origin'
+      });
+    }).catch(function () {});
+    var cap = new Promise(function (resolve) { setTimeout(resolve, 1500); });
+    return Promise.race([req, cap]);
+  }
+
   window.VooNotif = window.VooNotif || {};
   window.VooNotif.categoryOf = categoryOf;
   window.VooNotif.targetUrl = targetUrl;
+  window.VooNotif.markRead = markRead;
 })();
 
 /* ── Panel row rendering ───────────────────────────────────────────────────

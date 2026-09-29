@@ -10,13 +10,21 @@
    routes via VooNotif.targetUrl and has no meeting-tracker special case. #}
 function openNotification(n) {
     if (!n) return;
-    // Fire-and-forget: optimistically mark read, then route.
-    fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' }).catch(function() {});
-    closeDropdown();
     var isMeetingType = n.type === 'meeting_reminder' || n.type === 'meeting_event' || n.type === 'memory_overdue' || n.type === 'delivery_failed';
-    if (isMeetingType && n.employee_id) {
-      window.location.href = '/meeting-tracker?employee_id=' + encodeURIComponent(n.employee_id);
-      return;
+    var url = (isMeetingType && n.employee_id)
+      ? '/meeting-tracker?employee_id=' + encodeURIComponent(n.employee_id)
+      : window.VooNotif.targetUrl(n);
+    // Clear the red alert right away, then navigate only once the read request
+    // has been sent (navigating first cancels it and the badge comes back).
+    if (!n.read) {
+      n.read = true;
+      var current = count ? parseInt(count.textContent, 10) : NaN;
+      if (!isNaN(current)) updateBadge(Math.max(current - 1, 0));
     }
-    window.location.href = window.VooNotif.targetUrl(n);
+    closeDropdown();
+    window.VooNotif.markRead(n.id).then(function() { window.location.href = url; });
   }
+  // Coming back via the browser's back button restores a stale badge from the
+  // page cache; refresh it.
+  window.addEventListener('pageshow', function(e) { if (e.persisted) loadNotifications(); });
+  window.addEventListener('voo:notifications-changed', function() { loadNotifications(); });

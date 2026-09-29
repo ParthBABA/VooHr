@@ -393,7 +393,7 @@ window.voovrInitRiskDrift = function() {
       .then(function(r) { if (!r.ok) throw new Error('not_found'); return r.json(); })
       .then(function(n) {
         // If opened via a direct link, mark it read in the background.
-        fetch('/api/notifications/' + id + '/read', { method: 'PUT' }).catch(function() {});
+        window.VooNotif.markRead(id).then(function() { window.dispatchEvent(new Event('voo:notifications-changed')); });
         loadingEl.style.display = 'none';
         detailEl.style.display = '';
         renderDetail(n);
