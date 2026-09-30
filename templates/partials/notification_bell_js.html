@@ -10,6 +10,30 @@
    related employee, and everything else falls through to the shared
    window.VooNotif.targetUrl().
 
+   ── Seen-while-open ────────────────────────────────────────────────────
+   The red dot outlived the reading. Opening the bell marked nothing, so rows
+   the user had plainly looked at stayed unread until they were clicked — and
+   the dot is worse than that, because it tracks the org-wide unread_count
+   while the panel only ever lists the newest 5. Reading those 5 left the older
+   ones behind them with nothing on screen to clear them.
+
+   So the bell now marks what was actually read. Every unread row gets a ~1s
+   dwell timer armed by an IntersectionObserver rooted at #notifList (the
+   panel's own scroll box, threshold 0.6), so a row merely scrolled past — or
+   one still hidden behind a closed dropdown, which is display:none and
+   therefore never intersects — does not count. The ids are batched into a
+   single VooNotif.markManyRead() call, and a successful batch re-reads the
+   endpoint: the panel holds 5 rows and the badge holds every unread row in the
+   org, so the server's unread_count is the only number worth believing and the
+   local decrement is only there to make the UI feel instant. A failed batch
+   puts the rows and the count back rather than leave the page claiming
+   something the server never agreed to.
+
+   These functions sit in the including page's closure on purpose: updateBadge,
+   renderList and loadNotifications are page-local, so the badge, the panel and
+   the request all move together. Only markRead/markManyRead/markAllRead and
+   the row painter come from notification-routing.js.
+
    notifications.html is deliberately NOT served from this partial: it always
    routes via VooNotif.targetUrl and has no meeting-tracker special case. #}
 function openNotification(n) {
@@ -22,13 +46,174 @@ function openNotification(n) {
     // has been sent (navigating first cancels it and the badge comes back).
     if (!n.read) {
       n.read = true;
-      var current = count ? parseInt(count.textContent, 10) : NaN;
-      if (!isNaN(current)) updateBadge(Math.max(current - 1, 0));
+      var current = window.VooNotif.getBadgeCount();
+      if (current !== null) updateBadge(Math.max(current - 1, 0));
     }
     closeDropdown();
     window.VooNotif.markRead(n.id).then(function() { window.location.href = url; });
   }
+
+  // ── Seen-while-open ──────────────────────────────────────────────────────
+  var BELL_VISIBLE_RATIO = 0.6;  // a row has to be mostly on screen, not clipped
+  var BELL_DWELL_MS = 1000;      // ...and has to stay there for a beat
+  var BELL_FLUSH_MS = 400;       // rows arm together; one request for the lot
+  var bellPending = [];
+  var bellFlushTimer = null;
+  var bellDwell = {};
+  var bellObserver = null;
+  // True only while we dispatch our own change event, so the listener below
+  // refreshes for *other* pages and does not fire a second request at this one.
+  var bellSelfDispatch = false;
+
+  function bellReducedMotion() {
+    try {
+      return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e) { return false; }
+  }
+
+  // The unread look is one class plus the little dot inside the avatar, so
+  // dropping the class is enough and .notif-row already transitions
+  // `background` (the global prefers-reduced-motion rule in style.css collapses
+  // that). The opacity dip is JS-only, hence the guard: anyone who asked for
+  // less motion gets the class swap and nothing else.
+  function paintRowRead(row, read) {
+    if (!row) return;
+    var avatar = row.querySelector('.notif-row__avatar');
+    var dot = row.querySelector('.notif-row__unread-dot');
+    if (read) {
+      row.classList.remove('notif-row--unread');
+      if (dot && dot.parentNode) dot.parentNode.removeChild(dot);
+      if (!bellReducedMotion() && typeof row.animate === 'function') {
+        try {
+          row.animate(
+            [{ opacity: 1 }, { opacity: 0.55 }, { opacity: 1 }],
+            { duration: 340, easing: 'ease-in-out' }
+          );
+        } catch (e) {}
+      }
+      return;
+    }
+    // Rollback: the server never agreed, so put the unread look back exactly.
+    row.classList.add('notif-row--unread');
+    if (avatar && !avatar.querySelector('.notif-row__unread-dot')) {
+      var fresh = document.createElement('span');
+      fresh.className = 'notif-row__unread-dot';
+      avatar.appendChild(fresh);
+    }
+  }
+
+  // A nudge, never a recount. Reading the 5 rows on screen must not zero a
+  // badge with 30 unread behind it; the authoritative number arrives from the
+  // re-read that follows a successful batch.
+  function bumpBadge(delta) {
+    var current = window.VooNotif.getBadgeCount();
+    if (current !== null) updateBadge(Math.max(current + delta, 0));
+  }
+
+  // Every other listener (the other open pages, the hub on notifications) wants
+  // to know the read state moved.
+  function announceRead() {
+    bellSelfDispatch = true;
+    try { window.dispatchEvent(new Event('voo:notifications-changed')); } catch (e) {}
+    bellSelfDispatch = false;
+  }
+
+  function queueBellRead(row) {
+    if (!row || !row.dataset) return;
+    var id = row.dataset.id;
+    if (!id || row.dataset.queued === '1') return;
+    row.dataset.queued = '1';
+    paintRowRead(row, true);
+    bumpBadge(-1);
+    bellPending.push({ id: String(id), row: row });
+    if (bellFlushTimer) return;
+    bellFlushTimer = setTimeout(flushBellPending, BELL_FLUSH_MS);
+  }
+
+  function flushBellPending() {
+    bellFlushTimer = null;
+    if (!bellPending.length) return;
+    var batch = bellPending;
+    bellPending = [];
+    // markManyRead already resolves true|false, never rejects; the catch is here
+    // so a helper swapped out later cannot strand the batch mid-flight.
+    Promise.resolve(window.VooNotif.markManyRead(batch.map(function (p) { return p.id; })))
+      .catch(function () { return false; })
+      .then(function (ok) {
+        if (ok) {
+          // These are read on the server now, so its count is the truth and the
+          // next unread rows are whatever sits behind them. Re-read rather than
+          // trust the decrement above, or the panel and the badge disagree for
+          // as long as this tab stays open.
+          loadNotifications();
+          return;
+        }
+        // It failed, so the server still counts these as unread. Undo the claim
+        // instead of leaving rows painted read with nothing behind them.
+        batch.forEach(function (p) {
+          p.row.dataset.queued = '';
+          paintRowRead(p.row, false);
+        });
+        bumpBadge(batch.length);
+      });
+  }
+
+  // (Re)arm the dwell timers for whatever unread rows are on screen right now.
+  // Called after every render, because the panel's rows are replaced wholesale
+  // by renderList and a timer pointing at a detached node is a no-op at best.
+  function armBellObserver() {
+    if (typeof IntersectionObserver !== 'function') return;
+    if (!list) return;
+    Object.keys(bellDwell).forEach(function (k) { clearTimeout(bellDwell[k]); });
+    bellDwell = {};
+    if (!bellObserver) {
+      bellObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          var row = entry.target;
+          var key = row && row.dataset ? row.dataset.id : '';
+          if (!key) return;
+          if (!entry.isIntersecting || entry.intersectionRatio < BELL_VISIBLE_RATIO) {
+            // Left the screen before the dwell ran out, so it was not read.
+            if (bellDwell[key]) { clearTimeout(bellDwell[key]); delete bellDwell[key]; }
+            return;
+          }
+          if (bellDwell[key] || row.dataset.queued === '1') return;
+          bellDwell[key] = setTimeout(function () {
+            delete bellDwell[key];
+            queueBellRead(row);
+          }, BELL_DWELL_MS);
+        });
+      }, { root: list, threshold: [0, BELL_VISIBLE_RATIO] });
+    } else {
+      bellObserver.disconnect();
+    }
+    // Only the rows on screen, and only the unread ones.
+    var rows = list.querySelectorAll('.notif-row--unread');
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].dataset.queued !== '1') bellObserver.observe(rows[i]);
+    }
+  }
+
+  // Row clicks inside the avatar (the unread dot removal) are not what re-arms
+  // this — the panel's own children are, which is exactly when renderList ran.
+  // childList alone: a subtree watch would also fire on the dot removal above
+  // and restart the dwell timer of a row that was still being read.
+  if (typeof MutationObserver === 'function' && list) {
+    new MutationObserver(function () { armBellObserver(); })
+      .observe(list, { childList: true });
+  }
+
   // Coming back via the browser's back button restores a stale badge from the
   // page cache; refresh it.
   window.addEventListener('pageshow', function(e) { if (e.persisted) loadNotifications(); });
-  window.addEventListener('voo:notifications-changed', function() { loadNotifications(); });
+  // Another page or the hub changed something: resync, but never in response to
+  // our own dispatch (that path already re-read).
+  window.addEventListener('voo:notifications-changed', function() {
+    if (bellSelfDispatch) return;
+    loadNotifications();
+  });
+  // A tab left open in the background misses reads that happen while it is
+  // hidden, so re-read on the way back rather than show a stale dot.
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState !== 'hidden') loadNotifications();
+  });

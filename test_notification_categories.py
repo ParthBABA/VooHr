@@ -7,7 +7,11 @@ risk) and the page groups rows by it.
 """
 from datetime import datetime, timezone
 from pathlib import Path
+import json
 import os
+import shutil
+import subprocess
+import textwrap
 
 import pytest
 from bson import ObjectId
@@ -399,3 +403,313 @@ def test_panel_avatar_slot_is_styled_for_a_photo():
     # never get overflow:hidden or it would clip the badge.
     avatar_rule = css.split(".notif-row__avatar{")[1].split("}")[0]
     assert "overflow:hidden" not in avatar_rule
+
+
+# ── The bell dropdown: "seen means read" ─────────────────────────────────
+#
+# The reported bug: the red dot outlived the reading. Opening the bell marked
+# nothing, so rows the user had plainly looked at stayed unread until they were
+# clicked — and the dot tracks the org-wide unread_count while the panel only
+# lists the newest 5, so reading those 5 left the older ones with nothing on
+# screen to clear them. The fix lives in the shared partial, so all three bell
+# pages get it from one place.
+
+BELL_DROPDOWN_PAGES = (
+    "dashboard.html",
+    "conversation-workspace.html",
+    "risk-drift.html",
+)
+
+
+def _bell_partial():
+    return (ROOT / "templates" / "partials" / "notification_bell_js.html").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_bell_marks_a_row_read_after_it_has_been_on_screen():
+    """A row that was actually looked at counts as read, with no click.
+
+    IntersectionObserver rooted at #notifList — the panel's own scroll box — so a
+    row merely scrolled past, or one behind a closed dropdown (display:none, so
+    it never intersects), does not count. Threshold 0.6 and a ~1s dwell keep a
+    fast flick through from clearing the badge for a page of unread rows."""
+    partial = _bell_partial()
+    assert "new IntersectionObserver(" in partial
+    assert "var BELL_VISIBLE_RATIO = 0.6;" in partial
+    assert "var BELL_DWELL_MS = 1000;" in partial
+    # Rooted at the list, so a row scrolled out of the panel is out of view.
+    assert "{ root: list, threshold: [0, BELL_VISIBLE_RATIO] }" in partial
+    assert "entry.intersectionRatio < BELL_VISIBLE_RATIO" in partial
+    # Leaving the screen before the dwell expires cancels it: not read.
+    assert "clearTimeout(bellDwell[key]); delete bellDwell[key];" in partial
+    # Only unread, not-yet-queued rows are watched, and once handled a row can
+    # never be marked twice.
+    assert "list.querySelectorAll('.notif-row--unread')" in partial
+    assert "row.dataset.queued === '1'" in partial
+    # Re-armed on every render, because renderList replaces the rows wholesale.
+    assert "new MutationObserver(function () { armBellObserver(); })" in partial
+
+
+def test_bell_batches_viewed_rows_into_one_request():
+    """A screenful of viewed rows must cost one request, not one per row."""
+    partial = _bell_partial()
+    assert "bellPending.push({ id: String(id), row: row });" in partial
+    assert "window.VooNotif.markManyRead(batch.map(function (p) { return p.id; }))" in partial
+    # One in-flight flush, not one per row.
+    assert "if (bellFlushTimer) return;" in partial
+    assert "setTimeout(flushBellPending, BELL_FLUSH_MS)" in partial
+    # The PUT goes to the batch endpoint, which the backend already scopes.
+    routes = (ROOT / "notifications.py").read_text(encoding="utf-8")
+    assert '@notifications_bp.route("/notifications/read", methods=["PUT"])' in routes
+
+
+def test_bell_reconciles_the_badge_from_the_server_after_a_marking():
+    """The mismatch that kept the dot lit: the panel holds 5 rows, the badge
+    holds every unread row in the org, so decrementing by the number of rows on
+    screen leaves the count wrong in both directions. A successful batch must
+    re-read the endpoint and let the server's unread_count win."""
+    partial = _bell_partial()
+    flush = partial[partial.index("function flushBellPending("):partial.index("function armBellObserver(")]
+    assert "if (ok) {" in flush
+    assert "loadNotifications();" in flush
+    # And the local step is only a nudge so the UI feels instant, never a recount.
+    assert "function bumpBadge(delta)" in partial
+    assert "window.VooNotif.getBadgeCount()" in partial
+    # The re-read is the pages' own loadNotifications, which asks for the latest
+    # 5 unread rows with photos -- so the list refills with what sits behind the
+    # ones just read, and the badge becomes the server's org-wide unread_count.
+    for page in BELL_DROPDOWN_PAGES:
+        html = (ROOT / "static" / page).read_text(encoding="utf-8")
+        assert ("/api/notifications?limit=5&include_photo=1&unread_only=true"
+                in html), page
+
+
+def test_bell_rolls_back_rows_when_the_read_request_fails():
+    """A failed request leaves the server still counting these as unread, so the
+    page must not keep claiming they are read: repaint the rows and put the
+    count back."""
+    partial = _bell_partial()
+    flush = partial[partial.index("function flushBellPending("):partial.index("function armBellObserver(")]
+    assert "paintRowRead(p.row, false);" in flush
+    assert "bumpBadge(batch.length);" in flush
+    # The rollback restores the exact unread affordances it removed.
+    paint = partial[partial.index("function paintRowRead("):partial.index("function bumpBadge(")]
+    assert "row.classList.add('notif-row--unread');" in paint
+    assert "notif-row__unread-dot" in paint
+
+
+def test_bell_row_fade_respects_reduced_motion():
+    """The class swap is the fade (.notif-row already transitions background and
+    the global reduced-motion rule collapses it), so the only motion added is the
+    opacity dip — and that has to be opt-out."""
+    partial = _bell_partial()
+    assert "function bellReducedMotion()" in partial
+    assert "(prefers-reduced-motion: reduce)" in partial
+    assert "if (!bellReducedMotion() && typeof row.animate === 'function') {" in partial
+
+
+@pytest.mark.parametrize("page", BELL_DROPDOWN_PAGES)
+def test_bell_mark_all_read_uses_the_csrf_safe_helper(page):
+    """A raw PUT races csrf.js and is rejected when the token has not landed, so
+    "Mark all read" in the bell must go through the shared helper — on all three
+    pages, not just the hub's copy."""
+    html = (ROOT / "static" / page).read_text(encoding="utf-8")
+    assert "fetch('/api/notifications/read-all', { method: 'PUT' })" not in html
+    assert "window.VooNotif.markAllRead()" in html
+    # Failure must not leave the button stuck disabled.
+    assert "markAll.disabled = true;" in html
+    assert "markAll.disabled = false;" in html
+    assert "if (!ok) return;" in html
+    # And the other pages are told, so their badges follow.
+    assert "announceRead();" in html
+
+
+@pytest.mark.parametrize("page", BELL_DROPDOWN_PAGES)
+def test_bell_gets_the_new_marking_from_the_shared_partial_only(page):
+    """The behaviour has to live in the partial, or the three copies drift again
+    (which is how the pages ended up with three different mark-all handlers)."""
+    html = (ROOT / "static" / page).read_text(encoding="utf-8")
+    assert "{% include 'partials/notification_bell_js.html' %}" in html
+    # No page may re-implement the observer or the batch.
+    assert "IntersectionObserver" not in html
+    assert "markManyRead" not in html
+
+
+def test_bell_resyncs_on_focus_pageshow_and_read_changes():
+    """A tab left open in the background misses reads that happen while it is
+    hidden, and the back button restores a stale badge from the page cache."""
+    partial = _bell_partial()
+    assert "document.addEventListener('visibilitychange', function() {" in partial
+    assert "if (document.visibilityState !== 'hidden') loadNotifications();" in partial
+    # The pre-existing pageshow refresh survives.
+    assert "window.addEventListener('pageshow', function(e) { if (e.persisted) loadNotifications(); });" in partial
+    # A change made elsewhere resyncs this page, but our own dispatch must not
+    # fire a second request at it.
+    assert "window.addEventListener('voo:notifications-changed', function() {" in partial
+    assert "if (bellSelfDispatch) return;" in partial
+    assert "new Event('voo:notifications-changed')" in partial
+
+
+def test_shared_badge_count_reader_is_exported():
+    """bumpBadge has to read the live count to step it, and has to tell "0
+    unread" apart from "there is no badge on this page" — hence null, not NaN."""
+    js = _routing_js()
+    assert "function getBadgeCount()" in js
+    assert "window.VooNotif.getBadgeCount = getBadgeCount;" in js
+    body = js[js.index("function getBadgeCount()"):js.index("window.VooNotif = ")]
+    assert "getElementById('notifCount')" in body
+    assert "return isNaN(n) ? null : n;" in body
+
+
+# ── Runtime proof that the helpers keep their promise ────────────────────
+#
+# The static checks above pin the source. These actually execute
+# notification-routing.js in node and assert the never-reject contract, because
+# that is the property the whole optimistic UI is built on: every caller chains
+# a .then() to decide whether to keep the change or roll it back, so a rejection
+# strands rows painted read and a badge decremented for nothing.
+
+_NODE = shutil.which("node")
+
+_HARNESS = textwrap.dedent(r"""
+    const fs = require('fs');
+    const vm = require('vm');
+    const src = fs.readFileSync(process.argv[2], 'utf8');
+
+    // Minimal stand-in for the page: notification-routing.js only needs a
+    // document it can query and a window to hang things off.
+    function load(fetchImpl, csrf) {
+      const sandbox = {
+        Promise, setTimeout, clearTimeout, JSON, console, Date, Math, Array, Object, String, Number,
+        fetch: fetchImpl,
+        document: {
+          getElementById: () => null,
+          createElement: () => ({ setAttribute() {}, appendChild() {}, className: '' }),
+        },
+        matchMedia: () => ({ matches: false }),
+      };
+      sandbox.window = sandbox;
+      sandbox.csrfTokenReady = csrf === undefined ? Promise.resolve('token') : csrf;
+      vm.createContext(sandbox);
+      vm.runInContext(src, sandbox);
+      return sandbox.VooNotif;
+    }
+
+    const out = [];
+    function check(name, promise, expected) {
+      return Promise.resolve(promise)
+        .then(v => { out.push([name, v === expected, v]); })
+        .catch(e => { out.push([name, false, 'REJECTED: ' + e]); });
+    }
+
+    const bodies = [];
+    const okFetch = (url, opts) => { bodies.push({ url, opts }); return Promise.resolve({ ok: true }); };
+
+    (async () => {
+      // 1. Happy path: both helpers resolve true.
+      let V = load(okFetch);
+      await check('markManyRead ok', V.markManyRead(['1', '2']), true);
+      await check('markAllRead ok', V.markAllRead(), true);
+      out.push(['batch url + body', bodies[0].url === '/api/notifications/read'
+        && bodies[0].opts.method === 'PUT' && bodies[0].opts.keepalive === true
+        && bodies[0].opts.body === '{"ids":["1","2"]}', JSON.stringify(bodies[0])]);
+      out.push(['read-all url', bodies[1].url === '/api/notifications/read-all', bodies[1].url]);
+
+      // 2. A 500 must resolve false, not throw.
+      V = load(() => Promise.resolve({ ok: false, status: 500 }));
+      await check('markManyRead 500', V.markManyRead(['1']), false);
+      await check('markAllRead 500', V.markAllRead(), false);
+
+      // 3. A thrown/rejected fetch must resolve false.
+      V = load(() => Promise.reject(new Error('offline')));
+      await check('markManyRead network', V.markManyRead(['1']), false);
+      await check('markAllRead network', V.markAllRead(), false);
+
+      // 4. Duplicates, blanks and nulls are dropped before the request.
+      bodies.length = 0;
+      V = load(okFetch);
+      await check('markManyRead dedupe', V.markManyRead(['1', '1', '', null, undefined, '2']), true);
+      out.push(['deduped body', bodies[0].opts.body === '{"ids":["1","2"]}', bodies[0].opts.body]);
+
+      // 5. An empty batch resolves without any request at all.
+      bodies.length = 0;
+      V = load(okFetch);
+      await check('markManyRead empty', V.markManyRead([]), true);
+      out.push(['no request for empty batch', bodies.length === 0, bodies.length + ' calls']);
+
+      // 6. A rejected CSRF token must not stop the helper from resolving.
+      bodies.length = 0;
+      V = load(okFetch, Promise.reject(new Error('no token')));
+      await check('markManyRead bad csrf', V.markManyRead(['1']), true);
+      await check('markAllRead bad csrf', V.markAllRead(), true);
+      out.push(['csrf rejection still sends', bodies.length === 2, bodies.length + ' calls']);
+
+      // 7. markRead with no id resolves rather than throwing.
+      V = load(okFetch);
+      await check('markRead no id', V.markRead(undefined), undefined);
+
+      console.log(JSON.stringify(out));
+    })();
+    """)
+
+
+@pytest.mark.skipif(_NODE is None, reason="node is not installed")
+def test_read_helpers_never_reject_at_runtime(tmp_path):
+    """Execute the helpers for real. Every one of these has to settle; the
+    optimistic UI and the rollback both hang off the resolved value."""
+    js = ROOT / "static" / "notification-routing.js"
+    harness = tmp_path / "harness.js"
+    harness.write_text(_HARNESS, encoding="utf-8")
+    proc = subprocess.run([_NODE, str(harness), str(js)],
+                          capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 0, proc.stderr[:2000]
+    results = json.loads(proc.stdout.strip().splitlines()[-1])
+
+    bad = [(name, value) for name, passed, value in results if not passed]
+    assert not bad, "helpers misbehaved: " + repr(bad)
+    names = [name for name, _, _ in results]
+    for expected in ("markManyRead ok", "markAllRead ok", "markManyRead 500",
+                     "markAllRead 500", "markManyRead network",
+                     "markAllRead network", "markManyRead dedupe",
+                     "markManyRead empty", "markManyRead bad csrf",
+                     "markAllRead bad csrf", "markRead no id"):
+        assert expected in names, f"{expected} never ran"
+
+
+@pytest.mark.skipif(_NODE is None, reason="node is not installed")
+def test_a_hung_request_does_not_freeze_the_caller(tmp_path):
+    """The 1.5s cap is what stops a stalled network from pinning rows painted
+    read forever, so it is asserted by actually hanging the request."""
+    harness_src = textwrap.dedent(r"""
+        const fs = require('fs');
+        const vm = require('vm');
+        const src = fs.readFileSync(process.argv[2], 'utf8');
+        const sandbox = {
+          Promise, setTimeout, clearTimeout, JSON, console, Date, Math, Array, Object, String, Number,
+          fetch: () => new Promise(() => {}),   // never settles
+          document: { getElementById: () => null, createElement: () => ({}) },
+          matchMedia: () => ({ matches: false }),
+        };
+        sandbox.window = sandbox;
+        sandbox.csrfTokenReady = Promise.resolve('token');
+        vm.createContext(sandbox);
+        vm.runInContext(src, sandbox);
+        const t0 = Date.now();
+        Promise.all([
+          sandbox.VooNotif.markManyRead(['1']).then(v => v),
+          sandbox.VooNotif.markAllRead().then(v => v),
+        ]).then(vals => {
+          console.log(JSON.stringify({ ms: Date.now() - t0, vals }));
+        });
+        """)
+    js = ROOT / "static" / "notification-routing.js"
+    harness = tmp_path / "hung.js"
+    harness.write_text(harness_src, encoding="utf-8")
+    proc = subprocess.run([_NODE, str(harness), str(js)],
+                          capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 0, proc.stderr[:2000]
+    got = json.loads(proc.stdout.strip().splitlines()[-1])
+    # Both settle false, and promptly: the cap, not the network.
+    assert got["vals"] == [False, False], got
+    assert got["ms"] < 3000, f"cap did not fire promptly: {got['ms']}ms"

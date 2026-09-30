@@ -284,14 +284,19 @@
   });
 
   if (markAll) markAll.addEventListener('click', function() {
-    fetch('/api/notifications/read-all', { method: 'PUT' })
-      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
-      .then(function() {
-        updateBadge(0);
-        renderList([]);
-        showToast('All notifications marked as read');
-      })
-      .catch(function() {});
+    // Shared helper: a raw PUT races csrf.js and is rejected when the token has
+    // not landed yet. markAllRead() waits for the token and resolves
+    // true|false rather than rejecting, so the button can never stick disabled.
+    markAll.disabled = true;
+    window.VooNotif.markAllRead().then(function(ok) {
+      markAll.disabled = false;
+      if (!ok) return;
+      updateBadge(0);
+      renderList([]);
+      showToast('All notifications marked as read');
+      // Mark-all is a read change like any other: tell the other pages.
+      announceRead();
+    });
   });
 
   document.addEventListener('click', function(e) {

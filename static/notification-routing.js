@@ -92,6 +92,18 @@
     }
   }
 
+  // The badge number currently on screen, or null when it can't be read (no
+  // element, or text that isn't a number). Read separately from setBadge so a
+  // caller can step the count by a delta without owning the write — the bell
+  // needs that to clear one row's worth of unread at a time, and it must be
+  // able to tell "0 unread" apart from "I have no idea what the count is".
+  function getBadgeCount() {
+    var el = document.getElementById('notifCount');
+    if (!el) return null;
+    var n = parseInt(el.textContent, 10);
+    return isNaN(n) ? null : n;
+  }
+
   window.VooNotif = window.VooNotif || {};
   window.VooNotif.categoryOf = categoryOf;
   window.VooNotif.targetUrl = targetUrl;
@@ -99,6 +111,7 @@
   window.VooNotif.markManyRead = markManyRead;
   window.VooNotif.markAllRead = markAllRead;
   window.VooNotif.setBadge = setBadge;
+  window.VooNotif.getBadgeCount = getBadgeCount;
 })();
 
 /* ── Panel row rendering ───────────────────────────────────────────────────
