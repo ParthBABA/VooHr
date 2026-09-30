@@ -69,6 +69,11 @@
 .alert-badge.neutral{color:var(--ivory-dim);border-color:var(--border-lit);background:var(--ivory-ghost);}
 .hub-list .alert-item.is-read .alert-name{font-weight:500;color:var(--ivory-dim);}
 .hub-list .alert-item.is-read .alert-detail,.hub-list .alert-item.is-read .alert-summary{color:var(--ivory-dim);}
+/* Reading a row must feel immediate rather than snap. Marking a row read only
+   swaps two classes on that row — it never rebuilds the list — so transition
+   the severity dot (red/amber/teal -> .read) and the text dimming. ~300ms. */
+.hub-list .alert-item .alert-severity{transition:background .3s ease,box-shadow .3s ease;}
+.hub-list .alert-item .alert-name,.hub-list .alert-item .alert-detail,.hub-list .alert-item .alert-summary{transition:color .3s ease;}
 .hub-list .alert-item .alert-action,.hub-list .alert-item .drift-conf{align-self:center;}
 .hub-list .alert-item .alert-action{font-size:.68rem;letter-spacing:.08em;padding:.5rem 1rem;border-radius:6px;}
 @media (max-width:560px){
@@ -82,7 +87,7 @@
   .hub-list .alert-item .alert-action,.hub-list .alert-item .drift-conf{margin-left:1.6rem;}
   .hub-list .alert-item .drift-conf + .alert-action{margin-left:0;}
 }
-@media (prefers-reduced-motion: reduce){ .hub-tab,.hub-markall{transition:none;} }
+@media (prefers-reduced-motion: reduce){ .hub-tab,.hub-markall,.hub-list .alert-item .alert-severity,.hub-list .alert-item .alert-name,.hub-list .alert-item .alert-detail,.hub-list .alert-item .alert-summary{transition:none;} }
 </style>
 </head>
 <body>
@@ -442,7 +447,6 @@ window.VooNotif = (function() {
   var wrap = document.getElementById('notifWrap');
   var btn = document.getElementById('notifBtn');
   var dropdown = document.getElementById('notifPanel');
-  var dot = document.getElementById('notifDot');
   var count = document.getElementById('notifCount');
   var list = document.getElementById('notifList');
   var empty = document.getElementById('notifEmpty');
@@ -466,11 +470,8 @@ window.VooNotif = (function() {
   }
 
   function updateBadge(unread) {
-    if (dot) dot.style.display = unread > 0 ? '' : 'none';
-    if (count) {
-      count.style.display = unread > 0 ? '' : 'none';
-      count.textContent = unread > 99 ? '99+' : String(unread || 0);
-    }
+    // Shared so the hub below can move the same badge; one implementation.
+    window.VooNotif.setBadge(unread);
   }
 
   function openNotification(n) {
@@ -485,6 +486,10 @@ window.VooNotif = (function() {
     window.VooNotif.markRead(n.id).then(function() { window.location.href = url; });
   }
   window.addEventListener('pageshow', function(e) { if (e.persisted) loadNotifications(); });
+  // The hub below marks rows read as they are viewed; when it does, re-read the
+  // server's unread total so the badge ends up authoritative rather than a
+  // running guess. Same wiring the shared bell partial uses.
+  window.addEventListener('voo:notifications-changed', function() { loadNotifications(); });
 
   function renderList(items) {
     // Row markup is shared with the other pages' bells — see
@@ -532,14 +537,16 @@ window.VooNotif = (function() {
   });
 
   if (markAll) markAll.addEventListener('click', function() {
-    fetch('/api/notifications/read-all', { method: 'PUT' })
-      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
-      .then(function() {
-        updateBadge(0);
-        renderList([]);
-        showToast('All notifications marked as read');
-      })
-      .catch(function() {});
+    // VooNotif.markAllRead waits for the CSRF token first — a raw PUT races
+    // csrf.js and gets rejected when the token hasn't landed yet. It resolves
+    // false on failure, so the panel is only emptied on a real 2xx.
+    window.VooNotif.markAllRead().then(function(ok) {
+      if (!ok) return;
+      updateBadge(0);
+      renderList([]);
+      window.dispatchEvent(new Event('voo:notifications-changed'));
+      showToast('All notifications marked as read');
+    });
   });
 
   document.addEventListener('click', function(e) {
@@ -570,10 +577,91 @@ window.voovrInitNotifications = function() {
   };
   var currentTab = 'activity';
 
-  function openNotification(n) {
+  // ── Read tracking ───────────────────────────────────────────────────
+  // A row that has been on screen for a moment has been seen, so it stops
+  // being "unread" without anyone clicking it. That is what used to need a
+  // full reload: nothing wrote `read` back to the row, so the red dot and the
+  // amber tab counters survived until the next GET.
+  //   DWELL_MS  how long a row must be genuinely visible before it counts
+  //   observed  intersection ratio required, so a half-scrolled row stays unread
+  //   pending   rows painted as read, waiting to go out in one batch
+  var DWELL_MS = 1500;
+  var DWELL_RATIO = 0.6;
+  var pending = [];
+  var dwellTimers = {};
+  var flushTimer = null;
+  var observer = null;
+
+  // Mirror of the badge step in partials/notification_bell_js.html: nudge the
+  // header count by a delta and let 0 hide the dot. Deliberately NOT a
+  // recomputed total — the hub loads at most 4 pages of 50, but the badge
+  // counts every unread notification server-side, so counting the rows we
+  // happen to hold would undercount and hide a badge that should be visible.
+  function bumpBadge(delta) {
+    var el = document.getElementById('notifCount');
+    var current = el ? parseInt(el.textContent, 10) : NaN;
+    if (isNaN(current)) return;
+    V.setBadge(Math.max(current + delta, 0));
+  }
+
+  // Turn one row read or unread by swapping classes only — no re-render, so the
+  // CSS transition on the dot can actually be seen.
+  function paintRow(n, row, read) {
+    if (!n || !row) return;
+    n.read = read;
+    row.classList.toggle('is-read', read);
+    var sev = row.querySelector('.alert-severity');
+    if (sev) sev.className = V.severityClass(n);
+  }
+
+  // Counters and badge always move together, so a tab drops 'has-unread' at
+  // the same moment the bell loses its red dot.
+  function afterReadChange(delta) {
+    refreshCounts();
+    bumpBadge(delta);
+  }
+
+  function notifyChanged() {
+    window.dispatchEvent(new Event('voo:notifications-changed'));
+  }
+
+  function openNotification(n, row) {
     if (!n) return;
     var url = V.targetUrl(n);
+    if (!n.read) {
+      paintRow(n, row, true);
+      afterReadChange(-1);
+    }
+    // Mark read BEFORE navigating. A bare fetch followed by location.href gets
+    // cancelled by the browser, which is what left the red badge behind.
     V.markRead(n.id).then(function() { window.location.href = url; });
+  }
+
+  // Queue a row the dwell timer has finished with, then send the whole queue in
+  // one request. One request per row is what made "mark on view" feel slow.
+  function queueRead(n, row) {
+    paintRow(n, row, true);
+    afterReadChange(-1);
+    pending.push({ id: String(n.id), row: row });
+    if (flushTimer) return;
+    flushTimer = setTimeout(flushPending, 400);
+  }
+
+  function flushPending() {
+    flushTimer = null;
+    if (!pending.length) return;
+    var batch = pending;
+    pending = [];
+    V.markManyRead(batch.map(function(p) { return p.id; })).then(function(ok) {
+      if (ok) {
+        notifyChanged();
+        return;
+      }
+      // The request failed, so the server still considers these unread. Put the
+      // rows back rather than let the page claim they are read.
+      batch.forEach(function(p) { paintRow(p.row._notif, p.row, false); });
+      afterReadChange(batch.length);
+    });
   }
 
   function buildRow(n) {
@@ -581,6 +669,7 @@ window.voovrInitNotifications = function() {
     var row = document.createElement('button');
     row.type = 'button';
     row.className = 'alert-item' + (n.read ? ' is-read' : '');
+    row._notif = n;
 
     var sev = document.createElement('span');
     sev.className = V.severityClass(n);
@@ -608,16 +697,55 @@ window.voovrInitNotifications = function() {
     action.textContent = 'View';
     row.appendChild(action);
 
-    row.addEventListener('click', function() { openNotification(n); });
+    row.addEventListener('click', function() { openNotification(n, row); });
     return row;
+  }
+
+  // Rows are re-created on every tab switch, so drop any in-flight dwell timer
+  // and re-arm the observer for the tab that is actually on screen. Inactive
+  // panels are display:none, which never reports an intersection, so only the
+  // active tab's rows are observed.
+  function armDwellTimer() {
+    Object.keys(dwellTimers).forEach(function(k) { clearTimeout(dwellTimers[k]); });
+    dwellTimers = {};
+    if (observer) observer.disconnect();
+    if (!window.IntersectionObserver) return;
+    if (!observer) {
+      observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (!entry.isIntersecting || entry.intersectionRatio < DWELL_RATIO) return;
+          var row = entry.target;
+          var key = row._notif ? String(row._notif.id) : '';
+          if (!key || dwellTimers[key]) return;
+          dwellTimers[key] = setTimeout(function() {
+            delete dwellTimers[key];
+            observer.unobserve(row);
+            var n = row._notif;
+            if (n && !n.read) queueRead(n, row);
+          }, DWELL_MS);
+        });
+      }, { threshold: DWELL_RATIO });
+    }
+    cfg[currentTab].items.forEach(function(n) {
+      var row = n._row;
+      if (row && !n.read) observer.observe(row);
+    });
   }
 
   function renderTab(key) {
     var c = cfg[key];
     c.list.innerHTML = '';
-    if (!c.items.length) { c.empty.style.display = ''; return; }
+    // Every notification's row is gone with the old DOM; drop the back-references
+    // so a stale one can never be read back during the flush.
+    ORDER.forEach(function(k) { cfg[k].items.forEach(function(n) { n._row = null; }); });
+    if (!c.items.length) { c.empty.style.display = ''; armDwellTimer(); return; }
     c.empty.style.display = 'none';
-    c.items.forEach(function(n) { c.list.appendChild(buildRow(n)); });
+    c.items.forEach(function(n) {
+      var row = buildRow(n);
+      n._row = row;
+      c.list.appendChild(row);
+    });
+    armDwellTimer();
     if (window.gsap) {
       gsap.fromTo('.hub-panel.active .alert-item', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.35, stagger: 0.03, ease: 'power3.out' });
     }
@@ -668,15 +796,17 @@ window.voovrInitNotifications = function() {
   // global "Mark all read" is the honest fit for that semantics.
   if (pageMarkAll) pageMarkAll.addEventListener('click', function() {
     pageMarkAll.disabled = true;
-    fetch('/api/notifications/read-all', { method: 'PUT' })
-      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('failed')); })
-      .then(function() {
-        ORDER.forEach(function(k) { cfg[k].items.forEach(function(n) { n.read = true; }); });
-        refreshCounts();
-        renderTab(currentTab);
-      })
-      .catch(function() {})
-      .then(function() { pageMarkAll.disabled = false; });
+    // Shared helper: waits for the CSRF token and resolves true/false instead
+    // of rejecting, so a failed request can't leave the button stuck disabled.
+    V.markAllRead().then(function(ok) {
+      pageMarkAll.disabled = false;
+      if (!ok) return;
+      ORDER.forEach(function(k) { cfg[k].items.forEach(function(n) { n.read = true; }); });
+      refreshCounts();
+      V.setBadge(0);
+      renderTab(currentTab);
+      notifyChanged();
+    });
   });
 
   function activateTabs() {

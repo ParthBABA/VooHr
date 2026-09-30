@@ -312,7 +312,7 @@ def create_app():
         is_logged_in = bool(user_id and session_token and _session_is_active(user_id, session_token))
         app.logger.info("Root route: is_logged_in=%s", is_logged_in)
         return render_template("login.html", is_logged_in=is_logged_in, **metadata(
-            "VooVr — The AI operating system for modern HR teams", public=True))
+            "VooVr — Private conversation memory for modern HR teams", public=True))
 
     @app.route("/login")
     def login():
@@ -442,6 +442,10 @@ def create_app():
     @app.route("/cookies")
     def cookies():
         return render_page("cookie-policy.html")
+
+    @app.route("/subprocessors")
+    def subprocessors():
+        return render_page("subprocessors.html")
 
     @app.route("/status")
     def status():

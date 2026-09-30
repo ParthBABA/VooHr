@@ -3,29 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VooVr — The AI operating system for modern HR teams</title>
+<title>VooVr — Private conversation memory for modern HR teams</title>
 {% include 'shared-head.html' %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
    ROOT / DESIGN TOKENS
 ============================================================ */
 :root{
-  --bg:#09090B;
-  --bg-elevated:#0d0d10;
-  --surface:#111113;
-  --surface-2:#17171a;
-  --surface-3:#1e1e22;
-  --line:#212125;
-  --line-strong:#2a2a30;
-  --primary:#6E56FF;
-  --primary-dim:#5a45e0;
-  --secondary:#4D9FFF;
-  --secondary-dim:#3d8eeb;
-  --accent:#A78BFA;
-  --accent-dim:#9378e8;
+  --bg:#0A0C11;
+  --bg-elevated:#0E1117;
+  --surface:#13171F;
+  --surface-2:#181C24;
+  --surface-3:#1F242D;
+  --line:#252B35;
+  --line-strong:#313844;
+  --primary:#D4884A;
+  --primary-dim:#A65F2C;
+  --secondary:#7C8AA0;
+  --secondary-dim:#5F6B7E;
+  --accent:#E8B27D;
+  --accent-dim:#C68B4F;
   --white:#F5F5F7;
   --white-dim:#d1d1d6;
   --muted:#8A8A93;
@@ -39,17 +39,17 @@
   --grad-primary-hover: linear-gradient(135deg, var(--primary-dim), var(--secondary-dim));
   --grad-accent: linear-gradient(135deg, var(--accent), var(--primary));
   --grad-accent-hover: linear-gradient(135deg, var(--accent-dim), var(--primary-dim));
-  --grad-radial: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(110,86,255,.18), transparent 65%);
-  --grad-radial-strong: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(110,86,255,.28), transparent 70%);
-  --grad-mesh: radial-gradient(ellipse 50% 50% at 20% 20%, rgba(110,86,255,.12), transparent 50%),
-               radial-gradient(ellipse 40% 40% at 80% 80%, rgba(77,159,255,.1), transparent 50%),
-               radial-gradient(ellipse 30% 30% at 50% 50%, rgba(167,139,250,.08), transparent 50%);
+  --grad-radial: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(212,136,74,.18), transparent 65%);
+  --grad-radial-strong: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,136,74,.28), transparent 70%);
+  --grad-mesh: radial-gradient(ellipse 50% 50% at 20% 20%, rgba(212,136,74,.12), transparent 50%),
+               radial-gradient(ellipse 40% 40% at 80% 80%, rgba(124,138,160,.1), transparent 50%),
+               radial-gradient(ellipse 30% 30% at 50% 50%, rgba(232,178,125,.08), transparent 50%);
   --grad-card: linear-gradient(180deg, rgba(255,255,255,.04) 0%, rgba(255,255,255,.01) 50%, rgba(0,0,0,.05) 100%);
-  --grad-border: linear-gradient(135deg, rgba(110,86,255,.3), rgba(77,159,255,.2), rgba(167,139,250,.15));
+  --grad-border: linear-gradient(135deg, rgba(212,136,74,.3), rgba(124,138,160,.2), rgba(232,178,125,.15));
 
-  --font-head: 'Space Grotesk', sans-serif;
-  --font-body: 'Manrope', sans-serif;
-  --font-num: 'IBM Plex Sans', sans-serif;
+  --font-head: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: 'Inter', system-ui, -apple-system, "Segoe UI", sans-serif;
 
   --container: 1280px;
   --radius-sm: 10px;
@@ -62,8 +62,8 @@
   --shadow-md: 0 8px 24px -8px rgba(0,0,0,.5);
   --shadow-lg: 0 20px 48px -16px rgba(0,0,0,.6);
   --shadow-xl: 0 40px 80px -24px rgba(0,0,0,.7);
-  --shadow-glow: 0 0 40px -8px rgba(110,86,255,.35);
-  --shadow-glow-strong: 0 0 60px -10px rgba(110,86,255,.5);
+  --shadow-glow: 0 0 40px -8px rgba(212,136,74,.35);
+  --shadow-glow-strong: 0 0 60px -10px rgba(212,136,74,.5);
 
   --transition-fast: 150ms cubic-bezier(.16,1,.3,1);
   --transition-base: 250ms cubic-bezier(.16,1,.3,1);
@@ -77,6 +77,8 @@ body{
   background:var(--bg);
   color:var(--white);
   font-family:var(--font-body);
+  font-size:17.5px;
+  font-variant-numeric:tabular-nums;
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
@@ -133,7 +135,7 @@ ul{list-style:none;}
   width:6px; height:6px;
   border-radius:50%;
   background:var(--grad-primary);
-  box-shadow:0 0 16px rgba(110,86,255,1);
+  box-shadow:0 0 16px rgba(212,136,74,1);
   animation:eyebrowPulse 2.5s ease-in-out infinite;
 }
 @keyframes eyebrowPulse{
@@ -186,11 +188,11 @@ h1,h2,h3,h4{
 .btn-primary{
   background:var(--grad-primary);
   color:#fff;
-  box-shadow:var(--shadow-md), 0 0 0 1px rgba(110,86,255,.15) inset;
+  box-shadow:var(--shadow-md), 0 0 0 1px rgba(212,136,74,.15) inset;
 }
 .btn-primary:hover{
   background:var(--grad-primary-hover);
-  box-shadow:var(--shadow-lg), var(--shadow-glow), 0 0 0 1px rgba(110,86,255,.2) inset;
+  box-shadow:var(--shadow-lg), var(--shadow-glow), 0 0 0 1px rgba(212,136,74,.2) inset;
   transform:translateY(-2px);
 }
 .btn-ghost{
@@ -221,7 +223,7 @@ h1,h2,h3,h4{
 
 .glass-strong{
   background:rgba(255,255,255,.04);
-  border:1px solid rgba(110,86,255,.15);
+  border:1px solid rgba(212,136,74,.15);
   backdrop-filter:blur(32px) saturate(180%);
   box-shadow:var(--shadow-md), var(--shadow-glow), 0 0 0 1px rgba(255,255,255,.03) inset;
 }
@@ -375,7 +377,7 @@ h1,h2,h3,h4{
   transition:all var(--transition-fast);
   color:var(--accent);
 }
-.mobile-menu a:hover, .mobile-menu a.active{ color:var(--white); background:rgba(110,86,255,.06); }
+.mobile-menu a:hover, .mobile-menu a.active{ color:var(--white); background:rgba(212,136,74,.06); }
 .mobile-menu a:hover::after, .mobile-menu a.active::after{ opacity:1; transform:translateX(0); }
 .mobile-menu .mm-cta{
   margin-top:28px;
@@ -520,7 +522,7 @@ h1,h2,h3,h4{
 .hero-inner .eyebrow{
   margin-bottom:28px;
   color:#c6b3ff;
-  text-shadow:0 0 26px rgba(167,139,250,.45);
+  text-shadow:0 0 26px rgba(232,178,125,.45);
 }
 .hero-inner h1{
   font-size:clamp(42px, 5vw, 68px);
@@ -548,7 +550,7 @@ h1,h2,h3,h4{
   width:160%;
   min-width:420px;
   height:4em;
-  background:radial-gradient(closest-side, rgba(110,86,255,.7), rgba(110,86,255,.22) 60%, rgba(110,86,255,0) 82%);
+  background:radial-gradient(closest-side, rgba(212,136,74,.7), rgba(212,136,74,.22) 60%, rgba(212,136,74,0) 82%);
   filter:blur(18px);
   border-radius:50%;
   z-index:-1;
@@ -632,7 +634,7 @@ h1,h2,h3,h4{
 .profile-hero:hover{
   transform:translateY(-2px);
   box-shadow:var(--shadow-md), var(--shadow-glow);
-  border-color:rgba(110,86,255,.3);
+  border-color:rgba(212,136,74,.3);
 }
 .profile-hero-top{ display:flex; align-items:center; gap:16px; }
 .profile-hero-avatar{
@@ -640,7 +642,7 @@ h1,h2,h3,h4{
   display:flex; align-items:center; justify-content:center;
   font-family:var(--font-head); font-weight:600; font-size:20px; color:#fff;
   background:var(--grad-accent);
-  box-shadow:var(--shadow-sm), 0 0 20px rgba(167,139,250,.4);
+  box-shadow:var(--shadow-sm), 0 0 20px rgba(232,178,125,.4);
 }
 .profile-hero-name{ font-size:17px; font-weight:600; color:var(--white); letter-spacing:-.01em; }
 .profile-hero-role{ font-size:13px; color:var(--muted); margin-top:2px; }
@@ -655,8 +657,8 @@ h1,h2,h3,h4{
   transition:all var(--transition-fast);
 }
 .profile-hero-meta span:hover{
-  border-color:rgba(110,86,255,.4);
-  background:rgba(110,86,255,.08);
+  border-color:rgba(212,136,74,.4);
+  background:rgba(212,136,74,.08);
   color:var(--accent);
 }
 .sync-badge{
@@ -665,15 +667,15 @@ h1,h2,h3,h4{
   font-size:11px; font-family:var(--font-num); font-weight:600;
   line-height:1; letter-spacing:.02em; white-space:nowrap;
   padding:6px 12px; border-radius:999px;
-  border:1px solid rgba(110,86,255,.4);
-  background:rgba(110,86,255,.12);
+  border:1px solid rgba(212,136,74,.4);
+  background:rgba(212,136,74,.12);
   color:var(--accent);
   opacity:0;
-  box-shadow:var(--shadow-sm), 0 0 20px rgba(110,86,255,.15);
+  box-shadow:var(--shadow-sm), 0 0 20px rgba(212,136,74,.15);
 }
 .chip-glow{
   width:6px; height:6px; border-radius:50%;
-  background:var(--grad-primary); box-shadow:0 0 10px rgba(110,86,255,1);
+  background:var(--grad-primary); box-shadow:0 0 10px rgba(212,136,74,1);
   flex-shrink:0;
   animation:chipGlow 1.5s ease-in-out infinite;
 }
@@ -682,7 +684,7 @@ h1,h2,h3,h4{
   50%{ opacity:.5; transform:scale(.9); }
 }
 
-/* --- Scene 2: AI monitors engagement, satisfaction & attrition risk --- */
+/* --- Scene 2: the note is drafted from the transcript --- */
 .monitor-card{
   border:1px solid var(--line); border-radius:16px;
   padding:22px; height:100%;
@@ -706,22 +708,22 @@ h1,h2,h3,h4{
 .metric-fill{
   height:100%; width:0%; border-radius:999px;
   background:var(--grad-primary);
-  box-shadow:0 0 12px rgba(110,86,255,.6);
+  box-shadow:0 0 12px rgba(212,136,74,.6);
 }
 
-/* --- Scene 3: psychological insight + tags --- */
+/* --- Scene 3: draft summary + the topics the note covers --- */
 .ai-chip{
   position:absolute;
   left:0; right:0; margin:0 auto; width:max-content;
   bottom:20px;
   display:inline-flex; align-items:center; justify-content:center; gap:6px;
   padding:6px 12px; border-radius:999px;
-  border:1px solid rgba(110,86,255,.4);
-  background:rgba(110,86,255,.12);
+  border:1px solid rgba(212,136,74,.4);
+  background:rgba(212,136,74,.12);
   font-size:11px; font-weight:600; color:var(--accent);
   line-height:1; letter-spacing:.02em; white-space:nowrap;
   opacity:0; z-index:2;
-  box-shadow:var(--shadow-sm), 0 0 20px rgba(110,86,255,.15);
+  box-shadow:var(--shadow-sm), 0 0 20px rgba(212,136,74,.15);
 }
 .tag-row{
   position:absolute; left:24px; right:24px; bottom:60px;
@@ -754,13 +756,13 @@ h1,h2,h3,h4{
   background:rgba(255,107,107,.07);
 }
 .tag-row .tag:nth-child(3){
-  border-color:rgba(167,139,250,.4); color:var(--accent);
-  background:rgba(167,139,250,.08);
+  border-color:rgba(232,178,125,.4); color:var(--accent);
+  background:rgba(232,178,125,.08);
 }
 .tag-row .tag:hover{
   border-color:currentColor;
   filter:brightness(1.25);
-  box-shadow:0 0 16px rgba(110,86,255,.2);
+  box-shadow:0 0 16px rgba(212,136,74,.2);
 }
 
 /* --- Scene 4: recommended follow-up --- */
@@ -768,10 +770,10 @@ h1,h2,h3,h4{
   position:absolute; left:24px; right:24px; top:24px;
   display:flex; flex-direction:column; gap:6px;
   padding:16px 18px; border-radius:14px;
-  border:1px solid rgba(110,86,255,.3);
-  background:rgba(110,86,255,.1);
+  border:1px solid rgba(212,136,74,.3);
+  background:rgba(212,136,74,.1);
   opacity:0; z-index:2;
-  box-shadow:var(--shadow-sm), 0 0 24px rgba(110,86,255,.1);
+  box-shadow:var(--shadow-sm), 0 0 24px rgba(212,136,74,.1);
 }
 .recommend-card .r-label{
   font-size:10px; text-transform:uppercase; letter-spacing:.1em;
@@ -784,11 +786,11 @@ h1,h2,h3,h4{
   position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
   display:inline-flex; align-items:center; justify-content:center; gap:6px;
   padding:6px 12px; border-radius:999px;
-  border:1px solid rgba(110,86,255,.45);
-  background:rgba(110,86,255,.12);
+  border:1px solid rgba(212,136,74,.45);
+  background:rgba(212,136,74,.12);
   font-size:11px; font-weight:600; color:var(--accent);
   line-height:1; letter-spacing:.02em; white-space:nowrap; z-index:3;
-  box-shadow:var(--shadow-sm), 0 0 24px rgba(110,86,255,.2);
+  box-shadow:var(--shadow-sm), 0 0 24px rgba(212,136,74,.2);
 }
 .route-dest{
   position:absolute;
@@ -801,10 +803,10 @@ h1,h2,h3,h4{
   transition:filter var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
 }
 .route-dest.lit{
-  border-color:rgba(110,86,255,.5);
-  background:rgba(110,86,255,.12);
+  border-color:rgba(212,136,74,.5);
+  background:rgba(212,136,74,.12);
   color:var(--white);
-  box-shadow:var(--shadow-sm), 0 0 20px rgba(110,86,255,.25);
+  box-shadow:var(--shadow-sm), 0 0 20px rgba(212,136,74,.25);
 }
 .route-dest.d-tl{ top:2%; left:0; }
 .route-dest.d-tr{ top:2%; right:0; }
@@ -814,7 +816,7 @@ h1,h2,h3,h4{
 .route-packet{
   position:absolute; width:8px; height:8px; border-radius:50%;
   background:var(--grad-primary);
-  box-shadow:0 0 14px rgba(110,86,255,1), 0 0 28px rgba(110,86,255,.5);
+  box-shadow:0 0 14px rgba(212,136,74,1), 0 0 28px rgba(212,136,74,.5);
   opacity:0; z-index:4;
 }
 
@@ -837,7 +839,7 @@ h1,h2,h3,h4{
   animation:livePulse 1.8s ease-in-out infinite;
 }
 
-/* --- Side: employee profile & live KPIs --- */
+/* --- Side: employee profile & draft note stats --- */
 .demo-side{
   border-left:1px solid var(--line);
   background:rgba(255,255,255,.01);
@@ -854,7 +856,7 @@ h1,h2,h3,h4{
   display:flex; align-items:center; justify-content:center;
   font-family:var(--font-head); font-weight:600; font-size:12.5px; color:#fff;
   background:var(--grad-accent);
-  box-shadow:0 0 16px rgba(167,139,250,.4);
+  box-shadow:0 0 16px rgba(232,178,125,.4);
 }
 .side-profile .info{ display:flex; flex-direction:column; gap:2px; min-width:0; }
 .side-profile .name{ font-size:13px; font-weight:600; color:var(--white); }
@@ -866,8 +868,8 @@ h1,h2,h3,h4{
   transition:all var(--transition-fast);
 }
 .side-stat:hover{
-  border-color:rgba(110,86,255,.3);
-  box-shadow:var(--shadow-sm), 0 0 16px rgba(110,86,255,.1);
+  border-color:rgba(212,136,74,.3);
+  box-shadow:var(--shadow-sm), 0 0 16px rgba(212,136,74,.1);
 }
 .side-stat .num{ font-family:var(--font-num); font-size:17px; font-weight:600; color:var(--white); }
 .side-stat .label{ font-size:9px; color:var(--muted-2); text-transform:uppercase; letter-spacing:.06em; margin-top:3px; }
@@ -1033,8 +1035,8 @@ h1,h2,h3,h4{
   transition:all var(--transition-fast);
 }
 .sc-text li:hover{
-  background:rgba(110,86,255,.05);
-  border-color:rgba(110,86,255,.3);
+  background:rgba(212,136,74,.05);
+  border-color:rgba(212,136,74,.3);
   transform:translateX(4px);
 }
 .sc-text li::before{
@@ -1044,7 +1046,7 @@ h1,h2,h3,h4{
   border-radius:50%;
   background:var(--grad-primary); 
   flex-shrink:0;
-  box-shadow:0 0 12px rgba(110,86,255,.8);
+  box-shadow:0 0 12px rgba(212,136,74,.8);
 }
 
 .sc-media{
@@ -1121,7 +1123,7 @@ h1,h2,h3,h4{
   font-weight:600; 
   font-size:14px; 
   color:#fff;
-  box-shadow:0 0 16px rgba(110,86,255,.5);
+  box-shadow:0 0 16px rgba(212,136,74,.5);
 }
 .mini-bar{ 
   height:10px; 
@@ -1153,8 +1155,8 @@ h1,h2,h3,h4{
   transition:all var(--transition-fast);
 }
 .mini-card:hover{
-  border-color:rgba(110,86,255,.3);
-  background:rgba(110,86,255,.05);
+  border-color:rgba(212,136,74,.3);
+  background:rgba(212,136,74,.05);
   color:var(--white);
 }
 
@@ -1208,7 +1210,7 @@ h1,h2,h3,h4{
   height:0;
   background:var(--grad-primary);
   border-radius:2px;
-  box-shadow:0 0 16px rgba(110,86,255,.7);
+  box-shadow:0 0 16px rgba(212,136,74,.7);
 }
 .tl-step{
   position:relative;
@@ -1248,7 +1250,7 @@ h1,h2,h3,h4{
   border-color:var(--primary);
   background:var(--grad-primary);
   color:#fff;
-  box-shadow:var(--shadow-md), var(--shadow-glow), 0 0 0 4px var(--bg), 0 0 0 8px rgba(110,86,255,.15);
+  box-shadow:var(--shadow-md), var(--shadow-glow), 0 0 0 4px var(--bg), 0 0 0 8px rgba(212,136,74,.15);
 }
 .tl-content{ padding-top:4px; }
 .tl-content h4{ 
@@ -1288,7 +1290,7 @@ h1,h2,h3,h4{
 .bento-item:hover{
   transform:translateY(-8px);
   box-shadow:var(--shadow-xl), var(--shadow-glow);
-  border-color:rgba(110,86,255,.3);
+  border-color:rgba(212,136,74,.3);
 }
 .bento-item h4{ 
   position:relative; 
@@ -1371,7 +1373,7 @@ h1,h2,h3,h4{
   position:relative;
   overflow:hidden;
   border-top:1px solid var(--line);
-  background:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(77,159,255,.08), transparent 70%);
+  background:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,138,160,.08), transparent 70%);
 }
 .security-center{
   position:relative; z-index:2;
@@ -1413,12 +1415,12 @@ h1,h2,h3,h4{
   transition:all var(--transition-fast);
 }
 .sec-badge:hover{
-  border-color:rgba(110,86,255,.4);
-  background:rgba(110,86,255,.08);
+  border-color:rgba(212,136,74,.4);
+  background:rgba(212,136,74,.08);
   color:var(--accent);
 }
 
-/* --- End-to-end data flow (animated pipeline) --- */
+/* --- Data flow (animated pipeline) --- */
 .sec-flow{
   margin-top:88px;
   padding:40px 20px 0;
@@ -1435,8 +1437,8 @@ h1,h2,h3,h4{
   position:absolute;
   inset:-40px -20px;
   background-image:
-    linear-gradient(rgba(110,86,255,.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(110,86,255,.06) 1px, transparent 1px);
+    linear-gradient(rgba(212,136,74,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212,136,74,.06) 1px, transparent 1px);
   background-size:28px 28px;
   -webkit-mask-image:radial-gradient(ellipse 70% 90% at 50% 50%, #000 40%, transparent 85%);
   mask-image:radial-gradient(ellipse 70% 90% at 50% 50%, #000 40%, transparent 85%);
@@ -1510,11 +1512,11 @@ h1,h2,h3,h4{
   z-index:2;
 }
 /* encryption node gets a continuous scanning shimmer, independent of the main cycle */
-.flow-node.is-encrypt{ overflow:hidden; border-color:rgba(77,159,255,.35); }
+.flow-node.is-encrypt{ overflow:hidden; border-color:rgba(124,138,160,.35); }
 .flow-node.is-encrypt::before{
   content:'';
   position:absolute; inset:0;
-  background:conic-gradient(from 0deg, transparent 0deg, rgba(77,159,255,.35) 25deg, transparent 70deg, transparent 360deg);
+  background:conic-gradient(from 0deg, transparent 0deg, rgba(124,138,160,.35) 25deg, transparent 70deg, transparent 360deg);
   animation:encryptScan 4s linear infinite;
 }
 @keyframes encryptScan{
@@ -1536,7 +1538,7 @@ h1,h2,h3,h4{
 
 /* --- interactive inspect mode: hover / focus / tap a node --- */
 .flow-node{ cursor:pointer; outline:none; }
-.flow-node:focus-visible{ box-shadow:0 0 0 3px rgba(77,159,255,.45); }
+.flow-node:focus-visible{ box-shadow:0 0 0 3px rgba(124,138,160,.45); }
 
 .flow-detail{
   display:block;
@@ -1557,9 +1559,9 @@ h1,h2,h3,h4{
 
 .flow-node{ transition:transform .35s var(--ease-out,ease), border-color .35s ease, box-shadow .35s ease; }
 .flow-step.is-active .flow-node{ transform:scale(1.16); border-color:transparent; animation:nodeBreathe 1.8s ease-in-out infinite; }
-.flow-step.is-active .flow-node.n1{ box-shadow:0 0 0 1px rgba(110,86,255,.5), 0 0 26px rgba(110,86,255,.55); }
-.flow-step.is-active .flow-node.n2{ box-shadow:0 0 0 1px rgba(77,159,255,.5), 0 0 26px rgba(77,159,255,.55); }
-.flow-step.is-active .flow-node.n3{ box-shadow:0 0 0 1px rgba(167,139,250,.5), 0 0 26px rgba(167,139,250,.55); }
+.flow-step.is-active .flow-node.n1{ box-shadow:0 0 0 1px rgba(212,136,74,.5), 0 0 26px rgba(212,136,74,.55); }
+.flow-step.is-active .flow-node.n2{ box-shadow:0 0 0 1px rgba(124,138,160,.5), 0 0 26px rgba(124,138,160,.55); }
+.flow-step.is-active .flow-node.n3{ box-shadow:0 0 0 1px rgba(232,178,125,.5), 0 0 26px rgba(232,178,125,.55); }
 .flow-step.is-active .flow-node.n4{ box-shadow:0 0 0 1px rgba(94,230,160,.5), 0 0 26px rgba(94,230,160,.55); }
 @keyframes nodeBreathe{
   0%,100%{ filter:brightness(1); }
@@ -1635,7 +1637,7 @@ h1,h2,h3,h4{
   position:absolute; inset:0;
   border-radius:inherit;
   padding:1px;
-  background:linear-gradient(120deg, var(--ins-glow-a,#6E56FF), transparent 30%, transparent 70%, var(--ins-glow-b,#4D9FFF));
+  background:linear-gradient(120deg, var(--ins-glow-a,#D4884A), transparent 30%, transparent 70%, var(--ins-glow-b,#7C8AA0));
   -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite:xor;
@@ -1643,15 +1645,15 @@ h1,h2,h3,h4{
   opacity:.55;
   pointer-events:none;
 }
-.flow-inspector[data-theme="1"]{ --ins-glow-a:#6E56FF; --ins-glow-b:#4D9FFF; }
-.flow-inspector[data-theme="2"]{ --ins-glow-a:#4D9FFF; --ins-glow-b:#5EE6A0; }
-.flow-inspector[data-theme="3"]{ --ins-glow-a:#A78BFA; --ins-glow-b:#6E56FF; }
-.flow-inspector[data-theme="4"]{ --ins-glow-a:#5EE6A0; --ins-glow-b:#A78BFA; }
+.flow-inspector[data-theme="1"]{ --ins-glow-a:#D4884A; --ins-glow-b:#7C8AA0; }
+.flow-inspector[data-theme="2"]{ --ins-glow-a:#7C8AA0; --ins-glow-b:#5EE6A0; }
+.flow-inspector[data-theme="3"]{ --ins-glow-a:#E8B27D; --ins-glow-b:#D4884A; }
+.flow-inspector[data-theme="4"]{ --ins-glow-a:#5EE6A0; --ins-glow-b:#E8B27D; }
 
 .insp-head{ display:flex; align-items:center; gap:10px; margin-bottom:4px; }
 .insp-num{
   font-family:var(--font-num); font-size:11px; font-weight:600;
-  color:var(--bg); background:linear-gradient(135deg, var(--ins-glow-a,#6E56FF), var(--ins-glow-b,#4D9FFF));
+  color:var(--bg); background:linear-gradient(135deg, var(--ins-glow-a,#D4884A), var(--ins-glow-b,#7C8AA0));
   width:24px; height:24px; border-radius:50%;
   display:flex; align-items:center; justify-content:center; flex-shrink:0;
 }
@@ -1672,7 +1674,7 @@ h1,h2,h3,h4{
   min-height:150px;
   margin-top:16px;
   border-radius:var(--radius-md);
-  background:radial-gradient(120% 140% at 20% 0%, rgba(110,86,255,.08), transparent 60%), var(--bg-elevated);
+  background:radial-gradient(120% 140% at 20% 0%, rgba(212,136,74,.08), transparent 60%), var(--bg-elevated);
   border:1px solid var(--line);
   overflow:hidden;
   padding:18px 18px 16px;
@@ -1686,7 +1688,7 @@ h1,h2,h3,h4{
 }
 .insp-progress::after{
   content:''; display:block; height:100%; width:0%;
-  background:linear-gradient(90deg, var(--ins-glow-a,#6E56FF), var(--ins-glow-b,#4D9FFF));
+  background:linear-gradient(90deg, var(--ins-glow-a,#D4884A), var(--ins-glow-b,#7C8AA0));
 }
 .insp-panel.is-playing .insp-progress::after{ animation:inspProgress 10s linear infinite; }
 @keyframes inspProgress{ 0%{ width:0%; } 100%{ width:100%; } }
@@ -1850,7 +1852,7 @@ h1,h2,h3,h4{
 .ec-sync b{ color:var(--white-dim); }
 .ec-dest{ display:flex; gap:6px; margin-top:10px; opacity:0; flex-wrap:wrap; }
 .insp-panel.is-playing .ec-dest{ animation:ecRowIn .5s cubic-bezier(.2,.8,.2,1) forwards; animation-delay:5.3s; }
-.ec-dest span{ font-size:10.5px; font-family:var(--font-num); color:var(--secondary); background:rgba(77,159,255,.1); border:1px solid rgba(77,159,255,.25); padding:3px 8px; border-radius:20px; }
+.ec-dest span{ font-size:10.5px; font-family:var(--font-num); color:var(--secondary); background:rgba(124,138,160,.1); border:1px solid rgba(124,138,160,.25); padding:3px 8px; border-radius:20px; }
 
 /* ---- Panel 2: AES-256 Encryption — scramble + lock ---- */
 .enc-line{ font-family:var(--font-num); font-size:12.5px; color:var(--white-dim); word-break:break-all; min-height:18px; opacity:0; transform:scale(.82); transform-origin:left center; }
@@ -1946,15 +1948,15 @@ h1,h2,h3,h4{
 .insp-panel.is-playing .acc-card.c2 .acc-cfill{ animation-delay:4.4s; }
 .insp-panel.is-playing .acc-card.c3 .acc-cfill{ animation-delay:5.9s; }
 @keyframes accBar{ to{ transform:scaleX(1); } }
-.acc-card.is-riya{ border-color:rgba(77,159,255,.45); background:var(--surface-3); box-shadow:0 0 0 1px rgba(77,159,255,.2), 0 8px 20px -10px rgba(77,159,255,.4); }
-.acc-card .acc-you{ font-style:normal; font-size:8.5px; font-weight:600; color:var(--secondary); background:rgba(77,159,255,.14); border:1px solid rgba(77,159,255,.35); padding:0 4px; border-radius:8px; margin-left:4px; vertical-align:1px; }
+.acc-card.is-riya{ border-color:rgba(124,138,160,.45); background:var(--surface-3); box-shadow:0 0 0 1px rgba(124,138,160,.2), 0 8px 20px -10px rgba(124,138,160,.4); }
+.acc-card .acc-you{ font-style:normal; font-size:8.5px; font-weight:600; color:var(--secondary); background:rgba(124,138,160,.14); border:1px solid rgba(124,138,160,.35); padding:0 4px; border-radius:8px; margin-left:4px; vertical-align:1px; }
 .acc-tags{ display:flex; gap:5px; margin-top:6px; flex-wrap:wrap; }
 .acc-tags span{ font-size:9.5px; font-family:var(--font-num); color:var(--white-dim); background:var(--surface-3); border:1px solid var(--line-strong); padding:1px 6px; border-radius:10px; opacity:0; transform:translateY(3px) scale(.9); transform-origin:left center; }
 .insp-panel.is-playing .acc-card .acc-tags span{ animation:ecRowIn .35s ease forwards; }
 .insp-panel.is-playing .acc-card.c1 .acc-tags span{ animation-delay:3.4s; }
 .insp-panel.is-playing .acc-card.c2 .acc-tags span{ animation-delay:4.9s; }
 .insp-panel.is-playing .acc-card.c3 .acc-tags span{ animation-delay:6.4s; }
-.acc-card.c2 .acc-tags span{ color:var(--secondary); background:rgba(77,159,255,.1); border-color:rgba(77,159,255,.3); }
+.acc-card.c2 .acc-tags span{ color:var(--secondary); background:rgba(124,138,160,.1); border-color:rgba(124,138,160,.3); }
 .acc-grant{ text-align:center; margin-top:14px; font-size:11.5px; color:var(--muted); opacity:0; }
 .insp-panel.is-playing .acc-grant{ animation:ecRowIn .4s ease forwards; animation-delay:7.2s; }
 .acc-grant b{ color:var(--success); }
@@ -1997,7 +1999,7 @@ h1,h2,h3,h4{
 .aud-ip{ margin-left:auto; color:var(--muted); flex-shrink:0; }
 .aud-chain{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:12px; opacity:0; }
 .insp-panel.is-playing .aud-chain{ animation:ecRowIn .4s ease forwards; animation-delay:6.8s; }
-.aud-chain .chain-block{ font-family:var(--font-num); font-size:10px; color:var(--secondary); background:rgba(77,159,255,.08); border:1px solid rgba(77,159,255,.25); padding:3px 7px; border-radius:6px; }
+.aud-chain .chain-block{ font-family:var(--font-num); font-size:10px; color:var(--secondary); background:rgba(124,138,160,.08); border:1px solid rgba(124,138,160,.25); padding:3px 7px; border-radius:6px; }
 .aud-chain .chain-arrow{ color:var(--muted-2); font-size:11px; }
 .aud-chain .chain-lab{ font-size:11px; color:var(--muted); margin-left:2px; }
 .aud-note{ margin-top:12px; font-size:11.5px; color:var(--muted); opacity:0; }
@@ -2327,9 +2329,9 @@ h1,h2,h3,h4{
   <div class="container">
     <div class="hero-grid">
       <div class="hero-inner">
-        <span class="eyebrow" data-reveal>AI Employee Intelligence Platform</span>
-        <h1 data-reveal>The AI operating system<br>for <span class="grad">employee intelligence.</span></h1>
-        <p data-reveal>One platform for employee records, AI insights, psychological analysis, follow-ups and workforce intelligence — so HR understands people, not just paperwork.</p>
+        <span class="eyebrow" data-reveal>Private conversation memory for HR</span>
+        <h1 data-reveal>Remember every conversation.<br>Without watching anyone.</h1>
+        <p data-reveal>Voice notes and WhatsApp dictation become structured notes, follow-ups and reminders — drafted from the conversation itself, stored with the minimum personal data, and always read by a human before anything happens.</p>
         <div class="hero-cta" data-reveal>
           {% if is_logged_in %}
             <a href="/dashboard" class="btn btn-primary magnetic">Go to Dashboard</a>
@@ -2416,56 +2418,56 @@ h1,h2,h3,h4{
   <div class="container">
     <div class="showcase-head">
       <span class="eyebrow" data-reveal>Product</span>
-      <h2 class="grad-head" data-reveal style="margin-top:14px;">Every HR moment, understood by AI.</h2>
-      <p data-reveal>From the meeting to the record to the insight — VooVr connects the entire employee lifecycle.</p>
+      <h2 class="grad-head" data-reveal style="margin-top:14px;">Every conversation, kept where you can find it.</h2>
+      <p data-reveal>Capture what was said, turn it into a record, and let the follow-up write itself — without turning your people into a scoreboard.</p>
     </div>
 
     <div class="showcase-row" data-showcase>
       <div class="sc-text">
-        <span class="index">01 / ATTRITION INTELLIGENCE</span>
-        <h3>Predict Attrition Before It Happens</h3>
-        <p>Continuously monitor employee satisfaction, engagement and workplace trends to identify employees who may require HR attention before resignation risks increase.</p>
+        <span class="index">01 / VOICE TO RECORD</span>
+        <h3>Dictate it. Get a structured note.</h3>
+        <p>Talk through a one-to-one on your phone and VooVr turns the audio into a transcript, then drafts the note, the action items and the agreed next step. You edit before anything is saved.</p>
         <ul>
-          <li>Attrition Risk: Medium</li>
-          <li>Satisfaction: 82%</li>
-          <li>Engagement: Stable</li>
-          <li>AI Alert Active</li>
+          <li>Transcript: Auto-drafted</li>
+          <li>Action items: 3 extracted</li>
+          <li>Next step: Agreed in the call</li>
+          <li>Reviewed by: You</li>
         </ul>
       </div>
       <div class="sc-media m1">
         <div class="glow"></div>
-        <img src="{{ url_for('static', filename='product-1.webp') }}" alt="Attrition Intelligence dashboard showing employee attrition risk, satisfaction, and engagement scores" class="sc-media-img">
+        <img src="{{ url_for('static', filename='product-1.webp') }}" alt="VooVr conversation record showing an auto-drafted transcript, extracted action items and the agreed next step" class="sc-media-img">
       </div>
     </div>
 
     <div class="showcase-row reverse" data-showcase>
       <div class="sc-text">
-        <span class="index">02 / WORKFORCE PSYCHOLOGY</span>
-        <h3>Workforce Psychology</h3>
-        <p>Gain AI-powered psychological insights from employee interactions, behaviour patterns and workplace trends to better understand well-being, motivation and organizational health.</p>
+        <span class="index">02 / CONTEXT, NOT SCORING</span>
+        <h3>The thread of a conversation</h3>
+        <p>VooVr keeps what was actually said and connects it to the previous conversation, so a manager picking up a thread after three weeks is not starting cold. It summarises and organises. It does not score people, rank them, or decide anything.</p>
         <ul>
-          <li>Behaviour Analysis</li>
-          <li>Well-being Score</li>
-          <li>Stress Indicator</li>
-          <li>AI Recommendation</li>
+          <li>Previous threads: Linked</li>
+          <li>Open questions: 2 carried forward</li>
+          <li>People ranked: None</li>
+          <li>Decisions made by: A person</li>
         </ul>
       </div>
       <div class="sc-media m2">
         <div class="glow"></div>
-        <img src="{{ url_for('static', filename='product-2.webp') }}" alt="Workforce Psychology dashboard showing behaviour analysis, well-being score, stress indicator, and AI recommendations" class="sc-media-img">
+        <img src="{{ url_for('static', filename='product-2.webp') }}" alt="VooVr conversation memory showing linked previous threads and open questions carried forward" class="sc-media-img">
       </div>
     </div>
 
     <div class="showcase-row" data-showcase>
       <div class="sc-text">
         <span class="index">03 / SMART FOLLOW-UPS</span>
-        <h3>Smart Follow-ups</h3>
-        <p>Automatically organize personalized Gmail and WhatsApp follow-ups, reminders and employee timelines, helping HR maintain meaningful engagement without missing important actions.</p>
+        <h3>Follow-ups without nagging anyone</h3>
+        <p>After a conversation is recorded, VooVr drafts a reminder for the next step and can send it by email or WhatsApp if you choose. You review it first. Suggestions, never verdicts.</p>
         <ul>
-          <li>Gmail Ready</li>
-          <li>WhatsApp Scheduled</li>
-          <li>Reminder Created</li>
-          <li>Timeline Updated</li>
+          <li>Email draft: Ready to review</li>
+          <li>WhatsApp message: Ready to review</li>
+          <li>Reminder: Created</li>
+          <li>Timeline: Updated</li>
         </ul>
       </div>
       <div class="sc-media m3">
@@ -2494,28 +2496,28 @@ h1,h2,h3,h4{
                 </div>
               </div>
 
-              <!-- Scene 2: AI monitors engagement and detects a change -->
+              <!-- Scene 2: the note is drafted from the transcript -->
               <div class="demo-layer" id="layerMonitor">
                 <div class="monitor-card">
-                  <h5>AI Monitoring</h5>
+                  <h5>Draft from the call</h5>
                   <div class="metric-block" data-m>
-                    <div class="metric-head"><span class="m-label">Satisfaction Score</span><span class="m-value" id="satValue">82</span></div>
+                    <div class="metric-head"><span class="m-label">Meetings transcribed</span><span class="m-value" id="satValue">82</span></div>
                     <div class="metric-track"><div class="metric-fill" id="satFill"></div></div>
                   </div>
                   <div class="metric-block" data-m>
-                    <div class="metric-head"><span class="m-label">Attrition Risk</span><span class="m-value" id="riskValue">18%</span></div>
+                    <div class="metric-head"><span class="m-label">Action items still open</span><span class="m-value" id="riskValue">18%</span></div>
                     <div class="metric-track"><div class="metric-fill" id="riskFill"></div></div>
                   </div>
                 </div>
               </div>
 
-              <!-- Scene 3: psychological insight — tags generated dynamically -->
+              <!-- Scene 3: the topics the note actually covers -->
               <div class="tag-row" id="tagRow">
-                <span class="tag">Engagement Drop</span>
-                <span class="tag">Burnout Signal</span>
-                <span class="tag">Retention Risk</span>
+                <span class="tag">Hiring</span>
+                <span class="tag">Compensation</span>
+                <span class="tag">Time off</span>
               </div>
-              <div class="ai-chip" id="aiChip"><span class="chip-glow"></span>Psychological Insight…</div>
+              <div class="ai-chip" id="aiChip"><span class="chip-glow"></span>Draft summary…</div>
 
               <!-- Scene 4: recommendation -->
               <div class="recommend-card" id="recommendCard">
@@ -2527,7 +2529,7 @@ h1,h2,h3,h4{
               <div class="demo-layer" id="layerRouting">
                 <span class="route-dest d-tl" id="destTimeline">Timeline Updated</span>
                 <span class="route-dest d-tr" id="destKB">Knowledge Base</span>
-                <span class="route-dest d-mr" id="destManager">Manager Alert</span>
+                <span class="route-dest d-mr" id="destManager">Reminder Set</span>
                 <span class="route-dest d-bl" id="destEmail">Email Scheduled</span>
                 <span class="route-dest d-br" id="destWhatsapp">WhatsApp Scheduled</span>
                 <div class="route-center" id="routeCenter"><span class="chip-glow"></span>Routing</div>
@@ -2535,7 +2537,7 @@ h1,h2,h3,h4{
               </div>
 
               <!-- Notification toast, fires when the manager is alerted -->
-              <div class="demo-toast" id="demoToast"><span class="dot"></span>Manager alerted: risk is high</div>
+              <div class="demo-toast" id="demoToast"><span class="dot"></span>Reminder scheduled for the manager</div>
 
               <!-- Scene 6: complete flow strip -->
               <div class="demo-complete" id="demoComplete">
@@ -2558,8 +2560,8 @@ h1,h2,h3,h4{
                 </div>
               </div>
               <div class="side-stats">
-                <div class="side-stat"><div class="num" id="statSatNum">82</div><div class="label">Satisfaction</div></div>
-                <div class="side-stat"><div class="num" id="statRiskNum">18%</div><div class="label">Attrition Risk</div></div>
+                <div class="side-stat"><div class="num" id="statSatNum">82</div><div class="label">Transcribed</div></div>
+                <div class="side-stat"><div class="num" id="statRiskNum">18%</div><div class="label">Open items</div></div>
               </div>
               <div class="record-item" data-r id="recTimeline"><span class="check">✓</span>Timeline Updated</div>
               <div class="record-item" data-r id="recKB"><span class="check">✓</span>Knowledge Base Updated</div>
@@ -2579,8 +2581,8 @@ h1,h2,h3,h4{
   <div class="container">
     <div class="workflow-head">
       <span class="eyebrow" data-reveal>How it works</span>
-      <h2 class="grad-head" data-reveal style="margin-top:14px;">AI-powered HR intelligence, end to end.</h2>
-      <p data-reveal>VooVr transforms employee interactions, records and behavioral signals into intelligent workforce insights for modern HR teams.</p>
+      <h2 class="grad-head" data-reveal style="margin-top:14px;">How a conversation becomes a record.</h2>
+      <p data-reveal>VooVr turns voice notes and conversations into draft notes, action items and follow-ups. You read, edit and decide what happens next.</p>
     </div>
 
     <div class="timeline" id="timeline">
@@ -2589,10 +2591,10 @@ h1,h2,h3,h4{
 
       <div class="tl-step" data-step><div class="tl-node">01</div><div class="tl-content"><h4>Employee Profile</h4><p>Every employee has a centralized profile with personal details, department, role, documents, meeting history and performance records.</p></div></div>
       <div class="tl-step" data-step><div class="tl-node">02</div><div class="tl-content"><h4>Continuous Employee Insights</h4><p>Meetings, feedback, attendance, interactions and HR activities continuously enrich each employee's profile with real-time data.</p></div></div>
-      <div class="tl-step" data-step><div class="tl-node">03</div><div class="tl-content"><h4>AI Workforce Intelligence</h4><p>AI analyzes satisfaction, engagement, behavioral patterns and workplace signals to identify trends before they become problems.</p></div></div>
-      <div class="tl-step" data-step><div class="tl-node">04</div><div class="tl-content"><h4>Attrition & Risk Detection</h4><p>VooVr identifies employees who may be at risk of disengagement or resignation by analyzing multiple workplace indicators.</p></div></div>
-      <div class="tl-step" data-step><div class="tl-node">05</div><div class="tl-content"><h4>Smart Follow-ups</h4><p>AI recommends personalized HR actions and automatically schedules Gmail and WhatsApp follow-ups to maintain engagement.</p></div></div>
-      <div class="tl-step" data-step><div class="tl-node">06</div><div class="tl-content"><h4>Smarter HR Decisions</h4><p>HR teams receive actionable insights, psychological analysis, workforce trends and employee recommendations from a single unified platform.</p></div></div>
+<div class="tl-step" data-step><div class="tl-node">03</div><div class="tl-content"><h4>Conversation context</h4><p>VooVr links a new note to previous conversations and carries open questions forward, so the context is always there.</p></div></div>
+<div class="tl-step" data-step><div class="tl-node">04</div><div class="tl-content"><h4>Draft notes and action items</h4><p>A draft summary, action items and follow-up are created from the transcript. Nothing is sent out without your review.</p></div></div>
+<div class="tl-step" data-step><div class="tl-node">05</div><div class="tl-content"><h4>Follow-ups and reminders</h4><p>Reminders and draft messages are prepared for you to review. You choose what gets sent and when.</p></div></div>
+<div class="tl-step" data-step><div class="tl-node">06</div><div class="tl-content"><h4>People still decide</h4><p>Every suggestion stays a draft. The person reading it decides what, if anything, to do next.</p></div></div>
     </div>
   </div>
 </section>
@@ -2602,7 +2604,8 @@ h1,h2,h3,h4{
   <div class="container">
     <div class="showcase-head">
       <span class="eyebrow" data-reveal>Why VooVr</span>
-      <h2 class="grad-head" data-reveal style="margin-top:14px;">Built for how HR actually works.</h2>
+      <h2 class="grad-head" data-reveal style="margin-top:14px;">Privacy-first by design.</h2>
+      <p data-reveal>VooVr is designed so that only the minimum data needed for a specific task is shared with a provider, and no automated decisions are made about people.</p>
     </div>
     <div class="bento" data-bento>
       <div class="bento-item b1">
@@ -2610,13 +2613,13 @@ h1,h2,h3,h4{
         <div class="bento-glow"></div>
         <div class="decor"><span class="bento-dot"></span><span class="bento-dot"></span></div>
         <h4>Security by design.</h4>
-        <p>VooVr is built on enterprise-grade infrastructure with end-to-end encryption, strict access controls and comprehensive audit trails. Employee data is protected at every layer of the platform.</p>
+        <p>We use TLS in transit and <strong>field-level encryption at rest (AES-256-GCM, per-record keys wrapped with Google Cloud KMS)</strong> for selected personal fields, with role-based access controls and audit trails. The exact protections are described in our <a href="/privacy">Privacy Policy</a>.</p>
       </div>
       <div class="bento-item b2">
         <img src="{{ url_for('static', filename='aes-bg.webp') }}" alt="" class="bento-bg">
         <div class="bento-glow"></div>
-        <h4>AES-256 protected records</h4>
-        <p>Every employee record is encrypted using AES-256 standards at rest and in transit. Your data remains yours, secured by bank-grade cryptography.</p>
+        <h4>Least data, every time</h4>
+        <p>For conversation analysis, only the transcript text of the conversation is sent — not names, email addresses, phone numbers, employee IDs, department labels, IP addresses or document contents. See exactly what each provider receives on our <a href="/subprocessors">Sub-processors</a> page.</p>
       </div>
       <div class="bento-item b3">
         <img src="{{ url_for('static', filename='access-bg.webp') }}" alt="" class="bento-bg">
@@ -2633,8 +2636,8 @@ h1,h2,h3,h4{
       <div class="bento-item b5">
         <img src="{{ url_for('static', filename='privacy-bg.webp') }}" alt="" class="bento-bg">
         <div class="bento-glow"></div>
-        <h4>Privacy-first HR platform</h4>
-        <p>Employee trust is non-negotiable. VooVr is designed with data minimization principles, giving employees visibility into their own information and how it is used.</p>
+        <h4>Suggestions, never verdicts</h4>
+        <p>VooVr drafts notes, action items and follow-ups. It does not score people, predict outcomes, or make employment decisions. A human reads, edits and decides what to do next.</p>
       </div>
     </div>
   </div>
@@ -2644,31 +2647,33 @@ h1,h2,h3,h4{
 <section class="section security" id="security">
   <div class="container security-center">
     <span class="eyebrow" data-reveal>Security</span>
-    <h2 class="grad-head" data-reveal style="margin-top:14px;">Enterprise-grade, by default.</h2>
-    <p data-reveal>Employee data is the most sensitive data your company holds. VooVr is built with encryption, access controls and audit trails from the ground up.</p>
+    <h2 class="grad-head" data-reveal style="margin-top:14px;">Built with GDPR principles in mind.</h2>
+    <p data-reveal>Employee data is the most sensitive data your company holds. VooVr is built with data minimisation, encryption, access controls and audit trails from the ground up — and we describe the limits honestly.</p>
     <div class="security-badges" data-reveal>
-      <span class="sec-badge">SOC 2 Type II</span>
-      <span class="sec-badge">GDPR Ready</span>
-      <span class="sec-badge">SSO / SCIM</span>
-      <span class="sec-badge">Data Encryption at Rest</span>
-      <span class="sec-badge">Role-Based Access</span>
+      <span class="sec-badge">GDPR principles in mind</span>
+      <span class="sec-badge">TOTP two-factor sign-in</span>
+      <span class="sec-badge">Field-level encryption at rest</span>
+      <span class="sec-badge">TLS in transit</span>
+      <span class="sec-badge">Role-based access</span>
+      <span class="sec-badge"><a href="/subprocessors">Published sub-processors</a></span>
     </div>
+    <p class="legal-updated" data-reveal style="text-align:center;margin-top:1.25rem;">We do not hold an independent security certification such as SOC 2, and we do not claim one.</p>
 
     <div class="sec-flow" id="securityFlow" data-reveal>
       <div class="flow-diagram">
         <svg class="flow-svg" id="flowSvg" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">
           <defs>
             <linearGradient id="flowLineGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stop-color="#6E56FF" stop-opacity="0"/>
-              <stop offset="15%" stop-color="#6E56FF" stop-opacity=".55"/>
-              <stop offset="50%" stop-color="#4D9FFF" stop-opacity=".55"/>
+              <stop offset="0%" stop-color="#D4884A" stop-opacity="0"/>
+              <stop offset="15%" stop-color="#D4884A" stop-opacity=".55"/>
+              <stop offset="50%" stop-color="#7C8AA0" stop-opacity=".55"/>
               <stop offset="85%" stop-color="#5EE6A0" stop-opacity=".55"/>
               <stop offset="100%" stop-color="#5EE6A0" stop-opacity="0"/>
             </linearGradient>
             <radialGradient id="particleGlow">
               <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
-              <stop offset="35%" stop-color="#4D9FFF" stop-opacity=".9"/>
-              <stop offset="100%" stop-color="#4D9FFF" stop-opacity="0"/>
+              <stop offset="35%" stop-color="#7C8AA0" stop-opacity=".9"/>
+              <stop offset="100%" stop-color="#7C8AA0" stop-opacity="0"/>
             </radialGradient>
             <filter id="softGlow" x="-200%" y="-200%" width="500%" height="500%">
               <feGaussianBlur stdDeviation="3.2" result="blur"/>
@@ -2748,8 +2753,8 @@ h1,h2,h3,h4{
             <svg viewBox="0 0 56 56">
               <defs>
                 <linearGradient id="ecRingGrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stop-color="#6E56FF"/>
-                  <stop offset="100%" stop-color="#4D9FFF"/>
+                  <stop offset="0%" stop-color="#D4884A"/>
+                  <stop offset="100%" stop-color="#7C8AA0"/>
                 </linearGradient>
               </defs>
               <circle class="track" cx="28" cy="28" r="24"/>
@@ -2783,7 +2788,7 @@ h1,h2,h3,h4{
           <span class="enc-fchip fc3"><b>Dept</b><span class="f-val"><i>Product Design</i><em>e771…0c3b</em></span></span>
         </div>
         <div class="enc-lock">
-          <svg viewBox="0 0 30 30"><g class="shackle"><path d="M9 12V9a6 6 0 0 1 12 0v3" fill="none" stroke="#4D9FFF" stroke-width="2.4" stroke-linecap="round"/></g><rect x="6" y="12" width="18" height="13" rx="3" fill="none" stroke="#4D9FFF" stroke-width="2.4"/></svg>
+          <svg viewBox="0 0 30 30"><g class="shackle"><path d="M9 12V9a6 6 0 0 1 12 0v3" fill="none" stroke="#7C8AA0" stroke-width="2.4" stroke-linecap="round"/></g><rect x="6" y="12" width="18" height="13" rx="3" fill="none" stroke="#7C8AA0" stroke-width="2.4"/></svg>
           <span class="enc-badge">AES-256-GCM · sealed</span>
         </div>
         <div class="enc-kms">Each record gets its own key, <b>wrapped and rotated via Cloud KMS</b> — nothing sits in plain text.</div>
@@ -2859,8 +2864,8 @@ h1,h2,h3,h4{
 <section class="section cta-section" id="pricing">
   <div class="container">
     <div class="cta-box">
-      <h2 class="grad-head" data-reveal>Give your HR team an operating system, not another tool.</h2>
-      <p data-reveal>Set up VooVr in an afternoon. See the difference in a week.</p>
+      <h2 class="grad-head" data-reveal>Stop losing the follow-up.</h2>
+      <p data-reveal>Dictate the conversation. Get a note, the action items and a reminder — reviewed by you before it goes anywhere.</p>
       <div class="hero-cta" data-reveal>
         <a href="onboarding.html" class="btn btn-primary magnetic">Get Started</a>
         <!-- BOOK DEMO — 3 alternatives; toggle whichever you like.
@@ -2883,7 +2888,7 @@ h1,h2,h3,h4{
     <div class="footer-top">
       <div class="footer-brand">
     <div class="logo"><img src="{{ url_for('static', filename='voovr-logo-full.webp') }}" alt="VooVr" class="logo-img"></div>
-        <p>The operating system for modern HR teams. Meetings, records and insight, connected.</p>
+        <p>Private conversation memory for modern HR teams. Dictation becomes notes, follow-ups and reminders — and a person still decides.</p>
       </div>
       <div class="footer-col">
         <h5>Product</h5>
@@ -2906,13 +2911,14 @@ h1,h2,h3,h4{
       </div>
       <div class="footer-col">
         <h5>Legal</h5>
-        <a href="/privacy-policy.html">Privacy</a>
-        <a href="/terms-of-service.html">Terms</a>
-        <a href="/cookie-policy.html">Cookies</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/subprocessors">Sub-processors</a>
+        <a href="/terms">Terms</a>
+        <a href="/cookies">Cookies</a>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 VooVr, Inc. All rights reserved.</span>
+      <span>© 2026 VooVr. All rights reserved.</span>
       <!-- FOOTER SOCIAL ICONS — removed until real VooVr profiles exist.
            When real profile URLs are provided, uncomment and fill in:
       <div class="footer-socials">

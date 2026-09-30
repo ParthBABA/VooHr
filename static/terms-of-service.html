@@ -6,68 +6,123 @@
   <title>Terms of Service - VooVr</title>
   <!-- shared-head -->
   <link rel="stylesheet" href="/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* Public-page tokens: pin the ink/amber palette for this page in both themes. */
+    :root{ --amber:#D4884A; --amber-deep:#A65F2C; --ink:#13171F; }
+
     .bg-banding{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;}
+
+    .legal-card{ max-width:65ch; }
+    .legal-card h1, .legal-card h2{ font-family:'Fraunces',Georgia,serif; font-weight:600; }
+    .legal-card h1{ font-size:2.1rem; letter-spacing:-.01em; }
+    .legal-card h2{ font-size:1.3rem; margin-top:0; }
+    .legal-card p, .legal-card li{
+      font-family:'Inter',system-ui,-apple-system,"Segoe UI",sans-serif;
+      font-size:1.0625rem; line-height:1.6; letter-spacing:0;
+    }
+    .legal-card section p{ margin:.85rem 0; }
+    .legal-card ul{ padding-left:1.25rem; }
+    .legal-card li{ margin-bottom:.6rem; }
+    .num{ font-variant-numeric:tabular-nums; }
+
+    .callout{
+      border-left:2px solid var(--amber); padding:.1rem 0 .1rem 1.15rem;
+      margin:1.25rem 0; color:var(--ivory-dim);
+    }
+    .callout p{ margin:.4rem 0; }
+
+    @media (prefers-reduced-motion:reduce){
+      .bg-banding{ display:none; }
+      *{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+    }
   </style>
 </head>
 <body class="legal-page">
   <img class="bg-banding" src="Banding - Copy@1-1536x730.webp" alt="" aria-hidden="true" width="1536" height="730">
   <main class="legal-card">
-    <a href="/login" class="legal-back">← Back to sign in</a>
+    <a href="/login" class="legal-back">&larr; Back to sign in</a>
     <h1>Terms of Service</h1>
-    <p class="legal-updated">Last updated: August 15, 2026</p>
+    <p class="legal-updated">Last updated: September 30, 2026</p>
 
     <section>
-      <h2>1. Acceptance of Terms</h2>
-      <p>By accessing or using VooVr (the "Service"), you agree to be bound by these Terms of Service ("Terms"). If you disagree with any part, you may not use the Service. These Terms govern your relationship with VooVr ("Company", "we", "us", "our").</p>
+      <h2>1. Acceptance of these terms</h2>
+      <p>By accessing or using VooVr (the "Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, please do not use the Service. These Terms govern your relationship with VooVr ("we", "us", "our").</p>
     </section>
 
     <section>
-      <h2>2. Use of Service</h2>
-      <p>VooVr provides AI‑assisted HR conversation analysis, sentiment scoring, and workforce insights. You may use the Service solely for internal business purposes in accordance with applicable law. You are responsible for all activity under your account and for ensuring that any data you upload (e.g., employee conversation transcripts) is processed in compliance with privacy regulations such as GDPR, CCPA, and local labor laws.</p>
+      <h2>2. What the Service does</h2>
+      <p>VooVr is a privacy-first conversation memory tool for HR teams. It stores meeting and conversation records, turns speech or voice notes into text, and generates <strong>draft</strong> summaries, action items, follow-ups and reminders for a person to read, edit and decide on.</p>
+      <div class="callout">
+        <p>The output is a suggestion, not a decision or a judgement about any person. VooVr does not make employment decisions, does not take action on its own, and is not a substitute for your professional judgement or for human review. You decide what, if anything, to do with any suggestion.</p>
+      </div>
     </section>
 
     <section>
-      <h2>3. User Responsibilities</h2>
+      <h2>3. Acceptable use</h2>
+      <p>You may use the Service only for lawful internal business purposes. You are responsible for all activity under your account and for ensuring that any data you upload is processed in a way that complies with the privacy and labour laws that apply to you &mdash; including, where relevant, GDPR, CCPA and local employment law.</p>
+      <p>You agree not to:</p>
       <ul>
-        <li>Provide accurate, complete, and up‑to‑date registration information.</li>
-        <li>Maintain the confidentiality of your credentials and restrict access to authorized personnel only.</li>
-        <li>Do not use the Service to harass, discriminate, or violate any employment law.</li>
-        <li>Do not attempt to reverse‑engineer, decompile, or extract the underlying models.</li>
+        <li>use the Service to harass, discriminate against, or take unlawful action against any person;</li>
+        <li>make employment decisions about a person on the basis of the Service's output alone;</li>
+        <li>upload sensitive personal data you are not authorised to process, such as health, biometric or union-membership information;</li>
+        <li>attempt to reverse-engineer, decompile, or extract the underlying models, except to the limited extent that law does not permit us to exclude it;</li>
+        <li>misuse the Service to send unsolicited bulk messages through its messaging features.</li>
       </ul>
     </section>
 
     <section>
-      <h2>4. Data & Privacy</h2>
-      <p>Your use of the Service is also subject to our <a href="/privacy">Privacy Policy</a>, which describes how we collect, process, and protect personal data—including HR conversation transcripts, sentiment scores, and employee identifiers. By using the Service you consent to the practices described therein.</p>
+      <h2>4. Accounts and access</h2>
+      <ul>
+        <li>Provide accurate, complete and up-to-date registration information.</li>
+        <li>Keep your credentials confidential and restrict account access to authorised personnel.</li>
+        <li>Tell us promptly if you believe your account has been used without your permission.</li>
+      </ul>
     </section>
 
     <section>
-      <h2>5. Account Termination</h2>
-      <p>We may suspend or terminate your access immediately, with or without notice, for breach of these Terms, non‑payment, or if required by law. Upon termination, your right to use the Service ceases, and we will delete or anonymize your data in accordance with our data‑retention schedule (see Privacy Policy).</p>
+      <h2>5. Data and privacy</h2>
+      <p>Our <a href="/privacy">Privacy Policy</a> describes how we collect, process and protect personal data, including meeting transcripts, notes and profile information. Our <a href="/subprocessors">Sub-processors</a> page lists every provider we use and the exact data each one receives &mdash; including the transcript text sent for conversation analysis, and the audio files sent for transcription.</p>
+      <p>Content you upload remains your responsibility. You confirm that you have the right and the lawful basis to upload it and to let us process it as described.</p>
     </section>
 
     <section>
-      <h2>6. Limitation of Liability</h2>
-      <p>To the fullest extent permitted by law, VooVr shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or business opportunities arising from your use or inability to use the Service. Our aggregate liability shall not exceed the fees paid by you in the twelve (12) months preceding the claim.</p>
+      <h2>6. Security</h2>
+      <p>We protect data in transit with TLS, and apply <strong>field-level encryption at rest (<span class="num">AES-256-GCM</span>, per-record keys wrapped with Google Cloud KMS)</strong> to selected personal fields, alongside role-based access controls and audit logging. We do not hold an independent security certification such as SOC 2, and we do not represent that we do. Transcripts and audio files are protected by transport encryption and access controls rather than by field-level encryption. The <a href="/privacy">Privacy Policy</a> sets out these limits in full.</p>
     </section>
 
     <section>
-      <h2>7. Changes to Terms</h2>
-      <p>We may modify these Terms at any time. Material changes will be communicated via email or an in‑app notice at least 30 days before they take effect. Continued use after the effective date constitutes acceptance.</p>
+      <h2>7. Availability and changes</h2>
+      <p>The Service is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis. We may change or discontinue features, and we do not warrant uninterrupted availability. Current component status is published on our <a href="/status">status page</a>.</p>
     </section>
 
     <section>
-      <h2>8. Contact Information</h2>
-      <p>For any questions regarding these Terms, reach out to <a href="mailto:voovrhr@gmail.com">voovrhr@gmail.com</a>.</p>
+      <h2>8. Suspension and termination</h2>
+      <p>You may stop using the Service and ask us to delete your account at any time. We may suspend or terminate access, with or without notice, if you breach these Terms, fail to pay, or if required by law. When your account ends, your right to use the Service ends, and we will delete or anonymise your data in line with the <a href="/privacy">Privacy Policy</a>.</p>
+    </section>
+
+    <section>
+      <h2>9. Limitation of liability</h2>
+      <p>To the fullest extent permitted by law, VooVr will not be liable for indirect, incidental, special, consequential or punitive damages, including loss of profits, data or business opportunities, arising from your use of or inability to use the Service. Our aggregate liability will not exceed the fees you paid us in the twelve (12) months before the claim. Nothing in these Terms excludes liability that cannot lawfully be excluded.</p>
+    </section>
+
+    <section>
+      <h2>10. Changes to these Terms</h2>
+      <p>We may modify these Terms at any time. The &ldquo;Last updated&rdquo; date at the top of this page shows when they last changed. Material changes will be communicated by email or an in-app notice at least 30 days before they take effect. Continuing to use the Service after the effective date means you accept the updated Terms.</p>
+    </section>
+
+    <section>
+      <h2>11. Contact</h2>
+      <p>For any question about these Terms, email <a href="mailto:voovrhr@gmail.com">voovrhr@gmail.com</a>.</p>
     </section>
   </main>
 
   <footer class="site-footer">
-    <span>© 2026 VooVr. All rights reserved.</span>
-    <nav aria-label="Legal"><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
+    <span>&copy; 2026 VooVr. All rights reserved.</span>
+    <nav aria-label="Legal"><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/subprocessors">Sub-processors</a><a href="/terms">Terms of Service</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
   </footer>
-
 
 </body>
 </html>

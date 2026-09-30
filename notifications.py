@@ -264,6 +264,64 @@ def mark_read(notification_id: str):
     return jsonify({"ok": True})
 
 
+@notifications_bp.route("/notifications/read", methods=["PUT"])
+def mark_many_read():
+    """Mark a batch of notifications read in one request.
+
+    The Notifications hub marks every row that has been on screen for a
+    moment, so it sends one list rather than a request per row. Scoped exactly
+    like the single-id route above: same org, and for a manager only the
+    employees they can reach. Because the scope lives in the *filter* rather
+    than in a pre-check, an id belonging to someone else is simply never
+    matched — it cannot be written, and it is not reported as changed.
+
+    Ids that don't exist, are malformed, or are out of scope are skipped rather
+    than failing the batch, so a stale list on a slow page can't lose the rows
+    that were valid. Idempotent: re-sending already-read ids modifies nothing
+    and still returns ok. CSRF is enforced by the app-wide before_request guard,
+    same as every other state-changing route.
+    """
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    raw = payload.get("ids")
+    if not isinstance(raw, list):
+        return jsonify({"error": "invalid_request"}), 400
+    # The hub caps at 4 pages of 50; this bound is well clear of that and stops
+    # a single request from carrying an unbounded $in.
+    if len(raw) > 500:
+        return jsonify({"error": "too_many_ids"}), 400
+
+    oids = []
+    for value in raw:
+        try:
+            oids.append(ObjectId(str(value)))
+        except (InvalidId, TypeError, ValueError):
+            # One bad id must not sink the ids around it.
+            continue
+    if not oids:
+        return jsonify({"ok": True, "modified": 0})
+
+    db = get_db()
+    # "read": False makes the update genuinely idempotent: a repeat call matches
+    # nothing and writes nothing, so read_at is not rewritten and modified_count
+    # reports only the rows this call actually flipped. Same reason the
+    # read-all route filters on it.
+    result = db.notifications.update_many(
+        _scoped_notification_filter(
+            db, org_id,
+            {"_id": {"$in": oids}, "org_id": ObjectId(org_id), "read": False},
+        ),
+        {"$set": {"read": True, "read_at": datetime.now(timezone.utc)}},
+    )
+
+    logger.debug("mark_many_read: requested=%d modified=%d", len(oids), result.modified_count)
+
+    return jsonify({"ok": True, "modified": result.modified_count})
+
+
 @notifications_bp.route("/notifications/read-all", methods=["PUT"])
 def mark_all_read():
     org_id = _require_auth()

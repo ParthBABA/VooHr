@@ -77,7 +77,7 @@ def render_page(filename):
         title, public=filename in {
             "privacy-policy.html", "terms-of-service.html",
             "about.html", "careers.html", "cookie-policy.html",
-            "status.html"
+            "status.html", "subprocessors.html"
         }
     ))
     # Expand {% include %} first, then substitute the head, so the injected

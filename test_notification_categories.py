@@ -220,6 +220,177 @@ def test_mark_read_never_blocks_navigation():
     assert "setTimeout(resolve, 1500)" in js
 
 
+def _routing_js():
+    return (ROOT / "static" / "notification-routing.js").read_text(encoding="utf-8")
+
+
+def test_bulk_mark_read_helpers_always_resolve():
+    """markManyRead / markAllRead must resolve true|false and never reject.
+
+    The hub chains a .then() onto these to decide whether to keep the
+    optimistic UI or roll it back, and the bell chains one to clear its panel.
+    A rejection would strand both — the badge stuck decremented and the row
+    stuck painted read. So: no throw escapes, the CSRF wait is swallowed, the
+    response is coerced to a boolean, and a 1500ms cap bounds the wait."""
+    js = _routing_js()
+    body = js[js.index("function putJson("):js.index("function markManyRead(")]
+    # The CSRF wait is caught before the request is even attempted.
+    assert "window.csrfTokenReady" in body
+    assert ".catch(function () {})" in body
+    # A non-2xx becomes false rather than an exception; a thrown error too.
+    assert "return r.ok === true" in body
+    assert ".catch(function () { return false; })" in body
+    # Bounded, so a hung request can't freeze the page.
+    assert "Promise.race([req, cap])" in body
+    assert "setTimeout(function () { resolve(false); }, 1500)" in body
+    # Both helpers go through it, so both inherit the never-reject contract.
+    assert "return putJson('/api/notifications/read', { ids: list });" in js
+    assert "return putJson('/api/notifications/read-all', {});" in js
+
+
+def test_bulk_mark_read_sends_one_request_for_the_whole_batch():
+    """A screenful of viewed rows must cost one request, not one per row."""
+    js = _routing_js()
+    many = js[js.index("function markManyRead("):js.index("function markAllRead(")]
+    assert "return putJson('/api/notifications/read', { ids: list });" in many
+    # Blank and duplicate ids are dropped rather than sent for the server to
+    # de-duplicate; an empty list still resolves (true) without a request.
+    assert "if (!list.length) return Promise.resolve(true);" in many
+    # Content-Type matters: the body is JSON, not form-encoded.
+    assert "'Content-Type': 'application/json'" in js
+    assert "keepalive: true" in js
+
+
+def test_bulk_mark_read_endpoints_match_the_backend_routes():
+    js = _routing_js()
+    routes = (ROOT / "notifications.py").read_text(encoding="utf-8")
+    assert "putJson('/api/notifications/read'," in js
+    assert '@notifications_bp.route("/notifications/read", methods=["PUT"])' in routes
+    assert "putJson('/api/notifications/read-all'," in js
+    assert '@notifications_bp.route("/notifications/read-all", methods=["PUT"])' in routes
+
+
+def test_shared_badge_helper_is_exported():
+    """The hub and the bell are separate closures on notifications.html, so the
+    badge writer has to be shared or the two would drift."""
+    js = _routing_js()
+    assert "window.VooNotif.setBadge = setBadge;" in js
+    # 0 total hides both the dot and the count.
+    set_badge = js[js.index("function setBadge("):js.index("window.VooNotif = ")]
+    assert "getElementById('notifDot')" in set_badge
+    assert "getElementById('notifCount')" in set_badge
+    assert "unread > 0 ? '' : 'none'" in set_badge
+
+
+# ── The hub's "seen means read" behaviour ───────────────────────────────
+
+def _hub_script():
+    """The voovrInitNotifications body, i.e. the hub half of the page."""
+    html = (ROOT / "static" / "notifications.html").read_text(encoding="utf-8")
+    return html[html.index("window.voovrInitNotifications = function()"):]
+
+
+def test_hub_open_notification_marks_read_optimistically():
+    """The reported bug: on the hub, the red highlight survived until a reload
+    because clicking View only fired a request and never updated the row.
+
+    openNotification must now repaint the row and the counters *before*
+    navigating, and must still send the read first and navigate after — the
+    order that keeps the red badge from coming back on the next page."""
+    hub = _hub_script()
+    open_notif = hub[hub.index("function openNotification("):hub.index("// Queue a row")]
+    # Optimistic: the row itself, not just the server. paintRow is the single
+    # place that writes the flag and repaints the dot.
+    assert "paintRow(n, row, true);" in open_notif
+    paint = hub[hub.index("function paintRow("):hub.index("// Counters and badge")]
+    assert "n.read = read;" in paint
+    # Tab counters (and so 'has-unread') plus the header badge both move.
+    assert "afterReadChange(-1);" in open_notif
+    assert "function afterReadChange(" in hub
+    assert "refreshCounts();" in hub
+    # Read is still sent BEFORE navigating, and via the shared helper.
+    assert "V.markRead(n.id).then(function() { window.location.href = url; })" in open_notif
+    # Must not regress to an inline fire-and-forget fetch.
+    assert "fetch('/api/notifications/" not in open_notif
+
+
+def test_hub_marks_a_row_read_after_it_has_been_on_screen():
+    """A row that has actually been seen counts as read, with no click.
+
+    IntersectionObserver with a 0.6 ratio so a row merely scrolled past does
+    not count, and a ~1.5s dwell so a fast scroll through doesn't mark
+    everything. Only unread rows in the tab on screen are observed."""
+    hub = _hub_script()
+    assert "new IntersectionObserver(" in hub
+    assert "var DWELL_MS = 1500;" in hub
+    assert "var DWELL_RATIO = 0.6;" in hub
+    assert "{ threshold: DWELL_RATIO }" in hub
+    assert "entry.intersectionRatio < DWELL_RATIO" in hub
+    # Only the active tab's rows, and only the unread ones.
+    assert "cfg[currentTab].items.forEach(function(n) {" in hub
+    assert "if (row && !n.read) observer.observe(row);" in hub
+    # Unobserved once handled, so a row can never be marked twice.
+    assert "observer.unobserve(row);" in hub
+    # Stale dwell timers are cleared when the tab (and the DOM) is replaced.
+    assert "clearTimeout(dwellTimers[k])" in hub
+    assert "observer.disconnect();" in hub
+
+
+def test_hub_batches_viewed_rows_into_one_request():
+    """Viewing a screenful must not cost a request per row."""
+    hub = _hub_script()
+    assert "pending.push({ id: String(n.id), row: row });" in hub
+    assert "V.markManyRead(batch.map(function(p) { return p.id; }))" in hub
+    # One in-flight flush, not one per row.
+    assert "if (flushTimer) return;" in hub
+    assert "setTimeout(flushPending, 400)" in hub
+
+
+def test_hub_rolls_back_rows_when_the_read_request_fails():
+    """A failed request leaves the server still thinking the row is unread, so
+    the page must not keep claiming it is read: repaint the rows, restore the
+    badge, and leave the counters alone-behind."""
+    hub = _hub_script()
+    flush = hub[hub.index("function flushPending("):hub.index("function buildRow(")]
+    assert "if (ok) {" in flush
+    assert "paintRow(p.row._notif, p.row, false);" in flush
+    assert "afterReadChange(batch.length);" in flush
+    # And a successful change tells the bell (and any other listener) to resync.
+    assert "notifyChanged();" in flush
+    assert "new Event('voo:notifications-changed')" in hub
+
+
+def test_hub_mark_all_read_uses_the_csrf_safe_helper():
+    """A raw PUT races csrf.js and is rejected when the token hasn't landed.
+    Both mark-all handlers must go through the shared helper instead."""
+    html = (ROOT / "static" / "notifications.html").read_text(encoding="utf-8")
+    assert "fetch('/api/notifications/read-all', { method: 'PUT' })" not in html
+    # The bell dropdown's handler and the hub's, both.
+    assert html.count("VooNotif.markAllRead()") == 1
+    assert html.count("V.markAllRead()") == 1
+    # Failure must not leave the hub's button stuck disabled.
+    hub = _hub_script()
+    assert "pageMarkAll.disabled = false;" in hub
+    assert "if (!ok) return;" in hub
+
+
+def test_hub_read_repaint_is_a_class_toggle_with_a_transition():
+    """Rebuilding the list would snap the highlight away and lose scroll
+    position; only the classes on that one row change, and CSS fades them."""
+    hub = _hub_script()
+    paint = hub[hub.index("function paintRow("):hub.index("// Counters and badge")]
+    assert "row.classList.toggle('is-read', read);" in paint
+    assert "sev.className = V.severityClass(n);" in paint
+
+    html = (ROOT / "static" / "notifications.html").read_text(encoding="utf-8")
+    assert "transition:background .3s ease,box-shadow .3s ease;" in html
+    # And the fade is opt-out for anyone who asked for less motion.
+    reduced = html[html.index("@media (prefers-reduced-motion: reduce)"):]
+    reduced = reduced[:reduced.index("}")]
+    assert ".alert-severity" in reduced
+    assert "transition:none" in reduced
+
+
 def test_panel_avatar_slot_is_styled_for_a_photo():
     css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
     assert ".notif-row__photo{" in css

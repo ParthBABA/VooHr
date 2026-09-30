@@ -16,6 +16,7 @@ phase tests — no live DB, no external test dependency):
 """
 import os
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 from unittest import mock
 
 from bson import ObjectId
@@ -29,6 +30,8 @@ import notifications as notif_mod
 import reminders as rm_mod
 import employees as employees_mod
 import email_service as email_mod
+
+ROOT = Path(__file__).parent
 
 ORG_A = "aaaaaaaaaaaaaaaaaaaaaaaa"
 EMP_A = "aaaa0000aaaa0000aaaa0001"       # manager A's own employee record
@@ -779,6 +782,100 @@ def test_admin_sees_all_and_read_all_scoped_for_manager(client, fake):
     set_user(client, ADMIN_USER)
     d = client.get("/api/notifications").get_json()
     assert d["total"] == 2
+
+
+# ── Bulk mark-read (the hub marks a screenful of rows at once) ──────────
+
+def test_bulk_read_marks_only_notifications_the_caller_owns(client, fake):
+    """PUT /api/notifications/read must not touch another manager's rows.
+
+    The hub batches the ids it has on screen. A batch can name anything the
+    client sends, so ownership has to be enforced by the *filter*: manager A
+    asking to read A's and B's notifications may only change A's."""
+    a_id = _add_notification(fake, headline="a", employee_id=ObjectId(REP_A1),
+                             meeting_id=None, memory_id=None)
+    b_id = _add_notification(fake, headline="b", employee_id=ObjectId(REP_B1),
+                             meeting_id=None, memory_id=None)
+
+    set_user(client, MANAGER_A)
+    r = client.put("/api/notifications/read", json={"ids": [str(a_id), str(b_id)]})
+    assert r.status_code == 200
+    assert r.get_json()["ok"] is True
+    # Only 1 of the 2 requested ids was actually writable.
+    assert r.get_json()["modified"] == 1
+    assert fake.notifications.find_one({"_id": a_id})["read"] is True
+    assert fake.notifications.find_one({"_id": b_id})["read"] is False
+
+    # The other manager can still read their own row normally.
+    set_user(client, MANAGER_B)
+    r = client.put("/api/notifications/read", json={"ids": [str(b_id)]})
+    assert r.status_code == 200
+    assert fake.notifications.find_one({"_id": b_id})["read"] is True
+
+
+def test_bulk_read_is_idempotent(client, fake):
+    a_id = _add_notification(fake, headline="a", employee_id=ObjectId(REP_A1),
+                             meeting_id=None, memory_id=None)
+    set_user(client, MANAGER_A)
+    body = {"ids": [str(a_id)]}
+    first = client.put("/api/notifications/read", json=body)
+    assert first.status_code == 200
+    assert first.get_json()["modified"] == 1
+    first_at = fake.notifications.find_one({"_id": a_id})["read_at"]
+
+    # Re-sending the same list (the hub can flush a row twice: dwell + click)
+    # must stay ok and must not rewrite anything — not even read_at.
+    second = client.put("/api/notifications/read", json=body)
+    assert second.status_code == 200
+    assert second.get_json()["ok"] is True
+    assert second.get_json()["modified"] == 0
+    assert fake.notifications.find_one({"_id": a_id})["read"] is True
+    assert fake.notifications.find_one({"_id": a_id})["read_at"] == first_at
+
+
+def test_bulk_read_skips_unknown_and_malformed_ids(client, fake):
+    """A stale id on a slow page must not sink the valid ids beside it."""
+    a_id = _add_notification(fake, headline="a", employee_id=ObjectId(REP_A1),
+                             meeting_id=None, memory_id=None)
+    set_user(client, MANAGER_A)
+    r = client.put("/api/notifications/read", json={
+        "ids": ["not-an-object-id", "aaaaaaaaaaaaaaaaaaaaaaaa", str(a_id)],
+    })
+    assert r.status_code == 200
+    assert r.get_json()["ok"] is True
+    assert fake.notifications.find_one({"_id": a_id})["read"] is True
+
+
+def test_bulk_read_rejects_a_body_that_is_not_an_id_list(client, fake):
+    set_user(client, MANAGER_A)
+    for body in ({}, {"ids": "a,b"}, {"ids": {"id": 1}}):
+        assert client.put("/api/notifications/read", json=body).status_code == 400
+    # An empty list is valid and simply changes nothing.
+    r = client.put("/api/notifications/read", json={"ids": []})
+    assert r.status_code == 200
+    assert r.get_json()["modified"] == 0
+
+
+def test_bulk_read_is_bounded(client, fake):
+    set_user(client, MANAGER_A)
+    r = client.put("/api/notifications/read", json={"ids": ["0" * 24] * 501})
+    assert r.status_code == 400
+    assert r.get_json()["error"] == "too_many_ids"
+
+
+def test_bulk_read_endpoint_is_csrf_protected():
+    """The route is a state-changing PUT, so the app-wide before_request guard
+    must cover it — it is enforced centrally, not per-route."""
+    source = (ROOT / "app.py").read_text(encoding="utf-8")
+    guard = source[source.index("def _csrf_protect"):]
+    guard = guard[:guard.index("@app")]
+    # Only safe methods are exempt; a PUT without a matching token is refused.
+    assert 'request.method in ("GET", "HEAD", "OPTIONS")' in guard
+    assert 'request.headers.get("X-CSRF-Token")' in guard
+    assert "CSRF validation failed" in guard
+    # And the route only accepts PUT.
+    routes = (ROOT / "notifications.py").read_text(encoding="utf-8")
+    assert '@notifications_bp.route("/notifications/read", methods=["PUT"])' in routes
 
 
 # ── unread_only on the bell dropdown ───────────────────────────────────

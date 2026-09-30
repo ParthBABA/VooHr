@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sub-processors - VooVr</title>
+  <!-- shared-head -->
+  <link rel="stylesheet" href="/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Public-page tokens: pin the ink/amber palette for this page in both themes
+       so the type and rules below stay legible whichever theme the visitor picks. */
+    :root{ --amber:#D4884A; --amber-deep:#A65F2C; --ink:#13171F; }
+
+    .bg-banding{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;}
+
+    .legal-card{ max-width:65ch; }
+    .legal-card h1, .legal-card h2{ font-family:'Fraunces',Georgia,serif; font-weight:600; }
+    .legal-card h1{ font-size:2.1rem; letter-spacing:-.01em; }
+    .legal-card h2{ font-size:1.3rem; margin-top:0; }
+    .legal-card p, .legal-card li{
+      font-family:'Inter',system-ui,-apple-system,"Segoe UI",sans-serif;
+      font-size:1.0625rem; line-height:1.6; letter-spacing:0;
+    }
+    .legal-card section p{ margin:.85rem 0; }
+    .legal-card .eyebrow-note{
+      font-family:'Inter',sans-serif; font-size:.95rem; color:var(--ivory-dim);
+    }
+    .num{ font-variant-numeric:tabular-nums; }
+
+    .table-scroll{ overflow-x:auto; margin:1rem 0 1.5rem; }
+    .sub-table{ width:100%; border-collapse:collapse; }
+    .sub-table th, .sub-table td{
+      padding:12px 14px; text-align:left; vertical-align:top;
+      border-bottom:1px solid var(--border);
+      font-family:'Inter',sans-serif; font-size:.95rem; line-height:1.55;
+    }
+    .sub-table th{
+      font-weight:600; color:var(--amber); font-size:.78rem;
+      text-transform:uppercase; letter-spacing:.06em; white-space:nowrap;
+    }
+    .sub-table td strong{ color:var(--ivory); font-weight:600; }
+    .sub-table .cell-purpose, .sub-table .cell-data{ min-width:15ch; }
+    .pill{
+      display:inline-block; padding:.15rem .55rem; border-radius:999px;
+      font-size:.72rem; letter-spacing:.04em; text-transform:uppercase;
+      border:1px solid var(--border); color:var(--ivory-dim); white-space:nowrap;
+    }
+    .pill-default{ border-color:var(--amber); color:var(--amber); }
+    .pill-optional{ color:var(--ivory-dim); }
+
+    .callout{
+      border-left:2px solid var(--amber); padding:.1rem 0 .1rem 1.15rem;
+      margin:1.25rem 0; color:var(--ivory-dim);
+    }
+    .callout p{ margin:.4rem 0; }
+
+    @media (max-width:640px){ .sub-table{ min-width:720px; } }
+
+    @media (prefers-reduced-motion:reduce){
+      .bg-banding{ display:none; }
+      *{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+    }
+  </style>
+</head>
+<body class="legal-page">
+  <img class="bg-banding" src="Banding - Copy@1-1536x730.webp" alt="" aria-hidden="true" width="1536" height="730">
+  <main class="legal-card">
+    <a href="/login" class="legal-back">&larr; Back to sign in</a>
+    <h1>Sub-processors</h1>
+    <p class="legal-updated">Last updated: September 30, 2026</p>
+
+    <section>
+      <h2>Who these are</h2>
+      <p>Some of the work VooVr does &mdash; turning speech into text, generating a draft summary, sending a verification code, encrypting a field &mdash; is handled by specialist companies rather than by us. We call them <strong>sub-processors</strong>.</p>
+      <p>Each one processes data only to perform the specific job we have configured, on our instructions. We do not give our sub-processors permission to use your data for their own purposes, and we do not sell it.</p>
+    </section>
+
+    <section>
+      <h2>The full list</h2>
+      <p>Everything below is in our current codebase. &ldquo;Default&rdquo; means the provider used when you have not configured an alternative. &ldquo;Optional&rdquo; means you have to turn it on before it receives anything.</p>
+      <div class="table-scroll">
+        <table class="sub-table">
+          <thead>
+            <tr>
+              <th scope="col">Provider</th>
+              <th scope="col">Purpose</th>
+              <th scope="col">Data received</th>
+              <th scope="col">Status</th>
+              <th scope="col">Region</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>DeepSeek</strong></td>
+              <td class="cell-purpose">Conversation analysis and draft notes</td>
+              <td class="cell-data">The transcript text of a meeting or voice note. For the periodic drift check, also previously derived scores and session dates.</td>
+              <td><span class="pill pill-default">Default</span></td>
+              <td>To be confirmed</td>
+            </tr>
+            <tr>
+              <td><strong>OpenAI</strong></td>
+              <td class="cell-purpose">Speech-to-text; OCR for uploaded documents and images</td>
+              <td class="cell-data">Audio files you submit for transcription. Images or documents you submit for text extraction.</td>
+              <td><span class="pill pill-default">Default</span></td>
+              <td>To be confirmed</td>
+            </tr>
+            <tr>
+              <td><strong>Google</strong></td>
+              <td class="cell-purpose">Text-to-speech for read-aloud playback; Cloud KMS key wrapping for field-level encryption</td>
+              <td class="cell-data">The text to be spoken, for synthesis. For KMS, key and encryption metadata &mdash; not record contents.</td>
+              <td><span class="pill pill-default">Default</span></td>
+              <td>To be confirmed</td>
+            </tr>
+            <tr>
+              <td><strong>Deepgram</strong></td>
+              <td class="cell-purpose">Alternative speech-to-text and text-to-speech</td>
+              <td class="cell-data">Audio files you submit for transcription; text submitted for synthesis.</td>
+              <td><span class="pill pill-optional">Optional</span></td>
+              <td>To be confirmed</td>
+            </tr>
+            <tr>
+              <td><strong>Gemini</strong></td>
+              <td class="cell-purpose">Alternative text-to-speech</td>
+              <td class="cell-data">The text submitted for synthesis.</td>
+              <td><span class="pill pill-optional">Optional</span></td>
+              <td>To be confirmed</td>
+            </tr>
+            <tr>
+              <td><strong>Brevo</strong></td>
+              <td class="cell-purpose">Transactional email: verification codes and reminders</td>
+              <td class="cell-data">The recipient email address and the content of the message being sent.</td>
+              <td><span class="pill pill-default">Default</span></td>
+              <td>To be confirmed</td>
+            </tr>
+            <tr>
+              <td><strong>Meta</strong></td>
+              <td class="cell-purpose">WhatsApp Business messages: verification codes and reminders</td>
+              <td class="cell-data">The phone number you provide and the content of the message being sent.</td>
+              <td><span class="pill pill-optional">Optional</span></td>
+              <td>To be confirmed</td>
+            </tr>
+            <tr>
+              <td><strong>MongoDB</strong></td>
+              <td class="cell-purpose">Primary database</td>
+              <td class="cell-data">The full application record set: profiles, meeting records, transcripts, notes, reminders and audit events.</td>
+              <td><span class="pill pill-default">Default</span></td>
+              <td>To be confirmed</td>
+            </tr>
+            <tr>
+              <td><strong>Google</strong></td>
+              <td class="cell-purpose">Sign in with Google (OAuth)</td>
+              <td class="cell-data">Your Google account identifier, name and email address, returned by Google at sign-in.</td>
+              <td><span class="pill pill-optional">Optional</span></td>
+              <td>To be confirmed</td>
+            </tr>
+            <tr>
+              <td><strong>Google Fonts</strong></td>
+              <td class="cell-purpose">Delivering this website's fonts</td>
+              <td class="cell-data">The network request your browser makes to the font CDN, including your IP address. No VooVr account data is sent.</td>
+              <td><span class="pill pill-default">Default</span></td>
+              <td>Global CDN</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="eyebrow-note">We do not use advertising or analytics trackers, and no analytics or advertising company appears in this list.</p>
+    </section>
+
+    <section>
+      <h2>What conversation analysis receives</h2>
+      <p>When a meeting transcript or voice note is analysed, the text of that conversation is sent to the configured language model provider so it can produce a summary, action items and follow-up drafts.</p>
+      <div class="callout">
+        <p>For a normal analysis request, the text sent does not include names, email addresses, phone numbers, employee IDs, department labels, IP addresses, document contents or any credentials.</p>
+        <p>Two things to be aware of, stated plainly: if you have a meeting recording, the audio file is sent to the transcription provider to be turned into text. And the periodic drift check is a separate request that also includes earlier derived scores and session dates, so the model can compare them over time.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Storage and encryption providers</h2>
+      <p>Application records are stored in MongoDB. Selected personal fields are encrypted at the field level with <span class="num">AES-256-GCM</span> using per-record keys that are wrapped with Google Cloud KMS. Transcripts and audio files are held in the database and in local file storage; they are protected by transport encryption and by access controls, but they are not individually field-encrypted.</p>
+    </section>
+
+    <section>
+      <h2>International transfers</h2>
+      <p>Several of the providers above process data outside your country of residence, including DeepSeek for conversation analysis. Where data is transferred abroad, it is transferred under the provider's own contractual terms and data-protection commitments. We keep the scope of what is shared narrow so that less data leaves your environment, and we do not share fields that are not needed for the task at hand.</p>
+    </section>
+
+    <section>
+      <h2>Changes to this list</h2>
+      <p>We review this list whenever we add, remove or change a provider. The &ldquo;Last updated&rdquo; date at the top of this page shows when it last changed. If you have questions about a provider listed here, contact us and we will explain what is sent and why.</p>
+    </section>
+
+    <section>
+      <h2>Contact</h2>
+      <p>Questions about sub-processors, or about any data we hold about you, email <a href="mailto:voovrhr@gmail.com">voovrhr@gmail.com</a>. Our <a href="/privacy">Privacy Policy</a> explains how to request a copy or deletion of your data.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>&copy; 2026 VooVr. All rights reserved.</span>
+    <nav aria-label="Legal"><a href="/about">About</a><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/subprocessors">Sub-processors</a><a href="/terms">Terms of Service</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
+  </footer>
+
+</body>
+</html>

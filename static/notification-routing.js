@@ -42,10 +42,63 @@
     return Promise.race([req, cap]);
   }
 
+  // Same contract as markRead, but for a batch: one request carrying a JSON
+  // list of ids instead of one request per row. Resolves true/false, never
+  // rejects, and never blocks for more than ~1.5s — callers use it to decide
+  // whether to keep the optimistic UI or roll it back.
+  function putJson(url, body) {
+    var ready = window.csrfTokenReady ? window.csrfTokenReady.catch(function () {}) : Promise.resolve();
+    var req = ready.then(function () {
+      return fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        keepalive: true,
+        credentials: 'same-origin'
+      });
+    }).then(function (r) { return r.ok === true; }).catch(function () { return false; });
+    var cap = new Promise(function (resolve) { setTimeout(function () { resolve(false); }, 1500); });
+    return Promise.race([req, cap]);
+  }
+
+  // Mark many read in one round trip. Blank/duplicate ids are dropped so the
+  // server never sees a list it has to re-parse twice.
+  function markManyRead(ids) {
+    var seen = {};
+    var list = [];
+    (ids || []).forEach(function (id) {
+      var key = String(id == null ? '' : id);
+      if (key && !seen[key]) { seen[key] = true; list.push(key); }
+    });
+    if (!list.length) return Promise.resolve(true);
+    return putJson('/api/notifications/read', { ids: list });
+  }
+
+  // Mark-all-read. Resolves true/false on the same terms as markManyRead.
+  function markAllRead() {
+    return putJson('/api/notifications/read-all', {});
+  }
+
+  // The header bell badge. Shared so the Notifications hub can keep the badge
+  // in step with its own rows — the hub and the bell are separate closures on
+  // the same page. A total of 0 hides both the dot and the count.
+  function setBadge(unread) {
+    var dot = document.getElementById('notifDot');
+    var count = document.getElementById('notifCount');
+    if (dot) dot.style.display = unread > 0 ? '' : 'none';
+    if (count) {
+      count.style.display = unread > 0 ? '' : 'none';
+      count.textContent = unread > 99 ? '99+' : String(unread || 0);
+    }
+  }
+
   window.VooNotif = window.VooNotif || {};
   window.VooNotif.categoryOf = categoryOf;
   window.VooNotif.targetUrl = targetUrl;
   window.VooNotif.markRead = markRead;
+  window.VooNotif.markManyRead = markManyRead;
+  window.VooNotif.markAllRead = markAllRead;
+  window.VooNotif.setBadge = setBadge;
 })();
 
 /* ── Panel row rendering ───────────────────────────────────────────────────
