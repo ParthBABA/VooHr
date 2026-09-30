@@ -14,11 +14,19 @@
    The Settings gear path is byte-identical to the dashboard.html copy. The two
    originals differed only in the final arc's radius ("a1.65 1.65 0 00-1.51 1z"
    vs "a2 2 0 00-1.51 1z"); both radii exceed half the 1.51 chord, so a renderer
-   clamps them to the same semicircle. The dashboard spelling is kept. #}
+   clamps them to the same semicircle. The dashboard spelling is kept.
+
+   The wordmark ships as two WebP cuts of identical dimensions (400x249) inside
+   .theme-logo-swap: logo-for-dark is the default, logo-for-light is revealed
+   by [data-theme="light"] in style.css. Both carry alt="VOOVR" because the
+   hidden one is display:none and so is dropped from the accessibility tree. #}
 <nav class="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo">
-        <img src="voovr-logo-full.png" alt="VOOVR" class="sidebar-logo-img">
+        <span class="theme-logo-swap">
+          <img src="voovr-logo-full.webp" alt="VOOVR" class="sidebar-logo-img logo-for-dark">
+          <img src="voovr_icon_dt.webp" alt="VOOVR" class="sidebar-logo-img logo-for-light">
+        </span>
       </div>
     </div>
     <div class="sidebar-nav">

@@ -341,12 +341,81 @@ class PresentationTests(unittest.TestCase):
 
     def test_partial_markup_is_normalized_like_page_markup(self):
         """The sidebar's logo is authored relative to the static root, so it must
-        be rewritten to /voovr-logo-full.png even though it now comes from a
+        be rewritten to /voovr-logo-full.webp even though it now comes from a
         template in templates/."""
         for page in ("dashboard.html", "settings.html"):
             with self.subTest(page=page):
-                self.assertIn('src="/voovr-logo-full.png"', self._render(page))
-                self.assertNotIn('src="voovr-logo-full.png"', self._render(page))
+                html = self._render(page)
+                for asset in ("voovr-logo-full.webp", "voovr_icon_dt.webp"):
+                    self.assertIn(f'src="/{asset}"', html)
+                    self.assertNotIn(f'src="{asset}"', html)
+
+    def test_wordmark_ships_both_theme_cuts(self):
+        """The wordmark is authored twice — once per theme cut — and CSS keyed on
+        [data-theme="light"] picks between them. If either cut is dropped, or the
+        two files drift in size, the sidebar logo vanishes or the layout jumps on
+        every theme toggle. Both cuts are always in the DOM; only their display
+        differs, so the non-visible one drops out of the accessibility tree and
+        this test also pins that it stays reachable to a screen reader when shown.
+        """
+        logo = re.compile(r'<img[^>]*class="[^"]*logo-for-(dark|light)"[^>]*>')
+        for page in ("dashboard.html", "settings.html"):
+            with self.subTest(page=page):
+                nav = re.search(r'<nav class="sidebar">.*?</nav>',
+                                self._render(page), re.S).group(0)
+                cuts = logo.findall(nav)
+                self.assertEqual(sorted(cuts), ["dark", "light"],
+                                 f"{page} wordmark cuts are {cuts}, expected both")
+                for match in logo.finditer(nav):
+                    self.assertIn('alt="VOOVR"', match.group(0))
+
+    def test_wordmark_cuts_are_webp_and_identically_sized(self):
+        """Both cuts must be WebP and share one pixel size, so the height-based
+        .sidebar-logo-img sizing renders an identical box for either theme.
+        Dimensions are read out of the RIFF/VP8X header rather than via Pillow,
+        which is not a test dependency."""
+        sizes = {}
+        for name in ("voovr-logo-full.webp", "voovr_icon_dt.webp"):
+            path = ROOT / "static" / name
+            self.assertTrue(path.is_file(), f"static/{name} is missing")
+            size = self._webp_size(path.read_bytes())
+            self.assertIsNotNone(size, f"{name} is not a parseable WebP")
+            sizes[name] = size
+        self.assertEqual(sizes["voovr-logo-full.webp"],
+                         sizes["voovr_icon_dt.webp"],
+                         f"wordmark cuts differ in size: {sizes}")
+
+    @staticmethod
+    def _webp_size(blob):
+        """(width, height) from a WebP RIFF container, or None if unparseable."""
+        if blob[:4] != b"RIFF" or blob[8:12] != b"WEBP":
+            return None
+        offset = 12
+        while offset + 8 <= len(blob):
+            fourcc = blob[offset:offset + 4]
+            size = int.from_bytes(blob[offset + 4:offset + 8], "little")
+            payload = blob[offset + 8:offset + 8 + size]
+            if fourcc == b"VP8X":  # 24-bit LE canvas dims, stored minus one
+                return (int.from_bytes(payload[4:7], "little") + 1,
+                        int.from_bytes(payload[7:10], "little") + 1)
+            if fourcc == b"VP8 ":  # 14-bit dims after the 3-byte frame tag
+                return (int.from_bytes(payload[6:8], "little") & 0x3FFF,
+                        int.from_bytes(payload[8:10], "little") & 0x3FFF)
+            if fourcc == b"VP8L":  # 14-bit dims packed after the 0x2F signature
+                bits = int.from_bytes(payload[1:5], "little")
+                return ((bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1)
+            offset += 8 + size + (size & 1)
+        return None
+
+    def test_theme_swap_css_precedes_no_script_dependency(self):
+        """The swap must be pure CSS keyed on [data-theme="light"], because
+        theme.js sets that attribute before first paint. A JS-driven src swap
+        would flash the wrong cut on every page load."""
+        css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
+        self.assertIn("html[data-theme=\"light\"] .theme-logo-swap .logo-for-dark"
+                      "{display:none !important;}", css)
+        self.assertIn("html[data-theme=\"light\"] .theme-logo-swap .logo-for-light"
+                      "{display:block !important;}", css)
 
     def test_sidebar_marks_exactly_its_own_nav_item_active(self):
         """nav_active drives the highlight; getting it wrong silently breaks
