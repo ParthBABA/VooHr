@@ -2,9 +2,13 @@
 
    These three carried the same handler; risk-drift's copy was missing only the
    explanatory comment, which this partial restores. Behaviour is unchanged:
-   mark-as-read is fire-and-forget, meeting-family notifications route to the
-   meeting tracker for the related employee, and everything else falls through
-   to the shared window.VooNotif.targetUrl().
+   the bell clears the row's unread dot and decrements the badge immediately
+   (optimistic), then marks the notification read and only navigates once that
+   request has been sent — markRead(...).then(navigate), never navigate-first,
+   because navigating immediately cancels the request and the red badge comes
+   back. Meeting-family notifications route to the meeting tracker for the
+   related employee, and everything else falls through to the shared
+   window.VooNotif.targetUrl().
 
    notifications.html is deliberately NOT served from this partial: it always
    routes via VooNotif.targetUrl and has no meeting-tracker special case. #}

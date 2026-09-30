@@ -412,9 +412,14 @@ class PresentationTests(unittest.TestCase):
         self.assertIn("'/meeting-tracker?employee_id=' + encodeURIComponent(n.employee_id)",
                       partial)
         self.assertIn("window.VooNotif.targetUrl(n)", partial)
-        # Mark-as-read must stay fire-and-forget.
-        self.assertIn("fetch('/api/notifications/' + n.id + '/read', { method: 'PUT' })",
-                      partial)
+        # Mark-as-read must be sent BEFORE navigation: markRead(...).then(navigate).
+        # Navigating first cancelled the fetch and the red badge came back.
+        self.assertIn("window.VooNotif.markRead(n.id)", partial)
+        self.assertIn(".then(function() { window.location.href = url; })", partial)
+        # The badge is cleared optimistically, so it is gone even if the
+        # read request is slow or fails.
+        self.assertIn("n.read = true", partial)
+        self.assertIn("updateBadge(", partial)
         for page in ("dashboard.html", "conversation-workspace.html", "risk-drift.html"):
             with self.subTest(page=page):
                 html = self._render(page)

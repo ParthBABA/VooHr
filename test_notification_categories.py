@@ -7,9 +7,13 @@ risk) and the page groups rows by it.
 """
 from datetime import datetime, timezone
 from pathlib import Path
+import os
 
 import pytest
 from bson import ObjectId
+
+# notifications -> employees -> config requires SECRET_KEY at import time.
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
 
 import notifications as notif_mod
 
@@ -194,6 +198,26 @@ def test_panel_renderer_builds_an_img_with_an_initials_fallback():
     assert "'notif-row__photo'" in js
     assert "showInitials(" in js
     assert "addEventListener('error'" in js
+
+
+def test_mark_read_never_blocks_navigation():
+    """window.VooNotif.markRead must PUT the read and then resolve *always*.
+
+    The bell navigates inside .then(), so a rejected promise would strand the
+    user on the page they just clicked. Three things guarantee resolution:
+    the request's own catch, a 1500ms cap raced against it, and a no-op
+    resolve for a missing id. keepalive additionally keeps the PUT alive
+    across the navigation that follows it."""
+    js = (ROOT / "static" / "notification-routing.js").read_text(encoding="utf-8")
+    assert "'/api/notifications/' + encodeURIComponent(id) + '/read'" in js
+    assert "method: 'PUT'" in js
+    assert "keepalive: true" in js
+    # No id -> nothing to send, but the caller still gets a promise to chain.
+    assert "if (!id) return Promise.resolve();" in js
+    # A failed request is swallowed, and the race caps how long the caller waits.
+    assert ".catch(function () {})" in js
+    assert "Promise.race([req, cap])" in js
+    assert "setTimeout(resolve, 1500)" in js
 
 
 def test_panel_avatar_slot_is_styled_for_a_photo():
