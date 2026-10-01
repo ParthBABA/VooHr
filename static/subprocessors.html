@@ -16,7 +16,7 @@
 
     .bg-banding{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;}
 
-    .legal-card{ max-width:80ch; }
+    .legal-card{ max-width:1100px; }
     .legal-card h1, .legal-card h2{ font-family:'Fraunces',Georgia,serif; font-weight:600; }
     .legal-card h1{ font-size:2.1rem; letter-spacing:-.01em; }
     .legal-card h2{ font-size:1.3rem; margin-top:0; }
@@ -24,6 +24,7 @@
       font-family:'Inter',system-ui,-apple-system,"Segoe UI",sans-serif;
       font-size:1.0625rem; line-height:1.6; letter-spacing:0;
     }
+    .legal-card p, .legal-card li, .legal-card .callout{ max-width:68ch; }
     .legal-card section p{ margin:.85rem 0; }
     .legal-card .eyebrow-note{
       font-family:'Inter',sans-serif; font-size:.95rem; color:var(--ivory-dim);
@@ -42,7 +43,8 @@
       text-transform:uppercase; letter-spacing:.06em; white-space:nowrap;
     }
     .sub-table td strong{ color:var(--ivory); font-weight:600; }
-    .sub-table .cell-purpose, .sub-table .cell-data{ min-width:15ch; }
+    .sub-table .cell-purpose{ min-width:18ch; }
+    .sub-table .cell-data{ min-width:26ch; }
     .pill{
       display:inline-block; padding:.15rem .55rem; border-radius:999px;
       font-size:.72rem; letter-spacing:.04em; text-transform:uppercase;
@@ -56,6 +58,8 @@
       margin:1.25rem 0; color:var(--ivory-dim);
     }
     .callout p{ margin:.4rem 0; }
+
+    @media (max-width:1100px){ .legal-card{ max-width:100%; } }
 
     @media (max-width:640px){ .sub-table{ min-width:720px; } }
 
