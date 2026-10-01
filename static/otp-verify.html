@@ -300,7 +300,13 @@ form.addEventListener('submit', function(event) {
   })
   .then(function(res) {
     if (res.data && res.data.redirect) {
-      window.location.href = res.data.redirect;
+      var requestedPath = new URLSearchParams(window.location.search).get('redirect');
+      if (requestedPath && requestedPath.charAt(0) === '/' && requestedPath.indexOf('//') !== 0) {
+        var destination = new URL(requestedPath, window.location.origin);
+        window.location.href = destination.origin === window.location.origin ? destination.href : res.data.redirect;
+      } else {
+        window.location.href = res.data.redirect;
+      }
       return;
     }
     if (!res.data) {

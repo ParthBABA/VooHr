@@ -15,7 +15,7 @@
 
     .bg-banding{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;}
 
-    .legal-card{ max-width:65ch; }
+    .legal-card{ max-width:80ch; }
     .legal-card h1, .legal-card h2{ font-family:'Fraunces',Georgia,serif; font-weight:600; }
     .legal-card h1{ font-size:2.1rem; letter-spacing:-.01em; }
     .legal-card h2{ font-size:1.3rem; margin-top:0; }
@@ -48,9 +48,11 @@
 <body class="legal-page">
   <img class="bg-banding" src="Banding - Copy@1-1536x730.webp" alt="" aria-hidden="true" width="1536" height="730">
   <main class="legal-card">
-    <a href="/login" class="legal-back">← Back to sign in</a>
+    <a href="/" class="legal-back" data-back-link>← Back</a>
     <h1>Cookie Policy</h1>
-    <p class="legal-updated">Last updated: September 30, 2026</p>
+    <p class="legal-updated">Last updated: October 1, 2026</p>
+
+    <p>The short version: we use one essential cookie to keep you signed in. No ads, no tracking.</p>
 
     <section>
       <h2>1. What Are Cookies</h2>
@@ -76,7 +78,7 @@
           </tr>
         </table>
       </div>
-      <p>This cookie is created with the safety attributes <strong>HttpOnly</strong> (inaccessible to browser scripts) and <strong>SameSite=Lax</strong> (not sent on cross-site requests). When VooVr is served over HTTPS in production, it is also marked <strong>Secure</strong>. Because the cookie is signed by the server, it cannot be read or tampered with by third parties.</p>
+      <p>This cookie is built to be safe: browser scripts can't read it, it isn't sent from other sites, and on the live site it's only sent over HTTPS. Because the cookie is signed by the server, it can't be read or tampered with by third parties.</p>
     </section>
 
     <section>
@@ -90,7 +92,7 @@
 
     <section>
       <h2>4. Advertising &amp; Analytics Cookies</h2>
-      <p>VooVr does not set advertising cookies, analytics cookies or any third-party tracking cookies. The pages load third-party libraries (such as GSAP, Google Fonts, Spline and Lenis) from their CDNs; these make network requests to their own servers but are not used for tracking you, and no VooVr cookie is involved. Where your browser sends cookies to those CDNs, their use is governed by the respective provider's policy.</p>
+      <p>VooVr does not set advertising cookies, analytics cookies or any third-party tracking cookies. Our pages load a few libraries (like fonts and animations) from their own servers &mdash; GSAP, Google Fonts, Spline and Lenis. We don't use them to track you, and no VooVr cookie is involved. Where your browser sends cookies to those CDNs, their use is governed by the respective provider's policy.</p>
     </section>
 
     <section>
@@ -121,9 +123,10 @@
 
   <footer class="site-footer">
     <span>© 2026 VooVr. All rights reserved.</span>
-    <nav aria-label="Legal"><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/subprocessors">Sub-processors</a><a href="/terms">Terms of Service</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
+    <nav aria-label="Legal"><a href="/about">About</a><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/subprocessors">Sub-processors</a><a href="/terms">Terms of Service</a><a href="/status">Status</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
   </footer>
 
 
+  <script src="/back-link.js"></script>
 </body>
 </html>

@@ -15,7 +15,7 @@
 
     .bg-banding{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;}
 
-    .legal-card{ max-width:65ch; }
+    .legal-card{ max-width:80ch; }
     .legal-card h1, .legal-card h2{ font-family:'Fraunces',Georgia,serif; font-weight:600; }
     .legal-card h1{ font-size:2.1rem; letter-spacing:-.01em; }
     .legal-card h2{ font-size:1.3rem; margin-top:0; }
@@ -44,11 +44,11 @@
 <body class="legal-page">
   <img class="bg-banding" src="Banding - Copy@1-1536x730.webp" alt="" aria-hidden="true" width="1536" height="730">
   <main class="legal-card">
-    <a href="/login" class="legal-back">&larr; Back to sign in</a>
+    <a href="/" class="legal-back" data-back-link>← Back</a>
     <h1>Privacy Policy</h1>
-    <p class="legal-updated">Last updated: September 30, 2026</p>
+    <p class="legal-updated">Last updated: October 1, 2026</p>
 
-    <p>VooVr is built with privacy principles in mind. The short version: we collect what we need to run the service, we do not sell it, we do not use advertising or analytics trackers, and we do not make decisions about people automatically. Managers and HR teams read the output and decide what to do next &mdash; the software does not take action on its own.</p>
+    <p>The short version: we collect only what we need to run VooVr, we never sell it, we don't use ad or analytics trackers, and software never makes decisions about people. A person always reads the output and decides.</p>
 
     <section>
       <h2>1. What data we collect</h2>
@@ -56,6 +56,7 @@
         <li><strong>Account data:</strong> name, email address, a hashed password, organization name and your role.</li>
         <li><strong>Conversation and meeting data:</strong> transcripts, audio files you choose to upload, meeting metadata such as timestamps and participants, and the notes, action items and follow-up drafts generated from them.</li>
         <li><strong>Employee record data:</strong> the profile and HR information your organisation has chosen to store in VooVr.</li>
+        <li><strong>Derived wellness signals:</strong> where your organisation uses them, VooVr derives wellness and attrition-risk signals from signals your organisation already holds &mdash; overtime hours, days absent, changes in performance rating, missed deadlines and engagement survey results &mdash; and, where conversation analysis is enabled, from the transcript itself. Each signal comes with the reasons behind it, so it stays explainable. Signals are suggestions for a person to review. VooVr does not make employment decisions from them.</li>
         <li><strong>Security and audit data:</strong> sign-in times, actions taken inside the service, and the network information needed to keep sessions secure. Some of this can include your IP address and device or browser details.</li>
         <li><strong>Communication data:</strong> verification codes, password-reset messages, reminders we send you, and any support correspondence with us.</li>
       </ul>
@@ -75,12 +76,20 @@
     </section>
 
     <section>
-      <h2>3. How it is stored and protected</h2>
-      <p>Application records are stored in MongoDB, and files are stored on the service's own storage. All traffic to and from the service is protected with TLS in transit.</p>
-      <p>Selected personal fields are protected with <strong>field-level encryption at rest (<span class="num">AES-256-GCM</span>, per-record keys wrapped with Google Cloud KMS)</strong>. Transcripts and audio files are stored in the database and file storage and are protected by transport encryption and access controls; they are not individually field-encrypted.</p>
-      <p>Access is limited to people who need it for their role, actions inside the service are logged with timestamps and an identity marker, and sign-in can be protected with an authenticator app (TOTP). We review the list of sub-processors as part of our release process.</p>
+      <h2>3. How we keep your data safe</h2>
+      <p><strong>In short: your personal details are locked, not just stored.</strong></p>
+      <ul>
+        <li>Your name and email are encrypted. Someone looking at the raw database would see scrambled characters, not your details.</li>
+        <li>Your password is never stored as-is. We keep only a one-way hash.</li>
+        <li>Employee records get the same protection. Personal details in each profile are encrypted with their own key.</li>
+        <li>Everything in transit is protected with TLS.</li>
+        <li>Only the right people get in: role-based access, activity logs, and optional authenticator-app sign-in.</li>
+      </ul>
+      <p><small>Encryption detail: <span class="num">AES-256-GCM</span>, per-record keys wrapped with Google Cloud KMS. Application records are stored in MongoDB, and files on the service's own storage.</small></p>
+      <p>Meeting transcripts and audio files are protected by encrypted connections and strict access controls. They are not individually field-encrypted, and we'd rather tell you that plainly.</p>
+      <p>Access is limited to people who need it for their role, and sensitive actions inside the service are logged with who performed them and when. We review the list of sub-processors as part of our release process.</p>
       <div class="callout">
-        <p>We do not hold an independent security certification such as SOC 2, and we do not claim one. We describe the specific protections in this policy so you can judge them for yourself.</p>
+        <p>We do not hold an independent security certification such as SOC 2, and we don't claim one. We describe the specific protections in this policy so you can judge them for yourself.</p>
       </div>
     </section>
 
@@ -107,7 +116,7 @@
 
     <section>
       <h2>6. Your rights</h2>
-      <p>Depending on where you live, you may have the right to:</p>
+      <p>You're in control of your data. Depending on where you live, you may have the right to:</p>
       <ul>
         <li><strong>Access</strong> &mdash; get a copy of the personal data we hold about you.</li>
         <li><strong>Rectification</strong> &mdash; correct data that is inaccurate or incomplete.</li>
@@ -122,13 +131,13 @@
 
     <section>
       <h2>7. Data retention</h2>
-      <p>We are publishing this section as the system works today, including where we are still deciding.</p>
+      <p>We're publishing this section as the system works today, including where we are still deciding.</p>
       <ul>
-        <li><strong>Retention period</strong> &mdash; <span class="tbc">to be confirmed</span>. We do not yet operate an automatic deletion schedule for meeting records or transcripts; nothing expires on a timer.</li>
+        <li><strong>Retention period</strong> &mdash; we're still setting a fixed schedule. Until then, nothing is deleted automatically, and we delete your account and data whenever you ask.</li>
         <li><strong>Deletion on request</strong> &mdash; we delete your account and associated data when you ask, other than records we are required to keep for legal reasons.</li>
-        <li><strong>Audit logs</strong> &mdash; <span class="tbc">to be confirmed</span>.</li>
+        <li><strong>Activity logs</strong> &mdash; <span class="tbc">still being confirmed</span>.</li>
       </ul>
-      <p>We will update this section, and the date at the top of the page, when a fixed schedule is in place.</p>
+      <p>We'll update this section, and the date at the top of the page, when the schedule is final.</p>
     </section>
 
     <section>
@@ -144,8 +153,9 @@
 
   <footer class="site-footer">
     <span>&copy; 2026 VooVr. All rights reserved.</span>
-    <nav aria-label="Legal"><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/subprocessors">Sub-processors</a><a href="/terms">Terms of Service</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
+    <nav aria-label="Legal"><a href="/about">About</a><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/subprocessors">Sub-processors</a><a href="/terms">Terms of Service</a><a href="/status">Status</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
   </footer>
 
+  <script src="/back-link.js"></script>
 </body>
 </html>

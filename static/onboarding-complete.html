@@ -188,7 +188,7 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
     <div class="setup-left-body">
       <span class="eyebrow" data-reveal>Setup Complete</span>
       <h1 data-reveal>Your Workspace Is Ready</h1>
-        <p data-reveal>Your business Google account has been verified successfully. Your organization, <span class="success-highlight">Acme Inc.</span>, has been created. Everything is ready to go.</p>
+        <p data-reveal>Your business Google account has been verified successfully. Your organization, <span class="success-highlight" id="successOrgNameIntro">your organization</span>, has been created. Everything is ready to go.</p>
 
       <div class="trust-list" data-reveal>
         <div class="trust-item"><span class="trust-check">&#10003;</span>Organization Created</div>
@@ -217,16 +217,16 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
       <div class="success-icon" data-reveal>&#127881;</div>
 
       <p class="success-message" data-reveal>
-        Welcome, <span class="success-highlight" id="successUserName">there</span>. Your business Google account has been <span class="success-highlight">verified successfully</span>.
+        <span class="success-highlight" id="successUserName">Welcome</span>. Your business Google account has been <span class="success-highlight">verified successfully</span>.
       </p>
 
       <p class="success-message" data-reveal>
         Your organization <span class="success-highlight" id="successOrgName">your organization</span> has been created. Everything is ready to go.
       </p>
 
-      <a href="dashboard.html" class="btn btn-primary" data-reveal>Start Your Productivity</a>
+      <a href="dashboard.html" class="btn btn-primary" data-reveal>Go to Your Dashboard</a>
 
-      <div class="setup-note" data-reveal>Welcome to VooVr. Your productivity journey begins now.</div>
+      <div class="setup-note" data-reveal>You're all set. Welcome to VooVr.</div>
     </div>
   </div>
 </div>
@@ -238,10 +238,11 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
     var res = await fetch('/api/me');
     if (!res.ok) { window.location.href = '/signin'; return; }
     var data = await res.json();
-    var firstName = (data.name || '').split(' ')[0] || 'there';
-    document.getElementById('successUserName').textContent = firstName;
+    var firstName = (data.name || '').split(' ')[0] || '';
+    document.getElementById('successUserName').textContent = firstName ? 'Welcome, ' + firstName : 'Welcome';
     if (data.organization) {
       document.getElementById('successOrgName').textContent = data.organization.name;
+      document.getElementById('successOrgNameIntro').textContent = data.organization.name;
     }
   } catch (err) {
     window.location.href = '/signin';

@@ -28,11 +28,10 @@
     .status-refresh:hover{background:var(--amber);color:var(--void);}
     .status-refresh:disabled{opacity:.5;cursor:wait;}
     .status-note{margin-top:18px;font-size:.72rem;color:var(--ivory-faint);line-height:1.7;}
-    .status-footer{margin-top:40px;text-align:center;font-size:.7rem;color:var(--ivory-faint);}
-    .status-footer a{color:var(--amber);text-transform:uppercase;letter-spacing:.05em;}
   </style>
 </head>
 <body class="status-page">
+  <a href="/" class="legal-back" data-back-link>← Back</a>
   <main class="status-wrap">
     <div class="status-head">
       <img src="/voovr-logo-full.webp" alt="VooVr">
@@ -61,23 +60,27 @@
       <button class="status-refresh" id="statusRefresh" type="button">Refresh</button>
     </div>
     <p class="status-note">
-      This page shows current, self-reported health from the VooVr application
-      itself. Historical uptime percentages and an incident history are future
-      enhancements and are not tracked yet.
+      This page shows live health straight from the VooVr app. Uptime history
+      and past incidents are coming later.
     </p>
   </main>
-  <footer class="status-footer">
+  <footer class="site-footer">
     <span>© 2026 VooVr. All rights reserved.</span>
-    <span style="margin-left:16px;">|</span>
+    <span class="site-footer__separator">|</span>
+    <a href="/about">About</a>
+    <span class="site-footer__separator">|</span>
+    <a href="/cookies">Cookie Policy</a>
+    <span class="site-footer__separator">|</span>
     <a href="/privacy">Privacy Policy</a>
-    <span style="margin-left:16px;">|</span>
+    <span class="site-footer__separator">|</span>
     <a href="/subprocessors">Sub-processors</a>
-    <span style="margin-left:16px;">|</span>
+    <span class="site-footer__separator">|</span>
     <a href="/terms">Terms of Service</a>
-    <span style="margin-left:16px;">|</span>
+    <span class="site-footer__separator">|</span>
     <a href="mailto:voovrhr@gmail.com">Contact</a>
   </footer>
 
+  <script src="/back-link.js"></script>
   <script>
     (function () {
       /* Historical uptime / incident history is a FUTURE ENHANCEMENT — this
@@ -125,14 +128,18 @@
           })
           .then(function (data) {
             data = data || {};
+            var allHealthy = true;
             ROW_ORDER.forEach(function (key) {
               var state = STATES[data[key]] || UNKNOWN;
               var row = document.querySelector('[data-component="' + key + '"]');
               if (!row) return;
               row.querySelector('.status-dot').className = 'status-dot ' + state.cls;
               row.querySelector('.badge').textContent = state.text;
+              if (state.cls !== 'ok') allHealthy = false;
             });
-            document.getElementById('statusLede').textContent = 'Current status of VooVr services.';
+            document.getElementById('statusLede').textContent = allHealthy
+              ? 'All systems running smoothly.'
+              : "We're looking into it. Please try again in a few minutes.";
             document.getElementById('statusTime').textContent = timeText(data.timestamp);
           })
           .catch(applyFailure);

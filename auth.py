@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from urllib.parse import quote, urlsplit
 
 from authlib.integrations.base_client.errors import MismatchingStateError
 from authlib.integrations.flask_client import OAuth
@@ -19,6 +20,15 @@ oauth = OAuth()
 auth_bp = Blueprint("auth", __name__)
 
 log = logging.getLogger(__name__)
+
+
+def _safe_return_path(value):
+    if not isinstance(value, str) or not value.startswith("/") or value.startswith("//") or "\\" in value:
+        return None
+    parsed = urlsplit(value)
+    if parsed.scheme or parsed.netloc:
+        return None
+    return value
 
 
 def register_google_oauth(app):
@@ -49,6 +59,10 @@ def google_register():
 def google_signin():
     """Returning-user sign-in from signin.html."""
     session["oauth_flow"] = "signin"
+    session.pop("post_login_redirect", None)
+    post_login_redirect = _safe_return_path(request.args.get("redirect"))
+    if post_login_redirect:
+        session["post_login_redirect"] = post_login_redirect
     redirect_uri = current_app.config.get("GOOGLE_REDIRECT_URI") or url_for("auth.google_callback", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
@@ -298,6 +312,12 @@ def google_callback():
     # TOTP gate: redirect to verification or forced setup instead of
     # straight to the dashboard when needed.
     result = _login_result_for_user(db, user)
+    post_login_redirect = _safe_return_path(session.pop("post_login_redirect", None))
+    if post_login_redirect:
+        if result.get("requires_totp"):
+            result["redirect"] = "/auth/totp/verify-login?next=" + quote(post_login_redirect, safe="")
+        elif not result.get("totp_enroll"):
+            result["redirect"] = post_login_redirect
     return redirect(result["redirect"])
 
 

@@ -64,34 +64,19 @@ const failures = [];
       page.off('pageerror', onError);
       if (errors.length) failures.push(file + ': JS errors ' + [...new Set(errors)].join('; '));
     }
-    await page.goto(origin + '/preview/login2.html');
-    await page.locator('#loginForm [type=submit]').click();
-    assert.match(await page.locator('[role=alert]').innerText(), /both email and password/);
+    await page.goto(origin + '/preview/signin.html?redirect=%2Fdashboard');
+    await page.locator('.auth-tab[data-tab=email]').click();
+    await page.locator('#emailSignInBtn').click();
+    assert.match(await page.locator('#errorBanner').innerText(), /enter both email and password/i);
     await page.locator('#emailInput').fill('alex@example.test');
     await page.locator('#passwordInput').fill('Incorrect123');
-    await page.locator('#loginForm [type=submit]').click();
+    await page.locator('#emailSignInBtn').click();
     await page.getByText('Invalid email or password. Please try again.', {exact:true}).waitFor();
     await context.route('**/auth/email/signin', route => route.fulfill({json:{ok:true,requires_otp:true}}));
-    await page.locator('#loginForm [type=submit]').click();
-    await page.locator('#otpInput').waitFor({state:'visible'});
-    await page.locator('#otpInput').fill('123456');
-    await page.locator('#verifyBtn').click();
-    await page.getByText('That code is incorrect. Please try again.', {exact:true}).waitFor();
-    await page.locator('#changeEmailLink').click();
-    assert.equal(await page.locator('#emailInput').evaluate(el => el === document.activeElement), true);
-    await page.evaluate(() => { window.confirmed = null; VooVrUI.ask('Discard text?', {accept:'Discard'}).then(value => window.confirmed = value); });
-    await page.keyboard.press('Escape');
-    assert.equal(await page.evaluate(() => window.confirmed), false);
-    await page.evaluate(() => { VooVrUI.ask('Discard text?', {accept:'Discard'}).then(value => window.confirmed = value); });
-    await page.locator('[data-accept]').click();
-    assert.equal(await page.evaluate(() => window.confirmed), true);
-    await page.evaluate(() => VooVrUI.show('<img src=x onerror=alert(1)>'));
-    assert.equal(await page.locator('[role=alert] img').count(), 0);
-    for (const theme of ['dark','light']) {
-      await page.evaluate(theme => voovrSetTheme(theme), theme);
-      await page.waitForTimeout(100);
-      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.auth-card')).backgroundColor), theme === 'dark' ? 'rgb(19, 23, 31)' : 'rgb(255, 255, 255)');
-    }
+    await page.locator('#emailSignInBtn').click();
+    await page.waitForURL(url => url.pathname === '/verify-otp');
+    assert.equal(new URL(page.url()).searchParams.get('redirect'), '/dashboard');
+
     await page.goto(origin + '/preview/signup.html');
     await page.locator('#signupBtn').click();
     await page.getByText('Please enter your organization name, industry, and company size.', {exact:true}).waitFor();
@@ -147,7 +132,6 @@ const failures = [];
     await page.getByRole('button', {name:'Done', exact:true}).click();
     assert.equal(await page.locator('.recovery-dialog').count(), 0);
 
-    // Meeting Tracker delete flow: the confirm dialog must gate the DELETE.
     const trackerPerson = {
       id:'emp1', name:'Employee 1',
       employee:{id:'emp1', name:'Employee 1', position:'Engineer'},

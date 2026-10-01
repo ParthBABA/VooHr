@@ -16,7 +16,7 @@
 
     .bg-banding{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;}
 
-    .legal-card{ max-width:65ch; }
+    .legal-card{ max-width:80ch; }
     .legal-card h1, .legal-card h2{ font-family:'Fraunces',Georgia,serif; font-weight:600; }
     .legal-card h1{ font-size:2.1rem; letter-spacing:-.01em; }
     .legal-card h2{ font-size:1.3rem; margin-top:0; }
@@ -68,9 +68,9 @@
 <body class="legal-page">
   <img class="bg-banding" src="Banding - Copy@1-1536x730.webp" alt="" aria-hidden="true" width="1536" height="730">
   <main class="legal-card">
-    <a href="/login" class="legal-back">&larr; Back to sign in</a>
+    <a href="/" class="legal-back" data-back-link>← Back</a>
     <h1>Sub-processors</h1>
-    <p class="legal-updated">Last updated: September 30, 2026</p>
+    <p class="legal-updated">Last updated: October 1, 2026</p>
 
     <section>
       <h2>Who these are</h2>
@@ -81,6 +81,7 @@
     <section>
       <h2>The full list</h2>
       <p>Everything below is in our current codebase. &ldquo;Default&rdquo; means the provider used when you have not configured an alternative. &ldquo;Optional&rdquo; means you have to turn it on before it receives anything.</p>
+      <p>We're confirming exact data regions with each provider. Ask us and we'll tell you what we know today.</p>
       <div class="table-scroll">
         <table class="sub-table">
           <thead>
@@ -98,63 +99,63 @@
               <td class="cell-purpose">Conversation analysis and draft notes</td>
               <td class="cell-data">The transcript text of a meeting or voice note. For the periodic drift check, also previously derived scores and session dates.</td>
               <td><span class="pill pill-default">Default</span></td>
-              <td>To be confirmed</td>
+              <td>Being confirmed</td>
             </tr>
             <tr>
               <td><strong>OpenAI</strong></td>
               <td class="cell-purpose">Speech-to-text; OCR for uploaded documents and images</td>
               <td class="cell-data">Audio files you submit for transcription. Images or documents you submit for text extraction.</td>
               <td><span class="pill pill-default">Default</span></td>
-              <td>To be confirmed</td>
+              <td>Being confirmed</td>
             </tr>
             <tr>
               <td><strong>Google</strong></td>
               <td class="cell-purpose">Text-to-speech for read-aloud playback; Cloud KMS key wrapping for field-level encryption</td>
               <td class="cell-data">The text to be spoken, for synthesis. For KMS, key and encryption metadata &mdash; not record contents.</td>
               <td><span class="pill pill-default">Default</span></td>
-              <td>To be confirmed</td>
+              <td>Being confirmed</td>
             </tr>
             <tr>
               <td><strong>Deepgram</strong></td>
               <td class="cell-purpose">Alternative speech-to-text and text-to-speech</td>
               <td class="cell-data">Audio files you submit for transcription; text submitted for synthesis.</td>
               <td><span class="pill pill-optional">Optional</span></td>
-              <td>To be confirmed</td>
+              <td>Being confirmed</td>
             </tr>
             <tr>
               <td><strong>Gemini</strong></td>
               <td class="cell-purpose">Alternative text-to-speech</td>
               <td class="cell-data">The text submitted for synthesis.</td>
               <td><span class="pill pill-optional">Optional</span></td>
-              <td>To be confirmed</td>
+              <td>Being confirmed</td>
             </tr>
             <tr>
               <td><strong>Brevo</strong></td>
               <td class="cell-purpose">Transactional email: verification codes and reminders</td>
               <td class="cell-data">The recipient email address and the content of the message being sent.</td>
               <td><span class="pill pill-default">Default</span></td>
-              <td>To be confirmed</td>
+              <td>Being confirmed</td>
             </tr>
             <tr>
               <td><strong>Meta</strong></td>
               <td class="cell-purpose">WhatsApp Business messages: verification codes and reminders</td>
               <td class="cell-data">The phone number you provide and the content of the message being sent.</td>
               <td><span class="pill pill-optional">Optional</span></td>
-              <td>To be confirmed</td>
+              <td>Being confirmed</td>
             </tr>
             <tr>
               <td><strong>MongoDB</strong></td>
               <td class="cell-purpose">Primary database</td>
               <td class="cell-data">The full application record set: profiles, meeting records, transcripts, notes, reminders and audit events.</td>
               <td><span class="pill pill-default">Default</span></td>
-              <td>To be confirmed</td>
+              <td>Being confirmed</td>
             </tr>
             <tr>
               <td><strong>Google</strong></td>
               <td class="cell-purpose">Sign in with Google (OAuth)</td>
               <td class="cell-data">Your Google account identifier, name and email address, returned by Google at sign-in.</td>
               <td><span class="pill pill-optional">Optional</span></td>
-              <td>To be confirmed</td>
+              <td>Being confirmed</td>
             </tr>
             <tr>
               <td><strong>Google Fonts</strong></td>
@@ -174,7 +175,7 @@
       <p>When a meeting transcript or voice note is analysed, the text of that conversation is sent to the configured language model provider so it can produce a summary, action items and follow-up drafts.</p>
       <div class="callout">
         <p>For a normal analysis request, the text sent does not include names, email addresses, phone numbers, employee IDs, department labels, IP addresses, document contents or any credentials.</p>
-        <p>Two things to be aware of, stated plainly: if you have a meeting recording, the audio file is sent to the transcription provider to be turned into text. And the periodic drift check is a separate request that also includes earlier derived scores and session dates, so the model can compare them over time.</p>
+        <p>Two things worth knowing: if you have a meeting recording, the audio file is sent to the transcription provider to be turned into text. And the periodic drift check is a separate request that also includes earlier derived scores and session dates, so the model can compare them over time.</p>
       </div>
     </section>
 
@@ -201,8 +202,9 @@
 
   <footer class="site-footer">
     <span>&copy; 2026 VooVr. All rights reserved.</span>
-    <nav aria-label="Legal"><a href="/about">About</a><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/subprocessors">Sub-processors</a><a href="/terms">Terms of Service</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
+    <nav aria-label="Legal"><a href="/about">About</a><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/subprocessors">Sub-processors</a><a href="/terms">Terms of Service</a><a href="/status">Status</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
   </footer>
 
+  <script src="/back-link.js"></script>
 </body>
 </html>

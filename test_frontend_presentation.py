@@ -55,7 +55,7 @@ class PresentationTests(unittest.TestCase):
 
     def test_auth_metadata_is_not_indexable_and_escapes_title(self):
         from flask import render_template
-        with self.app.test_request_context("/login?redirect=secret"):
+        with self.app.test_request_context("/signin?redirect=secret"):
             html = render_template("shared-head.html", **metadata('VooVr " <script>'))
             self.assertIn('content="noindex, nofollow"', html)
             self.assertIn("&lt;script&gt;", html)

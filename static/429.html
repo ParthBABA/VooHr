@@ -18,18 +18,25 @@
       <p style="font-family:var(--font-lato); font-size:1rem; color:var(--ivory-faint); letter-spacing:0.04em; text-transform:uppercase; margin:8px 0 0;">Too Many Requests</p>
     </div>
 
-    <p style="font-family:var(--font-lato); font-size:0.9rem; color:var(--ivory); margin:24px 0;">You've made too many requests. Please wait a moment and try again.</p>
+    <p style="font-family:var(--font-lato); font-size:0.9rem; color:var(--ivory); margin:24px 0;">Things are moving a little fast. Take a breath and try again in a minute.</p>
+
+    <div style="text-align:center; margin-top:24px;">
+      <a href="/login" style="background:linear-gradient(135deg,var(--violet),var(--amber)); color:var(--void); font-family:var(--font-lato); font-weight:700; font-size:0.9rem; letter-spacing:0.04em; text-transform:uppercase; padding:16px 24px; display:inline-flex; align-items:center; justify-content:center; gap:10px; border-radius:8px; border:none; text-decoration:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><line x1="9" y1="20" x2="9.01" y2="20"/><line x1="15" y1="20" x2="15.01" y2="20"/></svg>
+        Go to Sign In
+      </a>
+    </div>
 
   </div>
 
-  <footer style="margin-top:28px; text-align:center; font-size:0.7rem; color:var(--ivory-faint); width:100%;">
+  <footer class="site-footer site-footer--error">
     <span>&copy; 2026 VooVr. All rights reserved.</span>
-    <span style="margin-left:16px; color:var(--ivory-faint);">|</span>
-    <a href="/privacy" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Privacy Policy</a>
-    <span style="margin-left:16px; color:var(--ivory-faint);">|</span>
-    <a href="/terms" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Terms of Service</a>
-    <span style="margin-left:16px; color:var(--ivory-faint);">|</span>
-    <a href="mailto:voovrhr@gmail.com" style="color:var(--amber); letter-spacing:0.05em; text-transform:uppercase;">Contact</a>
+    <span class="site-footer__separator">|</span>
+    <a href="/privacy">Privacy Policy</a>
+    <span class="site-footer__separator">|</span>
+    <a href="/terms">Terms of Service</a>
+    <span class="site-footer__separator">|</span>
+    <a href="mailto:voovrhr@gmail.com">Contact</a>
   </footer>
 
 </body>

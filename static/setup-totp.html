@@ -189,7 +189,7 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
     </div>
     <span class="eyebrow">Security Setup</span>
     <h1>Secure your<br>account with 2FA</h1>
-    <p>Set up two-factor authentication to protect your organization's data. This is required for all admin accounts.</p>
+    <p>Two-step sign-in keeps your team's data safe, even if a password leaks. It's required for admin accounts and takes about a minute.</p>
     <ul class="trust-list">
       <li class="trust-check"><span class="icon">&#10003;</span> Scan the QR code with your authenticator app</li>
       <li class="trust-check"><span class="icon">&#10003;</span> Enter the 6-digit code to verify</li>
@@ -258,7 +258,7 @@ h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em;color:v
     no_pending_setup:  'Your setup session expired. Restarting setup\u2026'
   };
   function redirectToSignIn(){
-    setTimeout(function(){ window.location.href = '/login'; }, 1800);
+    setTimeout(function(){ window.location.href = '/signin'; }, 1800);
   }
   function restartSetup(){
     setTimeout(function(){ window.location.reload(); }, 1800);

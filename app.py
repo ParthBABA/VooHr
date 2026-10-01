@@ -3,6 +3,7 @@ import logging
 import os
 import secrets
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 # ── Logging configuration ──────────────────────────────────────────────
 # Configure the root logger at import time, before create_app() (and before
@@ -287,10 +288,10 @@ def create_app():
         user_id = session.get("user_id")
         session_token = session.get("session_token")
         if not user_id or not session_token:
-            return redirect("/login?redirect=" + request.path)
+            return redirect("/signin?redirect=" + quote(request.path, safe=""))
         if not _session_is_active(user_id, session_token):
             session.clear()
-            return redirect("/login?redirect=" + request.path)
+            return redirect("/signin?redirect=" + quote(request.path, safe=""))
         return None
 
     # Clean URL routes for static pages
@@ -316,7 +317,7 @@ def create_app():
 
     @app.route("/login")
     def login():
-        return render_page("login2.html")
+        return redirect("/signin", code=301)
 
     @app.route("/signin")
     def signin():

@@ -34,6 +34,9 @@
   --success-dim:#4ac98a;
   --warning:#F5C542;
   --danger:#FF6B6B;
+  --footer-text:var(--white);
+  --footer-link:var(--white);
+  --footer-hover:var(--white);
 
   --grad-primary: linear-gradient(135deg, var(--primary), var(--secondary));
   --grad-primary-hover: linear-gradient(135deg, var(--primary-dim), var(--secondary-dim));
@@ -2118,7 +2121,9 @@ h1,h2,h3,h4{
 .footer-col a{ 
   display:block; 
   font-size:14px; 
-  color:var(--muted); 
+  color:var(--footer-link);
+  text-decoration:underline;
+  text-underline-offset:3px;
   margin-bottom:14px; 
   transition:all var(--transition-fast);
   position:relative;
@@ -2135,9 +2140,10 @@ h1,h2,h3,h4{
   transition:all var(--transition-fast);
 }
 .footer-col a:hover{ 
-  color:var(--white); 
+  color:var(--footer-hover);
   padding-left:8px;
 }
+.footer-col a:focus-visible{outline:2px solid var(--footer-link);outline-offset:3px;border-radius:2px;}
 .footer-col a:hover::before{ opacity:1; left:0; }
 .footer-bottom{
   border-top:1px solid var(--line);
@@ -2146,7 +2152,7 @@ h1,h2,h3,h4{
   justify-content:space-between; 
   align-items:center;
   font-size:13px; 
-  color:var(--muted-2);
+  color:var(--footer-text);
 }
 .footer-socials{ display:flex; gap:20px; }
 .footer-socials a{ 
@@ -2330,7 +2336,7 @@ h1,h2,h3,h4{
     <div class="hero-grid">
       <div class="hero-inner">
         <span class="eyebrow" data-reveal>Private conversation memory for HR</span>
-        <h1 data-reveal>Remember every conversation.<br>Without watching anyone.</h1>
+        <h1 data-reveal>Remember every conversation.<br>Support people, don't score them.</h1>
         <p data-reveal>Voice notes and WhatsApp dictation become structured notes, follow-ups and reminders — drafted from the conversation itself, stored with the minimum personal data, and always read by a human before anything happens.</p>
         <div class="hero-cta" data-reveal>
           {% if is_logged_in %}
@@ -2442,9 +2448,9 @@ h1,h2,h3,h4{
 
     <div class="showcase-row reverse" data-showcase>
       <div class="sc-text">
-        <span class="index">02 / CONTEXT, NOT SCORING</span>
+        <span class="index">02 / CONTEXT FIRST</span>
         <h3>The thread of a conversation</h3>
-        <p>VooVr keeps what was actually said and connects it to the previous conversation, so a manager picking up a thread after three weeks is not starting cold. It summarises and organises. It does not score people, rank them, or decide anything.</p>
+        <p>VooVr keeps what was actually said and connects it to the previous conversation, so a manager picking up a thread after three weeks is not starting cold. It summarises and organises. It never ranks people or decides anything about them — a person reads the output and chooses what happens next.</p>
         <ul>
           <li>Previous threads: Linked</li>
           <li>Open questions: 2 carried forward</li>
@@ -2473,7 +2479,7 @@ h1,h2,h3,h4{
       <div class="sc-media m3">
         <div class="glow"></div>
         <div class="demo-panel" id="demoPanel">
-          <div class="demo-header"><span class="demo-live-dot"></span>Live product demo</div>
+          <div class="demo-header"><span class="demo-live-dot"></span>Sample data</div>
           <div class="demo-body">
 
             <div class="demo-stage">
@@ -2521,7 +2527,7 @@ h1,h2,h3,h4{
 
               <!-- Scene 4: recommendation -->
               <div class="recommend-card" id="recommendCard">
-                <span class="r-label">Recommended Follow-up</span>
+                <span class="r-label">Suggested next step</span>
                 <span class="r-text">Schedule a 1:1 check-in with Aman this week</span>
               </div>
 
@@ -2542,9 +2548,9 @@ h1,h2,h3,h4{
               <!-- Scene 6: complete flow strip -->
               <div class="demo-complete" id="demoComplete">
                 <span class="node">Profile</span><span class="arrow">→</span>
-                <span class="node">AI Insight</span><span class="arrow">→</span>
-                <span class="node">Recommendation</span><span class="arrow">→</span>
-                <span class="node">Action Taken</span><span class="arrow">→</span>
+                <span class="node">Draft summary</span><span class="arrow">→</span>
+                <span class="node">Suggested next step</span><span class="arrow">→</span>
+                <span class="node">Reviewed by you</span><span class="arrow">→</span>
                 <span class="done-tag">Complete ✓</span>
               </div>
             </div>
@@ -2589,8 +2595,8 @@ h1,h2,h3,h4{
       <div class="timeline-line"></div>
       <div class="timeline-progress" id="tlProgress"></div>
 
-      <div class="tl-step" data-step><div class="tl-node">01</div><div class="tl-content"><h4>Employee Profile</h4><p>Every employee has a centralized profile with personal details, department, role, documents, meeting history and performance records.</p></div></div>
-      <div class="tl-step" data-step><div class="tl-node">02</div><div class="tl-content"><h4>Continuous Employee Insights</h4><p>Meetings, feedback, attendance, interactions and HR activities continuously enrich each employee's profile with real-time data.</p></div></div>
+      <div class="tl-step" data-step><div class="tl-node">01</div><div class="tl-content"><h4>Employee Profile</h4><p>Every employee has a centralized profile with personal details, department, role, documents and conversation history.</p></div></div>
+      <div class="tl-step" data-step><div class="tl-node">02</div><div class="tl-content"><h4>Conversation history</h4><p>Notes and follow-ups from each conversation are kept on the person's profile, so the next conversation starts with context.</p></div></div>
 <div class="tl-step" data-step><div class="tl-node">03</div><div class="tl-content"><h4>Conversation context</h4><p>VooVr links a new note to previous conversations and carries open questions forward, so the context is always there.</p></div></div>
 <div class="tl-step" data-step><div class="tl-node">04</div><div class="tl-content"><h4>Draft notes and action items</h4><p>A draft summary, action items and follow-up are created from the transcript. Nothing is sent out without your review.</p></div></div>
 <div class="tl-step" data-step><div class="tl-node">05</div><div class="tl-content"><h4>Follow-ups and reminders</h4><p>Reminders and draft messages are prepared for you to review. You choose what gets sent and when.</p></div></div>
@@ -2613,7 +2619,7 @@ h1,h2,h3,h4{
         <div class="bento-glow"></div>
         <div class="decor"><span class="bento-dot"></span><span class="bento-dot"></span></div>
         <h4>Security by design.</h4>
-        <p>We use TLS in transit and <strong>field-level encryption at rest (AES-256-GCM, per-record keys wrapped with Google Cloud KMS)</strong> for selected personal fields, with role-based access controls and audit trails. The exact protections are described in our <a href="/privacy">Privacy Policy</a>.</p>
+        <p>Names and emails are encrypted at rest, each with its own key. Access is role-based, and sensitive actions are logged. <small>AES-256-GCM, keys wrapped with Google Cloud KMS.</small> The exact protections are in our <a href="/privacy">Privacy Policy</a>.</p>
       </div>
       <div class="bento-item b2">
         <img src="{{ url_for('static', filename='aes-bg.webp') }}" alt="" class="bento-bg">
@@ -2625,19 +2631,19 @@ h1,h2,h3,h4{
         <img src="{{ url_for('static', filename='access-bg.webp') }}" alt="" class="bento-bg">
         <div class="bento-glow"></div>
         <h4>Role-based access control</h4>
-        <p>Granular permissions ensure HR admins, managers and executives see only what they need. No overexposure, no blind spots.</p>
+        <p>Admins, managers and leaders each see only what they need, nothing more.</p>
       </div>
       <div class="bento-item b4">
         <img src="{{ url_for('static', filename='audit-bg.webp') }}" alt="" class="bento-bg">
         <div class="bento-glow"></div>
-        <h4>Audit logs & activity tracking</h4>
-        <p>Every view, edit and action is logged with timestamps and identity markers. Full transparency for compliance and internal reviews.</p>
+        <h4>A clear activity trail</h4>
+        <p>Sensitive admin actions are logged with who did them and when. A clear trail is handy for reviews, and reassuring for everyone.</p>
       </div>
       <div class="bento-item b5">
         <img src="{{ url_for('static', filename='privacy-bg.webp') }}" alt="" class="bento-bg">
         <div class="bento-glow"></div>
         <h4>Suggestions, never verdicts</h4>
-        <p>VooVr drafts notes, action items and follow-ups. It does not score people, predict outcomes, or make employment decisions. A human reads, edits and decides what to do next.</p>
+        <p>VooVr drafts notes, action items and follow-ups, and it can show explainable wellness signals, so you notice who may need support. Signals are suggestions, never verdicts. A person reviews them and decides what happens next. Nothing is decided about an employee automatically.</p>
       </div>
     </div>
   </div>
@@ -2647,8 +2653,8 @@ h1,h2,h3,h4{
 <section class="section security" id="security">
   <div class="container security-center">
     <span class="eyebrow" data-reveal>Security</span>
-    <h2 class="grad-head" data-reveal style="margin-top:14px;">Built with GDPR principles in mind.</h2>
-    <p data-reveal>Employee data is the most sensitive data your company holds. VooVr is built with data minimisation, encryption, access controls and audit trails from the ground up — and we describe the limits honestly.</p>
+    <h2 class="grad-head" data-reveal style="margin-top:14px;">Your people's details stay private.</h2>
+    <p data-reveal>Names and emails are encrypted, access is role-based, and sensitive actions are logged. Employee data is the most sensitive data your company holds, so we build with data minimisation and describe the limits honestly.</p>
     <div class="security-badges" data-reveal>
       <span class="sec-badge">GDPR principles in mind</span>
       <span class="sec-badge">TOTP two-factor sign-in</span>
@@ -2711,25 +2717,25 @@ h1,h2,h3,h4{
             <span class="flow-node n1" tabindex="0" role="button" aria-label="Employee Data — hover to inspect"><span class="flow-num">01</span></span>
             <b>Employee Data</b>
             <small>Centralized records</small>
-            <span class="flow-detail">One profile per employee — synced across HR, meetings &amp; performance.</span>
+            <span class="flow-detail">One profile per employee — synced across HR records and conversation history.</span>
           </div>
           <div class="flow-step" data-step="2">
             <span class="flow-node n2 is-encrypt" tabindex="0" role="button" aria-label="AES-256 Encryption — hover to inspect"><span class="flow-num">02</span></span>
             <b>AES-256 Encryption</b>
             <small>Encrypted at rest</small>
-            <span class="flow-detail">AES-256-GCM envelope encryption — per-record keys wrapped via Cloud KMS.</span>
+            <span class="flow-detail">Sensitive details are encrypted, each with its own key. <small>AES-256-GCM, keys wrapped with Google Cloud KMS.</small></span>
           </div>
           <div class="flow-step" data-step="3">
             <span class="flow-node n3" tabindex="0" role="button" aria-label="Access Control — hover to inspect"><span class="flow-num">03</span></span>
             <b>Access Control</b>
-            <small>SSO + role-based access</small>
-            <span class="flow-detail">Granular RBAC — SSO/SCIM access scoped by role, team &amp; seniority.</span>
+            <small>Role-based access</small>
+            <span class="flow-detail">People only see what they need. Access is scoped by role and team.</span>
           </div>
           <div class="flow-step" data-step="4">
             <span class="flow-node n4" tabindex="0" role="button" aria-label="Audit Trail — hover to inspect"><span class="flow-num">04</span></span>
             <b>Audit Trail</b>
             <small>Every action logged</small>
-            <span class="flow-detail">Every read &amp; write logged with actor, timestamp &amp; IP for compliance.</span>
+            <span class="flow-detail">Sensitive actions are logged with who did them and when.</span>
           </div>
         </div>
       </div>
@@ -2791,7 +2797,7 @@ h1,h2,h3,h4{
           <svg viewBox="0 0 30 30"><g class="shackle"><path d="M9 12V9a6 6 0 0 1 12 0v3" fill="none" stroke="#4D9FFF" stroke-width="2.4" stroke-linecap="round"/></g><rect x="6" y="12" width="18" height="13" rx="3" fill="none" stroke="#4D9FFF" stroke-width="2.4"/></svg>
           <span class="enc-badge">AES-256-GCM · sealed</span>
         </div>
-        <div class="enc-kms">Each record gets its own key, <b>wrapped and rotated via Cloud KMS</b> — nothing sits in plain text.</div>
+        <div class="enc-kms">Each record gets its own key, <b>wrapped and rotated via Cloud KMS</b>. Names and emails are encrypted at rest. Transcripts are protected by encrypted connections and strict access.</div>
       </div>
       <div class="insp-progress"></div>
     </div>
@@ -2800,7 +2806,7 @@ h1,h2,h3,h4{
 
   <!-- Panel 3 — Access Control -->
   <div class="insp-panel" data-panel="3">
-    <div class="insp-head"><span class="insp-num">03</span><b>Access Control</b><span>SSO + RBAC</span></div>
+    <div class="insp-head"><span class="insp-num">03</span><b>Access Control</b><span>Role-based</span></div>
     <div class="insp-stage">
       <div class="acc-camera">
         <div class="acc-shield"><svg viewBox="0 0 42 46"><path d="M21 3 L37 10 V22 C37 33 30 40 21 43 C12 40 5 33 5 22 V10 Z"/></svg></div>
@@ -2831,7 +2837,7 @@ h1,h2,h3,h4{
             </div>
           </div>
         </div>
-        <div class="acc-grant"><b>Access granted</b> — scoped to Riya's team &amp; seniority only.</div>
+        <div class="acc-grant"><b>Access granted</b> — scoped to Riya's team and role only.</div>
         <div class="acc-audit"><b>Permission set applied</b> · audit log #A-8F21 · 28 entries</div>
       </div>
       <div class="insp-progress"></div>
@@ -2849,10 +2855,10 @@ h1,h2,h3,h4{
           <div class="aud-row g1"><span class="aud-node"></span><span class="aud-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7.5 10-7.5S22 12 22 12s-3.5 7.5-10 7.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="aud-time">09:41:02</span><span class="aud-actor">R. Verma</span><span class="aud-act">record viewed</span><span class="aud-ip">10.2.4.18</span></div>
           <div class="aud-row g2"><span class="aud-node"></span><span class="aud-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5l4 4L8 20l-5 1 1-5L16.5 3.5z"/></svg></span><span class="aud-time">09:41:47</span><span class="aud-actor">S. Rao (HR)</span><span class="aud-act">department updated</span><span class="aud-ip">10.2.4.03</span></div>
           <div class="aud-row g3"><span class="aud-node"></span><span class="aud-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 14H11l-1 8L18.5 10H12l1-8z"/></svg></span><span class="aud-time">09:42:15</span><span class="aud-actor">System</span><span class="aud-act">wellness score computed</span><span class="aud-ip">internal</span></div>
-          <div class="aud-row g4"><span class="aud-node"></span><span class="aud-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V5l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="aud-time">09:43:00</span><span class="aud-actor">R. Verma</span><span class="aud-act">login · SSO</span><span class="aud-ip">10.2.4.18</span></div>
+          <div class="aud-row g4"><span class="aud-node"></span><span class="aud-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V5l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="aud-time">09:43:00</span><span class="aud-actor">R. Verma</span><span class="aud-act">login · TOTP</span><span class="aud-ip">10.2.4.18</span></div>
         </div>
         <div class="aud-chain"><span class="chain-block">H4·88F2</span><span class="chain-arrow">→</span><span class="chain-block">9B1E·C0A7</span><span class="chain-arrow">→</span><span class="chain-block">A8F2·7D5E</span><span class="chain-lab">every event hashed &amp; linked</span></div>
-        <div class="aud-note">Every read &amp; write is logged with <b>actor, timestamp &amp; IP</b> — nothing is silent.</div>
+        <div class="aud-note">Sensitive actions are logged with <b>who did them and when</b> — nothing is silent.</div>
       </div>
       <div class="insp-progress"></div>
     </div>

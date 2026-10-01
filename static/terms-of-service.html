@@ -15,7 +15,7 @@
 
     .bg-banding{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;}
 
-    .legal-card{ max-width:65ch; }
+    .legal-card{ max-width:80ch; }
     .legal-card h1, .legal-card h2{ font-family:'Fraunces',Georgia,serif; font-weight:600; }
     .legal-card h1{ font-size:2.1rem; letter-spacing:-.01em; }
     .legal-card h2{ font-size:1.3rem; margin-top:0; }
@@ -43,26 +43,26 @@
 <body class="legal-page">
   <img class="bg-banding" src="Banding - Copy@1-1536x730.webp" alt="" aria-hidden="true" width="1536" height="730">
   <main class="legal-card">
-    <a href="/login" class="legal-back">&larr; Back to sign in</a>
+    <a href="/" class="legal-back" data-back-link>← Back</a>
     <h1>Terms of Service</h1>
-    <p class="legal-updated">Last updated: September 30, 2026</p>
+    <p class="legal-updated">Last updated: October 1, 2026</p>
 
     <section>
       <h2>1. Acceptance of these terms</h2>
-      <p>By accessing or using VooVr (the "Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, please do not use the Service. These Terms govern your relationship with VooVr ("we", "us", "our").</p>
+      <p>By using VooVr, you agree to these Terms. If that's not okay with you, please don't use it. These Terms govern your relationship with VooVr ("we", "us", "our").</p>
     </section>
 
     <section>
       <h2>2. What the Service does</h2>
       <p>VooVr is a privacy-first conversation memory tool for HR teams. It stores meeting and conversation records, turns speech or voice notes into text, and generates <strong>draft</strong> summaries, action items, follow-ups and reminders for a person to read, edit and decide on.</p>
       <div class="callout">
-        <p>The output is a suggestion, not a decision or a judgement about any person. VooVr does not make employment decisions, does not take action on its own, and is not a substitute for your professional judgement or for human review. You decide what, if anything, to do with any suggestion.</p>
+        <p>The output is a suggestion, not a decision or a judgement about any person. Where VooVr shows wellness signals, they are explainable suggestions for a person to review. VooVr does not make employment decisions, does not take action on its own, and is not a substitute for your professional judgement or for human review. You decide what, if anything, to do with any suggestion.</p>
       </div>
     </section>
 
     <section>
       <h2>3. Acceptable use</h2>
-      <p>You may use the Service only for lawful internal business purposes. You are responsible for all activity under your account and for ensuring that any data you upload is processed in a way that complies with the privacy and labour laws that apply to you &mdash; including, where relevant, GDPR, CCPA and local employment law.</p>
+      <p>VooVr is for supporting people, not policing them. Please use it for lawful, internal work only. You may use VooVr only for lawful internal business purposes. You are responsible for all activity under your account and for ensuring that any data you upload is processed in a way that complies with the privacy and labour laws that apply to you &mdash; including, where relevant, GDPR, CCPA and local employment law.</p>
       <p>You agree not to:</p>
       <ul>
         <li>use the Service to harass, discriminate against, or take unlawful action against any person;</li>
@@ -95,17 +95,18 @@
 
     <section>
       <h2>7. Availability and changes</h2>
-      <p>The Service is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis. We may change or discontinue features, and we do not warrant uninterrupted availability. Current component status is published on our <a href="/status">status page</a>.</p>
+      <p>We work hard to keep VooVr running, but we can't promise it will never go down. You can check our <a href="/status">status page</a> any time. VooVr is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis. We may change or discontinue features, and we do not warrant uninterrupted availability.</p>
     </section>
 
     <section>
       <h2>8. Suspension and termination</h2>
-      <p>You may stop using the Service and ask us to delete your account at any time. We may suspend or terminate access, with or without notice, if you breach these Terms, fail to pay, or if required by law. When your account ends, your right to use the Service ends, and we will delete or anonymise your data in line with the <a href="/privacy">Privacy Policy</a>.</p>
+      <p>You may stop using VooVr and ask us to delete your account at any time. We may suspend or terminate access if you breach these Terms, fail to pay, or if required by law. We'll try to give notice, except where the law or safety requires otherwise. When your account ends, your right to use VooVr ends, and we will delete or anonymise your data in line with the <a href="/privacy">Privacy Policy</a>.</p>
     </section>
 
     <section>
       <h2>9. Limitation of liability</h2>
-      <p>To the fullest extent permitted by law, VooVr will not be liable for indirect, incidental, special, consequential or punitive damages, including loss of profits, data or business opportunities, arising from your use of or inability to use the Service. Our aggregate liability will not exceed the fees you paid us in the twelve (12) months before the claim. Nothing in these Terms excludes liability that cannot lawfully be excluded.</p>
+      <p><strong>In short: we're not responsible for indirect losses, and our liability is capped at the fees you paid in the last 12 months.</strong></p>
+      <p>To the fullest extent permitted by law, VooVr will not be liable for indirect, incidental, special, consequential or punitive damages, including loss of profits, data or business opportunities, arising from your use of or inability to use VooVr. Our aggregate liability will not exceed the fees you paid us in the twelve (12) months before the claim. Nothing in these Terms excludes liability that cannot lawfully be excluded.</p>
     </section>
 
     <section>
@@ -121,8 +122,9 @@
 
   <footer class="site-footer">
     <span>&copy; 2026 VooVr. All rights reserved.</span>
-    <nav aria-label="Legal"><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/subprocessors">Sub-processors</a><a href="/terms">Terms of Service</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
+    <nav aria-label="Legal"><a href="/about">About</a><a href="/cookies">Cookie Policy</a><a href="/privacy">Privacy Policy</a><a href="/subprocessors">Sub-processors</a><a href="/terms">Terms of Service</a><a href="/status">Status</a><a href="mailto:voovrhr@gmail.com">Contact</a></nav>
   </footer>
 
+  <script src="/back-link.js"></script>
 </body>
 </html>

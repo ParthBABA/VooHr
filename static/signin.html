@@ -367,9 +367,9 @@ h1,h2{
       <p data-reveal>Choose your preferred sign-in method.</p>
 
       <div class="trust-list" data-reveal>
-        <div class="trust-item"><span class="trust-check">&#10003;</span>Secure Authentication</div>
-        <div class="trust-item"><span class="trust-check">&#10003;</span>Enterprise Privacy</div>
-        <div class="trust-item"><span class="trust-check">&#10003;</span>Encrypted Sessions</div>
+<div class="trust-item"><span class="trust-check">&#10003;</span>Two-step sign-in available</div>
+  <div class="trust-item"><span class="trust-check">&#10003;</span>Role-based access</div>
+  <div class="trust-item"><span class="trust-check">&#10003;</span>Encrypted connection</div>
       </div>
     </div>
   </div>
@@ -395,7 +395,7 @@ h1,h2{
           Continue with Google
         </button>
 
-        <div class="setup-note" data-reveal>Your session is encrypted and secure.</div>
+        <div class="setup-note" data-reveal>Your connection is encrypted.</div>
         <div class="setup-signin" data-reveal>New here? <a href="onboarding.html">Create an organization</a></div>
       </div>
 
@@ -428,6 +428,15 @@ h1,h2{
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  function safeReturnPath(path) {
+    if (typeof path !== 'string' || path.charAt(0) !== '/' || path.indexOf('//') === 0 || path.indexOf('\\') !== -1) return null;
+    try {
+      var destination = new URL(path, window.location.origin);
+      return destination.origin === window.location.origin ? destination.pathname + destination.search + destination.hash : null;
+    } catch (e) { return null; }
+  }
+  var redirect = safeReturnPath(new URLSearchParams(window.location.search).get('redirect')) || '/dashboard';
+
   // Show backend error from ?error= query param (e.g. after Google OAuth redirect)
   (function() {
     var params = new URLSearchParams(window.location.search);
@@ -462,7 +471,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Google sign in
   document.getElementById('googleBtn').addEventListener('click', function(){
-    window.location.href = '/auth/google/signin';
+    window.location.href = '/auth/google/signin?redirect=' + encodeURIComponent(redirect);
   });
 
   // Email + password sign in with OTP
@@ -490,9 +499,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data.requires_otp) {
           // Store email for OTP flow
           sessionStorage.setItem('voovr_pending_email', email);
-          window.location.href = '/verify-otp';
+          window.location.href = '/verify-otp?redirect=' + encodeURIComponent(redirect);
         } else {
-          window.location.href = data.redirect;
+          navigate(data.redirect);
         }
       } else if (data.error === 'invalid_credentials') {
         errorBox.style.display = 'block';
@@ -502,7 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorBox.textContent = 'This account requires OTP verification. A code has been sent to your email.';
         // Store email for OTP flow
         sessionStorage.setItem('voovr_pending_email', email);
-        window.location.href = '/verify-otp';
+        window.location.href = '/verify-otp?redirect=' + encodeURIComponent(redirect);
       } else if (data.error === 'google_only_account') {
         errorBox.style.display = 'block';
         errorBox.textContent = 'This account uses Google sign-in only. Please use Continue with Google instead.';
@@ -516,6 +525,11 @@ document.addEventListener('DOMContentLoaded', function() {
       errorBox.textContent = 'Network error — could not reach the server. Please try again.';
     });
   });
+
+  function navigate(path) {
+    var target = safeReturnPath(path) || redirect;
+    window.location.href = new URL(target, window.location.origin).href;
+  }
 
   // Forgot password link
   document.getElementById('forgotPasswordLink').addEventListener('click', function() {
