@@ -243,11 +243,12 @@ def _insert_session(user_oid, ua=UA_WIN_CHROME, ip="", location=None,
 
 
 @pytest.fixture()
-def db():
+def db(monkeypatch):
     _FAKE_DB.users.clear()
     _FAKE_DB.active_sessions.clear()
     _FAKE_DB.rate_limits.clear()
     _FAKE_DB.audit_log.clear()
+    monkeypatch.setattr(_login_flow.geoip_db, "get_reader", lambda: None)
     return _FAKE_DB
 
 
@@ -416,7 +417,7 @@ class TestClientIpResolution:
         assert self._ip("203.0.113.5", "1.2.3.4") == "203.0.113.5"
 
     def test_proxy_hop_uses_rightmost_public_forwarded_ip(self, db):
-        # Railway edge: private peer + proxy-appended chain.  Rightmost
+        # Render edge: private peer + proxy-appended chain.  Rightmost
         # public entry is the one added by the trusted edge.
         assert self._ip("10.1.2.3", "203.0.113.99, 198.51.100.9") == "198.51.100.9"
 
@@ -430,6 +431,27 @@ class TestClientIpResolution:
 
     def test_private_peer_without_header_yields_no_ip(self, db):
         assert self._ip("127.0.0.1") == ""
+
+    def test_render_uses_true_client_ip_not_public_proxy_from_xff(self, db, monkeypatch):
+        monkeypatch.setenv("RENDER", "true")
+        with _test_app.test_request_context(
+            "/",
+            environ_base={"REMOTE_ADDR": "10.226.90.65"},
+            headers={
+                "True-Client-IP": "49.36.0.1",
+                "X-Forwarded-For": "49.36.0.1, 172.71.195.123, 10.226.90.65",
+            },
+        ):
+            assert _login_flow._client_ip() == "49.36.0.1"
+
+    def test_render_does_not_fall_back_to_xff_or_public_peer(self, db, monkeypatch):
+        monkeypatch.setenv("RENDER", "true")
+        with _test_app.test_request_context(
+            "/",
+            environ_base={"REMOTE_ADDR": "172.71.195.123"},
+            headers={"X-Forwarded-For": "49.36.0.1, 172.71.195.123"},
+        ):
+            assert _login_flow._client_ip() == ""
 
 
 # ── 10-12: location lookup + formatting ───────────────────────────────

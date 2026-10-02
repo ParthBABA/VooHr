@@ -77,6 +77,29 @@ Locally, either set `GOOGLE_CREDENTIALS_JSON` in `.env` or use
    Visit `http://localhost:5000/onboarding.html` to try the sign-up flow, or
    `http://localhost:5000/signin.html` to sign in.
 
+  ## Render setup (free plan)
+
+  Set the Render **Build Command** to:
+
+  ```bash
+  pip install -r requirements.txt && python -m geoip_db
+  ```
+
+  Environment variables:
+
+  - `GEOIP_DB_PATH` (optional; defaults to `data/dbip-city-lite.mmdb`)
+  - `IP_API_KEY` (ipinfo.io token used only when the local database has no usable result)
+  - `GEOIP_FALLBACK_IPINFO` (optional; defaults to `true`)
+
+  Render's free-plan filesystem is ephemeral, so the database is downloaded during
+  the build and included with each deploy. DB-IP updates the database monthly;
+  trigger a redeploy monthly to refresh it (manually, or with a Render Deploy
+  Hook called by a monthly cron).
+
+  If the service moves to a paid plan with a persistent disk, set
+  `GEOIP_DB_PATH` to a location under the disk mount. When the database is
+  missing, the app starts a non-blocking background download at startup.
+
 ## Analysis / translation languages
 
 The languages offered by the "Analyze in" / "Translate" controls are driven

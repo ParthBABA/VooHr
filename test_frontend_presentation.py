@@ -88,6 +88,23 @@ class PresentationTests(unittest.TestCase):
         self.assertIn("fetch('/api/sessions/revoke-others'", source)
         self.assertIn("Signed out of ' + (data.revoked || 0) + ' other devices.'", source)
 
+    def test_db_ip_attribution_and_privacy_disclosure(self):
+        settings = (ROOT / "static/settings.html").read_text(encoding="utf-8")
+        subprocessors = (ROOT / "static/subprocessors.html").read_text(encoding="utf-8")
+        privacy = (ROOT / "static/privacy-policy.html").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        render_config = (ROOT / "render.yaml").read_text(encoding="utf-8")
+
+        self.assertIn('href="https://db-ip.com" target="_blank" rel="noopener"', settings)
+        self.assertIn("Backup lookup for approximate location when our local database has no result.", subprocessors)
+        self.assertIn("Your IP address is sent to ipinfo.io only if that lookup has no result.", subprocessors)
+        self.assertIn(
+            "IP address (used for approximate location in your security settings and sign-in alerts)",
+            privacy,
+        )
+        self.assertIn("pip install -r requirements.txt && python -m geoip_db", readme)
+        self.assertIn("pip install -r requirements.txt && python -m geoip_db", render_config)
+
     def test_meeting_tracker_delete_controls_on_card_and_detail(self):
         source = (ROOT / "static/meeting_tracker.html").read_text(encoding="utf-8")
         # ui-feedback must be loaded so the confirm dialog uses VooVrUI.ask.

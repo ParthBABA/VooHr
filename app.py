@@ -36,6 +36,7 @@ from conversation_memory import conversation_memory_bp
 from employees import employees_bp
 from employees import _session_is_active
 from employees import TOTPRequired
+from geoip_db import start_background_download
 from jobs import jobs_bp
 from extensions import get_db, init_db, check_rate_limit, record_rate_limit_event, client_ip
 from meetings import meetings_bp
@@ -169,6 +170,7 @@ def create_app():
 
     init_db(app)
     register_google_oauth(app)
+    start_background_download()
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(auth_email_bp, url_prefix="/auth")

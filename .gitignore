@@ -18,6 +18,8 @@ app_stderr.txt
 # locations are ignored so nothing slips back in.
 static/audio/
 audio_storage/
+data/*.mmdb
+data/*.mmdb.gz
 
 # Ad-hoc patch/diff files — should never be committed
 *.patch

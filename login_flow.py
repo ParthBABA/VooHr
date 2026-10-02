@@ -21,6 +21,8 @@ import requests
 from bson import ObjectId
 from flask import request, session
 
+import geoip_db
+
 
 def _hash_session_token(token: str) -> str:
     """Deterministic SHA-256 hash of a session token for database storage.
@@ -68,21 +70,20 @@ def _is_private_ip(ip) -> bool:
 
 
 def _client_ip() -> str:
-    """Best-effort resolution of the actual client PUBLIC IP for geo
-    attribution, safe behind the Railway/reverse-proxy deployment.
+    """Best-effort resolution of the actual client PUBLIC IP for geo attribution.
 
-    Trust model (deliberately conservative — never blindly trusts XFF):
-      1. If the direct peer (remote_addr) is a PUBLIC address, the TCP
-         connection itself identifies the client — trust it outright.
-      2. Otherwise the peer is a trusted reverse proxy (Railway's edge
-         terminates TLS and forwards internally, so remote_addr is a
-         private hop).  Proxies APPEND to X-Forwarded-For, while a client
-         can plant arbitrary entries at the FRONT of the chain — so walk
-         the chain RIGHT to LEFT and take the first public address.  A
-         spoofed leftmost entry is therefore ignored.
-      3. If nothing public can be determined, return "" — callers treat
-         that as "no location", never guessing and never blocking login.
+    Render terminates requests through Cloudflare and appends proxy addresses
+    to X-Forwarded-For, so its rightmost public value can be a proxy. On Render,
+    trust only the edge-provided True-Client-IP header. Elsewhere, trust a
+    public direct peer or conservatively walk X-Forwarded-For right-to-left.
+    Return "" when the client address cannot be determined safely.
     """
+    if os.environ.get("RENDER", "").strip().lower() == "true":
+        candidate = request.headers.get("True-Client-IP", "").strip()
+        if candidate and not _is_private_ip(candidate):
+            return candidate
+        return ""
+
     peer = request.remote_addr or ""
     if not _is_private_ip(peer):
         return peer
@@ -124,12 +125,47 @@ def _country_name(code):
 
 
 def _lookup_location(ip) -> dict:
-    """Best-effort approximate geo lookup (ipinfo.io). Never raises."""
-    if not ip or _is_private_ip(ip):
+    """Best-effort approximate geo lookup (local DB-IP, then ipinfo)."""
+    if not isinstance(ip, str) or not ip or _is_private_ip(ip):
         return None
+
+    try:
+        reader = geoip_db.get_reader()
+        record = reader.get(ip) if reader is not None else None
+        if isinstance(record, dict):
+            city_data = record.get("city") or {}
+            country_data = record.get("country") or {}
+            subdivisions = record.get("subdivisions") or []
+            first_subdivision = subdivisions[0] if subdivisions else {}
+
+            def _english_name(value):
+                if not isinstance(value, dict):
+                    return None
+                names = value.get("names") or {}
+                name = names.get("en") if isinstance(names, dict) else None
+                return name.strip() or None if isinstance(name, str) else None
+
+            local_location = {
+                "city": _english_name(city_data),
+                "region": _english_name(first_subdivision),
+                "country": _english_name(country_data),
+            }
+            if local_location["city"] or local_location["region"]:
+                return local_location
+        else:
+            local_location = None
+    except Exception:
+        local_location = None
+
+    if os.environ.get("GEOIP_FALLBACK_IPINFO", "true").strip().lower() in {
+        "false", "0", "no", "off"
+    }:
+        return local_location if local_location and any(local_location.values()) else None
+
     key = os.environ.get("IP_API_KEY")
     if not key:
-        return None  # no key configured: skip location, never block login
+        return local_location if local_location and any(local_location.values()) else None
+
     try:
         resp = requests.get(
             f"https://ipinfo.io/{ip}/json",
@@ -151,9 +187,11 @@ def _lookup_location(ip) -> dict:
             "region": _clean(data.get("region")),
             "country": _country_name(_clean(data.get("country"))),
         }
-        return location if any(location.values()) else None
+        if any(location.values()):
+            return location
+        return local_location if local_location and any(local_location.values()) else None
     except Exception:
-        return None
+        return local_location if local_location and any(local_location.values()) else None
 
 
 def _record_active_session(db, user_id: ObjectId):
