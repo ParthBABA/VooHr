@@ -478,6 +478,15 @@ html[data-theme="light"]{
 /* Keep danger sub-headings red (delete flows) */
 .st-sec-title--danger,.st-delete-zone .st-sec-title{color:var(--red);}
 
+/* Active Sessions header: notes + top-right "sign out everywhere" action */
+.sessions-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:0.2rem 1rem;}
+.sessions-head .st-sec-title{grid-column:1;grid-row:1;}
+.sessions-head .st-sec-desc{grid-column:1;grid-row:2;}
+.sessions-loc-note{font-size:0.72rem;color:var(--ivory-faint);}
+.revoke-others-btn{grid-column:2;grid-row:1 / span 2;white-space:nowrap;background:transparent!important;border-color:transparent!important;color:var(--ivory-dim);}
+.revoke-others-btn:hover{background:var(--ivory-ghost)!important;color:var(--ivory);}
+@media(max-width:640px){.sessions-head{grid-template-columns:minmax(0,1fr);}.revoke-others-btn{grid-column:1;grid-row:3;justify-self:start;}}
+
 /* 3) Sections become contained cards on the --void surface */
 .st-section{background:var(--ink);border:1px solid var(--border);border-radius:10px;padding:1.6rem 1.7rem;}
 .settings-panel .st-section + .st-section{border-top:0;padding-top:1.6rem;}
@@ -1132,9 +1141,10 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
 
           <!-- ACTIVE SESSIONS -->
           <div class="st-section st-card">
-            <div class="st-sec-head">
+            <div class="st-sec-head sessions-head">
               <h3 class="st-sec-title">Active Sessions</h3>
-              <span class="st-sec-desc">Other devices signed in to your account.</span>
+              <span class="st-sec-desc">Other devices signed in to your account.<br><small class="sessions-loc-note">Location is estimated from your network and may not match where you are.</small></span>
+              <button id="revokeOthersBtn" class="btn btn-sm btn-outline revoke-others-btn" type="button" style="display:none;">Sign out all other devices</button>
             </div>
             <div class="sessions-list" id="sessionsList"></div>
           </div>
@@ -1850,19 +1860,22 @@ function clearFieldError(input){
 })();
 
 /* ── ACTIVE SESSIONS: real session tracking + revoke ── */
+function formatRelativeSessionTime(iso){
+  if (!iso) return {text:'Unknown', title:null, aria:null};
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return {text:'Unknown', title:null, aria:null};
+  var title = d.toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'});
+  var diff = Math.round((Date.now() - d.getTime()) / 60000);
+  var text = diff < 1 ? 'just now'
+    : diff < 60 ? diff + 'm ago'
+    : diff < 1440 ? Math.round(diff / 60) + 'h ago'
+    : Math.round(diff / 1440) + 'd ago';
+  return {text:text, title:title, aria:title};
+}
+
 (function(){
   var listEl = document.getElementById('sessionsList');
   if (!listEl) return;
-
-  function formatLastSeen(iso){
-    if (!iso) return '';
-    var d = new Date(iso);
-    var diff = Math.round((Date.now() - d.getTime()) / 60000);
-    if (diff < 1) return 'just now';
-    if (diff < 60) return diff + 'm ago';
-    if (diff < 1440) return Math.round(diff / 60) + 'h ago';
-    return Math.round(diff / 1440) + 'd ago';
-  }
 
   function deviceIconSvg(type){
     if (type === 'Mobile') {
@@ -1895,7 +1908,7 @@ function clearFieldError(input){
     if (loc.city) parts.push(loc.city);
     if (loc.region) parts.push(loc.region);
     if (loc.country) parts.push(loc.country);
-    return parts.length ? parts.join(', ') : 'Local network';
+    return parts.length ? '\u2248 ' + parts.join(', ') : 'Local network';
   }
 
   function renderCurrentSession(s){
@@ -1909,11 +1922,20 @@ function clearFieldError(input){
     if (dev) dev.textContent = deviceLabel(s.device);
     var meta = document.getElementById('currentSessionMeta');
     if (meta) {
-      var parts = [];
       var loc = locationLabel(s.location, s.ip_private);
-      if (loc && loc !== 'Local network') parts.push(loc);
-      if (s.last_seen) parts.push('Active ' + formatLastSeen(s.last_seen));
-      meta.textContent = parts.join(' \u00b7 ') || 'Active session';
+      var time = formatRelativeSessionTime(s.last_seen);
+      meta.textContent = '';
+      if (loc && loc !== 'Local network') {
+        meta.appendChild(document.createTextNode(loc + ' \u00b7 '));
+      }
+      meta.appendChild(document.createTextNode('Active '));
+      var timeLabel = document.createElement('span');
+      timeLabel.textContent = time.text;
+      if (time.title) {
+        timeLabel.title = time.title;
+        timeLabel.setAttribute('aria-label', time.aria);
+      }
+      meta.appendChild(timeLabel);
     }
   }
 
@@ -1922,12 +1944,19 @@ function clearFieldError(input){
     if (!sessions || !sessions.length) {
       listEl.innerHTML = '<div class="text-caption">No active sessions found.</div>';
       renderCurrentSession(null);
+      if (revokeOthersBtn) revokeOthersBtn.style.display = 'none';
       return;
     }
     var current = null;
+    var others = 0;
     sessions.forEach(function(s){
       if (s.is_current) current = s;
+      else others++;
     });
+    if (revokeOthersBtn) {
+      if (others > 0) revokeOthersBtn.style.display = '';
+      else revokeOthersBtn.style.display = 'none';
+    }
     renderCurrentSession(current);
     sessions.forEach(function(s){
       var row = document.createElement('div');
@@ -1960,7 +1989,12 @@ function clearFieldError(input){
       } else {
         var time = document.createElement('div');
         time.className = 'session-time';
-        time.textContent = formatLastSeen(s.last_seen);
+        var ta = formatRelativeSessionTime(s.last_seen);
+        time.textContent = ta.text;
+        if (ta.title) {
+          time.title = ta.title;
+          time.setAttribute('aria-label', ta.aria);
+        }
         row.appendChild(time);
 
         var btn = document.createElement('button');
@@ -2005,11 +2039,46 @@ function clearFieldError(input){
     });
   }
 
-  fetch('/api/sessions/active').then(function(res){
-    return res.ok ? res.json() : null;
-  }).then(function(body){
-    if (body && body.sessions) renderSessions(body.sessions);
-  }).catch(function(){});
+  function loadSessions(){
+    fetch('/api/sessions/active').then(function(res){
+      return res.ok ? res.json() : null;
+    }).then(function(body){
+      if (body && body.sessions) renderSessions(body.sessions);
+    }).catch(function(){});
+  }
+
+  var revokeOthersBtn = document.getElementById('revokeOthersBtn');
+  if (revokeOthersBtn) {
+    revokeOthersBtn.addEventListener('click', async function(){
+      if (revokeOthersBtn.disabled) return;
+      if (!await VooVrUI.ask(
+        "Sign out everywhere else? You'll stay signed in on this device.",
+        {title:'Sign out all other devices?', accept:'Sign out'}
+      )) {
+        return;
+      }
+      revokeOthersBtn.disabled = true;
+      var prev = revokeOthersBtn.textContent;
+      revokeOthersBtn.textContent = 'Signing out\u2026';
+      fetch('/api/sessions/revoke-others', { method: 'POST' }).then(function(res){
+        if (!res.ok) {
+          throw new Error('revoke_others_failed');
+        }
+        return res.json();
+      }).then(function(data){
+        revokeOthersBtn.disabled = false;
+        revokeOthersBtn.textContent = prev;
+        loadSessions();
+        showToast('Signed out of ' + (data.revoked || 0) + ' other devices.');
+      }).catch(function(){
+        revokeOthersBtn.disabled = false;
+        revokeOthersBtn.textContent = prev;
+        showToast('Couldn\u2019t sign out other devices. Try again.');
+      });
+    });
+  }
+
+  loadSessions();
 })();
 
 /* ── AUDIT LOG: admin-only activity feed with contextual icons. Categories:
@@ -2045,6 +2114,8 @@ function clearFieldError(input){
     'totp.disable': 'Two-factor authentication disabled',
     'totp.backup_codes_regenerate': 'Recovery codes regenerated',
     'session.revoke': 'Session revoked',
+    'session.revoke_all_others': 'All other sessions signed out',
+    'session.new_signin_alert_sent': 'New sign-in alert sent',
     'account.export': 'Account data exported',
     'account.delete': 'Account deleted',
     'manager.invite_sent': 'Manager invite sent',
@@ -2071,6 +2142,8 @@ function clearFieldError(input){
     'totp.disable': 'teal',
     'totp.backup_codes_regenerate': 'teal',
     'session.revoke': 'red',
+    'session.revoke_all_others': 'red',
+    'session.new_signin_alert_sent': 'teal',
     'account.export': 'blue',
     'account.delete': 'red',
     'manager.invite_sent': 'teal',
@@ -2107,14 +2180,8 @@ function clearFieldError(input){
   }
 
   function timeAgo(iso){
-    if (!iso) return '';
-    var d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
-    var diff = Math.round((Date.now() - d.getTime()) / 60000);
-    if (diff < 1) return 'just now';
-    if (diff < 60) return diff + 'm ago';
-    if (diff < 1440) return Math.round(diff / 60) + 'h ago';
-    return Math.round(diff / 1440) + 'd ago';
+    var res = formatRelativeSessionTime(iso);
+    return res.text === 'Unknown' ? '' : res.text;
   }
 
   function renderEvents(events){

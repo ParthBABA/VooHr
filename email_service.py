@@ -19,7 +19,7 @@ import base64
 import logging
 import os
 import re
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -228,6 +228,74 @@ def send_otp_email(to_email: str, otp: str) -> bool:
         return _send_via_brevo(to_email, otp)
     except Exception:
         logger.exception("email_failed=unexpected_exception recipient=%s", to_email)
+        return False
+
+
+def send_new_signin_alert(
+    to_email: str, first_name: str, device_label: str, location_text: str, when_utc
+) -> bool:
+    """Send a new-sign-in security alert via Brevo. Never raises."""
+    try:
+        api_key = os.environ.get("BREVO_API_KEY", "")
+        sender_email = os.environ.get("BREVO_SENDER_EMAIL", "")
+        if not api_key or not sender_email or not _SENDER_RE.match(sender_email):
+            logger.error(
+                "email_failed=new_signin_missing_config recipient=%s",
+                to_email,
+            )
+            return False
+
+        when = when_utc
+        if isinstance(when, datetime):
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+            when = when.astimezone(timezone.utc).strftime("%d %b %Y, %I:%M %p UTC")
+        else:
+            when = str(when_utc)
+
+        payload = {
+            "sender": {
+                "email": sender_email,
+                "name": os.environ.get("BREVO_SENDER_NAME", "VooVr"),
+            },
+            "replyTo": {"email": "voovrhr@gmail.com", "name": "VooVr"},
+            "to": [{"email": to_email}],
+            "subject": "New sign-in to your VooVr account",
+            "htmlContent": (
+                f"<p>Hi {_escape_html(first_name)},</p>"
+                "<p>We noticed a new sign-in to your VooVr account.</p>"
+                f"<p><strong>Device:</strong> {_escape_html(device_label)}<br>"
+                f"<strong>Approx. location:</strong> {_escape_html(location_text)}<br>"
+                f"<strong>Time:</strong> {_escape_html(when)}</p>"
+                "<p>If this was you, there's nothing to do. If it wasn't, please "
+                "sign in, go to Settings &gt; Security, and use <strong>Sign out "
+                "all other devices</strong>, then change your password.</p>"
+                + _email_footer()
+            ),
+            "headers": _profile_avatar_headers(),
+        }
+        response = requests.post(
+            BREVO_API_URL,
+            headers={
+                "api-key": api_key,
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=15,
+        )
+        if not response.ok:
+            logger.error(
+                "email_failed=new_signin status=%s recipient=%s body=%s",
+                response.status_code,
+                to_email,
+                _brevo_error_message(response),
+            )
+            return False
+        logger.info("email_sent provider=brevo kind=new_signin recipient=%s", to_email)
+        return True
+    except Exception:
+        logger.exception("email_failed=new_signin_unexpected recipient=%s", to_email)
         return False
 
 

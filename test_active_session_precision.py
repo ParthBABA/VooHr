@@ -52,13 +52,34 @@ class _FakeCursor:
         return iter(self._docs)
 
 
+class _FakeUpdateResult:
+    def __init__(self, modified_count=0):
+        self.modified_count = modified_count
+
+
+class _FakeDeleteResult:
+    def __init__(self, deleted_count=0):
+        self.deleted_count = deleted_count
+
+
 class _FakeCollection:
     def __init__(self):
         self.docs = []
 
     def _match(self, doc, q):
         for k, v in q.items():
-            if isinstance(v, dict) and "$gt" in v:
+            if k == "$expr":
+                limit = v["$lt"][1]
+                filt = v["$lt"][0]["$size"]["$filter"]
+                cutoff = filt["cond"]["$gt"][1]
+                recent = [t for t in doc.get("new_signin_alert_times", [])
+                          if t > cutoff]
+                if not len(recent) < limit:
+                    return False
+            elif isinstance(v, dict) and "$ne" in v:
+                if doc.get(k) == v["$ne"]:
+                    return False
+            elif isinstance(v, dict) and "$gt" in v:
                 if not (doc.get(k) is not None and doc.get(k) > v["$gt"]):
                     return False
             elif doc.get(k) != v:
@@ -88,15 +109,35 @@ class _FakeCollection:
     def update_one(self, q, update, upsert=False):
         matches = [d for d in self.docs if self._match(d, q)]
         if not matches:
-            return
+            return _FakeUpdateResult()
         doc = matches[0]
+        modified = False
         if "$set" in update:
+            modified = any(doc.get(k) != v for k, v in update["$set"].items())
             doc.update(update["$set"])
+        if "$push" in update:
+            for key, spec in update["$push"].items():
+                values = list(doc.get(key) or [])
+                if isinstance(spec, dict) and "$each" in spec:
+                    values.extend(spec["$each"])
+                    if "$slice" in spec:
+                        values = values[spec["$slice"]:]
+                else:
+                    values.append(spec)
+                doc[key] = values
+                modified = True
+        return _FakeUpdateResult(1 if modified else 0)
 
     def delete_one(self, q):
         matches = [d for d in self.docs if self._match(d, q)]
         if matches:
             self.docs.remove(matches[0])
+
+    def delete_many(self, q):
+        matches = [d for d in self.docs if self._match(d, q)]
+        for doc in matches:
+            self.docs.remove(doc)
+        return _FakeDeleteResult(len(matches))
 
     def create_index(self, *a, **k):
         pass
@@ -110,6 +151,7 @@ class _FakeDB:
         self.rate_limits = _FakeCollection()
         self.active_sessions = _FakeCollection()
         self.users = _FakeCollection()
+        self.audit_log = _FakeCollection()
 
 
 _FAKE_DB = _FakeDB()
@@ -205,6 +247,7 @@ def db():
     _FAKE_DB.users.clear()
     _FAKE_DB.active_sessions.clear()
     _FAKE_DB.rate_limits.clear()
+    _FAKE_DB.audit_log.clear()
     return _FAKE_DB
 
 
@@ -217,6 +260,7 @@ def client():
     _FAKE_DB.users.clear()
     _FAKE_DB.active_sessions.clear()
     _FAKE_DB.rate_limits.clear()
+    _FAKE_DB.audit_log.clear()
     originals = []
     for name in _DB_PATCH_MODULES:
         mod = sys.modules.get(name)
@@ -391,46 +435,67 @@ class TestClientIpResolution:
 # ── 10-12: location lookup + formatting ───────────────────────────────
 
 class TestLocationLookup:
-    def test_successful_lookup_formats_city_region_country(self, db):
+    def test_successful_lookup_formats_city_region_country(self, db, monkeypatch):
+        monkeypatch.setenv("IP_API_KEY", "test-ipinfo-token")
         resp = _mock.MagicMock()
+        resp.status_code = 200
         resp.json.return_value = {
-            "status": "success",
             "city": "Dehradun",
-            "regionName": "Uttarakhand",
-            "country": "India",
+            "region": "Uttarakhand",
+            "country": "IN",
         }
         with _mock.patch.object(_login_flow.requests, "get", return_value=resp) as g:
             loc = _login_flow._lookup_location("203.0.113.7")
         assert loc == {"city": "Dehradun", "region": "Uttarakhand", "country": "India"}
         assert g.call_count == 1
+        assert g.call_args.kwargs["params"] == {"token": "test-ipinfo-token"}
+        assert g.call_args.kwargs["timeout"] == 2
 
-    def test_missing_fields_become_null(self, db):
+    def test_missing_fields_become_null(self, db, monkeypatch):
+        monkeypatch.setenv("IP_API_KEY", "test-ipinfo-token")
         resp = _mock.MagicMock()
+        resp.status_code = 200
         resp.json.return_value = {
-            "status": "success", "city": "Dehradun", "regionName": "", "country": None,
+            "city": "Dehradun", "region": "", "country": None,
         }
         with _mock.patch.object(_login_flow.requests, "get", return_value=resp):
             loc = _login_flow._lookup_location("203.0.113.7")
         assert loc == {"city": "Dehradun", "region": None, "country": None}
 
-    def test_all_fields_empty_returns_none(self, db):
+    def test_all_fields_empty_returns_none(self, db, monkeypatch):
+        monkeypatch.setenv("IP_API_KEY", "test-ipinfo-token")
         resp = _mock.MagicMock()
-        resp.json.return_value = {
-            "status": "success", "city": "", "regionName": "", "country": "",
-        }
+        resp.status_code = 200
+        resp.json.return_value = {"city": "", "region": "", "country": ""}
         with _mock.patch.object(_login_flow.requests, "get", return_value=resp):
             assert _login_flow._lookup_location("203.0.113.7") is None
 
-    def test_provider_failure_returns_none(self, db):
+    def test_bogon_returns_none(self, db, monkeypatch):
+        monkeypatch.setenv("IP_API_KEY", "test-ipinfo-token")
         resp = _mock.MagicMock()
-        resp.json.return_value = {"status": "fail"}
+        resp.status_code = 200
+        resp.json.return_value = {"bogon": True}
         with _mock.patch.object(_login_flow.requests, "get", return_value=resp):
             assert _login_flow._lookup_location("203.0.113.7") is None
 
-    def test_network_error_returns_none(self, db):
+    def test_non_200_returns_none(self, db, monkeypatch):
+        monkeypatch.setenv("IP_API_KEY", "test-ipinfo-token")
+        resp = _mock.MagicMock()
+        resp.status_code = 429
+        with _mock.patch.object(_login_flow.requests, "get", return_value=resp):
+            assert _login_flow._lookup_location("203.0.113.7") is None
+
+    def test_timeout_returns_none(self, db, monkeypatch):
+        monkeypatch.setenv("IP_API_KEY", "test-ipinfo-token")
         with _mock.patch.object(_login_flow.requests, "get",
-                                side_effect=RuntimeError("timeout")):
+                                side_effect=_login_flow.requests.Timeout("timeout")):
             assert _login_flow._lookup_location("203.0.113.7") is None
+
+    def test_missing_key_returns_none_without_request(self, db, monkeypatch):
+        monkeypatch.delenv("IP_API_KEY", raising=False)
+        with _mock.patch.object(_login_flow.requests, "get") as get:
+            assert _login_flow._lookup_location("203.0.113.7") is None
+            get.assert_not_called()
 
     def test_private_ip_short_circuits_without_network_call(self, db):
         with _mock.patch.object(_login_flow.requests, "get") as g:
@@ -443,13 +508,14 @@ class TestLocationLookup:
             assert _login_flow._lookup_location("169.254.3.7") is None
             g.assert_not_called()
 
-    def test_public_cgnat_adjacent_ranges_still_lookup(self, db):
+    def test_public_cgnat_adjacent_ranges_still_lookup(self, db, monkeypatch):
+        monkeypatch.setenv("IP_API_KEY", "test-ipinfo-token")
         # 100.63.x.x and 100.128.x.x are OUTSIDE 100.64/10 — must be treated
         # as public and reach the provider.
         resp = _mock.MagicMock()
+        resp.status_code = 200
         resp.json.return_value = {
-            "status": "success", "city": "Dehradun",
-            "regionName": "Uttarakhand", "country": "India",
+            "city": "Dehradun", "region": "Uttarakhand", "country": "IN",
         }
         with _mock.patch.object(_login_flow.requests, "get", return_value=resp) as g:
             assert _login_flow._lookup_location("100.63.0.1") is not None
@@ -543,6 +609,30 @@ class TestRecordActiveSession:
 class TestActiveSessionsEndpoint:
     def test_authentication_required(self, client, db):
         resp = client.get("/api/sessions/active")
+        assert resp.status_code == 401
+        assert resp.get_json()["error"] == "not_authenticated"
+
+    def test_revoke_others_keeps_current_and_audits_count(self, client, db):
+        _seed_user(_USER_A)
+        current_raw = _insert_session(_USER_A, token_suffix="current")
+        _insert_session(_USER_A, ua=UA_MAC_SAFARI, token_suffix="other-a")
+        _insert_session(_USER_A, ua=UA_ANDROID, token_suffix="other-b")
+        _login(client, _USER_A, current_raw)
+
+        resp = client.post("/api/sessions/revoke-others")
+
+        assert resp.status_code == 200
+        assert resp.get_json() == {"revoked": 2}
+        assert len(db.active_sessions.docs) == 1
+        assert db.active_sessions.docs[0]["session_token"] == _login_flow._hash_session_token(
+            current_raw
+        )
+        event = db.audit_log.docs[0]
+        assert event["action"] == "session.revoke_all_others"
+        assert event["meta"]["count"] == 2
+
+    def test_revoke_others_requires_authentication(self, client, db):
+        resp = client.post("/api/sessions/revoke-others")
         assert resp.status_code == 401
         assert resp.get_json()["error"] == "not_authenticated"
 
@@ -669,6 +759,163 @@ class TestActiveSessionsEndpoint:
             src = f.read()
         assert "Accept-CH" in src
         assert "Sec-CH-UA-Platform-Version" in src
+
+
+class TestNewSigninAlert:
+    def _prepare(self, user_id, *, known_device, known_country="India",
+                 ua=UA_WIN_CHROME, country="India", sent_times=None):
+        _seed_user(user_id)
+        db_user_id = ObjectId(user_id)
+        _FAKE_DB.users.update_one(
+            {"_id": db_user_id},
+            {"$set": {
+                "known_devices": [known_device] if known_device else [],
+                "known_countries": [known_country] if known_country else [],
+                "encrypted": {},
+                "wrapped_dek": "",
+                "new_signin_alert_times": list(sent_times or []),
+            }},
+        )
+        location = {"city": "New Delhi", "region": "Delhi", "country": country}
+        raw = _insert_session(user_id, ua=ua, ip="203.0.113.7", location=location)
+        return raw, location
+
+    def _patch_email(self, monkeypatch):
+        monkeypatch.setattr(
+            "field_encryption.decrypt_fields",
+            lambda *_: {"email": "person@example.com", "name": "Asha Rao"},
+        )
+        return monkeypatch.setattr(
+            "email_service.send_new_signin_alert", lambda *args: True
+        )
+
+    def test_sends_for_new_country_and_logs_audit(self, db, monkeypatch):
+        known_device = _login_flow._device_fingerprint(
+            _api._parse_device(UA_WIN_CHROME)
+        )
+        raw, location = self._prepare(
+            _USER_A, known_device=known_device, country="Australia"
+        )
+        send = _mock.Mock(return_value=True)
+        self._patch_email(monkeypatch)
+        monkeypatch.setattr("email_service.send_new_signin_alert", send)
+
+        _login_flow._maybe_send_new_signin_alert(db, raw, location)
+
+        assert send.call_count == 1
+        assert "203.0.113.7" not in str(send.call_args)
+        assert db.audit_log.docs[0]["action"] == "session.new_signin_alert_sent"
+
+    def test_sends_for_new_device(self, db, monkeypatch):
+        known_device = _login_flow._device_fingerprint(
+            _api._parse_device(UA_WIN_CHROME)
+        )
+        raw, location = self._prepare(
+            _USER_A, known_device=known_device, ua=UA_MAC_SAFARI
+        )
+        send = _mock.Mock(return_value=True)
+        self._patch_email(monkeypatch)
+        monkeypatch.setattr("email_service.send_new_signin_alert", send)
+
+        _login_flow._maybe_send_new_signin_alert(db, raw, location)
+
+        assert send.call_count == 1
+
+    def test_does_not_send_for_known_device_and_country(self, db, monkeypatch):
+        known_device = _login_flow._device_fingerprint(
+            _api._parse_device(UA_WIN_CHROME)
+        )
+        raw, location = self._prepare(_USER_A, known_device=known_device)
+        send = _mock.Mock(return_value=True)
+        self._patch_email(monkeypatch)
+        monkeypatch.setattr("email_service.send_new_signin_alert", send)
+
+        _login_flow._maybe_send_new_signin_alert(db, raw, location)
+
+        send.assert_not_called()
+
+    def test_does_not_send_on_first_ever_login(self, db, monkeypatch):
+        raw, location = self._prepare(
+            _USER_A, known_device=None, known_country=None
+        )
+        send = _mock.Mock(return_value=True)
+        self._patch_email(monkeypatch)
+        monkeypatch.setattr("email_service.send_new_signin_alert", send)
+
+        _login_flow._maybe_send_new_signin_alert(db, raw, location)
+
+        send.assert_not_called()
+        user = db.users.find_one({"_id": ObjectId(_USER_A)})
+        assert user["known_devices"]
+        assert user["known_countries"] == ["India"]
+
+    def test_rate_limit_allows_at_most_three_per_24_hours(self, db, monkeypatch):
+        known_device = _login_flow._device_fingerprint(
+            _api._parse_device(UA_WIN_CHROME)
+        )
+        recent = datetime.now(timezone.utc) - timedelta(hours=1)
+        raw, location = self._prepare(
+            _USER_A,
+            known_device=known_device,
+            ua=UA_MAC_SAFARI,
+            sent_times=[recent, recent, recent],
+        )
+        send = _mock.Mock(return_value=True)
+        self._patch_email(monkeypatch)
+        monkeypatch.setattr("email_service.send_new_signin_alert", send)
+
+        _login_flow._maybe_send_new_signin_alert(db, raw, location)
+
+        send.assert_not_called()
+
+    def test_sends_at_most_once_per_session(self, db, monkeypatch):
+        known_device = _login_flow._device_fingerprint(
+            _api._parse_device(UA_WIN_CHROME)
+        )
+        raw, location = self._prepare(
+            _USER_A, known_device=known_device, country="Australia"
+        )
+        send = _mock.Mock(return_value=True)
+        self._patch_email(monkeypatch)
+        monkeypatch.setattr("email_service.send_new_signin_alert", send)
+
+        _login_flow._maybe_send_new_signin_alert(db, raw, location)
+        _login_flow._maybe_send_new_signin_alert(db, raw, location)
+
+        assert send.call_count == 1
+
+    def test_email_uses_brevo_template_without_ip(self, monkeypatch):
+        import email_service
+
+        monkeypatch.setenv("BREVO_API_KEY", "test-brevo-key")
+        monkeypatch.setenv("BREVO_SENDER_EMAIL", "security@example.com")
+        response = _mock.MagicMock(ok=True, status_code=201)
+        with _mock.patch.object(email_service.requests, "post", return_value=response) as post:
+            assert email_service.send_new_signin_alert(
+                "person@example.com",
+                "Asha",
+                "Laptop · Chrome on Windows",
+                "New Delhi, Delhi, India",
+                datetime(2026, 10, 2, 9, 42, tzinfo=timezone.utc),
+            ) is True
+
+        payload = post.call_args.kwargs["json"]
+        assert payload["subject"] == "New sign-in to your VooVr account"
+        assert "Approx. location:" in payload["htmlContent"]
+        assert "Settings &gt; Security" in payload["htmlContent"]
+        assert "203.0.113.7" not in str(payload)
+
+    def test_email_failure_never_raises(self, monkeypatch):
+        import email_service
+
+        monkeypatch.setenv("BREVO_API_KEY", "test-brevo-key")
+        monkeypatch.setenv("BREVO_SENDER_EMAIL", "security@example.com")
+        with _mock.patch.object(
+            email_service.requests, "post", side_effect=RuntimeError("offline")
+        ):
+            assert email_service.send_new_signin_alert(
+                "person@example.com", "Asha", "Laptop", "India", datetime.now(timezone.utc)
+            ) is False
 
 
 # ── Read-path enrichment: stale rows reach the UI precisely ──────────

@@ -13,6 +13,7 @@ from audit_log import (
     ACTION_ACCOUNT_EXPORT,
     ACTION_ORG_UPDATE,
     ACTION_SESSION_REVOKE,
+    ACTION_SESSION_REVOKE_OTHERS,
     log_audit_event,
 )
 from extensions import check_rate_limit, get_db, record_rate_limit_event
@@ -1034,6 +1035,32 @@ def revoke_active_session(session_doc_id):
     )
 
     return jsonify({"ok": True})
+
+
+@api_bp.route("/sessions/revoke-others", methods=["POST"])
+def revoke_other_sessions():
+    user_id = _check_auth()
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    current_hash = _hash_session_token(session.get("session_token", ""))
+    result = db.active_sessions.delete_many(
+        {
+            "user_id": ObjectId(user_id),
+            "session_token": {"$ne": current_hash},
+        }
+    )
+
+    org_id = db.users.find_one({"_id": ObjectId(user_id)}, {"org_id": 1})
+    log_audit_event(
+        db, (org_id or {}).get("org_id"), user_id, session.get("user_name") or "",
+        ACTION_SESSION_REVOKE_OTHERS,
+        target_type="session",
+        meta={"count": result.deleted_count},
+    )
+
+    return jsonify({"revoked": result.deleted_count})
 
 
 def _device_label(device) -> str:

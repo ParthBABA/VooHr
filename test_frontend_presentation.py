@@ -75,6 +75,19 @@ class PresentationTests(unittest.TestCase):
             self.assertNotIn("HR Copilot", source)
         self.assertNotIn(b"\x00", (ROOT / "static/style.css").read_bytes())
 
+    def test_settings_session_location_and_exact_time_accessibility(self):
+        source = (ROOT / "static/settings.html").read_text(encoding="utf-8")
+        self.assertIn("return parts.length ? '\\u2248 ' + parts.join(', ')", source)
+        self.assertIn("if (!loc) return ipPrivate ? 'Local network' : 'Location unavailable'", source)
+        self.assertEqual(source.count("function formatRelativeSessionTime(iso)"), 1)
+        self.assertIn("toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'})", source)
+        self.assertIn("return {text:'Unknown', title:null, aria:null}", source)
+        self.assertIn("timeLabel.setAttribute('aria-label', time.aria)", source)
+        self.assertIn("time.setAttribute('aria-label', ta.aria)", source)
+        self.assertIn("Sign out everywhere else? You'll stay signed in on this device.", source)
+        self.assertIn("fetch('/api/sessions/revoke-others'", source)
+        self.assertIn("Signed out of ' + (data.revoked || 0) + ' other devices.'", source)
+
     def test_meeting_tracker_delete_controls_on_card_and_detail(self):
         source = (ROOT / "static/meeting_tracker.html").read_text(encoding="utf-8")
         # ui-feedback must be loaded so the confirm dialog uses VooVrUI.ask.
