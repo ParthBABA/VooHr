@@ -46,7 +46,12 @@
   --st-warn:var(--amber);
   --st-bad:var(--red);
   --st-icon:36px;                      /* leading icon in a title line    */
-  --st-card-x:var(--sp-6);             /* card padding-x, shared with bleeds */
+  --st-card-x:var(--sp-6);             /* card padding-x, and the full-bleed tables  */
+  /* Prose measure. `ch` is the width of "0", which runs ~1.4x wider than an
+     average character in Inter, so 48ch lands the longest rendered line at
+     ~67 characters - inside the 70-character reading target. A literal 64ch
+     would run out to ~90 characters. */
+  --st-measure:48ch;
   font-family:var(--font-d);            /* Inter, not the global Lato body   */
 }
 html[data-theme="light"] .settings-page{
@@ -65,27 +70,44 @@ html[data-theme="light"] .settings-page{
 }
 .settings-page :focus-visible{outline-color:var(--st-accent);}
 
-/*  1 - Page shell: the settings nav is the fixed left bar, content is one
-        centred column in the space that remains  */
+/*  Page shell: the settings nav is the fixed left bar, content is one
+    centred column in the space that remains.
+    .settings-layout and .settings-topbar-inner share one 1040px box so the
+    header title, the card edges and the header actions line up exactly. */
 .settings-layout{
   display:grid;
   grid-template-columns:minmax(0,1fr);
-  max-width:1200px;
+  max-width:1040px;
   margin:0 auto;
   padding:var(--sp-6) clamp(24px,4vw,48px) var(--sp-7);
 }
-.settings-content{min-width:0;width:100%;max-width:none;margin-inline:0;}
+/* Text stops at 64ch; only bars and tables run the full card width. */
+.settings-content{min-width:0;width:100%;max-width:1040px;margin-inline:0;}
 .settings-panel{display:none;}
 .settings-panel.active{display:grid;gap:var(--sp-5);}
+/* Sparse panels sit side by side once there is room for two readable columns. */
+@media(min-width:1100px){
+  .settings-panel.active[data-panel="billing"],
+  .settings-panel.active[data-panel="sessions"],
+  .settings-panel.active[data-panel="data-privacy"]{
+    grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);
+    gap:24px;
+    align-items:start;
+  }
+  /* The data tiles lose a column with their card, so they stop at two. */
+  .settings-panel[data-panel="data-privacy"] .st-data-list{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
 .st-stack{display:grid;gap:var(--sp-5);}
 
 /* Page header: full-bleed bar, but its contents share the content
    container so the title lines up with the card edges. */
 .settings-page .top-bar{padding:1rem 0;}
 .settings-topbar-inner{
-  width:100%;max-width:1200px;margin:0 auto;
+  width:100%;max-width:1040px;margin:0 auto;
   padding-inline:clamp(24px,4vw,48px);
-  display:flex;justify-content:space-between;align-items:center;
+  display:flex;justify-content:space-between;align-items:flex-start;
   gap:var(--sp-4);min-width:0;
 }
 .settings-page .top-bar .page-title{
@@ -155,12 +177,24 @@ html[data-theme="light"] .settings-page{
 .settings-nav-item.active .nav-ind{background:var(--st-accent);}
 
 /*  2 - Typography  */
-.st-page{margin:0;}
-.st-desc{
+/* One intro per panel, sitting under the breadcrumb. The visible one is chosen
+    with :has() on the active panel, so switching tabs needs no JS. */
+.st-page-intro{
+  display:none;
+  margin:4px 0 24px;
   font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:68ch;margin:0;
+  color:var(--st-mute);max-width:var(--st-measure);
 }
-.st-desc-spaced{margin-top:var(--sp-4);}
+.settings-page:has(.settings-panel[data-panel="profile"].active)         .st-page-intro[data-intro="profile"],
+.settings-page:has(.settings-panel[data-panel="organization"].active)    .st-page-intro[data-intro="organization"],
+.settings-page:has(.settings-panel[data-panel="manager-roles"].active)   .st-page-intro[data-intro="manager-roles"],
+.settings-page:has(.settings-panel[data-panel="notifications"].active)   .st-page-intro[data-intro="notifications"],
+.settings-page:has(.settings-panel[data-panel="integrations"].active)    .st-page-intro[data-intro="integrations"],
+.settings-page:has(.settings-panel[data-panel="security"].active)        .st-page-intro[data-intro="security"],
+.settings-page:has(.settings-panel[data-panel="sessions"].active)        .st-page-intro[data-intro="sessions"],
+.settings-page:has(.settings-panel[data-panel="activity-log"].active)    .st-page-intro[data-intro="activity-log"],
+.settings-page:has(.settings-panel[data-panel="billing"].active)         .st-page-intro[data-intro="billing"],
+.settings-page:has(.settings-panel[data-panel="data-privacy"].active)    .st-page-intro[data-intro="data-privacy"]{display:block;}
 .st-eyebrow{
   display:block;font-size:var(--t-eyebrow);font-weight:600;
   letter-spacing:.08em;text-transform:uppercase;color:var(--st-mute);
@@ -189,24 +223,27 @@ html[data-theme="light"] .settings-page{
 }
 .st-sec-desc{
   font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:68ch;
+  color:var(--ivory-dim);max-width:var(--st-measure);
 }
 /* Secondary note under a section description. */
 .st-sec-note{
-  display:block;margin-top:var(--sp-2);
+  display:block;margin-top:var(--sp-2);max-width:var(--st-measure);
   font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);
 }
 .st-sec-note a{color:var(--ivory-dim);text-decoration:underline;text-underline-offset:2px;}
 .st-sec-note a:hover{color:var(--ivory);}
 
-/*  4 - Component A - setting row  */
+/*  4 - Component A - setting row
+    Rows sit on the card's content box (no edge-to-edge bleed) so a button on
+    the right lines up with the card edge, and the last row drops its bottom
+    padding so no dead space is left under it. */
 .st-row{
   display:grid;grid-template-columns:minmax(0,1fr) auto;
-  column-gap:var(--sp-5);align-items:center;
-  padding:var(--sp-4) var(--st-card-x);
-  margin-inline:calc(var(--st-card-x) * -1);   /* hover + dividers bleed to the card edge */
+  column-gap:24px;align-items:center;
+  padding:16px 0;
   transition:background .15s var(--ease-out);
 }
+.st-row:last-child{padding-bottom:0;}
 .st-row:hover{background:var(--ivory-ghost);}
 .st-row-main{min-width:0;display:grid;gap:var(--sp-1);}   /* title ABOVE description */
 .st-row-title{
@@ -216,7 +253,7 @@ html[data-theme="light"] .settings-page{
 }
 .st-row-desc{
   font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:68ch;overflow-wrap:break-word;
+  color:var(--ivory-dim);max-width:var(--st-measure);overflow-wrap:break-word;
 }
 /* Rows with a leading icon indent the description to the title's left edge. */
 .st-row-title:has(.st-row-icon) ~ .st-row-desc{
@@ -233,6 +270,8 @@ html[data-theme="light"] .settings-page{
   display:flex;align-items:center;justify-content:flex-end;
   gap:var(--sp-2);flex-shrink:0;
 }
+/* 36px tall, centred against the whole title+description block. */
+.st-row-actions .btn{min-height:36px;}
 /* One divider rule for every row type. Never on the first row of a card. */
 .st-row + .st-row,
 .st-row + .st-meta-row,
@@ -242,16 +281,19 @@ html[data-theme="light"] .settings-page{
 .st-meta-row + .toggle-row,
 .session-row + .session-row,
 .activity-row + .activity-row{border-top:1px solid var(--st-divider);}
-.st-divide-top{border-top:1px solid var(--st-divider);}
+/* Divider above a block that starts inside a card body. Same inset as the
+   card header divider - no edge-to-edge bleed. */
+.st-divide-top{border-top:1px solid var(--border);padding-top:20px;}
 
-/*  5 - Component B - meta row (label - hint - value)  */
+/*  5 - Component B - meta row (label - hint - value)
+    Same no-bleed inset as .st-row: security mixes the two in one card. */
 .st-meta-row{
   display:grid;
   grid-template-columns:minmax(160px,220px) minmax(0,1fr) auto;
   column-gap:var(--sp-5);align-items:center;
-  padding:var(--sp-4) var(--st-card-x);
-  margin-inline:calc(var(--st-card-x) * -1);
+  padding:16px 0;
 }
+.st-meta-row:last-child{padding-bottom:0;}
 .st-meta-label{font-size:var(--t-row);font-weight:600;color:var(--ivory);}
 .st-meta-hint{
   font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);
@@ -336,10 +378,10 @@ html[data-theme="light"] .settings-page{
 .toggle-row{
   display:grid;grid-template-columns:minmax(0,1fr) auto;
   column-gap:var(--sp-5);align-items:start;
-  padding:var(--sp-4) var(--st-card-x);
-  margin-inline:calc(var(--st-card-x) * -1);
+  padding:16px 0;
   cursor:pointer;transition:background .15s var(--ease-out);
 }
+.toggle-row:last-child{padding-bottom:0;}
 .toggle-row:hover{background:var(--ivory-ghost);}
 .toggle-label{
   display:grid;grid-template-columns:auto minmax(0,1fr);
@@ -361,7 +403,7 @@ html[data-theme="light"] .settings-page{
 }
 .toggle-desc{
   font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:68ch;overflow-wrap:break-word;
+  color:var(--ivory-dim);max-width:var(--st-measure);overflow-wrap:break-word;
 }
 .toggle-switch{position:relative;display:inline-flex;flex-shrink:0;}
 /* Centre the 22px switch on the 32px title line, not on the whole row. */
@@ -478,10 +520,10 @@ html[data-theme="light"] .settings-page{
 .st-list{display:flex;flex-direction:column;}
 .session-row{
   display:flex;align-items:center;gap:var(--sp-4);
-  padding:var(--sp-4) var(--st-card-x);
-  margin-inline:calc(var(--st-card-x) * -1);
+  padding:16px 0;
   transition:background .15s var(--ease-out);
 }
+.session-row:last-child{padding-bottom:0;}
 .session-row:hover{background:var(--ivory-ghost);}
 .session-meta{flex:1;min-width:0;}
 .session-device{font-size:var(--t-row);font-weight:600;color:var(--ivory);}
@@ -496,10 +538,10 @@ html[data-theme="light"] .settings-page{
 .activity-row{
   display:grid;grid-template-columns:auto minmax(0,1fr) auto;
   align-items:start;column-gap:var(--sp-4);
-  padding:var(--sp-4) var(--st-card-x);
-  margin-inline:calc(var(--st-card-x) * -1);
+  padding:16px 0;
   transition:background .15s var(--ease-out);
 }
+.activity-row:last-child{padding-bottom:0;}
 .activity-row:hover{background:var(--ivory-ghost);}
 .activity-icon{
   width:var(--st-icon);height:var(--st-icon);border-radius:var(--r-sm);flex-shrink:0;
@@ -540,24 +582,35 @@ html[data-theme="light"] .settings-page{
 }
 
 /* Plan + usage */
+/* Name and badge share row 1 so the badge is centred on the plan name; the org
+   name sits directly under it on row 2. */
 .st-plan-head{
-  display:flex;align-items:flex-start;justify-content:space-between;
-  gap:var(--sp-4);flex-wrap:wrap;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  column-gap:var(--sp-4);row-gap:4px;align-items:center;
 }
-.st-plan-name{font-size:var(--t-section);font-weight:600;color:var(--ivory);}
-.st-plan-org{font-size:var(--t-small);color:var(--st-mute);margin-top:var(--sp-1);}
+.st-plan-name{
+  grid-column:1;grid-row:1;
+  font-size:20px;font-weight:600;color:var(--ivory);line-height:var(--lh-tight);
+}
 .st-plan-badge{
+  grid-column:2;grid-row:1;align-self:center;
   display:inline-flex;align-items:center;height:24px;padding:0 var(--sp-3);
   border-radius:var(--r-pill);font-size:var(--t-small);font-weight:600;
   color:var(--teal);background:var(--teal-soft);border:1px solid var(--teal-glow);
 }
+.st-plan-org{
+  grid-column:1;grid-row:2;
+  font-size:var(--t-body);line-height:var(--lh-body);color:var(--st-mute);
+}
 .st-plan-desc{
   font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:68ch;margin:var(--sp-4) 0 0;
+  color:var(--ivory-dim);max-width:var(--st-measure);margin:12px 0 0;padding-bottom:24px;
 }
+/* Label and count share one baseline row; the bar sits 12px under it and the
+   note 12px under the bar. Bar and note run the full card width. */
 .st-usage-head{
   display:flex;align-items:baseline;justify-content:space-between;
-  gap:var(--sp-4);margin-bottom:var(--sp-3);
+  gap:var(--sp-4);margin-bottom:12px;
 }
 .st-usage-label{font-size:var(--t-small);font-weight:600;color:var(--ivory-dim);}
 .st-usage-nums{font-size:var(--t-row);font-weight:600;color:var(--ivory);font-variant-numeric:tabular-nums;}
@@ -569,8 +622,8 @@ html[data-theme="light"] .settings-page{
 .st-usage-fill{height:100%;border-radius:var(--r-pill);background:var(--st-accent);transition:width .4s var(--ease-out);}
 .st-usage-fill.warn{background:var(--st-warn);}
 .st-usage-fill.crit{background:var(--st-bad);}
-.st-usage-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-top:var(--sp-3);}
-.st-usage-note{font-size:var(--t-small);color:var(--st-mute);}
+.st-usage-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-top:12px;}
+.st-usage-note{font-size:13px;line-height:var(--lh-body);color:var(--st-mute);}
 
 /* Manager roles table */
 /* Card toolbar: context on the left, actions right-aligned with the primary last. */
@@ -590,7 +643,7 @@ html[data-theme="light"] .settings-page{
 /* Data & Privacy: what we hold, as a quiet two-column grid. */
 .st-data-intro{
   font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:68ch;margin:0 0 var(--sp-2);
+  color:var(--ivory-dim);max-width:var(--st-measure);margin:0 0 var(--sp-2);
 }
 /* Data We Store: four across on wide screens, two on tablets, one on phones. */
 .st-data-list{
@@ -638,6 +691,13 @@ html[data-theme="light"] .settings-page{
 .settings-page .st-muted{font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);}
 .settings-page .text-caption{font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);padding:var(--sp-4) 0;}
 .mr-toast{font-size:var(--t-small);font-weight:600;color:var(--st-warn);}
+
+/* Toasts (e.g. "Redirecting to the billing portal...") sit in the bottom-right
+   corner, clear of the cards. Scoped to Settings so other pages keep the
+   shared .toast-notification offset. */
+.settings-page .toast-notification{
+  bottom:24px;right:24px;z-index:300;
+}
 
 /* Integration cards: the standard card, plus a muted brand backdrop so the
    tile still reads as WhatsApp / Gmail without introducing a second palette.
@@ -747,9 +807,10 @@ html[data-theme="light"] .settings-page{
   .settings-page .st-card,
   .settings-page .st-section{--st-card-x:var(--sp-4);padding:var(--sp-4);}
   .st-data-list{grid-template-columns:minmax(0,1fr);}
-  .st-row,.st-meta-row,.toggle-row,.session-row,.activity-row{
-    padding:var(--sp-4) var(--st-card-x);margin-inline:calc(var(--st-card-x) * -1);
-  }
+  /* Rows keep the desktop inset on phones - no re-introduced bleed. */
+  .st-row:last-child,.st-meta-row:last-child,
+  .toggle-row:last-child,.session-row:last-child,
+  .activity-row:last-child{padding-bottom:0;}
   .st-row{grid-template-columns:minmax(0,1fr);row-gap:var(--sp-3);}
   .st-row-actions{justify-content:flex-start;width:100%;}
   .st-row-actions .btn{flex:1 1 auto;}
@@ -880,6 +941,16 @@ html[data-theme="light"] .settings-page{
         <div>
           <div class="page-title">Settings</div>
           <div class="breadcrumb"><span>Settings</span> / <span id="settingsBreadcrumb">Profile</span></div>
+          <p class="st-page-intro" data-intro="profile">Manage your personal information and how you appear across VooVr.</p>
+          <p class="st-page-intro" data-intro="organization">Update your company profile. These details affect your plan and how your team identifies the workspace.</p>
+          <p class="st-page-intro" data-intro="manager-roles">Send manager invites to employees who need read-only, scoped access to their team's data.</p>
+          <p class="st-page-intro" data-intro="notifications">Control which VooVr events and updates you receive.</p>
+          <p class="st-page-intro" data-intro="integrations">Connect outside services to extend what VooVr can do for you.</p>
+          <p class="st-page-intro" data-intro="security">Protect your VooVr account and manage authentication methods.</p>
+          <p class="st-page-intro" data-intro="sessions">Manage devices and active sessions connected to your VooVr account.</p>
+          <p class="st-page-intro" data-intro="activity-log">Review important activity and administrative changes across your VooVr organization.</p>
+          <p class="st-page-intro" data-intro="billing">Your subscription, plan details and employee seat usage.</p>
+          <p class="st-page-intro" data-intro="data-privacy">Manage your personal data, exports, and account lifecycle.</p>
         </div>
       </div>
       <div class="top-bar-right">
@@ -940,10 +1011,6 @@ html[data-theme="light"] .settings-page{
 
         <!-- ═══ PROFILE ═══ -->
         <div class="settings-panel active" data-panel="profile">
-          <div class="st-page">
-            <p class="st-desc">Manage your personal information and how you appear across VooVr.</p>
-          </div>
-
           <div class="st-section st-card" id="profileIdentitySection">
             <div class="profile-head">
               <div class="profile-avatar" id="profileAvatar">U</div>
@@ -999,10 +1066,6 @@ html[data-theme="light"] .settings-page{
 
         <!-- ═══ ORGANIZATION ═══ -->
         <div class="settings-panel" data-panel="organization">
-          <div class="st-page">
-            <p class="st-desc">Update your company profile. These details affect your plan and how your team identifies the workspace.</p>
-          </div>
-
           <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Organization information</h3>
@@ -1053,10 +1116,6 @@ html[data-theme="light"] .settings-page{
 
         <!-- ═══ MANAGER ROLES ═══ -->
         <div class="settings-panel admin-only" data-panel="manager-roles" style="display:none;">
-          <div class="st-page">
-            <p class="st-desc">Send manager invites to employees who need read-only, scoped access to their team's data.</p>
-          </div>
-
           <div class="st-section st-card" id="mrLoading">
             <div class="st-visually-hidden">Loading roster…</div>
             <div class="st-skeleton" aria-hidden="true">
@@ -1099,10 +1158,6 @@ html[data-theme="light"] .settings-page{
 
         <!-- ═══ NOTIFICATIONS ═══ -->
         <div class="settings-panel" data-panel="notifications">
-          <div class="st-page">
-            <p class="st-desc">Control which VooVr events and updates you receive.</p>
-          </div>
-
           <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Email notifications</h3>
@@ -1184,10 +1239,6 @@ html[data-theme="light"] .settings-page{
 
         <!-- ═══ INTEGRATIONS ═══ -->
         <div class="settings-panel" data-panel="integrations">
-          <div class="st-page">
-            <p class="st-desc">Connect outside services to extend what VooVr can do for you.</p>
-          </div>
-
           <div class="st-card st-int st-int--whatsapp">
             <div class="st-sec-head st-sec-head--action">
               <div>
@@ -1248,10 +1299,7 @@ html[data-theme="light"] .settings-page{
 
         <!-- ═══ SECURITY (existing TOTP + recovery functionality preserved) ═══ -->
         <div class="settings-panel" data-panel="security">
-          <div class="st-page">
-            <p class="st-desc">Protect your VooVr account and manage authentication methods.</p>
-          </div>
-<div class="st-section st-card">
+          <div class="st-section st-card">
             <div class="st-sec-head st-sec-head--action">
               <div>
                 <h3 class="st-sec-title">Security overview</h3>
@@ -1321,10 +1369,6 @@ html[data-theme="light"] .settings-page{
 
         <!-- ═══ SESSIONS (existing active-sessions functionality preserved) ═══ -->
         <div class="settings-panel" data-panel="sessions">
-          <div class="st-page">
-            <p class="st-desc">Manage devices and active sessions connected to your VooVr account.</p>
-          </div>
-
           <!-- CURRENT SESSION -->
           <div class="st-section st-card">
             <div class="st-sec-head">
@@ -1358,10 +1402,6 @@ html[data-theme="light"] .settings-page{
 
         <!-- ═══ ACTIVITY LOG (existing admin-only audit-log functionality preserved) ═══ -->
         <div class="settings-panel" data-panel="activity-log">
-          <div class="st-page">
-            <p class="st-desc">Review important activity and administrative changes across your VooVr organization.</p>
-          </div>
-
           <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Activity</h3>
@@ -1392,10 +1432,6 @@ html[data-theme="light"] .settings-page{
 
         <!-- ═══ BILLING (existing billing functionality preserved, admin-only) ═══ -->
         <div class="settings-panel admin-only" data-panel="billing" style="display:none;">
-          <div class="st-page">
-            <p class="st-desc">Your subscription, plan details and employee seat usage.</p>
-          </div>
-
           <!-- CURRENT PLAN -->
           <div class="st-section st-card">
             <div class="st-sec-head">
@@ -1404,11 +1440,9 @@ html[data-theme="light"] .settings-page{
             </div>
 
             <div class="st-plan-head">
-              <div>
-                <div class="st-plan-name">Growth Plan</div>
-                <div class="st-plan-org" id="planOrgName">Your Organization</div>
-              </div>
+              <div class="st-plan-name">Growth Plan</div>
               <span class="st-plan-badge">Active</span>
+              <div class="st-plan-org" id="planOrgName">Your Organization</div>
             </div>
 
             <p class="st-plan-desc">
@@ -1448,10 +1482,6 @@ html[data-theme="light"] .settings-page{
 
         <!-- ═══ DATA &amp; PRIVACY (existing export + account-deletion functionality preserved) ═══ -->
         <div class="settings-panel" data-panel="data-privacy">
-          <div class="st-page">
-            <p class="st-desc">Manage your personal data, exports, and account lifecycle.</p>
-          </div>
-
           <!-- DATA WE STORE -->
           <div class="st-section st-card">
             <div class="st-sec-head">
