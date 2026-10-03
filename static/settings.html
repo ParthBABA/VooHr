@@ -8,830 +8,9 @@
 <!-- shared-head -->
 <script src="/ui-feedback.js"></script>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="settings-v2.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <script src="/csrf.js" defer></script>
-<style>
-/* 
-   SETTINGS DESIGN SYSTEM
-   -
-   Every setting on this page is exactly one of five components:
-
-     A  .st-row        setting row   title + description - control
-     B  .st-meta-row   meta row      label - hint - value
-     C  .st-field      form field    label + control + helper / error
-     D  .st-status     status badge  dot + label (ok / warn / crit / neutral)
-     E  .toggle-row    toggle row    title + description - switch
-
-   Each selector is defined EXACTLY ONCE, in this order:
-
-     0 scope tokens - 1 page shell - 2 typography - 3 card
-     4 A - 5 B - 6 C - 7 D - 8 E - 9 buttons - 10 danger zone
-     11 lists (sessions / activity / plan / table / integration)
-     12 states - 13 responsive
-
-   Spacing, radius and type values come from the tokens declared once in
-   static/style.css :root (--sp-1..7, --r-sm/md/lg/pill, --t-*, --lh-*).
-   Only colour tokens live here, and they are scoped to .settings-page so the
-   rest of the app - including the global uppercase h1-h6 rule - is untouched.
-    */
-
-/*  0 - Scope tokens  */
-.settings-page{
-  --st-accent:var(--amber);            /* the ONE accent: primary actions    */
-  --st-accent-bg:var(--amber);
-  --st-accent-ink:#0A0D13;
-  --st-divider:rgba(130,160,220,0.20);
-  --st-mute:#7B8598;                   /* 4.8:1 on --ink, 5.3:1 on --void   */
-  --st-ok:var(--teal);
-  --st-warn:var(--amber);
-  --st-bad:var(--red);
-  --st-icon:36px;                      /* leading icon in a title line    */
-  --st-card-x:var(--sp-6);             /* card padding-x, and the full-bleed tables  */
-  /* Prose measure. `ch` is the width of "0", which runs ~1.4x wider than an
-     average character in Inter, so 48ch lands the longest rendered line at
-     ~67 characters - inside the 70-character reading target. A literal 64ch
-     would run out to ~90 characters. */
-  --st-measure:48ch;
-  font-family:var(--font-d);            /* Inter, not the global Lato body   */
-}
-html[data-theme="light"] .settings-page{
-  --st-accent-bg:var(--amber-deep);    /* amber-deep keeps 6.4:1 vs --ink   */
-  --st-accent-ink:#FFFFFF;
-  --st-divider:rgba(20,30,60,0.16);
-  --st-mute:#5E6674;                   /* 4.6:1 on --void, 5.8:1 on --ink  */
-}
-/* The global h1-h6 rule shouts in caps; Settings is sentence case throughout. */
-.settings-page h1,.settings-page h2,.settings-page h3,
-.settings-page h4,.settings-page h5,.settings-page h6{
-  font-family:var(--font-d);
-  text-transform:none;
-  letter-spacing:-0.01em;
-  line-height:var(--lh-tight);
-}
-.settings-page :focus-visible{outline-color:var(--st-accent);}
-
-/*  Page shell: the settings nav is the fixed left bar, content is one
-    centred column in the space that remains.
-    .settings-layout and .settings-topbar-inner share one 1040px box so the
-    header title, the card edges and the header actions line up exactly. */
-.settings-layout{
-  display:grid;
-  grid-template-columns:minmax(0,1fr);
-  max-width:1040px;
-  margin:0 auto;
-  padding:var(--sp-6) clamp(24px,4vw,48px) var(--sp-7);
-}
-/* Text stops at 64ch; only bars and tables run the full card width. */
-.settings-content{min-width:0;width:100%;max-width:1040px;margin-inline:0;}
-.settings-panel{display:none;}
-.settings-panel.active{display:grid;gap:var(--sp-5);}
-/* Sparse panels sit side by side once there is room for two readable columns. */
-@media(min-width:1100px){
-  .settings-panel.active[data-panel="billing"],
-  .settings-panel.active[data-panel="sessions"],
-  .settings-panel.active[data-panel="data-privacy"]{
-    grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);
-    gap:24px;
-    align-items:start;
-  }
-  /* The data tiles lose a column with their card, so they stop at two. */
-  .settings-panel[data-panel="data-privacy"] .st-data-list{
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
-}
-.st-stack{display:grid;gap:var(--sp-5);}
-
-/* Page header: full-bleed bar, but its contents share the content
-   container so the title lines up with the card edges. */
-.settings-page .top-bar{padding:1rem 0;}
-.settings-topbar-inner{
-  width:100%;max-width:1040px;margin:0 auto;
-  padding-inline:clamp(24px,4vw,48px);
-  display:flex;justify-content:space-between;align-items:flex-start;
-  gap:var(--sp-4);min-width:0;
-}
-.settings-page .top-bar .page-title{
-  font-family:var(--font-d);font-size:var(--t-page);font-weight:600;
-  letter-spacing:-0.02em;text-transform:none;color:var(--ivory);line-height:1.2;
-}
-.settings-page .top-bar .breadcrumb{
-  font-family:var(--font-d);font-size:var(--t-small);font-weight:400;
-  letter-spacing:normal;text-transform:none;color:var(--st-mute);margin-top:var(--sp-1);
-}
-.settings-page .top-bar .icon-btn{width:40px;height:40px;border-radius:var(--r-sm);}
-
-/* Left bar: 260px, fixed, full height, skinned from the same tokens as
-   the global .sidebar so it reads as the native app nav, not a second rail.
-   It deliberately avoids the .sidebar class so the global collapsed/icon-only
-   rules and their width overrides cannot touch it. */
-.settings-nav-wrap{
-  position:fixed;top:0;left:0;z-index:100;
-  width:260px;height:100dvh;
-  display:flex;flex-direction:column;
-  background:var(--sidebar);border-right:1px solid var(--border);
-  overflow:hidden;
-}
-.settings-nav-wrap .sidebar-header,
-.settings-nav-wrap .sidebar-footer{flex-shrink:0;}
-.settings-nav-wrap .sidebar-logo{color:inherit;}
-
-/* Back link + section eyebrow, sitting under the logo */
-.settings-side-top{padding:1.2rem 0 0;}
-.settings-back{
-  display:flex;align-items:center;gap:var(--sp-2);
-  margin:0 1.5rem;
-  color:var(--ivory-dim);font-family:var(--font-d);
-  font-size:var(--t-small);font-weight:500;line-height:1.3;
-  text-decoration:none;
-  transition:color .15s var(--ease-out);
-}
-.settings-back:hover{color:var(--ivory);}
-.settings-back-arrow{font-size:1.05em;line-height:1;}
-.settings-side-eyebrow{
-  display:block;margin:var(--sp-4) 1.5rem 0;padding-top:var(--sp-4);
-  border-top:1px solid var(--border);
-}
-
-.settings-nav{
-  flex:1;min-height:0;overflow-y:auto;
-  display:flex;flex-direction:column;gap:var(--sp-1);
-  padding:0.6rem 0 1rem;
-}
-.settings-nav-item{
-  display:flex;align-items:center;gap:var(--sp-3);
-  min-height:40px;padding:0 1.5rem;
-  position:relative;border-radius:var(--r-sm);
-  color:var(--ivory-dim);font-family:var(--font-d);
-  font-size:var(--t-body);font-weight:500;line-height:1.3;
-  text-decoration:none;cursor:pointer;
-  transition:background .15s var(--ease-out),color .15s var(--ease-out);
-}
-.settings-nav-item svg{width:18px;height:18px;flex-shrink:0;stroke-width:1.75;}
-.settings-nav-item:hover{background:var(--ivory-ghost);color:var(--ivory);}
-.settings-nav-item.active{background:var(--ivory-ghost);color:var(--ivory);font-weight:600;}
-.settings-nav-item .nav-ind{
-  position:absolute;left:0;top:50%;transform:translateY(-50%);
-  width:2px;height:20px;border-radius:var(--r-pill);background:transparent;
-  transition:background .15s var(--ease-out);
-}
-.settings-nav-item.active .nav-ind{background:var(--st-accent);}
-
-/*  2 - Typography  */
-/* One intro per panel, sitting under the breadcrumb. The visible one is chosen
-    with :has() on the active panel, so switching tabs needs no JS. */
-.st-page-intro{
-  display:none;
-  margin:4px 0 24px;
-  font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--st-mute);max-width:var(--st-measure);
-}
-.settings-page:has(.settings-panel[data-panel="profile"].active)         .st-page-intro[data-intro="profile"],
-.settings-page:has(.settings-panel[data-panel="organization"].active)    .st-page-intro[data-intro="organization"],
-.settings-page:has(.settings-panel[data-panel="manager-roles"].active)   .st-page-intro[data-intro="manager-roles"],
-.settings-page:has(.settings-panel[data-panel="notifications"].active)   .st-page-intro[data-intro="notifications"],
-.settings-page:has(.settings-panel[data-panel="integrations"].active)    .st-page-intro[data-intro="integrations"],
-.settings-page:has(.settings-panel[data-panel="security"].active)        .st-page-intro[data-intro="security"],
-.settings-page:has(.settings-panel[data-panel="sessions"].active)        .st-page-intro[data-intro="sessions"],
-.settings-page:has(.settings-panel[data-panel="activity-log"].active)    .st-page-intro[data-intro="activity-log"],
-.settings-page:has(.settings-panel[data-panel="billing"].active)         .st-page-intro[data-intro="billing"],
-.settings-page:has(.settings-panel[data-panel="data-privacy"].active)    .st-page-intro[data-intro="data-privacy"]{display:block;}
-.st-eyebrow{
-  display:block;font-size:var(--t-eyebrow);font-weight:600;
-  letter-spacing:.08em;text-transform:uppercase;color:var(--st-mute);
-}
-
-/*  3 - Card - the only grouping surface  */
-.settings-page .st-card,
-.settings-page .st-section{
-  background:var(--ink);
-  border:1px solid var(--st-divider);
-  border-radius:var(--r-lg);
-  padding:var(--sp-5) var(--st-card-x);
-}
-.st-sec-head{
-  display:flex;flex-direction:column;gap:var(--sp-1);
-  padding-bottom:var(--sp-4);margin:0 0 var(--sp-4);
-  border-bottom:1px solid var(--st-divider);
-}
-.st-sec-head--action{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;
-  align-items:start;gap:var(--sp-2) var(--sp-4);
-}
-.st-sec-title{
-  font-size:var(--t-section);font-weight:600;
-  line-height:var(--lh-tight);color:var(--ivory);margin:0;
-}
-.st-sec-desc{
-  font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:var(--st-measure);
-}
-/* Secondary note under a section description. */
-.st-sec-note{
-  display:block;margin-top:var(--sp-2);max-width:var(--st-measure);
-  font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);
-}
-.st-sec-note a{color:var(--ivory-dim);text-decoration:underline;text-underline-offset:2px;}
-.st-sec-note a:hover{color:var(--ivory);}
-
-/*  4 - Component A - setting row
-    Rows sit on the card's content box (no edge-to-edge bleed) so a button on
-    the right lines up with the card edge, and the last row drops its bottom
-    padding so no dead space is left under it. */
-.st-row{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;
-  column-gap:24px;align-items:center;
-  padding:16px 0;
-  transition:background .15s var(--ease-out);
-}
-.st-row:last-child{padding-bottom:0;}
-.st-row:hover{background:var(--ivory-ghost);}
-.st-row-main{min-width:0;display:grid;gap:var(--sp-1);}   /* title ABOVE description */
-.st-row-title{
-  display:flex;align-items:center;gap:var(--sp-3);
-  font-size:var(--t-row);font-weight:600;
-  line-height:var(--lh-tight);color:var(--ivory);
-}
-.st-row-desc{
-  font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:var(--st-measure);overflow-wrap:break-word;
-}
-/* Rows with a leading icon indent the description to the title's left edge. */
-.st-row-title:has(.st-row-icon) ~ .st-row-desc{
-  padding-left:calc(var(--st-icon) + var(--sp-3));
-}
-.st-row-icon{
-  width:var(--st-icon);height:var(--st-icon);flex-shrink:0;
-  display:inline-flex;align-items:center;justify-content:center;
-  border-radius:var(--r-sm);background:var(--surface);
-  border:1px solid var(--st-divider);color:var(--ivory-dim);
-}
-.st-row-icon svg{width:18px;height:18px;stroke-width:1.75;}
-.st-row-actions{
-  display:flex;align-items:center;justify-content:flex-end;
-  gap:var(--sp-2);flex-shrink:0;
-}
-/* 36px tall, centred against the whole title+description block. */
-.st-row-actions .btn{min-height:36px;}
-/* One divider rule for every row type. Never on the first row of a card. */
-.st-row + .st-row,
-.st-row + .st-meta-row,
-.st-row + .toggle-row,
-.st-meta-row + .st-row,
-.st-meta-row + .st-meta-row,
-.st-meta-row + .toggle-row,
-.session-row + .session-row,
-.activity-row + .activity-row{border-top:1px solid var(--st-divider);}
-/* Divider above a block that starts inside a card body. Same inset as the
-   card header divider - no edge-to-edge bleed. */
-.st-divide-top{border-top:1px solid var(--border);padding-top:20px;}
-
-/*  5 - Component B - meta row (label - hint - value)
-    Same no-bleed inset as .st-row: security mixes the two in one card. */
-.st-meta-row{
-  display:grid;
-  grid-template-columns:minmax(160px,220px) minmax(0,1fr) auto;
-  column-gap:var(--sp-5);align-items:center;
-  padding:16px 0;
-}
-.st-meta-row:last-child{padding-bottom:0;}
-.st-meta-label{font-size:var(--t-row);font-weight:600;color:var(--ivory);}
-.st-meta-hint{
-  font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);
-}
-.st-meta-value{
-  font-size:var(--t-small);color:var(--st-mute);text-align:right;
-  font-variant-numeric:tabular-nums;white-space:nowrap;
-}
-
-/*  6 - Component C - form field  */
-.st-fields{
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:var(--sp-4) var(--sp-5);
-}
-.st-fields .span-2{grid-column:1 / -1;}
-.st-field{display:flex;flex-direction:column;min-width:0;}
-.st-field label{
-  font-size:var(--t-row);font-weight:500;color:var(--ivory);
-  text-transform:none;letter-spacing:0;margin-bottom:var(--sp-2);
-}
-.settings-page .form-input{
-  height:40px;padding:0 var(--sp-3);
-  border-radius:var(--r-sm);border:1px solid var(--st-divider);
-  background:var(--surface);color:var(--ivory);
-  font-family:var(--font-d);font-size:var(--t-body);
-  transition:border-color .15s var(--ease-out),box-shadow .15s var(--ease-out);
-}
-.settings-page select.form-input{padding-right:var(--sp-2);}
-.settings-page .form-input::placeholder{color:var(--st-mute);}
-.settings-page .form-input:focus{
-  border-color:var(--st-accent);box-shadow:0 0 0 2px var(--amber-glow);
-}
-.settings-page .form-input[readonly]{opacity:.75;}
-.settings-page .form-input.input-error{
-  border-color:var(--st-bad);box-shadow:0 0 0 2px var(--red-soft);
-}
-.st-hint{
-  font-size:var(--t-small);line-height:var(--lh-body);
-  color:var(--st-mute);margin-top:var(--sp-2);
-}
-.settings-page .field-error{
-  font-size:var(--t-small);font-weight:600;color:var(--st-bad);
-  margin-top:var(--sp-2);display:none;
-}
-.st-help{
-  font-size:var(--t-body);line-height:var(--lh-body);color:var(--ivory-dim);
-  background:var(--surface);border:1px solid var(--st-divider);
-  border-radius:var(--r-md);padding:var(--sp-4);margin-top:var(--sp-5);
-}
-.st-help p{margin:var(--sp-2) 0 0;}
-
-/*  7 - Component D - status badge  */
-.st-status{
-  display:inline-flex;align-items:center;gap:var(--sp-2);
-  height:24px;padding:0 var(--sp-3);border-radius:var(--r-pill);
-  font-size:var(--t-small);font-weight:600;white-space:nowrap;
-  color:var(--ivory-dim);background:var(--surface);border:1px solid var(--st-divider);
-}
-.st-status .st-dot{
-  width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--st-mute);
-}
-.st-status.ok{color:var(--st-ok);background:var(--teal-soft);border-color:var(--teal-glow);}
-.st-status.ok .st-dot{background:var(--st-ok);}
-.st-status.warn{color:var(--st-warn);background:var(--amber-soft);border-color:var(--amber-glow);}
-.st-status.warn .st-dot{background:var(--st-warn);}
-.st-status.crit{color:var(--st-bad);background:var(--red-soft);border-color:var(--red-glow);}
-.st-status.crit .st-dot{background:var(--st-bad);}
-.st-status.neutral .st-dot{background:var(--st-mute);}
-.st-status strong{font-weight:600;color:var(--ivory);}
-.st-status-row{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;}
-/* Connection chips. The WhatsApp script swaps is-off / is-on on the badge. */
-.st-status.is-off .st-dot{background:transparent;box-shadow:inset 0 0 0 1.5px var(--st-mute);}
-.st-status.is-on{color:var(--st-ok);background:var(--teal-soft);border-color:var(--teal-glow);}
-.st-status.is-on .st-dot,
-.st-status.is-on .wa-glyph-wa{display:none;}
-.st-status.is-on .wa-glyph-check{display:block;color:var(--st-ok);}
-.st-status .wa-glyph{width:15px;height:15px;flex-shrink:0;stroke-width:1.75;}
-.wa-glyph-check{display:none;}
-
-/*  8 - Component E - toggle row  */
-.st-toggle-list{display:flex;flex-direction:column;}
-.toggle-row{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;
-  column-gap:var(--sp-5);align-items:start;
-  padding:16px 0;
-  cursor:pointer;transition:background .15s var(--ease-out);
-}
-.toggle-row:last-child{padding-bottom:0;}
-.toggle-row:hover{background:var(--ivory-ghost);}
-.toggle-label{
-  display:grid;grid-template-columns:auto minmax(0,1fr);
-  column-gap:var(--sp-3);row-gap:var(--sp-1);align-items:center;min-width:0;
-}
-.toggle-label .toggle-icon{grid-row:1 / span 2;}
-.toggle-label .toggle-title,
-.toggle-label .toggle-desc{grid-column:2;}
-.toggle-icon{
-  width:var(--st-icon);height:var(--st-icon);flex-shrink:0;
-  display:inline-flex;align-items:center;justify-content:center;
-  border-radius:var(--r-sm);background:var(--surface);
-  border:1px solid var(--st-divider);color:var(--ivory-dim);
-}
-.toggle-icon svg{width:18px;height:18px;stroke-width:1.75;}
-.toggle-title{
-  font-size:var(--t-row);font-weight:600;
-  line-height:var(--lh-tight);color:var(--ivory);
-}
-.toggle-desc{
-  font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:var(--st-measure);overflow-wrap:break-word;
-}
-.toggle-switch{position:relative;display:inline-flex;flex-shrink:0;}
-/* Centre the 22px switch on the 32px title line, not on the whole row. */
-.toggle-row:has(.toggle-icon) .toggle-switch{margin-top:calc((var(--st-icon) - 22px) / 2);}
-.toggle-switch input{
-  position:absolute;inset:0;width:100%;height:100%;
-  margin:0;opacity:0;cursor:pointer;z-index:1;
-}
-.toggle-slider{
-  display:block;position:relative;width:40px;height:22px;
-  border-radius:var(--r-pill);background:var(--surface);
-  border:1px solid var(--st-divider);
-  transition:background .15s var(--ease-out),border-color .15s var(--ease-out);
-}
-.toggle-slider::before{
-  content:'';position:absolute;top:2px;left:2px;
-  width:16px;height:16px;border-radius:50%;background:var(--st-mute);
-  transition:transform .15s var(--ease-out),background .15s var(--ease-out);
-}
-.toggle-switch input:checked + .toggle-slider{background:var(--st-ok);border-color:var(--st-ok);}
-.toggle-switch input:checked + .toggle-slider::before{transform:translateX(18px);background:var(--void);}
-.toggle-switch input:focus-visible + .toggle-slider{outline:2px solid var(--st-accent);outline-offset:2px;}
-.toggle-switch input:disabled + .toggle-slider{opacity:.55;cursor:not-allowed;}
-.st-note{font-size:var(--t-small);color:var(--st-mute);padding:var(--sp-2) var(--st-card-x) 0;}
-
-/*  9 - Buttons - three kinds only  */
-.settings-page .btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-2);
-  height:40px;padding:0 var(--sp-4);
-  border-radius:var(--r-sm);border:1px solid var(--st-divider);
-  background:transparent;color:var(--ivory);
-  font-family:var(--font-d);font-size:var(--t-body);font-weight:500;
-  letter-spacing:0;text-transform:none;white-space:nowrap;
-  transition:background .15s var(--ease-out),border-color .15s var(--ease-out),color .15s var(--ease-out);
-}
-.settings-page .btn-sm{height:36px;padding:0 var(--sp-3);}
-.settings-page .btn:focus-visible{outline:2px solid var(--st-accent);outline-offset:2px;}
-.settings-page .btn-primary{background:var(--st-accent-bg);border-color:var(--st-accent-bg);color:var(--st-accent-ink);}
-.settings-page .btn-primary:hover{background:var(--st-accent-bg);border-color:var(--st-accent-bg);filter:brightness(1.08);}
-.settings-page .btn-outline{background:transparent;border:1px solid var(--st-divider);color:var(--ivory-dim);}
-.settings-page .btn-outline:hover{background:var(--ivory-ghost);border-color:var(--border-lit);color:var(--ivory);}
-.settings-page .st-danger-btn{background:transparent;border-color:var(--st-bad);color:var(--st-bad);}
-.settings-page .st-danger-btn:hover{background:var(--red-soft);border-color:var(--st-bad);color:var(--st-bad);}
-
-/* Action footer. Right-aligned: destructive first, primary last. */
-.st-actions{
-  display:flex;align-items:center;justify-content:flex-end;gap:var(--sp-3);flex-wrap:wrap;
-  margin-top:var(--sp-4);padding-top:var(--sp-4);border-top:1px solid var(--st-divider);
-}
-/* Standalone save bar for editable tabs. Sticky so Save is always in reach. */
-.st-savebar{
-  display:flex;align-items:center;justify-content:flex-end;gap:var(--sp-3);flex-wrap:wrap;
-  position:sticky;bottom:var(--sp-3);z-index:3;
-  margin-top:calc(var(--sp-5) * -1);padding:var(--sp-3) var(--sp-4);
-  border:1px solid var(--st-divider);border-radius:var(--r-md);
-  background:var(--ink);box-shadow:var(--shadow-md);
-}
-/* Compact row inside a confirm zone: no divider, no negative bleed. */
-.st-actions--tight{
-  justify-content:flex-start;gap:var(--sp-2);
-  margin:var(--sp-4) 0 0;padding:0;border-top:0;
-}
-
-/*  10 - Danger zone  */
-.st-card--danger{border-color:var(--red-glow);}
-.st-card--danger .st-sec-title{color:var(--st-bad);}
-.st-confirm-zone{margin-top:var(--sp-4);padding-top:var(--sp-4);border-top:1px solid var(--red-glow);}
-.st-confirm-note{
-  font-size:var(--t-body);line-height:var(--lh-body);color:var(--ivory-dim);
-  background:var(--red-soft);border:1px solid var(--red-glow);
-  border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);
-  margin:var(--sp-4) 0;
-}
-.st-confirm-fields{
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:var(--sp-4);margin-bottom:var(--sp-4);
-}
-
-/*  11 - Lists, plan, table, integrations  */
-/* Profile identity */
-.profile-head{display:flex;align-items:center;gap:var(--sp-4);}
-.profile-avatar{
-  width:56px;height:56px;border-radius:var(--r-lg);flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  background:var(--st-accent-bg);color:var(--st-accent-ink);
-  font-size:var(--t-section);font-weight:600;
-}
-.profile-name{font-size:var(--t-section);font-weight:600;color:var(--ivory);}
-.profile-role{font-size:var(--t-small);color:var(--st-mute);margin-top:var(--sp-1);}
-
-/* Sessions */
-.st-current{
-  display:flex;align-items:center;gap:var(--sp-4);
-  background:var(--surface);border:1px solid var(--st-divider);
-  border-radius:var(--r-md);padding:var(--sp-4);
-}
-.st-current .session-icon{color:var(--st-accent);}
-.st-current-row-main{min-width:0;flex:1;}
-.st-current-device{
-  display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
-  font-size:var(--t-row);font-weight:600;color:var(--ivory);
-}
-.st-current-meta{
-  font-size:var(--t-small);line-height:var(--lh-body);
-  color:var(--st-mute);margin-top:var(--sp-1);
-}
-.st-current .st-status{flex-shrink:0;}
-.session-icon{
-  width:var(--st-icon);height:var(--st-icon);border-radius:var(--r-sm);flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  background:var(--ink);border:1px solid var(--st-divider);color:var(--ivory-dim);
-}
-.session-icon svg{width:18px;height:18px;stroke-width:1.75;}
-.st-list{display:flex;flex-direction:column;}
-.session-row{
-  display:flex;align-items:center;gap:var(--sp-4);
-  padding:16px 0;
-  transition:background .15s var(--ease-out);
-}
-.session-row:last-child{padding-bottom:0;}
-.session-row:hover{background:var(--ivory-ghost);}
-.session-meta{flex:1;min-width:0;}
-.session-device{font-size:var(--t-row);font-weight:600;color:var(--ivory);}
-.session-loc{font-size:var(--t-small);color:var(--st-mute);margin-top:var(--sp-1);}
-.session-time{
-  flex-shrink:0;margin-left:auto;font-size:var(--t-small);
-  color:var(--st-mute);font-variant-numeric:tabular-nums;white-space:nowrap;
-}
-.session-signout{flex-shrink:0;min-width:96px;justify-content:center;}
-
-/* Activity log */
-.activity-row{
-  display:grid;grid-template-columns:auto minmax(0,1fr) auto;
-  align-items:start;column-gap:var(--sp-4);
-  padding:16px 0;
-  transition:background .15s var(--ease-out);
-}
-.activity-row:last-child{padding-bottom:0;}
-.activity-row:hover{background:var(--ivory-ghost);}
-.activity-icon{
-  width:var(--st-icon);height:var(--st-icon);border-radius:var(--r-sm);flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  background:var(--surface);border:1px solid var(--st-divider);color:var(--ivory-dim);
-}
-.activity-icon svg{width:18px;height:18px;stroke-width:1.75;}
-.activity-icon.blue{color:var(--violet);background:var(--violet-soft);border-color:var(--violet-glow);}
-.activity-icon.teal{color:var(--teal);background:var(--teal-soft);border-color:var(--teal-glow);}
-.activity-icon.amber{color:var(--amber);background:var(--amber-soft);border-color:var(--amber-glow);}
-.activity-icon.red{color:var(--red);background:var(--red-soft);border-color:var(--red-glow);}
-.activity-main{min-width:0;padding-top:2px;}
-.activity-title{font-size:var(--t-row);font-weight:600;color:var(--ivory);}
-.activity-detail{
-  font-size:var(--t-small);line-height:var(--lh-body);color:var(--ivory-dim);
-  margin-top:var(--sp-1);overflow-wrap:break-word;
-}
-.activity-time{
-  font-size:var(--t-small);color:var(--st-mute);white-space:nowrap;
-  font-variant-numeric:tabular-nums;padding-top:2px;
-}
-
-/* Empty + restricted states: one muted sentence plus what unblocks it.
-   .activity-empty is written by the audit-log script, so both names are styled. */
-.st-empty,.activity-empty{
-  display:flex;align-items:flex-start;gap:var(--sp-4);padding:var(--sp-4) 0;
-}
-.st-empty-icon{
-  width:var(--st-icon);height:var(--st-icon);border-radius:var(--r-sm);flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  background:var(--surface);border:1px solid var(--st-divider);color:var(--ivory-dim);
-}
-.st-empty-icon svg{width:18px;height:18px;stroke-width:1.75;}
-.st-empty--warn .st-empty-icon{background:var(--amber-soft);border-color:var(--amber-glow);color:var(--amber);}
-.st-empty-title{font-size:var(--t-row);font-weight:600;color:var(--ivory);}
-.st-empty-desc{
-  font-size:var(--t-body);line-height:var(--lh-body);color:var(--ivory-dim);margin-top:var(--sp-1);
-}
-
-/* Plan + usage */
-/* Name and badge share row 1 so the badge is centred on the plan name; the org
-   name sits directly under it on row 2. */
-.st-plan-head{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;
-  column-gap:var(--sp-4);row-gap:4px;align-items:center;
-}
-.st-plan-name{
-  grid-column:1;grid-row:1;
-  font-size:20px;font-weight:600;color:var(--ivory);line-height:var(--lh-tight);
-}
-.st-plan-badge{
-  grid-column:2;grid-row:1;align-self:center;
-  display:inline-flex;align-items:center;height:24px;padding:0 var(--sp-3);
-  border-radius:var(--r-pill);font-size:var(--t-small);font-weight:600;
-  color:var(--teal);background:var(--teal-soft);border:1px solid var(--teal-glow);
-}
-.st-plan-org{
-  grid-column:1;grid-row:2;
-  font-size:var(--t-body);line-height:var(--lh-body);color:var(--st-mute);
-}
-.st-plan-desc{
-  font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:var(--st-measure);margin:12px 0 0;padding-bottom:24px;
-}
-/* Label and count share one baseline row; the bar sits 12px under it and the
-   note 12px under the bar. Bar and note run the full card width. */
-.st-usage-head{
-  display:flex;align-items:baseline;justify-content:space-between;
-  gap:var(--sp-4);margin-bottom:12px;
-}
-.st-usage-label{font-size:var(--t-small);font-weight:600;color:var(--ivory-dim);}
-.st-usage-nums{font-size:var(--t-row);font-weight:600;color:var(--ivory);font-variant-numeric:tabular-nums;}
-.st-usage-nums span{color:var(--st-mute);font-weight:400;}
-.st-usage-bar{
-  width:100%;height:8px;border-radius:var(--r-pill);
-  background:var(--surface);border:1px solid var(--st-divider);overflow:hidden;
-}
-.st-usage-fill{height:100%;border-radius:var(--r-pill);background:var(--st-accent);transition:width .4s var(--ease-out);}
-.st-usage-fill.warn{background:var(--st-warn);}
-.st-usage-fill.crit{background:var(--st-bad);}
-.st-usage-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-top:12px;}
-.st-usage-note{font-size:13px;line-height:var(--lh-body);color:var(--st-mute);}
-
-/* Manager roles table */
-/* Card toolbar: context on the left, actions right-aligned with the primary last. */
-.st-toolbar{
-  display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
-  padding-bottom:var(--sp-4);margin-bottom:var(--sp-4);
-  border-bottom:1px solid var(--st-divider);
-}
-.st-toolbar-gap{flex:1 1 auto;min-width:var(--sp-4);}
-/* Explanatory block at the foot of a card: eyebrow label plus one muted paragraph. */
-.st-help-block{
-  margin-top:var(--sp-4);padding-top:var(--sp-4);
-  border-top:1px solid var(--st-divider);
-}
-.st-help-block .st-eyebrow{display:block;margin-bottom:var(--sp-2);}
-.st-help-block .st-help{margin:0;}
-/* Data & Privacy: what we hold, as a quiet two-column grid. */
-.st-data-intro{
-  font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:var(--st-measure);margin:0 0 var(--sp-2);
-}
-/* Data We Store: four across on wide screens, two on tablets, one on phones. */
-.st-data-list{
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:var(--sp-4);margin-top:var(--sp-4);
-}
-@media(max-width:1279px){
-  .st-data-list{grid-template-columns:repeat(2,minmax(0,1fr));}
-}
-.st-data-item{
-  padding:var(--sp-3) var(--sp-4);
-  border:1px solid var(--st-divider);border-radius:var(--r-md);
-  background:var(--surface);
-}
-.st-data-title{font-size:var(--t-body);font-weight:600;color:var(--ivory);}
-.st-data-desc{font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);margin-top:var(--sp-1);}
-.settings-page .manager-actions{padding:0;margin:0 0 var(--sp-4);}
-.settings-page .table-wrap{
-  margin:0 calc(var(--st-card-x) * -1);max-width:none;
-  overflow-x:auto;-webkit-overflow-scrolling:touch;
-}
-.st-table{width:100%;min-width:520px;border-collapse:collapse;font-size:var(--t-body);}
-.st-table th{
-  text-align:left;padding:var(--sp-3) var(--st-card-x);
-  font-size:var(--t-eyebrow);font-weight:600;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--st-mute);
-  border-bottom:1px solid var(--st-divider);white-space:nowrap;
-}
-.st-table td{
-  padding:var(--sp-3) var(--st-card-x);
-  border-bottom:1px solid var(--st-divider);vertical-align:middle;color:var(--ivory-dim);
-}
-.st-table tbody tr:last-child td{border-bottom:0;}
-.st-table tbody tr:hover{background:var(--ivory-ghost);}
-.st-table tbody tr.row-selected{background:var(--teal-soft);}
-.st-table .selection-column{width:48px;padding-right:0;}
-.st-badge{
-  display:inline-flex;align-items:center;height:24px;padding:0 var(--sp-3);
-  border-radius:var(--r-pill);font-size:var(--t-small);font-weight:600;white-space:nowrap;
-}
-.badge-violet{background:var(--violet-soft);color:var(--violet);}
-.badge-green{background:var(--teal-soft);color:var(--teal);}
-.badge-amber{background:var(--amber-soft);color:var(--st-warn);}
-.badge-grey{background:var(--surface);color:var(--ivory-dim);}
-.settings-page .st-muted{font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);}
-.settings-page .text-caption{font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);padding:var(--sp-4) 0;}
-.mr-toast{font-size:var(--t-small);font-weight:600;color:var(--st-warn);}
-
-/* Toasts (e.g. "Redirecting to the billing portal...") sit in the bottom-right
-   corner, clear of the cards. Scoped to Settings so other pages keep the
-   shared .toast-notification offset. */
-.settings-page .toast-notification{
-  bottom:24px;right:24px;z-index:300;
-}
-
-/* Integration cards: the standard card, plus a muted brand backdrop so the
-   tile still reads as WhatsApp / Gmail without introducing a second palette.
-   The backdrop is decorative only - contrast comes from the gradient scrim. */
-.st-int{position:relative;overflow:hidden;background-color:var(--ink);}
-.st-int::before{
-  content:'';position:absolute;inset:0;pointer-events:none;
-  background-size:cover;background-position:center right;background-repeat:no-repeat;
-}
-.st-int--whatsapp::before{background-image:url('img/whatsapp-connect-banner.png');}
-.st-int--gmail::before{background-image:url('gmail_integeration.webp');}
-.st-int::after{
-  content:'';position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(90deg,var(--ink) 58%,color-mix(in srgb,var(--ink) 30%,transparent) 100%);
-}
-.st-int > *{position:relative;z-index:1;}
-/* Inline connect form: control grows, action button holds its size. */
-.st-form-row{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;margin-top:var(--sp-4);}
-.st-form-row + .field-error{margin-top:var(--sp-2);}
-.st-form-row .form-input{flex:1 1 220px;min-width:0;}
-.st-form-row--end{justify-content:flex-end;}
-.st-form-row--end .form-input{flex:0 1 auto;}
-.st-int .wa-status-label{color:inherit;}
-
-/*  12 - States  */
-.page-skeleton{
-  position:fixed;inset:0;z-index:99999;
-  display:flex;align-items:center;justify-content:center;
-  background:var(--void);transition:opacity .3s var(--ease-out);
-}
-.page-skeleton.is-hidden{opacity:0;pointer-events:none;}
-.page-skeleton-spinner{width:220px;display:grid;gap:var(--sp-3);}
-.page-skeleton-spinner::before,.page-skeleton-spinner::after{
-  content:'';display:block;height:14px;border-radius:var(--r-pill);
-  background:var(--surface);animation:st-pulse 1.4s ease-in-out infinite;
-}
-.page-skeleton-spinner::after{width:60%;animation-delay:.2s;}
-.st-skeleton{display:grid;gap:var(--sp-3);}
-.st-skeleton span{
-  display:block;height:12px;border-radius:var(--r-pill);
-  background:var(--surface);animation:st-pulse 1.4s ease-in-out infinite;
-}
-.st-skeleton span:nth-child(2){width:80%;}
-.st-skeleton span:nth-child(3){width:60%;}
-@keyframes st-pulse{0%,100%{opacity:1}50%{opacity:.45}}
-.st-visually-hidden{
-  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
-  overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0;
-}
-
-/*  13 - Responsive  */
-@media(max-width:900px){
-  /* No left bar on narrow screens: the nav becomes a top scrollable pill row
-     and the content reclaims the full width. */
-  .settings-layout{padding:var(--sp-5) var(--sp-4) var(--sp-6);}
-  .settings-topbar-inner{padding-inline:var(--sp-4);}
-  .settings-nav-wrap{
-    position:relative;width:auto;height:auto;
-    display:block;background:transparent;
-    border-right:0;overflow:visible;
-  }
-  .settings-page .main-content{margin-left:0;}
-  .settings-nav-wrap .sidebar-header{padding:var(--sp-4) 0 0;}
-  .settings-nav-wrap .sidebar-logo-img{height:26px;}
-  .settings-side-top{
-    display:flex;align-items:center;gap:var(--sp-4);
-    padding:0;flex-wrap:wrap;
-  }
-  .settings-back{margin:0;}
-  .settings-side-eyebrow{margin:0;padding:0;border-top:0;}
-  .settings-nav{
-    flex-direction:row;gap:var(--sp-1);
-    margin-top:var(--sp-4);padding-bottom:var(--sp-2);
-    border-bottom:1px solid var(--st-divider);
-    overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
-    scrollbar-width:none;-ms-overflow-style:none;
-  }
-  .settings-nav::-webkit-scrollbar{display:none;}
-  .settings-nav-item{white-space:nowrap;}
-  .settings-nav-item .nav-ind{
-    left:1.5rem;right:1.5rem;top:auto;bottom:0;
-    transform:none;width:auto;height:2px;
-  }
-  /* The right-edge fade only makes sense on the scrolling row. */
-  .settings-nav-wrap::after{
-    content:'';pointer-events:none;position:absolute;right:0;top:0;bottom:0;
-    width:32px;background:linear-gradient(90deg,transparent,var(--void) 80%);
-  }
-  .settings-nav-wrap:not(.is-overflowing)::after{display:none;}
-  .settings-nav-wrap .sidebar-footer{
-    margin-top:var(--sp-4);padding:var(--sp-4) 0 0;
-    border-top:1px solid var(--st-divider);
-  }
-}
-@media(max-width:768px){
-  .settings-page .top-bar .page-title{font-size:1.5rem;}
-  .st-fields,.st-confirm-fields{grid-template-columns:minmax(0,1fr);}
-  .st-meta-row{grid-template-columns:minmax(0,1fr);row-gap:var(--sp-1);}
-  .st-meta-row .st-meta-value{text-align:left;margin-top:var(--sp-1);}
-  .st-sec-head--action{grid-template-columns:minmax(0,1fr);align-items:start;}
-  .st-sec-head--action > *:last-child{justify-self:start;margin-top:var(--sp-3);}
-  .st-actions,.st-savebar{flex-wrap:wrap;}
-  /* Minimum 40px touch target on mobile */
-  .settings-page .btn,.settings-page .btn-sm{min-height:40px;height:auto;padding:var(--sp-2) var(--sp-3);}
-}
-@media(max-width:640px){
-  .settings-page .st-card,
-  .settings-page .st-section{--st-card-x:var(--sp-4);padding:var(--sp-4);}
-  .st-data-list{grid-template-columns:minmax(0,1fr);}
-  /* Rows keep the desktop inset on phones - no re-introduced bleed. */
-  .st-row:last-child,.st-meta-row:last-child,
-  .toggle-row:last-child,.session-row:last-child,
-  .activity-row:last-child{padding-bottom:0;}
-  .st-row{grid-template-columns:minmax(0,1fr);row-gap:var(--sp-3);}
-  .st-row-actions{justify-content:flex-start;width:100%;}
-  .st-row-actions .btn{flex:1 1 auto;}
-  .toggle-row{grid-template-columns:minmax(0,1fr);row-gap:var(--sp-3);}
-  .toggle-row:has(.toggle-icon) .toggle-switch{margin-top:0;}
-  .activity-row{grid-template-columns:auto minmax(0,1fr);}
-  .activity-time{grid-column:2;padding-top:var(--sp-1);}
-  .session-row{flex-wrap:wrap;row-gap:var(--sp-3);}
-  .session-meta{flex:1 1 100%;order:2;}
-  .session-time{margin-left:auto;}
-  .session-signout{flex:1 1 auto;width:100%;order:3;}
-  /* Inline connect forms stack: control full width, action button full width. */
-  .st-form-row{flex-direction:column;align-items:stretch;}
-  .st-form-row .form-input,.st-form-row--end .form-input{flex:1 1 auto;width:100%;}
-  .st-form-row .btn{width:100%;}
-}
-@media(prefers-reduced-motion:reduce){
-  .settings-page *{transition-duration:.01ms !important;}
-  .st-skeleton span,.page-skeleton-spinner::before,.page-skeleton-spinner::after{animation:none;}
-}
-</style>
 </head>
 <body class="settings-page">
 <div id="page-skeleton" class="page-skeleton" aria-hidden="true"><div class="page-skeleton-spinner"></div></div>
@@ -939,7 +118,7 @@ html[data-theme="light"] .settings-page{
       <div class="settings-topbar-inner">
       <div class="top-bar-left">
         <div>
-          <div class="page-title">Settings</div>
+          <h1 class="page-title">Settings</h1>
           <div class="breadcrumb"><span>Settings</span> / <span id="settingsBreadcrumb">Profile</span></div>
           <p class="st-page-intro" data-intro="profile">Manage your personal information and how you appear across VooVr.</p>
           <p class="st-page-intro" data-intro="organization">Update your company profile. These details affect your plan and how your team identifies the workspace.</p>
@@ -1023,7 +202,7 @@ html[data-theme="light"] .settings-page{
 
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Profile information</h3>
+              <h2 class="st-sec-title">Profile information</h2>
               <span class="st-sec-desc">Basic details about you</span>
             </div>
             <div class="st-fields">
@@ -1046,7 +225,7 @@ html[data-theme="light"] .settings-page{
 
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Contact information</h3>
+              <h2 class="st-sec-title">Contact information</h2>
               <span class="st-sec-desc">How teammates and the system reach you</span>
             </div>
             <div class="st-fields">
@@ -1068,7 +247,7 @@ html[data-theme="light"] .settings-page{
         <div class="settings-panel" data-panel="organization">
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Organization information</h3>
+              <h2 class="st-sec-title">Organization information</h2>
               <span class="st-sec-desc">Editable only by organization admins</span>
             </div>
             <div class="st-fields">
@@ -1160,7 +339,7 @@ html[data-theme="light"] .settings-page{
         <div class="settings-panel" data-panel="notifications">
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Email notifications</h3>
+              <h2 class="st-sec-title">Email notifications</h2>
               <span class="st-sec-desc">Sent to your account email</span>
             </div>
             <div class="st-toggle-list">
@@ -1189,7 +368,7 @@ html[data-theme="light"] .settings-page{
 
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">HR / employee alerts</h3>
+              <h2 class="st-sec-title">HR / employee alerts</h2>
               <span class="st-sec-desc">Managed by your organization admins</span>
             </div>
             <div class="st-toggle-list">
@@ -1209,7 +388,7 @@ html[data-theme="light"] .settings-page{
 
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Product &amp; system updates</h3>
+              <h2 class="st-sec-title">Product &amp; system updates</h2>
               <span class="st-sec-desc">Occasional news from the VooVr team</span>
             </div>
             <div class="st-toggle-list">
@@ -1242,7 +421,7 @@ html[data-theme="light"] .settings-page{
           <div class="st-card st-int st-int--whatsapp">
             <div class="st-sec-head st-sec-head--action">
               <div>
-                <h3 class="st-sec-title">Connect WhatsApp</h3>
+                <h2 class="st-sec-title">Connect WhatsApp</h2>
                 <span class="st-sec-desc">Dictate sessions by voice, right from your phone.</span>
               </div>
               <span class="st-status is-off" id="waStatusBadge" role="status">
@@ -1276,7 +455,7 @@ html[data-theme="light"] .settings-page{
           <div class="st-card st-int st-int--gmail">
             <div class="st-sec-head st-sec-head--action">
               <div>
-                <h3 class="st-sec-title">Gmail Integration</h3>
+                <h2 class="st-sec-title">Gmail Integration</h2>
                 <span class="st-sec-desc">Connect your Gmail account to enable automated follow-ups and email notifications.</span>
               </div>
               <span class="st-status is-off" id="gmailStatusBadge" role="status">
@@ -1302,7 +481,7 @@ html[data-theme="light"] .settings-page{
           <div class="st-section st-card">
             <div class="st-sec-head st-sec-head--action">
               <div>
-                <h3 class="st-sec-title">Security overview</h3>
+                <h2 class="st-sec-title">Security overview</h2>
                 <span class="st-sec-desc protected-text" id="securityOverviewCount" translate="no">Loading&hellip;</span>
               </div>
               <div class="st-status-row">
@@ -1315,7 +494,7 @@ html[data-theme="light"] .settings-page{
           <!-- TWO-FACTOR AUTHENTICATION -->
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Two-Factor Authentication</h3>
+              <h2 class="st-sec-title">Two-Factor Authentication</h2>
               <span class="st-sec-desc">Extra protection for your account.</span>
             </div>
 
@@ -1342,7 +521,7 @@ html[data-theme="light"] .settings-page{
           <!-- RECOVERY -->
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Recovery</h3>
+              <h2 class="st-sec-title">Recovery</h2>
               <span class="st-sec-desc">Backup access if you lose your device.</span>
             </div>
 
@@ -1372,7 +551,7 @@ html[data-theme="light"] .settings-page{
           <!-- CURRENT SESSION -->
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Current Session</h3>
+              <h2 class="st-sec-title">Current Session</h2>
               <span class="st-sec-desc">This is the device you are using right now.</span>
             </div>
 
@@ -1390,7 +569,7 @@ html[data-theme="light"] .settings-page{
           <div class="st-section st-card">
             <div class="st-sec-head st-sec-head--action">
               <div>
-                <h3 class="st-sec-title">Active Sessions</h3>
+                <h2 class="st-sec-title">Active Sessions</h2>
                 <span class="st-sec-desc">Other devices signed in to your account.</span>
                 <span class="st-sec-note">Location is estimated from your network and may not match where you are. <a href="https://db-ip.com" target="_blank" rel="noopener">IP geolocation by DB-IP</a></span>
               </div>
@@ -1404,7 +583,7 @@ html[data-theme="light"] .settings-page{
         <div class="settings-panel" data-panel="activity-log">
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Activity</h3>
+              <h2 class="st-sec-title">Activity</h2>
               <span class="st-sec-desc">Sensitive and administrative actions, newest first.</span>
             </div>
 
@@ -1435,7 +614,7 @@ html[data-theme="light"] .settings-page{
           <!-- CURRENT PLAN -->
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Current Plan</h3>
+              <h2 class="st-sec-title">Current Plan</h2>
               <span class="st-sec-desc">Your subscription and organization information.</span>
             </div>
 
@@ -1463,7 +642,7 @@ html[data-theme="light"] .settings-page{
           <!-- USAGE -->
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Usage</h3>
+              <h2 class="st-sec-title">Usage</h2>
               <span class="st-sec-desc">Employee seats used across your organization this cycle.</span>
             </div>
 
@@ -1485,7 +664,7 @@ html[data-theme="light"] .settings-page{
           <!-- DATA WE STORE -->
           <div class="st-section st-card">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Data We Store</h3>
+              <h2 class="st-sec-title">Data We Store</h2>
               <span class="st-sec-desc">Categories of information your account holds &mdash; the data used to run your VooVr workspace, including your profile, organization details, security settings, and an activity trail.</span>
             </div>
             <div class="st-data-list">
@@ -1513,7 +692,7 @@ html[data-theme="light"] .settings-page{
             <!-- YOUR DATA -->
             <div class="st-section st-card">
               <div class="st-sec-head">
-                <h3 class="st-sec-title">Your Data</h3>
+                <h2 class="st-sec-title">Your Data</h2>
                 <span class="st-sec-desc">Download, review, or delete your account data.</span>
               </div>
               <p class="st-data-intro">Download a copy of what VooVr holds about you, review the categories below, or permanently delete your account at any time. Exports only include your own account and organization details &mdash; never other employees&rsquo; HR data. Deletion is immediate and irreversible: your account is removed on confirmation and, if you&rsquo;re the only member of your organization, the organization is removed with it.</p>
@@ -1533,7 +712,7 @@ html[data-theme="light"] .settings-page{
                  action is never mixed in with routine data settings. -->
             <div class="st-section st-card st-card--danger">
               <div class="st-sec-head">
-                <h3 class="st-sec-title">Delete your account</h3>
+                <h2 class="st-sec-title">Delete your account</h2>
                 <span class="st-sec-desc">Permanent &mdash; removes your account and, if you&rsquo;re the only member, your organization.</span>
               </div>
 
@@ -1574,7 +753,7 @@ html[data-theme="light"] .settings-page{
                user, whereas this exports/imports the whole workforce. -->
           <div class="st-section st-card admin-only" style="display:none;">
             <div class="st-sec-head">
-              <h3 class="st-sec-title">Employee directory</h3>
+              <h2 class="st-sec-title">Employee directory</h2>
               <span class="st-sec-desc">Organization-wide. Visible to admins only.</span>
             </div>
             <p class="st-data-intro">Export the full employee directory as a CSV file, or add employees in bulk by importing a CSV in the same format. These actions cover everyone in your organization &mdash; unlike the personal exports below, they are limited to admins.</p>
