@@ -380,6 +380,22 @@ class PresentationTests(unittest.TestCase):
                     self.assertIn(f'src="/{asset}"', html)
                     self.assertNotIn(f'src="{asset}"', html)
 
+    def _left_bar(self, page):
+        """The left navigation markup for a page.
+
+        Pages that include the shared partial render the global
+        <nav class="sidebar">. settings.html replaces it with its own fixed
+        settings bar, so its wordmark and its panel nav live inside
+        .settings-nav-wrap instead.
+        """
+        rendered = self._render(page)
+        if '<nav class="sidebar">' in rendered:
+            return re.search(r'<nav class="sidebar">.*?</nav>',
+                             rendered, re.S).group(0)
+        own = re.search(r'<div class="settings-nav-wrap">.*?</nav>', rendered, re.S)
+        self.assertIsNotNone(own, f"{page} has no left bar to inspect")
+        return own.group(0)
+
     def test_wordmark_ships_both_theme_cuts(self):
         """The wordmark is authored twice — once per theme cut — and CSS keyed on
         [data-theme="light"] picks between them. If either cut is dropped, or the
@@ -391,12 +407,11 @@ class PresentationTests(unittest.TestCase):
         logo = re.compile(r'<img[^>]*class="[^"]*logo-for-(dark|light)"[^>]*>')
         for page in ("dashboard.html", "settings.html"):
             with self.subTest(page=page):
-                nav = re.search(r'<nav class="sidebar">.*?</nav>',
-                                self._render(page), re.S).group(0)
-                cuts = logo.findall(nav)
+                bar = self._left_bar(page)
+                cuts = logo.findall(bar)
                 self.assertEqual(sorted(cuts), ["dark", "light"],
                                  f"{page} wordmark cuts are {cuts}, expected both")
-                for match in logo.finditer(nav):
+                for match in logo.finditer(bar):
                     self.assertIn('alt="VOOVR"', match.group(0))
 
     def test_wordmark_cuts_are_webp_and_identically_sized(self):
@@ -449,23 +464,47 @@ class PresentationTests(unittest.TestCase):
 
     def test_sidebar_marks_exactly_its_own_nav_item_active(self):
         """nav_active drives the highlight; getting it wrong silently breaks
-        "where am I" on two pages.
+        "where am I".
 
         The partial matches on the authored (relative) href, but the rendered
         page has been normalized to root-absolute by _RootAssetParser, so the
         expected hrefs here are the normalized ones. Asserting them doubles as a
         check that normalization still reaches markup that came from a partial.
         """
-        for page, active_href in (("dashboard.html", "/dashboard.html"),
-                                  ("settings.html", "/settings.html")):
-            with self.subTest(page=page):
-                nav = re.search(r'<nav class="sidebar">.*?</nav>',
-                                self._render(page), re.S).group(0)
-                actives = re.findall(r'<a href="([^"]+)" class="nav-item active"', nav)
-                self.assertEqual(actives, [active_href],
-                                 f"{page} highlights {actives}, expected [{active_href}]")
-                # Every other item must be plain — no second highlight.
-                self.assertEqual(nav.count("nav-item active"), 1)
+        nav = re.search(r'<nav class="sidebar">.*?</nav>',
+                        self._render("dashboard.html"), re.S).group(0)
+        actives = re.findall(r'<a href="([^"]+)" class="nav-item active"', nav)
+        self.assertEqual(actives, ["/dashboard.html"],
+                         f"dashboard.html highlights {actives}, expected [/dashboard.html]")
+        # Every other item must be plain — no second highlight.
+        self.assertEqual(nav.count("nav-item active"), 1)
+
+    def test_settings_marks_exactly_one_panel_active(self):
+        """settings.html no longer includes the shared partial, so it has no
+        nav-item pointing at itself to highlight. Its own bar instead highlights
+        the panel the page opens on, and exactly one item may carry the state —
+        a second highlight would mean two panels render at once.
+        """
+        nav = re.search(r'<nav class="settings-nav".*?</nav>',
+                        self._render("settings.html"), re.S).group(0)
+        actives = re.findall(r'<a href="#([^"]+)" class="settings-nav-item active"', nav)
+        self.assertEqual(actives, ["profile"],
+                         f"settings.html highlights {actives}, expected [profile]")
+        self.assertEqual(nav.count("settings-nav-item active"), 1)
+
+    def test_settings_ships_one_left_bar_and_no_global_sidebar(self):
+        """Settings replaced the global .sidebar with its own fixed settings bar.
+        Both rendering at once is the failure this guards: the old sidebar was
+        markup that arrived from the shared partial, so removing the include is
+        the only way to guarantee a single left bar here. Only dashboard.html
+        still includes the partial.
+        """
+        source = (ROOT / "static" / "settings.html").read_text(encoding="utf-8")
+        self.assertNotIn("partials/sidebar.html", source)
+        rendered = self._render("settings.html")
+        self.assertNotIn('<nav class="sidebar">', rendered)
+        self.assertEqual(rendered.count('<div class="settings-nav-wrap">'), 1)
+        self.assertEqual(rendered.count('class="main-content"'), 1)
 
     def test_notification_bell_markup_is_not_duplicated(self):
         """The three bell pages must share one copy of the markup."""

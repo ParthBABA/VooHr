@@ -65,22 +65,29 @@ html[data-theme="light"] .settings-page{
 }
 .settings-page :focus-visible{outline-color:var(--st-accent);}
 
-/*  1 - Page shell: sticky rail + one centred content column  */
+/*  1 - Page shell: the settings nav is the fixed left bar, content is one
+        centred column in the space that remains  */
 .settings-layout{
   display:grid;
-  grid-template-columns:240px minmax(0,1fr);
-  gap:var(--sp-7);
-  align-items:start;
-  max-width:1280px;
+  grid-template-columns:minmax(0,1fr);
+  max-width:1200px;
   margin:0 auto;
-  padding:var(--sp-6) clamp(var(--sp-4),3vw,var(--sp-6)) var(--sp-7);
+  padding:var(--sp-6) clamp(24px,4vw,48px) var(--sp-7);
 }
-.settings-content{min-width:0;max-width:880px;margin-inline:auto;}
+.settings-content{min-width:0;width:100%;max-width:none;margin-inline:0;}
 .settings-panel{display:none;}
 .settings-panel.active{display:grid;gap:var(--sp-5);}
 .st-stack{display:grid;gap:var(--sp-5);}
 
-/* Page header */
+/* Page header: full-bleed bar, but its contents share the content
+   container so the title lines up with the card edges. */
+.settings-page .top-bar{padding:1rem 0;}
+.settings-topbar-inner{
+  width:100%;max-width:1200px;margin:0 auto;
+  padding-inline:clamp(24px,4vw,48px);
+  display:flex;justify-content:space-between;align-items:center;
+  gap:var(--sp-4);min-width:0;
+}
 .settings-page .top-bar .page-title{
   font-family:var(--font-d);font-size:var(--t-page);font-weight:600;
   letter-spacing:-0.02em;text-transform:none;color:var(--ivory);line-height:1.2;
@@ -91,12 +98,46 @@ html[data-theme="light"] .settings-page{
 }
 .settings-page .top-bar .icon-btn{width:40px;height:40px;border-radius:var(--r-sm);}
 
-/* Left rail */
-.settings-nav-wrap{position:sticky;top:5.25rem;min-width:0;}
-.settings-nav{display:flex;flex-direction:column;gap:var(--sp-1);}
+/* Left bar: 260px, fixed, full height, skinned from the same tokens as
+   the global .sidebar so it reads as the native app nav, not a second rail.
+   It deliberately avoids the .sidebar class so the global collapsed/icon-only
+   rules and their width overrides cannot touch it. */
+.settings-nav-wrap{
+  position:fixed;top:0;left:0;z-index:100;
+  width:260px;height:100dvh;
+  display:flex;flex-direction:column;
+  background:var(--sidebar);border-right:1px solid var(--border);
+  overflow:hidden;
+}
+.settings-nav-wrap .sidebar-header,
+.settings-nav-wrap .sidebar-footer{flex-shrink:0;}
+.settings-nav-wrap .sidebar-logo{color:inherit;}
+
+/* Back link + section eyebrow, sitting under the logo */
+.settings-side-top{padding:1.2rem 0 0;}
+.settings-back{
+  display:flex;align-items:center;gap:var(--sp-2);
+  margin:0 1.5rem;
+  color:var(--ivory-dim);font-family:var(--font-d);
+  font-size:var(--t-small);font-weight:500;line-height:1.3;
+  text-decoration:none;
+  transition:color .15s var(--ease-out);
+}
+.settings-back:hover{color:var(--ivory);}
+.settings-back-arrow{font-size:1.05em;line-height:1;}
+.settings-side-eyebrow{
+  display:block;margin:var(--sp-4) 1.5rem 0;padding-top:var(--sp-4);
+  border-top:1px solid var(--border);
+}
+
+.settings-nav{
+  flex:1;min-height:0;overflow-y:auto;
+  display:flex;flex-direction:column;gap:var(--sp-1);
+  padding:0.6rem 0 1rem;
+}
 .settings-nav-item{
   display:flex;align-items:center;gap:var(--sp-3);
-  min-height:40px;padding:0 var(--sp-3);
+  min-height:40px;padding:0 1.5rem;
   position:relative;border-radius:var(--r-sm);
   color:var(--ivory-dim);font-family:var(--font-d);
   font-size:var(--t-body);font-weight:500;line-height:1.3;
@@ -117,7 +158,7 @@ html[data-theme="light"] .settings-page{
 .st-page{margin:0;}
 .st-desc{
   font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:60ch;margin:0;
+  color:var(--ivory-dim);max-width:68ch;margin:0;
 }
 .st-desc-spaced{margin-top:var(--sp-4);}
 .st-eyebrow{
@@ -148,7 +189,7 @@ html[data-theme="light"] .settings-page{
 }
 .st-sec-desc{
   font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:60ch;
+  color:var(--ivory-dim);max-width:68ch;
 }
 /* Secondary note under a section description. */
 .st-sec-note{
@@ -175,7 +216,7 @@ html[data-theme="light"] .settings-page{
 }
 .st-row-desc{
   font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:60ch;overflow-wrap:break-word;
+  color:var(--ivory-dim);max-width:68ch;overflow-wrap:break-word;
 }
 /* Rows with a leading icon indent the description to the title's left edge. */
 .st-row-title:has(.st-row-icon) ~ .st-row-desc{
@@ -320,7 +361,7 @@ html[data-theme="light"] .settings-page{
 }
 .toggle-desc{
   font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:60ch;overflow-wrap:break-word;
+  color:var(--ivory-dim);max-width:68ch;overflow-wrap:break-word;
 }
 .toggle-switch{position:relative;display:inline-flex;flex-shrink:0;}
 /* Centre the 22px switch on the 32px title line, not on the whole row. */
@@ -512,7 +553,7 @@ html[data-theme="light"] .settings-page{
 }
 .st-plan-desc{
   font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:60ch;margin:var(--sp-4) 0 0;
+  color:var(--ivory-dim);max-width:68ch;margin:var(--sp-4) 0 0;
 }
 .st-usage-head{
   display:flex;align-items:baseline;justify-content:space-between;
@@ -549,11 +590,15 @@ html[data-theme="light"] .settings-page{
 /* Data & Privacy: what we hold, as a quiet two-column grid. */
 .st-data-intro{
   font-size:var(--t-body);line-height:var(--lh-body);
-  color:var(--ivory-dim);max-width:70ch;margin:0 0 var(--sp-2);
+  color:var(--ivory-dim);max-width:68ch;margin:0 0 var(--sp-2);
 }
+/* Data We Store: four across on wide screens, two on tablets, one on phones. */
 .st-data-list{
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
   gap:var(--sp-4);margin-top:var(--sp-4);
+}
+@media(max-width:1279px){
+  .st-data-list{grid-template-columns:repeat(2,minmax(0,1fr));}
 }
 .st-data-item{
   padding:var(--sp-3) var(--sp-4);
@@ -644,26 +689,47 @@ html[data-theme="light"] .settings-page{
 }
 
 /*  13 - Responsive  */
-@media(max-width:1200px){
-  /* The rail no longer fits beside an 880px column: become a scrollable pill row. */
-  .settings-layout{grid-template-columns:minmax(0,1fr);gap:var(--sp-5);}
-  .settings-content{max-width:none;margin-inline:0;}
-  .settings-nav-wrap::after{
-    content:'';pointer-events:none;position:absolute;right:0;top:0;bottom:0;
-    width:32px;background:linear-gradient(90deg,transparent,var(--void) 80%);
+@media(max-width:900px){
+  /* No left bar on narrow screens: the nav becomes a top scrollable pill row
+     and the content reclaims the full width. */
+  .settings-layout{padding:var(--sp-5) var(--sp-4) var(--sp-6);}
+  .settings-topbar-inner{padding-inline:var(--sp-4);}
+  .settings-nav-wrap{
+    position:relative;width:auto;height:auto;
+    display:block;background:transparent;
+    border-right:0;overflow:visible;
   }
-  .settings-nav-wrap:not(.is-overflowing)::after{display:none;}
+  .settings-page .main-content{margin-left:0;}
+  .settings-nav-wrap .sidebar-header{padding:var(--sp-4) 0 0;}
+  .settings-nav-wrap .sidebar-logo-img{height:26px;}
+  .settings-side-top{
+    display:flex;align-items:center;gap:var(--sp-4);
+    padding:0;flex-wrap:wrap;
+  }
+  .settings-back{margin:0;}
+  .settings-side-eyebrow{margin:0;padding:0;border-top:0;}
   .settings-nav{
-    flex-direction:row;gap:var(--sp-1);padding-bottom:var(--sp-2);
+    flex-direction:row;gap:var(--sp-1);
+    margin-top:var(--sp-4);padding-bottom:var(--sp-2);
     border-bottom:1px solid var(--st-divider);
-    overflow-x:auto;-webkit-overflow-scrolling:touch;
+    overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
     scrollbar-width:none;-ms-overflow-style:none;
   }
   .settings-nav::-webkit-scrollbar{display:none;}
   .settings-nav-item{white-space:nowrap;}
   .settings-nav-item .nav-ind{
-    left:var(--sp-3);right:var(--sp-3);top:auto;bottom:0;
+    left:1.5rem;right:1.5rem;top:auto;bottom:0;
     transform:none;width:auto;height:2px;
+  }
+  /* The right-edge fade only makes sense on the scrolling row. */
+  .settings-nav-wrap::after{
+    content:'';pointer-events:none;position:absolute;right:0;top:0;bottom:0;
+    width:32px;background:linear-gradient(90deg,transparent,var(--void) 80%);
+  }
+  .settings-nav-wrap:not(.is-overflowing)::after{display:none;}
+  .settings-nav-wrap .sidebar-footer{
+    margin-top:var(--sp-4);padding:var(--sp-4) 0 0;
+    border-top:1px solid var(--st-divider);
   }
 }
 @media(max-width:768px){
@@ -805,12 +871,11 @@ html[data-theme="light"] .settings-page{
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
 </button>
 <div class="page-wrapper">
-  <!-- SIDEBAR -->
-  {% set nav_active = 'settings.html' %}
-  {% include 'partials/sidebar.html' %}
-  <!-- MAIN -->
+  <!-- MAIN: the global .sidebar is intentionally absent here: the settings
+       navigation below is this page's only left bar. -->
   <main class="main-content">
     <div class="top-bar">
+      <div class="settings-topbar-inner">
       <div class="top-bar-left">
         <div>
           <div class="page-title">Settings</div>
@@ -826,12 +891,28 @@ html[data-theme="light"] .settings-page{
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
       </div>
+      </div>
     </div>
 
-    <!-- SETTINGS LAYOUT: sticky rail (left) + one content column (right) -->
+    <!-- SETTINGS LAYOUT: the nav above is the fixed left bar; content sits
+         beside it in a single centred column. -->
     <div class="settings-layout">
 
       <div class="settings-nav-wrap">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <span class="theme-logo-swap">
+              <img src="voovr-logo-full.webp" alt="VOOVR" class="sidebar-logo-img logo-for-dark">
+              <img src="voovr_icon_dt.webp" alt="VOOVR" class="sidebar-logo-img logo-for-light">
+            </span>
+          </div>
+        </div>
+
+        <div class="settings-side-top">
+          <a href="/dashboard" class="settings-back"><span class="settings-back-arrow" aria-hidden="true">&#8592;</span> Back to dashboard</a>
+          <span class="st-eyebrow settings-side-eyebrow">Settings</span>
+        </div>
+
         <nav class="settings-nav" aria-label="Settings sections">
           <a href="#profile" class="settings-nav-item active" data-panel="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile<span class="nav-ind"></span></a>
           <a href="#organization" class="settings-nav-item" data-panel="organization"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>Organization<span class="nav-ind"></span></a>
@@ -844,6 +925,14 @@ html[data-theme="light"] .settings-page{
           <a href="#billing" class="settings-nav-item admin-only" data-panel="billing" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Plan &amp; Billing<span class="nav-ind"></span></a>
           <a href="#data-privacy" class="settings-nav-item" data-panel="data-privacy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Data &amp; Privacy<span class="nav-ind"></span></a>
         </nav>
+
+        <div class="sidebar-footer">
+          <div class="avatar" id="userAvatar">U</div>
+          <div class="user-info">
+            <div class="user-name" id="userName">User</div>
+            <div class="user-role" id="userRole">Admin</div>
+          </div>
+        </div>
       </div>
 
       <!-- SETTINGS CONTENT -->
