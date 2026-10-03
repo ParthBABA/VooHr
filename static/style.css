@@ -1555,3 +1555,25 @@ html[data-theme="light"] .stat-heart .heart-track{stroke:rgba(20,30,60,0.2);}
   user-select:text;
   -webkit-touch-callout:default;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   SETTINGS DESIGN SYSTEM — TOKENS
+   One spacing scale, one radius scale and one type scale for every
+   settings surface (settings.html). Declared once here so tabs can never
+   drift apart; the components themselves live with the page that uses
+   them, scoped under .settings-page.
+   ════════════════════════════════════════════════════════════════════ */
+:root{
+  /* spacing — 8px scale */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+  /* radius */
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-pill:999px;
+  /* settings type scale — Inter for all UI */
+  --t-page:1.75rem;      /* 28px  page title            */
+  --t-section:1.125rem;  /* 18px  card/section title    */
+  --t-row:0.9375rem;     /* 15px  row title / labels    */
+  --t-body:0.875rem;     /* 14px  descriptions, inputs  */
+  --t-small:0.8125rem;   /* 13px  helper text, meta     */
+  --t-eyebrow:0.75rem;   /* 12px  uppercase micro-label */
+  --lh-tight:1.25; --lh-body:1.55;
+}

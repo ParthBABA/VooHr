@@ -11,577 +11,702 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <script src="/csrf.js" defer></script>
 <style>
-/* ════════════════════════════════════════════════════════════════════
-   SETTINGS — PROFESSIONAL UI/UX POLISH (UI-ONLY)
-   A dedicated Settings sidebar anchored beside the global VooVr nav,
-   plus one continuous, naturally-scrollable content column.
-   Uses ONLY the existing VooVr design tokens (var(--...)); every accent and
-   surface flips automatically with the light/dark theme.
-   ════════════════════════════════════════════════════════════════════ */
+/* 
+   SETTINGS DESIGN SYSTEM
+   -
+   Every setting on this page is exactly one of five components:
 
-/* ── Layout ── */
-:root{
-  --sp-sm:0.75rem;
-  --sp-md:1.5rem;
-  --sp-lg:2.5rem;
+     A  .st-row        setting row   title + description - control
+     B  .st-meta-row   meta row      label - hint - value
+     C  .st-field      form field    label + control + helper / error
+     D  .st-status     status badge  dot + label (ok / warn / crit / neutral)
+     E  .toggle-row    toggle row    title + description - switch
+
+   Each selector is defined EXACTLY ONCE, in this order:
+
+     0 scope tokens - 1 page shell - 2 typography - 3 card
+     4 A - 5 B - 6 C - 7 D - 8 E - 9 buttons - 10 danger zone
+     11 lists (sessions / activity / plan / table / integration)
+     12 states - 13 responsive
+
+   Spacing, radius and type values come from the tokens declared once in
+   static/style.css :root (--sp-1..7, --r-sm/md/lg/pill, --t-*, --lh-*).
+   Only colour tokens live here, and they are scoped to .settings-page so the
+   rest of the app - including the global uppercase h1-h6 rule - is untouched.
+    */
+
+/*  0 - Scope tokens  */
+.settings-page{
+  --st-accent:var(--amber);            /* the ONE accent: primary actions    */
+  --st-accent-bg:var(--amber);
+  --st-accent-ink:#0A0D13;
+  --st-divider:rgba(130,160,220,0.20);
+  --st-mute:#7B8598;                   /* 4.8:1 on --ink, 5.3:1 on --void   */
+  --st-ok:var(--teal);
+  --st-warn:var(--amber);
+  --st-bad:var(--red);
+  --st-icon:36px;                      /* leading icon in a title line    */
+  --st-card-x:var(--sp-6);             /* card padding-x, shared with bleeds */
+  font-family:var(--font-d);            /* Inter, not the global Lato body   */
 }
-.settings-layout{display:block;max-width:1600px;margin:0 auto;padding:2rem clamp(0.75rem,1.5vw,1.5rem) 5rem;}
+html[data-theme="light"] .settings-page{
+  --st-accent-bg:var(--amber-deep);    /* amber-deep keeps 6.4:1 vs --ink   */
+  --st-accent-ink:#FFFFFF;
+  --st-divider:rgba(20,30,60,0.16);
+  --st-mute:#5E6674;                   /* 4.6:1 on --void, 5.8:1 on --ink  */
+}
+/* The global h1-h6 rule shouts in caps; Settings is sentence case throughout. */
+.settings-page h1,.settings-page h2,.settings-page h3,
+.settings-page h4,.settings-page h5,.settings-page h6{
+  font-family:var(--font-d);
+  text-transform:none;
+  letter-spacing:-0.01em;
+  line-height:var(--lh-tight);
+}
+.settings-page :focus-visible{outline-color:var(--st-accent);}
 
-/* Page title: scoped bump for the Settings page only — the shared .page-title rule in style.css stays untouched for other pages */
-.top-bar .page-title{font-size:1.6rem;font-weight:700;}
+/*  1 - Page shell: sticky rail + one centred content column  */
+.settings-layout{
+  display:grid;
+  grid-template-columns:240px minmax(0,1fr);
+  gap:var(--sp-7);
+  align-items:start;
+  max-width:1280px;
+  margin:0 auto;
+  padding:var(--sp-6) clamp(var(--sp-4),3vw,var(--sp-6)) var(--sp-7);
+}
+.settings-content{min-width:0;max-width:880px;margin-inline:auto;}
+.settings-panel{display:none;}
+.settings-panel.active{display:grid;gap:var(--sp-5);}
+.st-stack{display:grid;gap:var(--sp-5);}
 
-.settings-nav{display:flex;flex-direction:column;}
-.settings-nav-group{font-family:var(--font-lato);font-weight:700;font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--ivory-faint);margin:1.2rem 0.9rem 0.5rem;opacity:0.75;}
-.settings-nav-group:first-child{margin-top:0.35rem;}
-.settings-nav-item{display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0.9rem;position:relative;color:var(--ivory-dim);font-family:var(--font-lato);font-weight:500;font-size:1.07rem;line-height:1.2;transition:background 0.16s var(--ease-out);cursor:pointer;text-decoration:none;border-radius:7px;}
-.settings-nav-item svg{width:20px;height:20px;flex-shrink:0;}
+/* Page header */
+.settings-page .top-bar .page-title{
+  font-family:var(--font-d);font-size:var(--t-page);font-weight:600;
+  letter-spacing:-0.02em;text-transform:none;color:var(--ivory);line-height:1.2;
+}
+.settings-page .top-bar .breadcrumb{
+  font-family:var(--font-d);font-size:var(--t-small);font-weight:400;
+  letter-spacing:normal;text-transform:none;color:var(--st-mute);margin-top:var(--sp-1);
+}
+.settings-page .top-bar .icon-btn{width:40px;height:40px;border-radius:var(--r-sm);}
+
+/* Left rail */
+.settings-nav-wrap{position:sticky;top:5.25rem;min-width:0;}
+.settings-nav{display:flex;flex-direction:column;gap:var(--sp-1);}
+.settings-nav-item{
+  display:flex;align-items:center;gap:var(--sp-3);
+  min-height:40px;padding:0 var(--sp-3);
+  position:relative;border-radius:var(--r-sm);
+  color:var(--ivory-dim);font-family:var(--font-d);
+  font-size:var(--t-body);font-weight:500;line-height:1.3;
+  text-decoration:none;cursor:pointer;
+  transition:background .15s var(--ease-out),color .15s var(--ease-out);
+}
+.settings-nav-item svg{width:18px;height:18px;flex-shrink:0;stroke-width:1.75;}
 .settings-nav-item:hover{background:var(--ivory-ghost);color:var(--ivory);}
 .settings-nav-item.active{background:var(--ivory-ghost);color:var(--ivory);font-weight:600;}
-.settings-nav-item .nav-ind{position:absolute;left:0;top:0.5rem;bottom:0.5rem;width:2px;border-radius:2px;background:transparent;}
-.settings-nav-item.active .nav-ind{background:var(--amber);}
-.settings-nav-item.active svg{color:var(--amber);}
-
-/* ── Content pane: comfortable reading width, aligned to the rail ── */
-.settings-content{flex:1;min-width:0;max-width:840px;padding-top:0.2rem;}
-.settings-panel{display:none;}
-.settings-panel.active{display:block;}
-.settings-panel + .settings-panel{margin-top:3rem;}
-
-/* ── Page header: eyebrow / title / description ── */
-.st-page{padding-bottom:1rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem;}
-.st-eyebrow{font-family:var(--font-lato);font-weight:700;font-size:0.66rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--amber);margin-bottom:0.65rem;display:flex;align-items:center;gap:0.5rem;}
-.st-eyebrow svg{width:15px;height:15px;}
-.st-title{font-family:var(--font-d);font-weight:600;font-size:1.85rem;letter-spacing:-0.02em;color:var(--ivory);line-height:1.12;}
-.st-desc{font-family:var(--font-lato);font-size:0.93rem;color:var(--ivory-dim);line-height:1.65;margin-top:0.65rem;max-width:620px;}
-
-/* ── Section heading: section title / description ── */
-.st-section{margin-bottom:2.6rem;}
-.st-sec-head{display:flex;align-items:baseline;gap:0.75rem;margin-bottom:1.15rem;}
-.st-sec-title{font-family:var(--font-lato);font-weight:700;font-size:0.82rem;letter-spacing:0.02em;color:var(--ivory);margin:0;}
-.st-sec-desc{font-family:var(--font-lato);font-size:0.8rem;color:var(--ivory-faint);}
-
-/* ── Field grid + groups (responsive auto-fit columns) ── */
-.st-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem 1.75rem;}
-.st-fields .span-2{grid-column:1 / -1;}
-.st-field{display:flex;flex-direction:column;}
-.st-field label{font-family:var(--font-lato);font-weight:600;font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--ivory-dim);margin-bottom:0.5rem;}
-.st-field .st-hint{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-faint);margin-top:0.45rem;line-height:1.5;}
-
-/* Inputs: consistent height/padding/border/focus, restrained radius */
-.st-field .form-input{height:42px;padding:0.55rem 0.85rem;border-radius:6px;font-size:0.9rem;}
-.st-field input[readonly]{opacity:0.72;}
-.st-field .form-input.input-error{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft);}
-.field-error{font-family:var(--font-lato);font-weight:600;font-size:0.72rem;color:var(--red);margin-top:0.4rem;display:none;}
-
-/* Action footer */
-.st-actions{display:flex;justify-content:flex-end;gap:0.7rem;padding-top:1.5rem;border-top:1px solid var(--border);margin-top:2.3rem;}
-.st-actions .btn-primary{background:var(--amber);border-color:var(--amber);color:var(--void);}
-.st-actions .btn-primary:hover{background:var(--violet);border-color:var(--violet);}
-
-/* ── Profile identity head ── */
-.profile-head{display:flex;align-items:center;gap:1.1rem;margin-bottom:1.6rem;}
-.profile-avatar{width:60px;height:60px;border-radius:14px;flex-shrink:0;background:linear-gradient(135deg,var(--violet),var(--amber));color:var(--void);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-weight:700;font-size:1.25rem;letter-spacing:0.02em;}
-.profile-name{font-family:var(--font-lato);font-weight:700;font-size:1.1rem;color:var(--ivory);}
-.profile-role{font-family:var(--font-lato);font-weight:600;font-size:0.72rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--ivory-faint);margin-top:0.15rem;}
-
-/* ════ SETTINGS ROW: two-column (title+desc | status/action), divider-topped ════ */
-.st-row{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;padding:1.15rem 0;}
-.st-row + .st-row{border-top:1px solid var(--border);}
-.st-row-main{min-width:0;}
-.st-row-title{font-family:var(--font-lato);font-weight:600;font-size:0.9rem;color:var(--ivory);display:flex;align-items:center;gap:0.55rem;}
-.st-row-desc{font-family:var(--font-lato);font-size:0.8rem;color:var(--ivory-dim);line-height:1.55;margin-top:0.3rem;max-width:520px;}
-.st-row-actions{flex-shrink:0;display:flex;align-items:center;gap:0.7rem;}
-
-/* Contextual status indicator: icon/dot + label. Color never carries meaning alone. */
-.st-status{display:inline-flex;align-items:center;gap:0.5rem;font-family:var(--font-lato);font-size:0.76rem;font-weight:600;color:var(--ivory-dim);padding:0.4rem 0.85rem;border-radius:100px;background:var(--surface);border:1px solid var(--border);}
-.st-status .st-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--ivory-faint);}
-.st-status.ok{color:var(--teal);background:var(--teal-soft);border-color:var(--teal-glow);}
-.st-status.ok .st-dot{background:var(--teal);box-shadow:0 0 0 3px var(--teal-soft);}
-.st-status.warn{color:var(--amber);background:var(--amber-soft);border-color:var(--amber-glow);}
-.st-status.warn .st-dot{background:var(--amber);box-shadow:0 0 0 3px var(--amber-soft);}
-.st-status.crit{color:var(--red);background:var(--red-soft);border-color:var(--red-glow);}
-.st-status.crit .st-dot{background:var(--red);box-shadow:0 0 0 3px var(--red-soft);}
-.st-status.neutral .st-dot{background:var(--ivory-faint);}
-.st-status strong{font-weight:700;color:var(--ivory);}
-
-.st-monoline{font-family:var(--font-lato);font-weight:500;font-size:0.8rem;color:var(--ivory-dim);}
-
-/* ════ TOGGLES (Notification preferences as settings rows) ════ */
-.notif-prefs{display:flex;flex-direction:column;}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;padding:1.05rem 0;cursor:pointer;}
-.toggle-row + .toggle-row{border-top:1px solid var(--border);}
-.toggle-label{min-width:0;}
-.toggle-title{font-family:var(--font-lato);font-weight:600;font-size:0.9rem;color:var(--ivory);}
-.toggle-desc{font-family:var(--font-lato);font-size:0.8rem;color:var(--ivory-dim);line-height:1.5;margin-top:0.25rem;}
-.toggle-switch{flex-shrink:0;position:relative;display:inline-flex;}
-.toggle-switch input{position:absolute;opacity:0;cursor:pointer;width:100%;height:100%;margin:0;top:0;left:0;z-index:1;}
-.toggle-slider{width:40px;height:22px;border-radius:100px;background:var(--surface);border:1px solid var(--border);display:block;position:relative;transition:background 0.2s var(--ease-out),border-color 0.2s var(--ease-out);}
-.toggle-slider::before{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--ivory-faint);transition:transform 0.2s var(--ease-out),background 0.2s var(--ease-out);}
-.toggle-switch input:checked + .toggle-slider{background:var(--teal);border-color:var(--teal);}
-.toggle-switch input:checked + .toggle-slider::before{transform:translateX(18px);background:var(--void);}
-.toggle-switch input:focus-visible + .toggle-slider{box-shadow:0 0 0 3px var(--teal-soft);}
-.toggle-switch input:disabled + .toggle-slider{opacity:0.55;cursor:not-allowed;}
-
-/* ════ PLAN + USAGE (restrained accent; no marketing cards) ════ */
-.st-plan-head{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;}
-.st-plan-name{font-family:var(--font-d);font-weight:600;font-size:1.35rem;color:var(--ivory);letter-spacing:-0.01em;}
-.st-plan-org{font-family:var(--font-lato);font-weight:600;font-size:0.68rem;letter-spacing:0.09em;text-transform:uppercase;color:var(--ivory-faint);margin-top:0.35rem;}
-.st-plan-badge{font-family:var(--font-lato);font-weight:700;font-size:0.66rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);border:1px solid var(--teal-glow);background:var(--teal-soft);padding:0.35rem 0.8rem;border-radius:100px;}
-.st-plan-desc{font-family:var(--font-lato);font-size:0.84rem;color:var(--ivory-dim);line-height:1.6;margin-top:0.85rem;max-width:560px;}
-
-.st-usage-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:0.75rem;}
-.st-usage-label{font-family:var(--font-lato);font-weight:600;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-dim);}
-.st-usage-nums{font-family:var(--font-lato);font-weight:700;font-size:0.84rem;color:var(--ivory);}
-.st-usage-nums span{color:var(--ivory-faint);font-weight:500;}
-.st-usage-bar{width:100%;height:7px;border-radius:100px;background:var(--surface);border:1px solid var(--border);overflow:hidden;}
-.st-usage-bar .st-usage-fill{height:100%;border-radius:100px;background:var(--violet);transition:width 0.6s var(--ease-out);}
-.st-usage-bar .st-usage-fill.warn{background:var(--amber);}
-.st-usage-bar .st-usage-fill.crit{background:var(--red);}
-.st-usage-foot{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:0.75rem;}
-.st-usage-note{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-faint);}
-
-/* ════ SESSIONS ════ */
-/* Current session — one restrained, distinct surface (semantic value), no card soup */
-.st-current{display:flex;align-items:center;gap:1.1rem;background:var(--ink);border:1px solid var(--border);border-left:2px solid var(--violet);padding:1.1rem 1.3rem;border-radius:10px;}
-.st-current .session-icon{color:var(--violet);flex-shrink:0;}
-.st-current-row-main{min-width:0;flex:1;}
-.st-current-device{font-family:var(--font-lato);font-weight:600;font-size:0.92rem;color:var(--ivory);display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;}
-.st-current-meta{font-family:var(--font-lato);font-size:0.78rem;color:var(--ivory-dim);margin-top:0.3rem;}
-.session-icon{width:36px;height:36px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--ivory-dim);}
-.session-icon svg{width:17px;height:17px;}
-.session-row{display:flex;align-items:center;gap:0.9rem;padding:0.95rem 0;border-bottom:1px solid var(--border);}
-.session-row:last-child{border-bottom:none;}
-.session-meta{flex:1;min-width:0;}
-.session-device{font-family:var(--font-lato);font-weight:600;font-size:0.86rem;color:var(--ivory);}
-.session-loc{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-faint);margin-top:0.15rem;}
-.session-time{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-faint);white-space:nowrap;flex-shrink:0;}
-
-/* ════ ACTIVITY LOG (compact rows + clear dividers) ════ */
-.activity-row{display:flex;align-items:flex-start;gap:0.9rem;padding:0.95rem 0;border-bottom:1px solid var(--border);}
-.activity-row:last-child{border-bottom:none;}
-.activity-icon{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--ivory-dim);}
-.activity-icon svg{width:16px;height:16px;}
-.activity-icon.blue{color:var(--violet);background:var(--violet-soft);border-color:var(--violet-glow);}
-.activity-icon.teal{color:var(--teal);background:var(--teal-soft);border-color:var(--teal-glow);}
-.activity-icon.amber{color:var(--amber);background:var(--amber-soft);border-color:var(--amber-glow);}
-.activity-icon.red{color:var(--red);background:var(--red-soft);border-color:var(--red-glow);}
-.activity-main{flex:1;min-width:0;padding-top:0.1rem;}
-.activity-title{font-family:var(--font-lato);font-weight:600;font-size:0.86rem;color:var(--ivory);}
-.activity-detail{font-family:var(--font-lato);font-size:0.78rem;color:var(--ivory-dim);margin-top:0.2rem;line-height:1.5;overflow-wrap:break-word;}
-.activity-time{font-family:var(--font-lato);font-size:0.74rem;color:var(--ivory-faint);white-space:nowrap;margin-left:1rem;padding-top:0.3rem;flex-shrink:0;}
-.activity-empty{display:flex;align-items:flex-start;gap:0.85rem;padding:1.2rem 0;}
-.st-empty-icon{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--ivory-faint);}
-.st-empty-icon svg{width:16px;height:16px;}
-.st-empty-title{font-family:var(--font-lato);font-weight:600;font-size:0.86rem;color:var(--ivory);}
-.st-empty-desc{font-family:var(--font-lato);font-size:0.78rem;color:var(--ivory-faint);margin-top:0.2rem;line-height:1.5;}
-.st-restricted{display:flex;align-items:flex-start;gap:0.85rem;padding:1.1rem 0;color:var(--ivory-dim);}
-.st-restricted-icon{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--amber-soft);border:1px solid var(--amber-glow);color:var(--amber);}
-.st-restricted-icon svg{width:16px;height:16px;}
-.st-restricted-title{font-family:var(--font-lato);font-weight:600;font-size:0.86rem;color:var(--ivory);}
-.st-restricted-desc{font-family:var(--font-lato);font-size:0.78rem;color:var(--ivory-dim);margin-top:0.2rem;}
-
-/* ════ DATA & PRIVACY — destructive zone, restrained (no red card) ════ */
-.st-delete-zone{border-top:1px solid var(--border);margin-top:2.6rem;}
-.st-delete-zone .st-sec-title{color:var(--red);}
-.st-confirm-note{font-family:var(--font-lato);font-size:0.8rem;line-height:1.55;background:var(--red-soft);border:1px solid var(--red-glow);color:var(--ivory-dim);padding:0.7rem 0.9rem;border-radius:8px;}
-
-/* ── Buttons: clear hierarchy, consistent height/padding ── */
-.settings-content .btn{height:38px;padding:0 1.15rem;display:inline-flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;letter-spacing:0.02em;text-transform:none;border-radius:7px;}
-.settings-content .btn-sm{height:34px;padding:0 0.95rem;font-size:0.76rem;}
-.settings-content .btn-outline{background:transparent;border:1px solid var(--border);color:var(--ivory-dim);}
-.settings-content .btn-outline:hover{background:var(--ivory-ghost);border-color:var(--border-lit);color:var(--ivory);}
-
-/* ════ RESPONSIVE ════ */
-@media(max-width:1024px){
-  .settings-layout{gap:clamp(1.25rem,3vw,1.75rem);}
+.settings-nav-item .nav-ind{
+  position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:2px;height:20px;border-radius:var(--r-pill);background:transparent;
+  transition:background .15s var(--ease-out);
 }
-@media(max-width:1024px){
-  .settings-layout{flex-direction:column;}
-  .settings-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:0.3rem;padding-bottom:0.35rem;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;}
-  .settings-nav-group{display:none;}
-  .settings-nav-item{white-space:nowrap;padding:0.45rem 0.85rem;}
-  .settings-nav-item .nav-ind{display:none;}
-  .settings-content{max-width:none;}
+.settings-nav-item.active .nav-ind{background:var(--st-accent);}
+
+/*  2 - Typography  */
+.st-page{margin:0;}
+.st-desc{
+  font-size:var(--t-body);line-height:var(--lh-body);
+  color:var(--ivory-dim);max-width:60ch;margin:0;
 }
-@media(max-width:768px){
-  .st-title{font-size:1.5rem;}
-  .st-row{flex-direction:column;align-items:flex-start;gap:0.8rem;}
-  .st-row-actions{width:100%;}
-  .st-row-actions .btn{flex:1;}
-  .toggle-row{flex-direction:column;align-items:flex-start;gap:0.6rem;}
-  .toggle-switch{align-self:flex-start;}
-  .st-plan-head{flex-direction:column;align-items:flex-start;gap:0.8rem;}
-  .st-confirm-fields{grid-template-columns:1fr !important;}
-  .activity-time{display:none;}
-  .activity-row{flex-wrap:wrap;}
-  .activity-main{min-width:70%;}
+.st-desc-spaced{margin-top:var(--sp-4);}
+.st-eyebrow{
+  display:block;font-size:var(--t-eyebrow);font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--st-mute);
 }
 
-/* ════ PHASE 3: Activity Log + Data & Privacy ════
-   Activity rows — compact contextual rows with a small tinted icon.
-   Neutral surface; color only on the icon, never the whole row. */
-.activity-row{display:flex;align-items:flex-start;gap:0.9rem;padding:0.95rem 0;border-bottom:1px solid var(--border);}
-.activity-row:last-child{border-bottom:none;}
-.activity-icon{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--ivory-dim);}
-.activity-icon svg{width:16px;height:16px;}
-.activity-icon.blue{color:var(--violet);background:var(--violet-soft);border-color:var(--violet-glow);}
-.activity-icon.teal{color:var(--teal);background:var(--teal-soft);border-color:var(--teal-glow);}
-.activity-icon.amber{color:var(--amber);background:var(--amber-soft);border-color:var(--amber-glow);}
-.activity-icon.red{color:var(--red);background:var(--red-soft);border-color:var(--red-glow);}
-.activity-main{flex:1;min-width:0;padding-top:0.1rem;}
-.activity-title{font-family:var(--font-lato);font-weight:700;font-size:0.85rem;color:var(--ivory);}
-.activity-title .act-tint{font-weight:700;}
-.activity-detail{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-dim);margin-top:0.2rem;line-height:1.5;overflow-wrap:break-word;}
-.activity-time{font-family:var(--font-m);font-size:0.68rem;color:var(--ivory-faint);white-space:nowrap;margin-left:1rem;padding-top:0.25rem;}
-
-/* Compact empty state (Activity Log / lists). */
-.activity-empty{display:flex;align-items:flex-start;gap:0.85rem;padding:1.2rem 0;}
-.st-empty-icon{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--ivory-faint);}
-.st-empty-icon svg{width:16px;height:16px;}
-.st-empty-title{font-family:var(--font-lato);font-weight:700;font-size:0.85rem;color:var(--ivory);}
-.st-empty-desc{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-faint);margin-top:0.2rem;line-height:1.5;}
-
-/* Admin-only restricted note (Activity Log). */
-.st-restricted{display:flex;align-items:flex-start;gap:0.85rem;padding:1.1rem 0;color:var(--ivory-dim);}
-.st-restricted-icon{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--amber-soft);border:1px solid var(--amber-glow);color:var(--amber);}
-.st-restricted-icon svg{width:16px;height:16px;}
-.st-restricted-title{font-family:var(--font-lato);font-weight:700;font-size:0.85rem;color:var(--ivory);}
-.st-restricted-desc{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-dim);margin-top:0.2rem;}
-
-/* Delete Account — restrained destructive treatment. Neutral surface with a
-   single subtle red accent line + red heading. No red background wash. */
-.st-delete-zone{border-top:1px solid var(--border);padding-top:0.2rem;}
-.st-delete-zone .st-row-desc,.st-confirm-note{color:var(--ivory-dim);}
-.st-confirm-note{font-family:var(--font-lato);font-size:0.78rem;line-height:1.55;background:var(--red-soft);border:1px solid var(--red-glow);color:var(--ivory-dim);padding:0.7rem 0.9rem;border-radius:8px;}
-
-/* ════ PHASE 2: Security / Sessions / Plan & Billing ════
-   Settings-row pattern: heading + description on the left, action on
-   the right, separated by subtle top dividers. Neutral surfaces; color
-   is used only for status indicators, badges and contextual actions. */
-.st-sec-head .st-sec-desc{flex:1;}
-
-/* A single settings row (one feature block inside a section). */
-.st-row{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;padding:1.15rem 0;}
-.st-row + .st-row{border-top:1px solid var(--border);}
-.st-row-main{min-width:0;}
-.st-row-title{font-family:var(--font-lato);font-weight:700;font-size:0.86rem;color:var(--ivory);display:flex;align-items:center;gap:0.55rem;}
-.st-row-desc{font-family:var(--font-lato);font-size:0.78rem;color:var(--ivory-dim);line-height:1.55;margin-top:0.25rem;max-width:520px;}
-.st-row-actions{flex-shrink:0;display:flex;align-items:center;gap:0.7rem;}
-
-/* Contextual status indicator: a small icon + tinted label. Color never
-   carries meaning alone — glyph and label text are always present. */
-.st-status{display:inline-flex;align-items:center;gap:0.5rem;font-family:var(--font-lato);font-size:0.76rem;font-weight:600;color:var(--ivory-dim);padding:0.4rem 0.85rem;border-radius:100px;background:var(--surface);border:1px solid var(--border);}
-.st-status .st-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--ivory-faint);}
-.st-status.ok{color:var(--teal);background:var(--teal-soft);border-color:var(--teal-glow);}
-.st-status.ok .st-dot{background:var(--teal);box-shadow:0 0 0 3px var(--teal-soft);}
-.st-status.warn{color:var(--amber);background:var(--amber-soft);border-color:var(--amber-glow);}
-.st-status.warn .st-dot{background:var(--amber);box-shadow:0 0 0 3px var(--amber-soft);}
-.st-status.crit{color:var(--red);background:var(--red-soft);border-color:var(--red-glow);}
-.st-status.crit .st-dot{background:var(--red);box-shadow:0 0 0 3px var(--red-soft);}
-.st-status.neutral .st-dot{background:var(--ivory-faint);}
-.st-status strong{font-weight:700;color:var(--ivory);}
-.st-status .st-status-sub{font-weight:500;color:var(--ivory-faint);}
-
-/* Subtle mono detail line for things like recovery-code counts. */
-.st-monoline{font-family:var(--font-rc);font-size:0.72rem;color:var(--ivory-dim);}
-
-/* Plan header — prominent but restrained; accent reserved for badge + bars. */
-.st-plan-head{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;}
-.st-plan-name{font-family:var(--font-d);font-weight:600;font-size:1.3rem;color:var(--ivory);letter-spacing:-0.01em;}
-.st-plan-org{font-family:var(--font-rc);font-weight:600;font-size:0.66rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);margin-top:0.35rem;}
-.st-plan-badge{font-family:var(--font-rc);font-weight:700;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--violet);border:1px solid var(--violet-glow);background:var(--violet-soft);padding:0.4rem 0.85rem;border-radius:100px;}
-.st-plan-desc{font-family:var(--font-lato);font-size:0.82rem;color:var(--ivory-dim);line-height:1.6;margin-top:0.8rem;max-width:560px;}
-
-/* Usage (employee seats) with a subtle violet-tinted progress. */
-.st-usage-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:0.7rem;}
-.st-usage-label{font-family:var(--font-lato);font-weight:700;font-size:0.66rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ivory-dim);}
-.st-usage-nums{font-family:var(--font-rc);font-weight:700;font-size:0.82rem;color:var(--ivory);}
-.st-usage-nums span{color:var(--ivory-faint);font-weight:500;}
-.st-usage-bar{width:100%;height:7px;border-radius:100px;background:var(--surface);border:1px solid var(--border);overflow:hidden;}
-.st-usage-bar .st-usage-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--violet),var(--violet));transition:width 0.6s var(--ease-out);}
-.st-usage-bar .st-usage-fill.warn{background:linear-gradient(90deg,var(--amber),var(--amber));}
-.st-usage-bar .st-usage-fill.crit{background:linear-gradient(90deg,var(--red),var(--red));}
-.st-usage-foot{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:0.7rem;}
-.st-usage-note{font-family:var(--font-m);font-size:0.7rem;color:var(--ivory-faint);}
-
-/* "Current session" summary card — subtler than a full form card. */
-.st-current{display:flex;align-items:center;gap:1.1rem;background:var(--ink);border:1px solid var(--border);padding:1.15rem 1.4rem;box-shadow:var(--shadow-sm);}
-.st-current .session-icon{color:var(--violet);}
-.st-current-row-main{min-width:0;}
-.st-current-device{font-family:var(--font-lato);font-weight:700;font-size:0.9rem;color:var(--ivory);display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;}
-.st-current-meta{font-family:var(--font-lato);font-size:0.76rem;color:var(--ivory-dim);margin-top:0.3rem;}
-
-@media(max-width:768px){
-  .st-row{flex-direction:column;align-items:flex-start;gap:0.8rem;}
-  .st-row-actions{width:100%;}
-  .st-row-actions .btn{flex:1;}
-  .st-plan-head{flex-direction:column;align-items:flex-start;gap:0.8rem;}
+/*  3 - Card - the only grouping surface  */
+.settings-page .st-card,
+.settings-page .st-section{
+  background:var(--ink);
+  border:1px solid var(--st-divider);
+  border-radius:var(--r-lg);
+  padding:var(--sp-5) var(--st-card-x);
 }
-
-/* ── Responsive ── */
-@media(max-width:1280px){
-  .settings-layout{gap:1.45rem;}
+.st-sec-head{
+  display:flex;flex-direction:column;gap:var(--sp-1);
+  padding-bottom:var(--sp-4);margin:0 0 var(--sp-4);
+  border-bottom:1px solid var(--st-divider);
 }
-@media(max-width:1024px){
-  .settings-layout{flex-direction:column;gap:0.8rem;}
-  .settings-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:0.4rem;padding-bottom:0.25rem;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;}
-  .settings-nav-group{display:none;}
-  .settings-nav-item{white-space:nowrap;padding:0.5rem 0.85rem;}
-  .settings-nav-item .nav-ind{display:none;}
-  .settings-nav-item.active::before{top:0.4rem;bottom:0.4rem;}
+.st-sec-head--action{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  align-items:start;gap:var(--sp-2) var(--sp-4);
 }
-@media(max-width:768px){
-  .st-title{font-size:1.3rem;}
-  .settings-content{max-width:none;}
-  .st-confirm-fields{grid-template-columns:1fr !important;}
-  .activity-time{display:none;}
-  .activity-row{flex-wrap:wrap;}
-  .activity-main{min-width:70%;}
+.st-sec-title{
+  font-size:var(--t-section);font-weight:600;
+  line-height:var(--lh-tight);color:var(--ivory);margin:0;
 }
-
-/* ════ SETTINGS DIVIDER SYSTEM (visual polish only — no behavior changes) ════
-   Theme-aware 1px semantic divider, stronger than the global faint --border so
-   setting groups scan clearly, but still subtle. Dark = cool slate, Light =
-   cool gray. Applied to major panels, sub-sections, content rows, sidebar
-   groups and Settings inputs. Rules below override the faint defaults above. */
-:root{
-  --settings-divider:rgba(130,160,220,0.20);
+.st-sec-desc{
+  font-size:var(--t-body);line-height:var(--lh-body);
+  color:var(--ivory-dim);max-width:60ch;
 }
-html[data-theme="light"]{
-  --settings-divider:rgba(20,30,60,0.26);
+/* Secondary note under a section description. */
+.st-sec-note{
+  display:block;margin-top:var(--sp-2);
+  font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);
 }
+.st-sec-note a{color:var(--ivory-dim);text-decoration:underline;text-underline-offset:2px;}
+.st-sec-note a:hover{color:var(--ivory);}
 
-/* Major section boundary: panel-to-panel on the continuous scroll */
-.settings-panel + .settings-panel{border-top:1px solid var(--settings-divider);padding-top:2.4rem;}
-
-/* Page header underline (title + description) */
-.st-page{border-bottom-color:var(--settings-divider);}
-
-/* Sub-section boundaries inside a panel (Profile info → Contact info, etc.) */
-.settings-panel .st-section + .st-section{border-top:1px solid var(--settings-divider);padding-top:2.1rem;}
-
-/* Settings content rows + toggle-list separators */
+/*  4 - Component A - setting row  */
+.st-row{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  column-gap:var(--sp-5);align-items:center;
+  padding:var(--sp-4) var(--st-card-x);
+  margin-inline:calc(var(--st-card-x) * -1);   /* hover + dividers bleed to the card edge */
+  transition:background .15s var(--ease-out);
+}
+.st-row:hover{background:var(--ivory-ghost);}
+.st-row-main{min-width:0;display:grid;gap:var(--sp-1);}   /* title ABOVE description */
+.st-row-title{
+  display:flex;align-items:center;gap:var(--sp-3);
+  font-size:var(--t-row);font-weight:600;
+  line-height:var(--lh-tight);color:var(--ivory);
+}
+.st-row-desc{
+  font-size:var(--t-body);line-height:var(--lh-body);
+  color:var(--ivory-dim);max-width:60ch;overflow-wrap:break-word;
+}
+/* Rows with a leading icon indent the description to the title's left edge. */
+.st-row-title:has(.st-row-icon) ~ .st-row-desc{
+  padding-left:calc(var(--st-icon) + var(--sp-3));
+}
+.st-row-icon{
+  width:var(--st-icon);height:var(--st-icon);flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  border-radius:var(--r-sm);background:var(--surface);
+  border:1px solid var(--st-divider);color:var(--ivory-dim);
+}
+.st-row-icon svg{width:18px;height:18px;stroke-width:1.75;}
+.st-row-actions{
+  display:flex;align-items:center;justify-content:flex-end;
+  gap:var(--sp-2);flex-shrink:0;
+}
+/* One divider rule for every row type. Never on the first row of a card. */
 .st-row + .st-row,
-.toggle-row + .toggle-row{border-color:var(--settings-divider);}
+.st-row + .st-meta-row,
+.st-row + .toggle-row,
+.st-meta-row + .st-row,
+.st-meta-row + .st-meta-row,
+.st-meta-row + .toggle-row,
+.session-row + .session-row,
+.activity-row + .activity-row{border-top:1px solid var(--st-divider);}
+.st-divide-top{border-top:1px solid var(--st-divider);}
 
-/* Sessions + activity-log editorial list separators */
-.session-row{border-bottom-color:var(--settings-divider);}
-.activity-row{border-bottom-color:var(--settings-divider);}
-.sessions-list .session-row{border-bottom-color:var(--settings-divider);}
-.activity-list .activity-row{border-bottom-color:var(--settings-divider);}
-
-/* Footer actions + destructive-zone neutral dividers */
-.st-actions{border-top-color:var(--settings-divider);}
-.st-delete-zone{border-top-color:var(--settings-divider);}
-
-/* Settings input borders kept visible in both themes (never dominant) */
-.settings-content .form-input{border-color:var(--settings-divider);}
-
-/* ════ DATA & PRIVACY (informational sections — data/privacy lining) ════ */
-.st-data-intro{font-family:var(--font-lato);font-size:0.85rem;color:var(--ivory-dim);line-height:1.7;max-width:620px;margin:0 0 0.75rem;}
-.st-data-intro strong{color:var(--ivory);font-weight:600;}
-
-.st-data-list{display:flex;flex-direction:column;}
-.st-data-item{display:flex;flex-direction:column;gap:0.15rem;padding:0.9rem 0;}
-.st-data-item + .st-data-item{border-top:1px solid var(--settings-divider);}
-.st-data-title{font-family:var(--font-lato);font-weight:600;font-size:0.86rem;color:var(--ivory);}
-.st-data-desc{font-family:var(--font-lato);font-size:0.78rem;color:var(--ivory-dim);line-height:1.55;}
-
-/* Destructive action button — red accent only, not a full-section wash.
-   !important keeps the red fill consistent against the base .btn styles. */
-.settings-content .st-danger-btn{background:var(--red)!important;border:1px solid var(--red-glow)!important;color:#fff!important;transition:box-shadow 0.2s var(--ease-out);}
-.settings-content .st-danger-btn:hover{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important;box-shadow:0 4px 18px var(--red-glow);}
-
-/* Security overview and metadata rows use the existing settings rhythm. */
-.settings-panel[data-panel="security"] .st-section.st-card{margin-bottom:var(--sp-sm);}
-.security-overview{padding-top:1.15rem!important;padding-bottom:1.15rem!important;}
-.security-overview .st-sec-head{margin-bottom:0.8rem;}
-.security-overview-statuses{display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;}
-.security-overview-statuses .st-status{font-size:0.8rem;}
-.security-overview-statuses .st-status.ok .st-dot{background:var(--teal);}
-.security-overview-statuses .st-status.warn .st-dot{background:var(--amber);}
-.security-overview-statuses .st-status.neutral .st-dot{background:var(--ivory-faint);}
-.security-low-codes{color:var(--amber);}
-@media(max-width:768px){
-  .security-overview-statuses{align-items:flex-start;flex-direction:column;gap:0.55rem;}
-  .settings-panel[data-panel="security"] .st-row-actions{align-self:flex-start;}
+/*  5 - Component B - meta row (label - hint - value)  */
+.st-meta-row{
+  display:grid;
+  grid-template-columns:minmax(160px,220px) minmax(0,1fr) auto;
+  column-gap:var(--sp-5);align-items:center;
+  padding:var(--sp-4) var(--st-card-x);
+  margin-inline:calc(var(--st-card-x) * -1);
+}
+.st-meta-label{font-size:var(--t-row);font-weight:600;color:var(--ivory);}
+.st-meta-hint{
+  font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);
+}
+.st-meta-value{
+  font-size:var(--t-small);color:var(--st-mute);text-align:right;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
 }
 
-/* ════ REFACTOR: shared spacing utilities (CSS custom props, no inline styles) ════ */
-.mt-sm{margin-top:var(--sp-sm);}.mt-md{margin-top:var(--sp-md);}.mt-lg{margin-top:var(--sp-lg);}
-.mb-sm{margin-bottom:var(--sp-sm);}.mb-md{margin-bottom:var(--sp-md);}.mb-lg{margin-bottom:var(--sp-lg);}
-.pt-sm{padding-top:var(--sp-sm);}.pt-md{padding-top:var(--sp-md);}.pt-lg{padding-top:var(--sp-lg);}
-.pb-sm{padding-bottom:var(--sp-sm);}.pb-md{padding-bottom:var(--sp-md);}.pb-lg{padding-bottom:var(--sp-lg);}
-.pb-0{padding-bottom:0;}
-
-/* Section-title danger variant (Delete Account heading) */
-.st-sec-title--danger{color:var(--red);}
-
-/* Billing "Manage your subscription" divider row */
-.st-row--bordered{border-top:1px solid var(--settings-divider);}
-
-/* Small contextual note under a toggle (non-admin lockout note) */
-.st-note{font-family:var(--font-rc);font-size:0.62rem;letter-spacing:0.05em;color:var(--ivory-dim);padding:0.1rem 0 0.6rem;}
-
-/* Delete-account confirm block + its credential fields + action bar */
-.st-confirm-zone{margin-top:var(--sp-md);padding-top:var(--sp-md);border-top:1px solid var(--red-glow);}
-.st-confirm-fields{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem;}
-.st-actions--tight{gap:0.5rem;}
-
-/* Row/action right-hand grouping: keep status + buttons vertically centered,
-   right-aligned and non-shrinking identically across all rows. */
-.st-row-actions{align-self:center;}
-.st-current .st-status{flex-shrink:0;}
-
-/* Full-page loading skeleton (shown until /api/me resolves; no blank screen) */
-.page-skeleton{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--void);transition:opacity .3s var(--ease-out);}
-.page-skeleton-spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--ink);border-top-color:var(--amber);animation:page-skeleton-spin .8s linear infinite;}
-@keyframes page-skeleton-spin{to{transform:rotate(360deg);}}
-.page-skeleton.is-hidden{opacity:0;pointer-events:none;}
-
-/* ── Manager Roles: table + badges ── */
-.st-table{width:100%;border-collapse:collapse;font-size:0.85rem;}
-.st-table th{text-align:left;padding:0.7rem 1rem;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;}
-.st-table td{padding:0.7rem 1rem;border-bottom:1px solid var(--line);vertical-align:top;}
-.st-table tbody tr:hover{background:var(--surface-soft);}
-.st-table tbody tr.row-selected{background:rgba(51,160,143,0.08);}
-.st-badge{display:inline-block;padding:0.2rem 0.6rem;border-radius:999px;font-size:0.72rem;font-weight:600;white-space:nowrap;}
-.badge-violet{background:rgba(124,93,250,0.14);color:var(--violet);}
-.badge-green{background:rgba(40,167,100,0.14);color:var(--teal);}
-.badge-amber{background:rgba(243,156,18,0.16);color:#b7791f;}
-.badge-grey{background:rgba(120,120,128,0.14);color:var(--muted);}
-.mr-toast{font-size:0.82rem;font-weight:600;font-family:var(--font-rc);}
-
-/* ════════════════════════════════════════════════════════════════════
-   SETTINGS — PANEL TYPOGRAPHY & SURFACE RESTYLE (CSS-ONLY, NO LOGIC)
-   Removes the repetitive "tracked ALL-CAPS label + hairline per row"
-   template. Every panel shares these classes, so this fixes all of them.
-   · One serif moment per panel (.st-title): Cormorant italic — the app's
-     existing serif language (cf. .drawer-section-title), not a new font.
-   · Sub-sections stop shouting: quiet Inter semibold heading with the
-     description read as a subtitle beneath it, not an inline label pair.
-   · Sections become contained cards (--ink lifted off --void, 1px border,
-     10px radius) — grouping via shared surface, not repeated hairlines.
-   · Short toggle/info groups drop per-row dividers; tall scannable lists
-     (sessions, activity) keep theirs. Danger headings stay red.
-   ════════════════════════════════════════════════════════════════════ */
-
-/* 1) Panel heading — Cormorant italic, the one distinctive moment per panel */
-.st-title{font-family:var(--font-serif);font-weight:700;font-style:italic;font-size:clamp(1.8rem,3vw,2.25rem);letter-spacing:0.005em;line-height:1.12;color:var(--ivory);}
-
-/* 2) Sub-section heading = quiet Inter semibold; description slides under it */
-.st-sec-head{display:flex;flex-direction:column;align-items:flex-start;gap:0.2rem;margin-bottom:1.2rem;}
-.st-sec-head .st-sec-desc{flex:0 0 auto;}
-.st-sec-title{font-family:var(--font-d);font-weight:600;font-size:1rem;letter-spacing:0;text-transform:none;color:var(--ivory);margin:0;}
-.st-sec-desc{font-family:var(--font-lato);font-size:0.8rem;line-height:1.5;color:var(--ivory-faint);}
-
-/* Keep danger sub-headings red (delete flows) */
-.st-sec-title--danger,.st-delete-zone .st-sec-title{color:var(--red);}
-
-/* Active Sessions header: notes + top-right "sign out everywhere" action */
-.sessions-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:0.2rem 1rem;}
-.sessions-head .st-sec-title{grid-column:1;grid-row:1;}
-.sessions-head .st-sec-desc{grid-column:1;grid-row:2;}
-.sessions-loc-note{font-size:0.72rem;color:var(--ivory-faint);}
-.revoke-others-btn{grid-column:2;grid-row:1 / span 2;white-space:nowrap;background:transparent!important;border-color:transparent!important;color:var(--ivory-dim);}
-.revoke-others-btn:hover{background:var(--ivory-ghost)!important;color:var(--ivory);}
-@media(max-width:640px){.sessions-head{grid-template-columns:minmax(0,1fr);}.revoke-others-btn{grid-column:1;grid-row:3;justify-self:start;}}
-
-/* 3) Sections become contained cards on the --void surface */
-.st-section{background:var(--ink);border:1px solid var(--border);border-radius:10px;padding:1.6rem 1.7rem;}
-.settings-panel .st-section + .st-section{border-top:0;padding-top:1.6rem;}
-.st-section .st-section{background:transparent;border:0;border-radius:0;padding:1.1rem 0 0;}
-
-/* Horizontal settings tabs and contained settings sections. */
-.settings-layout{display:block;}
-.settings-content{max-width:none;}
-.settings-nav{display:flex;flex-direction:row;align-items:stretch;gap:0.3rem;overflow-x:auto;padding:0 0 0.35rem;border-bottom:1px solid var(--border);margin-bottom:2rem;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;}
-.settings-nav::-webkit-scrollbar{display:none;}
-.settings-nav-wrap{position:relative;}
-.settings-nav-wrap::after{content:"";pointer-events:none;position:absolute;right:0;top:0;bottom:0;width:32px;background:linear-gradient(90deg,transparent,var(--void) 80%);}
-.settings-nav-wrap:not(.is-overflowing)::after{display:none;}
-.settings-nav-group{display:none;}
-.settings-nav-item{white-space:nowrap;border-radius:6px;padding:0.7rem 0.9rem;}
-.settings-nav-item .nav-ind{left:0;right:0;top:auto;bottom:-1px;width:auto;height:2px;border-radius:0;}
-.settings-nav-item.active{background:var(--ivory-ghost);}
-.st-card{border:1px solid var(--border);border-radius:6px;background:var(--surface);padding:1.6rem 1.7rem;}
-.st-section.st-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.6rem 1.7rem;margin-bottom:1.5rem;}
-.settings-panel .st-section.st-card + .st-section.st-card{border-top:1px solid var(--border);padding-top:1.6rem;}
-.st-row-icon,.toggle-icon{width:38px;height:38px;border-radius:14px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--ivory-dim);transition:background 0.16s var(--ease-out);}
-.st-row:hover .st-row-icon,.toggle-row:hover .toggle-icon{background:var(--ivory-ghost);}
-.st-row-icon svg,.toggle-icon svg{width:18px;height:18px;}
-.st-row-main{display:flex;align-items:flex-start;gap:0.8rem;}
-.toggle-label{display:flex;align-items:flex-start;gap:0.8rem;}
-.toggle-label > span:last-child{min-width:0;}
-.notification-groups{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem 1.75rem;}
-.notification-groups .wa-card{grid-column:1 / -1;}
-.toggle-label{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:0.8rem;row-gap:0.25rem;align-items:start;}
-.toggle-label .toggle-icon{grid-row:1 / span 2;}
-.toggle-label .toggle-title,.toggle-label .toggle-desc{grid-column:2;}
-@media(max-width:768px){
-  .notification-groups{grid-template-columns:1fr;}
-  .settings-nav{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+/*  6 - Component C - form field  */
+.st-fields{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:var(--sp-4) var(--sp-5);
 }
+.st-fields .span-2{grid-column:1 / -1;}
+.st-field{display:flex;flex-direction:column;min-width:0;}
+.st-field label{
+  font-size:var(--t-row);font-weight:500;color:var(--ivory);
+  text-transform:none;letter-spacing:0;margin-bottom:var(--sp-2);
+}
+.settings-page .form-input{
+  height:40px;padding:0 var(--sp-3);
+  border-radius:var(--r-sm);border:1px solid var(--st-divider);
+  background:var(--surface);color:var(--ivory);
+  font-family:var(--font-d);font-size:var(--t-body);
+  transition:border-color .15s var(--ease-out),box-shadow .15s var(--ease-out);
+}
+.settings-page select.form-input{padding-right:var(--sp-2);}
+.settings-page .form-input::placeholder{color:var(--st-mute);}
+.settings-page .form-input:focus{
+  border-color:var(--st-accent);box-shadow:0 0 0 2px var(--amber-glow);
+}
+.settings-page .form-input[readonly]{opacity:.75;}
+.settings-page .form-input.input-error{
+  border-color:var(--st-bad);box-shadow:0 0 0 2px var(--red-soft);
+}
+.st-hint{
+  font-size:var(--t-small);line-height:var(--lh-body);
+  color:var(--st-mute);margin-top:var(--sp-2);
+}
+.settings-page .field-error{
+  font-size:var(--t-small);font-weight:600;color:var(--st-bad);
+  margin-top:var(--sp-2);display:none;
+}
+.st-help{
+  font-size:var(--t-body);line-height:var(--lh-body);color:var(--ivory-dim);
+  background:var(--surface);border:1px solid var(--st-divider);
+  border-radius:var(--r-md);padding:var(--sp-4);margin-top:var(--sp-5);
+}
+.st-help p{margin:var(--sp-2) 0 0;}
 
-/* 4) Short groups: rely on vertical rhythm, drop the per-row hairlines */
-.st-row{padding:0.9rem 0;}
-.st-row + .st-row{border-top:none;}
-.toggle-row + .toggle-row{border-top:none;}
-.st-data-item + .st-data-item{border-top:none;}
-
-/* ════ WHATSAPP CONNECTION CARD — visual module; JS/functionality untouched ════ */
-.wa-card{--wa-green:#25D366;--wa-green-deep:#1DA851;--wa-green-ink:#062B16;--wa-green-soft:rgba(37,211,102,0.10);--wa-green-line:rgba(37,211,102,0.38);position:relative;background-color:var(--ink);background-image:url('img/whatsapp-connect-banner.png');background-size:cover;background-position:center;background-repeat:no-repeat;background-clip:padding-box;border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:2.6rem;}
-.wa-card::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(8,10,15,0.60) 0%,rgba(8,10,15,0.86) 50%,rgba(8,10,15,0.96) 100%);}
-.wa-card-body{position:relative;z-index:1;padding:1.7rem 1.8rem 1.9rem;}
-.wa-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1.2rem;flex-wrap:wrap;}
-.wa-head-copy{min-width:0;}
-.wa-title{font-family:var(--font-d);font-weight:600;font-size:1.15rem;letter-spacing:0;text-transform:none;color:var(--ivory);margin:0;}
-.wa-sub{font-family:var(--font-serif);font-style:italic;font-weight:700;font-size:0.95rem;letter-spacing:0.005em;color:var(--ivory-dim);margin-top:0.3rem;}
-.wa-note{font-family:var(--font-lato);font-size:0.8rem;line-height:1.6;color:var(--ivory-faint);margin-top:1rem;max-width:560px;}
-.wa-status{display:inline-flex;align-items:center;gap:0.5rem;font-family:var(--font-lato);font-size:0.76rem;font-weight:600;flex-shrink:0;border-radius:100px;padding:0.45rem 0.9rem;}
-.wa-glyph{width:15px;height:15px;flex-shrink:0;}
+/*  7 - Component D - status badge  */
+.st-status{
+  display:inline-flex;align-items:center;gap:var(--sp-2);
+  height:24px;padding:0 var(--sp-3);border-radius:var(--r-pill);
+  font-size:var(--t-small);font-weight:600;white-space:nowrap;
+  color:var(--ivory-dim);background:var(--surface);border:1px solid var(--st-divider);
+}
+.st-status .st-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--st-mute);
+}
+.st-status.ok{color:var(--st-ok);background:var(--teal-soft);border-color:var(--teal-glow);}
+.st-status.ok .st-dot{background:var(--st-ok);}
+.st-status.warn{color:var(--st-warn);background:var(--amber-soft);border-color:var(--amber-glow);}
+.st-status.warn .st-dot{background:var(--st-warn);}
+.st-status.crit{color:var(--st-bad);background:var(--red-soft);border-color:var(--red-glow);}
+.st-status.crit .st-dot{background:var(--st-bad);}
+.st-status.neutral .st-dot{background:var(--st-mute);}
+.st-status strong{font-weight:600;color:var(--ivory);}
+.st-status-row{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;}
+/* Connection chips. The WhatsApp script swaps is-off / is-on on the badge. */
+.st-status.is-off .st-dot{background:transparent;box-shadow:inset 0 0 0 1.5px var(--st-mute);}
+.st-status.is-on{color:var(--st-ok);background:var(--teal-soft);border-color:var(--teal-glow);}
+.st-status.is-on .st-dot,
+.st-status.is-on .wa-glyph-wa{display:none;}
+.st-status.is-on .wa-glyph-check{display:block;color:var(--st-ok);}
+.st-status .wa-glyph{width:15px;height:15px;flex-shrink:0;stroke-width:1.75;}
 .wa-glyph-check{display:none;}
-.wa-status .st-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.wa-status.is-off{color:var(--ivory-dim);background:var(--wa-green-soft);border:1px solid var(--wa-green-line);}
-.wa-status.is-off .wa-glyph-wa{color:var(--wa-green);}
-.wa-status.is-off .st-dot{background:transparent;border:1.5px solid var(--wa-green);box-shadow:0 0 0 3px var(--wa-green-soft);}
-.wa-status.is-on{color:var(--wa-green-ink);background:var(--wa-green);border:1px solid var(--wa-green);box-shadow:0 4px 16px rgba(37,211,102,0.24);}
-.wa-status.is-on .wa-glyph-wa{display:none;}
-.wa-status.is-on .wa-glyph-check{display:block;}
-.wa-status.is-on .st-dot{display:none;}
-.wa-status-label{white-space:nowrap;}
-.wa-connect-row{display:flex;align-items:center;gap:0.7rem;margin-top:1.15rem;}
-.wa-connect-row .form-input{height:42px;padding:0.55rem 0.85rem;border-radius:6px;font-size:0.9rem;flex:1 1 220px;min-width:220px;}
-.wa-connect-row .form-input:focus{border-color:var(--wa-green);box-shadow:0 0 0 3px var(--wa-green-soft);}
-.wa-otp-row{margin-top:0.55rem;}
-.wa-card .wa-connect-row .wa-btn{flex-shrink:0;min-width:148px;height:42px;}
-.wa-btn{background:var(--wa-green);border:1px solid var(--wa-green);color:#FFFFFF;}
-.wa-btn:hover{background:var(--wa-green-deep);border-color:var(--wa-green-deep);color:#FFFFFF;}
-.wa-btn:active{transform:translateY(1px);}
-.wa-btn:disabled{opacity:0.55;background:var(--wa-green);border-color:var(--wa-green);color:#FFFFFF;}
-.wa-btn:focus-visible{box-shadow:0 0 0 3px var(--wa-green-soft);}
-.wa-msg{display:block;font-family:var(--font-lato);font-size:0.8rem;font-weight:500;line-height:1.45;margin-top:0.7rem;min-height:1em;}
-.wa-card .field-error:not(:empty){display:block;}
-html[data-theme="light"] .wa-card .wa-title{color:#E8ECF4;}
-html[data-theme="light"] .wa-card .wa-sub{color:#8893A8;}
-html[data-theme="light"] .wa-card .wa-note{color:#8893A8;}
-html[data-theme="light"] .wa-card .wa-msg{color:#8893A8;}
-html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
-@media(max-width:768px){.wa-card::before{background:linear-gradient(180deg,rgba(8,10,15,0.64) 0%,rgba(8,10,15,0.90) 50%,rgba(8,10,15,0.97) 100%);}.wa-card-body{padding:1.45rem 1.35rem 1.6rem;}}
-@media(max-width:480px){.wa-card::before{background:linear-gradient(180deg,rgba(8,10,15,0.72) 0%,rgba(8,10,15,0.93) 50%,rgba(8,10,15,0.98) 100%);}.wa-connect-row{flex-direction:column;align-items:stretch;}.wa-connect-row .wa-btn,.wa-card .wa-connect-row .wa-btn{width:100%;min-width:0;}.wa-status{width:100%;justify-content:center;}}
 
-/* ════ GMAIL INTEGRATION CARD ════ */
-.wa-card.gmail-card{background-image:url('gmail_integeration.webp');}
-.wa-card.gmail-card::before{display:block;}
-.wa-card.gmail-card .wa-status.is-off{color:var(--ivory-dim);background:var(--ivory-ghost);border:1px solid var(--border);}
-.wa-card.gmail-card .wa-status.is-off .st-dot{background:transparent;border:1.5px solid var(--ivory-faint);box-shadow:0 0 0 3px var(--ivory-ghost);}
-.gmail-btn{background:var(--violet);border:1px solid var(--violet);color:#FFFFFF;flex-shrink:0;min-width:148px;height:42px;border-radius:6px;}
-.gmail-btn:hover{background:var(--violet);border-color:var(--violet);color:#FFFFFF;opacity:0.92;}
-.gmail-btn:focus-visible{box-shadow:0 0 0 3px var(--violet-soft);}
-@media(max-width:480px){.wa-card.gmail-card .wa-connect-row .gmail-btn{width:100%;min-width:0;}}
+/*  8 - Component E - toggle row  */
+.st-toggle-list{display:flex;flex-direction:column;}
+.toggle-row{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  column-gap:var(--sp-5);align-items:start;
+  padding:var(--sp-4) var(--st-card-x);
+  margin-inline:calc(var(--st-card-x) * -1);
+  cursor:pointer;transition:background .15s var(--ease-out);
+}
+.toggle-row:hover{background:var(--ivory-ghost);}
+.toggle-label{
+  display:grid;grid-template-columns:auto minmax(0,1fr);
+  column-gap:var(--sp-3);row-gap:var(--sp-1);align-items:center;min-width:0;
+}
+.toggle-label .toggle-icon{grid-row:1 / span 2;}
+.toggle-label .toggle-title,
+.toggle-label .toggle-desc{grid-column:2;}
+.toggle-icon{
+  width:var(--st-icon);height:var(--st-icon);flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  border-radius:var(--r-sm);background:var(--surface);
+  border:1px solid var(--st-divider);color:var(--ivory-dim);
+}
+.toggle-icon svg{width:18px;height:18px;stroke-width:1.75;}
+.toggle-title{
+  font-size:var(--t-row);font-weight:600;
+  line-height:var(--lh-tight);color:var(--ivory);
+}
+.toggle-desc{
+  font-size:var(--t-body);line-height:var(--lh-body);
+  color:var(--ivory-dim);max-width:60ch;overflow-wrap:break-word;
+}
+.toggle-switch{position:relative;display:inline-flex;flex-shrink:0;}
+/* Centre the 22px switch on the 32px title line, not on the whole row. */
+.toggle-row:has(.toggle-icon) .toggle-switch{margin-top:calc((var(--st-icon) - 22px) / 2);}
+.toggle-switch input{
+  position:absolute;inset:0;width:100%;height:100%;
+  margin:0;opacity:0;cursor:pointer;z-index:1;
+}
+.toggle-slider{
+  display:block;position:relative;width:40px;height:22px;
+  border-radius:var(--r-pill);background:var(--surface);
+  border:1px solid var(--st-divider);
+  transition:background .15s var(--ease-out),border-color .15s var(--ease-out);
+}
+.toggle-slider::before{
+  content:'';position:absolute;top:2px;left:2px;
+  width:16px;height:16px;border-radius:50%;background:var(--st-mute);
+  transition:transform .15s var(--ease-out),background .15s var(--ease-out);
+}
+.toggle-switch input:checked + .toggle-slider{background:var(--st-ok);border-color:var(--st-ok);}
+.toggle-switch input:checked + .toggle-slider::before{transform:translateX(18px);background:var(--void);}
+.toggle-switch input:focus-visible + .toggle-slider{outline:2px solid var(--st-accent);outline-offset:2px;}
+.toggle-switch input:disabled + .toggle-slider{opacity:.55;cursor:not-allowed;}
+.st-note{font-size:var(--t-small);color:var(--st-mute);padding:var(--sp-2) var(--st-card-x) 0;}
+
+/*  9 - Buttons - three kinds only  */
+.settings-page .btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-2);
+  height:40px;padding:0 var(--sp-4);
+  border-radius:var(--r-sm);border:1px solid var(--st-divider);
+  background:transparent;color:var(--ivory);
+  font-family:var(--font-d);font-size:var(--t-body);font-weight:500;
+  letter-spacing:0;text-transform:none;white-space:nowrap;
+  transition:background .15s var(--ease-out),border-color .15s var(--ease-out),color .15s var(--ease-out);
+}
+.settings-page .btn-sm{height:36px;padding:0 var(--sp-3);}
+.settings-page .btn:focus-visible{outline:2px solid var(--st-accent);outline-offset:2px;}
+.settings-page .btn-primary{background:var(--st-accent-bg);border-color:var(--st-accent-bg);color:var(--st-accent-ink);}
+.settings-page .btn-primary:hover{background:var(--st-accent-bg);border-color:var(--st-accent-bg);filter:brightness(1.08);}
+.settings-page .btn-outline{background:transparent;border:1px solid var(--st-divider);color:var(--ivory-dim);}
+.settings-page .btn-outline:hover{background:var(--ivory-ghost);border-color:var(--border-lit);color:var(--ivory);}
+.settings-page .st-danger-btn{background:transparent;border-color:var(--st-bad);color:var(--st-bad);}
+.settings-page .st-danger-btn:hover{background:var(--red-soft);border-color:var(--st-bad);color:var(--st-bad);}
+
+/* Action footer. Right-aligned: destructive first, primary last. */
+.st-actions{
+  display:flex;align-items:center;justify-content:flex-end;gap:var(--sp-3);flex-wrap:wrap;
+  margin-top:var(--sp-4);padding-top:var(--sp-4);border-top:1px solid var(--st-divider);
+}
+/* Standalone save bar for editable tabs. Sticky so Save is always in reach. */
+.st-savebar{
+  display:flex;align-items:center;justify-content:flex-end;gap:var(--sp-3);flex-wrap:wrap;
+  position:sticky;bottom:var(--sp-3);z-index:3;
+  margin-top:calc(var(--sp-5) * -1);padding:var(--sp-3) var(--sp-4);
+  border:1px solid var(--st-divider);border-radius:var(--r-md);
+  background:var(--ink);box-shadow:var(--shadow-md);
+}
+/* Compact row inside a confirm zone: no divider, no negative bleed. */
+.st-actions--tight{
+  justify-content:flex-start;gap:var(--sp-2);
+  margin:var(--sp-4) 0 0;padding:0;border-top:0;
+}
+
+/*  10 - Danger zone  */
+.st-card--danger{border-color:var(--red-glow);}
+.st-card--danger .st-sec-title{color:var(--st-bad);}
+.st-confirm-zone{margin-top:var(--sp-4);padding-top:var(--sp-4);border-top:1px solid var(--red-glow);}
+.st-confirm-note{
+  font-size:var(--t-body);line-height:var(--lh-body);color:var(--ivory-dim);
+  background:var(--red-soft);border:1px solid var(--red-glow);
+  border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);
+  margin:var(--sp-4) 0;
+}
+.st-confirm-fields{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:var(--sp-4);margin-bottom:var(--sp-4);
+}
+
+/*  11 - Lists, plan, table, integrations  */
+/* Profile identity */
+.profile-head{display:flex;align-items:center;gap:var(--sp-4);}
+.profile-avatar{
+  width:56px;height:56px;border-radius:var(--r-lg);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--st-accent-bg);color:var(--st-accent-ink);
+  font-size:var(--t-section);font-weight:600;
+}
+.profile-name{font-size:var(--t-section);font-weight:600;color:var(--ivory);}
+.profile-role{font-size:var(--t-small);color:var(--st-mute);margin-top:var(--sp-1);}
+
+/* Sessions */
+.st-current{
+  display:flex;align-items:center;gap:var(--sp-4);
+  background:var(--surface);border:1px solid var(--st-divider);
+  border-radius:var(--r-md);padding:var(--sp-4);
+}
+.st-current .session-icon{color:var(--st-accent);}
+.st-current-row-main{min-width:0;flex:1;}
+.st-current-device{
+  display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
+  font-size:var(--t-row);font-weight:600;color:var(--ivory);
+}
+.st-current-meta{
+  font-size:var(--t-small);line-height:var(--lh-body);
+  color:var(--st-mute);margin-top:var(--sp-1);
+}
+.st-current .st-status{flex-shrink:0;}
+.session-icon{
+  width:var(--st-icon);height:var(--st-icon);border-radius:var(--r-sm);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--ink);border:1px solid var(--st-divider);color:var(--ivory-dim);
+}
+.session-icon svg{width:18px;height:18px;stroke-width:1.75;}
+.st-list{display:flex;flex-direction:column;}
+.session-row{
+  display:flex;align-items:center;gap:var(--sp-4);
+  padding:var(--sp-4) var(--st-card-x);
+  margin-inline:calc(var(--st-card-x) * -1);
+  transition:background .15s var(--ease-out);
+}
+.session-row:hover{background:var(--ivory-ghost);}
+.session-meta{flex:1;min-width:0;}
+.session-device{font-size:var(--t-row);font-weight:600;color:var(--ivory);}
+.session-loc{font-size:var(--t-small);color:var(--st-mute);margin-top:var(--sp-1);}
+.session-time{
+  flex-shrink:0;margin-left:auto;font-size:var(--t-small);
+  color:var(--st-mute);font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.session-signout{flex-shrink:0;min-width:96px;justify-content:center;}
+
+/* Activity log */
+.activity-row{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:start;column-gap:var(--sp-4);
+  padding:var(--sp-4) var(--st-card-x);
+  margin-inline:calc(var(--st-card-x) * -1);
+  transition:background .15s var(--ease-out);
+}
+.activity-row:hover{background:var(--ivory-ghost);}
+.activity-icon{
+  width:var(--st-icon);height:var(--st-icon);border-radius:var(--r-sm);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border:1px solid var(--st-divider);color:var(--ivory-dim);
+}
+.activity-icon svg{width:18px;height:18px;stroke-width:1.75;}
+.activity-icon.blue{color:var(--violet);background:var(--violet-soft);border-color:var(--violet-glow);}
+.activity-icon.teal{color:var(--teal);background:var(--teal-soft);border-color:var(--teal-glow);}
+.activity-icon.amber{color:var(--amber);background:var(--amber-soft);border-color:var(--amber-glow);}
+.activity-icon.red{color:var(--red);background:var(--red-soft);border-color:var(--red-glow);}
+.activity-main{min-width:0;padding-top:2px;}
+.activity-title{font-size:var(--t-row);font-weight:600;color:var(--ivory);}
+.activity-detail{
+  font-size:var(--t-small);line-height:var(--lh-body);color:var(--ivory-dim);
+  margin-top:var(--sp-1);overflow-wrap:break-word;
+}
+.activity-time{
+  font-size:var(--t-small);color:var(--st-mute);white-space:nowrap;
+  font-variant-numeric:tabular-nums;padding-top:2px;
+}
+
+/* Empty + restricted states: one muted sentence plus what unblocks it.
+   .activity-empty is written by the audit-log script, so both names are styled. */
+.st-empty,.activity-empty{
+  display:flex;align-items:flex-start;gap:var(--sp-4);padding:var(--sp-4) 0;
+}
+.st-empty-icon{
+  width:var(--st-icon);height:var(--st-icon);border-radius:var(--r-sm);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border:1px solid var(--st-divider);color:var(--ivory-dim);
+}
+.st-empty-icon svg{width:18px;height:18px;stroke-width:1.75;}
+.st-empty--warn .st-empty-icon{background:var(--amber-soft);border-color:var(--amber-glow);color:var(--amber);}
+.st-empty-title{font-size:var(--t-row);font-weight:600;color:var(--ivory);}
+.st-empty-desc{
+  font-size:var(--t-body);line-height:var(--lh-body);color:var(--ivory-dim);margin-top:var(--sp-1);
+}
+
+/* Plan + usage */
+.st-plan-head{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:var(--sp-4);flex-wrap:wrap;
+}
+.st-plan-name{font-size:var(--t-section);font-weight:600;color:var(--ivory);}
+.st-plan-org{font-size:var(--t-small);color:var(--st-mute);margin-top:var(--sp-1);}
+.st-plan-badge{
+  display:inline-flex;align-items:center;height:24px;padding:0 var(--sp-3);
+  border-radius:var(--r-pill);font-size:var(--t-small);font-weight:600;
+  color:var(--teal);background:var(--teal-soft);border:1px solid var(--teal-glow);
+}
+.st-plan-desc{
+  font-size:var(--t-body);line-height:var(--lh-body);
+  color:var(--ivory-dim);max-width:60ch;margin:var(--sp-4) 0 0;
+}
+.st-usage-head{
+  display:flex;align-items:baseline;justify-content:space-between;
+  gap:var(--sp-4);margin-bottom:var(--sp-3);
+}
+.st-usage-label{font-size:var(--t-small);font-weight:600;color:var(--ivory-dim);}
+.st-usage-nums{font-size:var(--t-row);font-weight:600;color:var(--ivory);font-variant-numeric:tabular-nums;}
+.st-usage-nums span{color:var(--st-mute);font-weight:400;}
+.st-usage-bar{
+  width:100%;height:8px;border-radius:var(--r-pill);
+  background:var(--surface);border:1px solid var(--st-divider);overflow:hidden;
+}
+.st-usage-fill{height:100%;border-radius:var(--r-pill);background:var(--st-accent);transition:width .4s var(--ease-out);}
+.st-usage-fill.warn{background:var(--st-warn);}
+.st-usage-fill.crit{background:var(--st-bad);}
+.st-usage-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-top:var(--sp-3);}
+.st-usage-note{font-size:var(--t-small);color:var(--st-mute);}
+
+/* Manager roles table */
+/* Card toolbar: context on the left, actions right-aligned with the primary last. */
+.st-toolbar{
+  display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
+  padding-bottom:var(--sp-4);margin-bottom:var(--sp-4);
+  border-bottom:1px solid var(--st-divider);
+}
+.st-toolbar-gap{flex:1 1 auto;min-width:var(--sp-4);}
+/* Explanatory block at the foot of a card: eyebrow label plus one muted paragraph. */
+.st-help-block{
+  margin-top:var(--sp-4);padding-top:var(--sp-4);
+  border-top:1px solid var(--st-divider);
+}
+.st-help-block .st-eyebrow{display:block;margin-bottom:var(--sp-2);}
+.st-help-block .st-help{margin:0;}
+/* Data & Privacy: what we hold, as a quiet two-column grid. */
+.st-data-intro{
+  font-size:var(--t-body);line-height:var(--lh-body);
+  color:var(--ivory-dim);max-width:70ch;margin:0 0 var(--sp-2);
+}
+.st-data-list{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:var(--sp-4);margin-top:var(--sp-4);
+}
+.st-data-item{
+  padding:var(--sp-3) var(--sp-4);
+  border:1px solid var(--st-divider);border-radius:var(--r-md);
+  background:var(--surface);
+}
+.st-data-title{font-size:var(--t-body);font-weight:600;color:var(--ivory);}
+.st-data-desc{font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);margin-top:var(--sp-1);}
+.settings-page .manager-actions{padding:0;margin:0 0 var(--sp-4);}
+.settings-page .table-wrap{
+  margin:0 calc(var(--st-card-x) * -1);max-width:none;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+}
+.st-table{width:100%;min-width:520px;border-collapse:collapse;font-size:var(--t-body);}
+.st-table th{
+  text-align:left;padding:var(--sp-3) var(--st-card-x);
+  font-size:var(--t-eyebrow);font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--st-mute);
+  border-bottom:1px solid var(--st-divider);white-space:nowrap;
+}
+.st-table td{
+  padding:var(--sp-3) var(--st-card-x);
+  border-bottom:1px solid var(--st-divider);vertical-align:middle;color:var(--ivory-dim);
+}
+.st-table tbody tr:last-child td{border-bottom:0;}
+.st-table tbody tr:hover{background:var(--ivory-ghost);}
+.st-table tbody tr.row-selected{background:var(--teal-soft);}
+.st-table .selection-column{width:48px;padding-right:0;}
+.st-badge{
+  display:inline-flex;align-items:center;height:24px;padding:0 var(--sp-3);
+  border-radius:var(--r-pill);font-size:var(--t-small);font-weight:600;white-space:nowrap;
+}
+.badge-violet{background:var(--violet-soft);color:var(--violet);}
+.badge-green{background:var(--teal-soft);color:var(--teal);}
+.badge-amber{background:var(--amber-soft);color:var(--st-warn);}
+.badge-grey{background:var(--surface);color:var(--ivory-dim);}
+.settings-page .st-muted{font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);}
+.settings-page .text-caption{font-size:var(--t-small);line-height:var(--lh-body);color:var(--st-mute);padding:var(--sp-4) 0;}
+.mr-toast{font-size:var(--t-small);font-weight:600;color:var(--st-warn);}
+
+/* Integration cards: the standard card, plus a muted brand backdrop so the
+   tile still reads as WhatsApp / Gmail without introducing a second palette.
+   The backdrop is decorative only - contrast comes from the gradient scrim. */
+.st-int{position:relative;overflow:hidden;background-color:var(--ink);}
+.st-int::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background-size:cover;background-position:center right;background-repeat:no-repeat;
+}
+.st-int--whatsapp::before{background-image:url('img/whatsapp-connect-banner.png');}
+.st-int--gmail::before{background-image:url('gmail_integeration.webp');}
+.st-int::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,var(--ink) 58%,color-mix(in srgb,var(--ink) 30%,transparent) 100%);
+}
+.st-int > *{position:relative;z-index:1;}
+/* Inline connect form: control grows, action button holds its size. */
+.st-form-row{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;margin-top:var(--sp-4);}
+.st-form-row + .field-error{margin-top:var(--sp-2);}
+.st-form-row .form-input{flex:1 1 220px;min-width:0;}
+.st-form-row--end{justify-content:flex-end;}
+.st-form-row--end .form-input{flex:0 1 auto;}
+.st-int .wa-status-label{color:inherit;}
+
+/*  12 - States  */
+.page-skeleton{
+  position:fixed;inset:0;z-index:99999;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--void);transition:opacity .3s var(--ease-out);
+}
+.page-skeleton.is-hidden{opacity:0;pointer-events:none;}
+.page-skeleton-spinner{width:220px;display:grid;gap:var(--sp-3);}
+.page-skeleton-spinner::before,.page-skeleton-spinner::after{
+  content:'';display:block;height:14px;border-radius:var(--r-pill);
+  background:var(--surface);animation:st-pulse 1.4s ease-in-out infinite;
+}
+.page-skeleton-spinner::after{width:60%;animation-delay:.2s;}
+.st-skeleton{display:grid;gap:var(--sp-3);}
+.st-skeleton span{
+  display:block;height:12px;border-radius:var(--r-pill);
+  background:var(--surface);animation:st-pulse 1.4s ease-in-out infinite;
+}
+.st-skeleton span:nth-child(2){width:80%;}
+.st-skeleton span:nth-child(3){width:60%;}
+@keyframes st-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.st-visually-hidden{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0;
+}
+
+/*  13 - Responsive  */
+@media(max-width:1200px){
+  /* The rail no longer fits beside an 880px column: become a scrollable pill row. */
+  .settings-layout{grid-template-columns:minmax(0,1fr);gap:var(--sp-5);}
+  .settings-content{max-width:none;margin-inline:0;}
+  .settings-nav-wrap::after{
+    content:'';pointer-events:none;position:absolute;right:0;top:0;bottom:0;
+    width:32px;background:linear-gradient(90deg,transparent,var(--void) 80%);
+  }
+  .settings-nav-wrap:not(.is-overflowing)::after{display:none;}
+  .settings-nav{
+    flex-direction:row;gap:var(--sp-1);padding-bottom:var(--sp-2);
+    border-bottom:1px solid var(--st-divider);
+    overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;-ms-overflow-style:none;
+  }
+  .settings-nav::-webkit-scrollbar{display:none;}
+  .settings-nav-item{white-space:nowrap;}
+  .settings-nav-item .nav-ind{
+    left:var(--sp-3);right:var(--sp-3);top:auto;bottom:0;
+    transform:none;width:auto;height:2px;
+  }
+}
+@media(max-width:768px){
+  .settings-page .top-bar .page-title{font-size:1.5rem;}
+  .st-fields,.st-confirm-fields{grid-template-columns:minmax(0,1fr);}
+  .st-meta-row{grid-template-columns:minmax(0,1fr);row-gap:var(--sp-1);}
+  .st-meta-row .st-meta-value{text-align:left;margin-top:var(--sp-1);}
+  .st-sec-head--action{grid-template-columns:minmax(0,1fr);align-items:start;}
+  .st-sec-head--action > *:last-child{justify-self:start;margin-top:var(--sp-3);}
+  .st-actions,.st-savebar{flex-wrap:wrap;}
+  /* Minimum 40px touch target on mobile */
+  .settings-page .btn,.settings-page .btn-sm{min-height:40px;height:auto;padding:var(--sp-2) var(--sp-3);}
+}
+@media(max-width:640px){
+  .settings-page .st-card,
+  .settings-page .st-section{--st-card-x:var(--sp-4);padding:var(--sp-4);}
+  .st-data-list{grid-template-columns:minmax(0,1fr);}
+  .st-row,.st-meta-row,.toggle-row,.session-row,.activity-row{
+    padding:var(--sp-4) var(--st-card-x);margin-inline:calc(var(--st-card-x) * -1);
+  }
+  .st-row{grid-template-columns:minmax(0,1fr);row-gap:var(--sp-3);}
+  .st-row-actions{justify-content:flex-start;width:100%;}
+  .st-row-actions .btn{flex:1 1 auto;}
+  .toggle-row{grid-template-columns:minmax(0,1fr);row-gap:var(--sp-3);}
+  .toggle-row:has(.toggle-icon) .toggle-switch{margin-top:0;}
+  .activity-row{grid-template-columns:auto minmax(0,1fr);}
+  .activity-time{grid-column:2;padding-top:var(--sp-1);}
+  .session-row{flex-wrap:wrap;row-gap:var(--sp-3);}
+  .session-meta{flex:1 1 100%;order:2;}
+  .session-time{margin-left:auto;}
+  .session-signout{flex:1 1 auto;width:100%;order:3;}
+  /* Inline connect forms stack: control full width, action button full width. */
+  .st-form-row{flex-direction:column;align-items:stretch;}
+  .st-form-row .form-input,.st-form-row--end .form-input{flex:1 1 auto;width:100%;}
+  .st-form-row .btn{width:100%;}
+}
+@media(prefers-reduced-motion:reduce){
+  .settings-page *{transition-duration:.01ms !important;}
+  .st-skeleton span,.page-skeleton-spinner::before,.page-skeleton-spinner::after{animation:none;}
+}
 </style>
 </head>
-<body>
+<body class="settings-page">
 <div id="page-skeleton" class="page-skeleton" aria-hidden="true"><div class="page-skeleton-spinner"></div></div>
 <script>
 (function(){
@@ -703,26 +828,26 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
       </div>
     </div>
 
-    <!-- NEW SETTINGS LAYOUT: Settings rail (left) + scrollable content (right) -->
+    <!-- SETTINGS LAYOUT: sticky rail (left) + one content column (right) -->
     <div class="settings-layout">
+
+      <div class="settings-nav-wrap">
+        <nav class="settings-nav" aria-label="Settings sections">
+          <a href="#profile" class="settings-nav-item active" data-panel="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile<span class="nav-ind"></span></a>
+          <a href="#organization" class="settings-nav-item" data-panel="organization"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>Organization<span class="nav-ind"></span></a>
+          <a href="#manager-roles" class="settings-nav-item admin-only" data-panel="manager-roles" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Manager Roles<span class="nav-ind"></span></a>
+          <a href="#notifications" class="settings-nav-item" data-panel="notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>Notifications<span class="nav-ind"></span></a>
+          <a href="#integrations" class="settings-nav-item" data-panel="integrations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Integrations<span class="nav-ind"></span></a>
+          <a href="#security" class="settings-nav-item" data-panel="security"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Security<span class="nav-ind"></span></a>
+          <a href="#sessions" class="settings-nav-item" data-panel="sessions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Sessions<span class="nav-ind"></span></a>
+          <a href="#activity-log" class="settings-nav-item" data-panel="activity-log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Activity Log<span class="nav-ind"></span></a>
+          <a href="#billing" class="settings-nav-item admin-only" data-panel="billing" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Plan &amp; Billing<span class="nav-ind"></span></a>
+          <a href="#data-privacy" class="settings-nav-item" data-panel="data-privacy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Data &amp; Privacy<span class="nav-ind"></span></a>
+        </nav>
+      </div>
 
       <!-- SETTINGS CONTENT -->
       <section class="settings-content">
-
-        <div class="settings-nav-wrap">
-          <nav class="settings-nav" aria-label="Settings sections">
-            <a href="#profile" class="settings-nav-item active" data-panel="profile" data-accent="violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile<span class="nav-ind"></span></a>
-            <a href="#organization" class="settings-nav-item" data-panel="organization" data-accent="teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>Organization<span class="nav-ind"></span></a>
-            <a href="#manager-roles" class="settings-nav-item admin-only" data-panel="manager-roles" data-accent="indigo" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Manager Roles<span class="nav-ind"></span></a>
-            <a href="#notifications" class="settings-nav-item" data-panel="notifications" data-accent="amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>Notifications<span class="nav-ind"></span></a>
-            <a href="#integrations" class="settings-nav-item" data-panel="integrations" data-accent="violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Integrations<span class="nav-ind"></span></a>
-            <a href="#security" class="settings-nav-item" data-panel="security" data-accent="teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Security<span class="nav-ind"></span></a>
-            <a href="#sessions" class="settings-nav-item" data-panel="sessions" data-accent="violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Sessions<span class="nav-ind"></span></a>
-            <a href="#activity-log" class="settings-nav-item" data-panel="activity-log" data-accent="teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Activity Log<span class="nav-ind"></span></a>
-            <a href="#billing" class="settings-nav-item admin-only" data-panel="billing" data-accent="violet" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Plan &amp; Billing<span class="nav-ind"></span></a>
-            <a href="#data-privacy" class="settings-nav-item" data-panel="data-privacy" data-accent="red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Data &amp; Privacy<span class="nav-ind"></span></a>
-          </nav>
-        </div>
 
         <!-- ═══ PROFILE ═══ -->
         <div class="settings-panel active" data-panel="profile">
@@ -731,7 +856,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
           </div>
 
           <div class="st-section st-card" id="profileIdentitySection">
-            <div class="profile-head mb-md">
+            <div class="profile-head">
               <div class="profile-avatar" id="profileAvatar">U</div>
               <div>
                 <div class="profile-name" id="profileDisplayName">You</div>
@@ -778,7 +903,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             </div>
           </div>
 
-          <div class="st-actions">
+          <div class="st-savebar">
             <button class="btn btn-primary" id="profileSaveBtn" type="button">Save Changes</button>
           </div>
         </div>
@@ -829,10 +954,10 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                 </select>
               </div>
             </div>
-            <div class="field-error mt-md" id="orgAdminNote" style="display:none;">Only org admins can edit these details.</div>
+            <div class="field-error" id="orgAdminNote" style="display:none;">Only org admins can edit these details.</div>
           </div>
 
-          <div class="st-actions">
+          <div class="st-savebar">
             <button class="btn btn-primary" id="orgSaveBtn" type="button">Save Changes</button>
           </div>
         </div>
@@ -843,17 +968,20 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <p class="st-desc">Send manager invites to employees who need read-only, scoped access to their team's data.</p>
           </div>
 
-          <div class="st-section st-card p-lg" id="mrLoading">
-            <div class="st-muted">Loading roster…</div>
+          <div class="st-section st-card" id="mrLoading">
+            <div class="st-visually-hidden">Loading roster…</div>
+            <div class="st-skeleton" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
           </div>
 
           <div class="st-section st-card" id="mrTableWrap" style="display:none;">
-            <div class="mr-actions manager-actions">
-              <button class="btn btn-sm btn-primary" id="mrBulkInviteBtn" type="button" disabled>Send Invites</button>
+            <div class="st-toolbar">
               <span class="st-muted" id="mrSelectedInfo">0 selected</span>
-              <span class="flex-spacer"></span>
+              <span class="st-toolbar-gap"></span>
               <button class="btn btn-sm btn-outline" id="mrCsvImportBtn" type="button">Import via CSV</button>
               <input type="file" id="mrCsvInput" accept=".csv,text/csv" style="display:none;">
+              <button class="btn btn-sm btn-primary" id="mrBulkInviteBtn" type="button" disabled>Send Invites</button>
             </div>
 
             <div class="table-wrap">
@@ -871,11 +999,9 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
               </table>
             </div>
 
-            <div class="st-section st-card p-lg">
-              <div class="field-group">
-                <label class="field-label">How manager invites work</label>
-                <p class="st-muted text-help">Employees with no account and a valid email receive an invite link. Invites expire after 7 days. Clicking the link creates a manager account scoped to their direct reports — no admin access, no code-deploy access.</p>
-              </div>
+            <div class="st-help-block">
+              <span class="st-eyebrow">How manager invites work</span>
+              <p class="st-help">Employees with no account and a valid email receive an invite link. Invites expire after 7 days. Clicking the link creates a manager account scoped to their direct reports — no admin access, no code-deploy access.</p>
             </div>
           </div>
 
@@ -888,13 +1014,12 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <p class="st-desc">Control which VooVr events and updates you receive.</p>
           </div>
 
-          <div class="notification-groups">
           <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Email notifications</h3>
               <span class="st-sec-desc">Sent to your account email</span>
             </div>
-            <div class="notif-prefs">
+            <div class="st-toggle-list">
               <label class="toggle-row">
                 <span class="toggle-label"><span class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span>
                   <span class="toggle-title">Email alerts</span>
@@ -923,7 +1048,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
               <h3 class="st-sec-title">HR / employee alerts</h3>
               <span class="st-sec-desc">Managed by your organization admins</span>
             </div>
-            <div class="notif-prefs">
+            <div class="st-toggle-list">
               <label class="toggle-row">
                 <span class="toggle-label"><span class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v5c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg></span>
                   <span class="toggle-title">Risk &amp; burnout alerts</span>
@@ -937,14 +1062,13 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
               <div id="notifRiskNote" class="st-note" style="display:none;">Only org admins can change this.</div>
             </div>
           </div>
-          </div>
 
           <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Product &amp; system updates</h3>
               <span class="st-sec-desc">Occasional news from the VooVr team</span>
             </div>
-            <div class="notif-prefs">
+            <div class="st-toggle-list">
               <label class="toggle-row">
                 <span class="toggle-label"><span class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 12h8M8 8h5"/></svg></span>
                   <span class="toggle-title">Weekly digest</span>
@@ -975,64 +1099,60 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <p class="st-desc">Connect outside services to extend what VooVr can do for you.</p>
           </div>
 
-          <div class="wa-card">
-            <div class="wa-card-body">
-              <div class="wa-head">
-                <div class="wa-head-copy">
-                  <h3 class="wa-title">Connect WhatsApp</h3>
-                  <p class="wa-sub">Dictate sessions by voice, right from your phone.</p>
-                </div>
-                <span class="wa-status is-off" id="waStatusBadge" role="status">
-                  <svg class="wa-glyph wa-glyph-wa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-2.9-.4-4.1-1.1L4 20l1.2-3.2A8.5 8.5 0 1 1 20 11.5Z"/>
-                    <path d="M8.4 9.3c.5-.9 1.4-1 2.1-.9h.3l.9 1.5-.9.9c.3.8 1 1.6 1.8 1.9l.9-.9 1.5.9v.3c0 .6-.3 1.5-1.4 2-2 .9-5.1-1.2-6.2-3.4-1.1-2.2-1.2-3.4-.3-4.5Z"/>
-                  </svg>
-                  <svg class="wa-glyph wa-glyph-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M5 13l4 4L19 7"/>
-                  </svg>
-                  <span class="st-dot"></span>
-                  <span class="wa-status-label" id="waStatusLabel">Not connected</span>
-                </span>
+          <div class="st-card st-int st-int--whatsapp">
+            <div class="st-sec-head st-sec-head--action">
+              <div>
+                <h3 class="st-sec-title">Connect WhatsApp</h3>
+                <span class="st-sec-desc">Dictate sessions by voice, right from your phone.</span>
               </div>
-
-              <p class="wa-note">Verify a phone number to (1) dictate sessions by messaging your VooVr WhatsApp number and (2) receive meeting-reminder texts. A one-time code is sent to the number over WhatsApp itself.</p>
-
-              <div class="wa-connect-row">
-                <input type="tel" class="form-input" id="waPhoneInput" placeholder="+1 555 123 4567" autocomplete="tel">
-                <button class="btn wa-btn" id="waSendCodeBtn" type="button">Send code</button>
-              </div>
-              <div class="field-error" id="waPhoneError"></div>
-              <div class="wa-connect-row wa-otp-row" id="waOtpRow" style="display:none;">
-                <input type="text" class="form-input" id="waOtpInput" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
-                <button class="btn wa-btn" id="waVerifyBtn" type="button">Verify</button>
-              </div>
-              <span class="wa-msg" id="waPhoneMsg"></span>
-              <span class="st-hint" id="waPhoneStatus" hidden></span>
+              <span class="st-status is-off" id="waStatusBadge" role="status">
+                <svg class="wa-glyph wa-glyph-wa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-2.9-.4-4.1-1.1L4 20l1.2-3.2A8.5 8.5 0 1 1 20 11.5Z"/>
+                  <path d="M8.4 9.3c.5-.9 1.4-1 2.1-.9h.3l.9 1.5-.9.9c.3.8 1 1.6 1.8 1.9l.9-.9 1.5.9v.3c0 .6-.3 1.5-1.4 2-2 .9-5.1-1.2-6.2-3.4-1.1-2.2-1.2-3.4-.3-4.5Z"/>
+                </svg>
+                <svg class="wa-glyph wa-glyph-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 13l4 4L19 7"/>
+                </svg>
+                <span class="st-dot"></span>
+                <span class="wa-status-label" id="waStatusLabel">Not connected</span>
+              </span>
             </div>
+
+            <p class="st-help">Verify a phone number to (1) dictate sessions by messaging your VooVr WhatsApp number and (2) receive meeting-reminder texts. A one-time code is sent to the number over WhatsApp itself.</p>
+
+            <div class="st-form-row">
+              <input type="tel" class="form-input" id="waPhoneInput" placeholder="+1 555 123 4567" autocomplete="tel">
+              <button class="btn btn-primary" id="waSendCodeBtn" type="button">Send code</button>
+            </div>
+            <div class="field-error" id="waPhoneError"></div>
+            <div class="st-form-row" id="waOtpRow" style="display:none;">
+              <input type="text" class="form-input" id="waOtpInput" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+              <button class="btn btn-primary" id="waVerifyBtn" type="button">Verify</button>
+            </div>
+            <span class="st-note" id="waPhoneMsg"></span>
+            <span class="st-hint" id="waPhoneStatus" hidden></span>
           </div>
 
-          <div class="wa-card gmail-card">
-            <div class="wa-card-body">
-              <div class="wa-head">
-                <div class="wa-head-copy">
-                  <h3 class="wa-title">Gmail Integration</h3>
-                  <p class="wa-sub">Connect your Gmail account to enable automated follow-ups and email notifications.</p>
-                </div>
-                <span class="wa-status is-off" id="gmailStatusBadge" role="status">
-                  <svg class="wa-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <path d="M22 6l-10 7L2 6"/>
-                  </svg>
-                  <span class="st-dot"></span>
-                  <span class="wa-status-label">Not connected</span>
-                </span>
+          <div class="st-card st-int st-int--gmail">
+            <div class="st-sec-head st-sec-head--action">
+              <div>
+                <h3 class="st-sec-title">Gmail Integration</h3>
+                <span class="st-sec-desc">Connect your Gmail account to enable automated follow-ups and email notifications.</span>
               </div>
+              <span class="st-status is-off" id="gmailStatusBadge" role="status">
+                <svg class="wa-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <path d="M22 6l-10 7L2 6"/>
+                </svg>
+                <span class="st-dot"></span>
+                <span class="wa-status-label">Not connected</span>
+              </span>
+            </div>
 
-              <p class="wa-note">Automated follow-ups on overdue 1:1 meetings and email notifications from VooVr will flow through your connected Gmail account.</p>
+            <p class="st-help">Automated follow-ups on overdue 1:1 meetings and email notifications from VooVr will flow through your connected Gmail account.</p>
 
-              <div class="wa-connect-row">
-                <button class="btn gmail-btn" id="gmailConnectBtn" type="button">Connect Gmail</button>
-              </div>
+            <div class="st-form-row st-form-row--end">
+              <button class="btn btn-primary" id="gmailConnectBtn" type="button">Connect Gmail</button>
             </div>
           </div>
         </div>
@@ -1042,20 +1162,21 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
           <div class="st-page">
             <p class="st-desc">Protect your VooVr account and manage authentication methods.</p>
           </div>
-
-          <div class="st-section st-card security-overview">
-            <div class="st-sec-head">
-              <h3 class="st-sec-title">Security overview</h3>
-              <span class="st-sec-desc protected-text" id="securityOverviewCount" translate="no">Loading&hellip;</span>
-            </div>
-            <div class="security-overview-statuses">
-              <span class="st-status neutral protected-text" id="securityOverviewTotp" translate="no"><span class="st-dot"></span>2FA loading&hellip;</span>
-              <span class="st-status neutral protected-text" id="securityOverviewRecovery" translate="no"><span class="st-dot"></span>Recovery codes loading&hellip;</span>
+<div class="st-section st-card">
+            <div class="st-sec-head st-sec-head--action">
+              <div>
+                <h3 class="st-sec-title">Security overview</h3>
+                <span class="st-sec-desc protected-text" id="securityOverviewCount" translate="no">Loading&hellip;</span>
+              </div>
+              <div class="st-status-row">
+                <span class="st-status neutral protected-text" id="securityOverviewTotp" translate="no"><span class="st-dot"></span>2FA loading&hellip;</span>
+                <span class="st-status neutral protected-text" id="securityOverviewRecovery" translate="no"><span class="st-dot"></span>Recovery codes loading&hellip;</span>
+              </div>
             </div>
           </div>
 
           <!-- TWO-FACTOR AUTHENTICATION -->
-          <div class="st-section st-card mb-sm">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Two-Factor Authentication</h3>
               <span class="st-sec-desc">Extra protection for your account.</span>
@@ -1073,14 +1194,11 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                 <a class="btn btn-sm btn-outline" id="enable2faBtn" href="/settings/security/setup-totp" style="display:none;">Enable 2FA</a>
               </div>
             </div>
-            <div class="st-row">
-              <div class="st-row-main">
-                <div class="st-row-title">Setup details</div>
-                <div class="st-row-desc protected-text" id="totpEnabledMeta" translate="no">Checking setup date&hellip;</div>
-              </div>
-              <div class="st-row-actions">
-                <span class="st-monoline protected-text" id="totpEnabledDate" translate="no">Loading&hellip;</span>
-              </div>
+
+            <div class="st-meta-row">
+              <div class="st-meta-label">Setup details</div>
+              <div class="st-meta-hint protected-text" id="totpEnabledMeta" translate="no">Checking setup date&hellip;</div>
+              <div class="st-meta-value protected-text" id="totpEnabledDate" translate="no">Loading&hellip;</div>
             </div>
           </div>
 
@@ -1099,19 +1217,15 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                 </div>
               </div>
               <div class="st-row-actions">
-                <span class="st-monoline protected-text" id="backupCodesText" translate="no">Loading&hellip;</span>
-                <span class="st-status warn security-low-codes protected-text" id="backupCodesWarning" style="display:none;" translate="no"><span class="st-dot"></span>Running low &mdash; regenerate soon.</span>
+                <span class="st-meta-value protected-text" id="backupCodesText" translate="no">Loading&hellip;</span>
+                <span class="st-status warn protected-text" id="backupCodesWarning" style="display:none;" translate="no"><span class="st-dot"></span>Running low &mdash; regenerate soon.</span>
                 <button class="btn btn-sm btn-primary" id="regenerateCodesBtn" type="button" style="display:none;">Regenerate codes</button>
               </div>
             </div>
-            <div class="st-row">
-              <div class="st-row-main">
-                <div class="st-row-title">Last generated</div>
-                <div class="st-row-desc protected-text" id="backupCodesGeneratedMeta" translate="no">When these recovery codes were created.</div>
-              </div>
-              <div class="st-row-actions">
-                <span class="st-monoline protected-text" id="backupCodesGeneratedDate" translate="no">Loading&hellip;</span>
-              </div>
+            <div class="st-meta-row">
+              <div class="st-meta-label">Last generated</div>
+              <div class="st-meta-hint protected-text" id="backupCodesGeneratedMeta" translate="no">When these recovery codes were created.</div>
+              <div class="st-meta-value protected-text" id="backupCodesGeneratedDate" translate="no">Loading&hellip;</div>
             </div>
           </div>
         </div>
@@ -1123,7 +1237,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
           </div>
 
           <!-- CURRENT SESSION -->
-          <div class="st-section st-card mb-lg">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Current Session</h3>
               <span class="st-sec-desc">This is the device you are using right now.</span>
@@ -1141,12 +1255,15 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
 
           <!-- ACTIVE SESSIONS -->
           <div class="st-section st-card">
-            <div class="st-sec-head sessions-head">
-              <h3 class="st-sec-title">Active Sessions</h3>
-              <span class="st-sec-desc">Other devices signed in to your account.<br><small class="sessions-loc-note">Location is estimated from your network and may not match where you are.<br><a href="https://db-ip.com" target="_blank" rel="noopener">IP geolocation by DB-IP</a></small></span>
-              <button id="revokeOthersBtn" class="btn btn-sm btn-outline revoke-others-btn" type="button" style="display:none;">Sign out all other devices</button>
+            <div class="st-sec-head st-sec-head--action">
+              <div>
+                <h3 class="st-sec-title">Active Sessions</h3>
+                <span class="st-sec-desc">Other devices signed in to your account.</span>
+                <span class="st-sec-note">Location is estimated from your network and may not match where you are. <a href="https://db-ip.com" target="_blank" rel="noopener">IP geolocation by DB-IP</a></span>
+              </div>
+              <button id="revokeOthersBtn" class="btn btn-sm btn-outline" type="button" style="display:none;">Sign out all other devices</button>
             </div>
-            <div class="sessions-list" id="sessionsList"></div>
+            <div class="st-list" id="sessionsList"></div>
           </div>
         </div>
 
@@ -1163,12 +1280,12 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             </div>
 
             <div id="auditLogCard" style="display:none;">
-              <div id="auditLogList" class="activity-list"></div>
-              <div id="auditLogRestricted" class="st-restricted" style="display:none;">
-                <span class="st-restricted-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
+              <div id="auditLogList" class="st-list"></div>
+              <div id="auditLogRestricted" class="st-empty st-empty--warn" style="display:none;">
+                <span class="st-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
                 <div>
-                  <div class="st-restricted-title">Activity Log is admin-only</div>
-                  <div class="st-restricted-desc">Only organization admins can view the audit log.</div>
+                  <div class="st-empty-title">Activity Log is admin-only</div>
+                  <div class="st-empty-desc">Only organization admins can view the audit log.</div>
                 </div>
               </div>
               <div class="st-actions">
@@ -1191,7 +1308,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
           </div>
 
           <!-- CURRENT PLAN -->
-          <div class="st-section st-card mb-lg">
+          <div class="st-section st-card">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Current Plan</h3>
               <span class="st-sec-desc">Your subscription and organization information.</span>
@@ -1209,7 +1326,7 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
               Employee wellness analytics, AI sync rooms, and priority support for growing teams.
             </p>
 
-            <div class="st-row st-row--bordered mt-md pb-0">
+            <div class="st-row st-divide-top">
               <div class="st-row-main">
                 <div class="st-row-title"><span class="st-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>Manage your subscription</div>
                 <div class="st-row-desc">Update billing details, add seats or change your plan through the billing portal.</div>
@@ -1246,7 +1363,34 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
             <p class="st-desc">Manage your personal data, exports, and account lifecycle.</p>
           </div>
 
-          <div id="dangerZoneCard" style="display:none;">
+          <!-- DATA WE STORE -->
+          <div class="st-section st-card">
+            <div class="st-sec-head">
+              <h3 class="st-sec-title">Data We Store</h3>
+              <span class="st-sec-desc">Categories of information your account holds &mdash; the data used to run your VooVr workspace, including your profile, organization details, security settings, and an activity trail.</span>
+            </div>
+            <div class="st-data-list">
+              <div class="st-data-item">
+                <div class="st-data-title">Profile</div>
+                <div class="st-data-desc">Your name, email, role.</div>
+              </div>
+              <div class="st-data-item">
+                <div class="st-data-title">Organization</div>
+                <div class="st-data-desc">Company name, industry, size, plan.</div>
+              </div>
+              <div class="st-data-item">
+                <div class="st-data-title">Security</div>
+                <div class="st-data-desc">2FA, recovery codes, sessions.</div>
+              </div>
+              <div class="st-data-item">
+                <div class="st-data-title">Activity</div>
+                <div class="st-data-desc">Admin and security actions.</div>
+              </div>
+            </div>
+          </div>
+
+
+          <div id="dangerZoneCard" class="st-stack" style="display:none;">
             <!-- YOUR DATA -->
             <div class="st-section st-card">
               <div class="st-sec-head">
@@ -1264,11 +1408,19 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                   <button class="btn btn-sm btn-primary" id="exportDataBtn" type="button">Export Data</button>
                 </div>
               </div>
+            </div>
+
+            <!-- DELETE ACCOUNT: isolated in its own card so the destructive
+                 action is never mixed in with routine data settings. -->
+            <div class="st-section st-card st-card--danger">
+              <div class="st-sec-head">
+                <h3 class="st-sec-title">Delete your account</h3>
+                <span class="st-sec-desc">Permanent &mdash; removes your account and, if you&rsquo;re the only member, your organization.</span>
+              </div>
 
               <div class="st-row">
                 <div class="st-row-main">
-                  <div class="st-row-title"><span class="st-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg></span>Delete your account</div>
-                  <div class="st-row-desc">Permanent &mdash; removes your account and, if you&rsquo;re the only member, your organization.</div>
+                  <div class="st-row-desc">Deletion is immediate and irreversible. You will be asked to confirm with your password or a 6-digit authenticator code.</div>
                 </div>
                 <div class="st-row-actions">
                   <button class="btn btn-sm st-danger-btn" id="deleteAccountBtn" type="button">Delete Account</button>
@@ -1290,34 +1442,8 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
                   </div>
                 </div>
                 <div class="st-actions st-actions--tight">
-                  <button class="btn btn-sm st-danger-btn" id="confirmDeleteBtn" type="button">Delete account</button>
                   <button class="btn btn-sm btn-outline" id="cancelDeleteBtn" type="button">Cancel</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- DATA WE STORE -->
-            <div class="st-section st-card">
-              <div class="st-sec-head">
-                <h3 class="st-sec-title">Data We Store</h3>
-                <span class="st-sec-desc">Categories of information your account holds &mdash; the data used to run your VooVr workspace, including your profile, organization details, security settings, and an activity trail.</span>
-              </div>
-              <div class="st-data-list">
-                <div class="st-data-item">
-                  <div class="st-data-title">Profile</div>
-                  <div class="st-data-desc">Your name, email, role.</div>
-                </div>
-                <div class="st-data-item">
-                  <div class="st-data-title">Organization</div>
-                  <div class="st-data-desc">Company name, industry, size, plan.</div>
-                </div>
-                <div class="st-data-item">
-                  <div class="st-data-title">Security</div>
-                  <div class="st-data-desc">2FA, recovery codes, sessions.</div>
-                </div>
-                <div class="st-data-item">
-                  <div class="st-data-title">Activity</div>
-                  <div class="st-data-desc">Admin and security actions.</div>
+                  <button class="btn btn-sm st-danger-btn" id="confirmDeleteBtn" type="button">Delete account</button>
                 </div>
               </div>
             </div>
@@ -1325,14 +1451,14 @@ html[data-theme="light"] .wa-card .wa-status.is-off{color:#8893A8;}
 
           <!-- EMPLOYEE DIRECTORY (CSV) — org-wide admin action. Deliberately a
                sibling of #dangerZoneCard, not a child: that card holds only
-               personal "Your Data" / "Data We Store" content available to every
+               personal "Your Data" / "Delete account" content available to every
                user, whereas this exports/imports the whole workforce. -->
           <div class="st-section st-card admin-only" style="display:none;">
             <div class="st-sec-head">
               <h3 class="st-sec-title">Employee directory</h3>
               <span class="st-sec-desc">Organization-wide. Visible to admins only.</span>
             </div>
-            <p class="st-data-intro">Export the full employee directory as a CSV file, or add employees in bulk by importing a CSV in the same format. These actions cover everyone in your organization &mdash; unlike the personal exports above, they are limited to admins.</p>
+            <p class="st-data-intro">Export the full employee directory as a CSV file, or add employees in bulk by importing a CSV in the same format. These actions cover everyone in your organization &mdash; unlike the personal exports below, they are limited to admins.</p>
 
             <div class="st-row">
               <div class="st-row-main">
