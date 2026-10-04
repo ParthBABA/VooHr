@@ -597,10 +597,12 @@
 .settings-page .btn-primary{
   background:var(--s-accent);
   border:1px solid var(--s-accent);
-  color:var(--amber-deep);
-  font-weight:600;
+  color:var(--amber-ink);
+  font-weight:700;
 }
-.settings-page .btn-primary:hover{background:var(--amber-glow);}
+.settings-page .btn-primary:hover{
+  background:color-mix(in srgb, var(--s-accent) 82%, var(--amber-deep));
+}
 .settings-page .btn-outline{
   background:transparent;
   border:1px solid var(--border-lit);
@@ -1093,39 +1095,71 @@
    .st-int__body, which carries the padding the card gives up. `.st-int` is a
    scoping hook only: it must never set the body padding or a display value, or
    the card loses its padding and the header collapses into one column. */
-.settings-page .st-card.st-int{padding:0;overflow:hidden;}
-.settings-page .st-int__banner{
-  display:block;
-  width:100%;
-  /* The width/height attributes would otherwise fix the box at their intrinsic
-     ratio and max-height would clip it on every width; height:auto hands the box
-     to the ratio below, so the cap only bites on a wide card. */
-  height:auto;
-  aspect-ratio:2.7 / 1;
-  max-height:220px;
-  object-fit:cover;
-  border-bottom:var(--card-border);
-  background:var(--surface);
+.settings-page .st-card.st-int{
+  position:relative;
+  padding:0;
+  overflow:hidden;
+  background:var(--s-bg);
 }
-/* The WhatsApp plate is 3:2, so a 2.7:1 box keeps only about a third of its
-   height. Its wordmarks and the link sit in the upper third of the artwork
-   (roughly rows 12%-42%, white ink over the dark field and the top of the
-   white panel) and the chat bubbles run on below them, so the band is anchored
-   high enough to hold that text and crop the bubbles. Gmail's plate is 2.69:1
-   and needs no anchor. */
-.settings-page .st-int--whatsapp .st-int__banner{object-position:50% 30%;}
-.settings-page .st-int--gmail .st-int__banner{object-position:50% 50%;}
-.settings-page .st-int__body{padding:var(--s-5) var(--s-6) var(--s-6);}
+.settings-page .st-card.st-int::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height:200px;
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  border-bottom:var(--card-border);
+}
+.settings-page .st-card.st-int::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg, rgba(6,11,18,0.12) 0%, rgba(6,11,18,0.45) 28%, rgba(6,11,18,0.72) 100%);
+}
+.settings-page .st-int--whatsapp::before{
+  background-image:url('/img/whatsapp-connect-banner.webp');
+  background-position:50% 30%;
+}
+.settings-page .st-int--gmail::before{
+  background-image:url('/gmail_integeration.webp');
+  background-position:50% 50%;
+}
+.settings-page .st-int__banner{
+  display:none;
+}
+.settings-page .st-int__body{
+  position:relative;
+  z-index:1;
+  padding:var(--s-5) var(--s-6) var(--s-6);
+  background:linear-gradient(180deg, rgba(10,14,20,0.2) 0%, rgba(10,14,20,0.72) 24%, var(--s-bg) 32%, var(--s-bg) 100%);
+}
 
 /* Help copy sits 16px under the header divider, in the same measure and ink as
    every other card description. `.st-help` also appears on Manager Roles, so
    this rule is scoped to the integration bodies and leaves that tab alone. */
+.settings-page .st-int__body .st-sec-title,
+.settings-page .st-int__body .st-sec-desc,
+.settings-page .st-int__body .st-help,
+.settings-page .st-int__body .st-note,
+.settings-page .st-int__body .field-error,
+.settings-page .st-int__body .st-form-row .form-input,
+.settings-page .st-int__body .st-file-label,
+.settings-page .st-int__body .wa-status-label{
+  color:var(--ivory);
+}
+.settings-page .st-int__body .st-sec-desc,
+.settings-page .st-int__body .st-help,
+.settings-page .st-int__body .st-note,
+.settings-page .st-int__body .field-error{
+  opacity:0.9;
+}
 .settings-page .st-int__body .st-help{
   display:block;
   margin:var(--s-4) 0 0;
   font-size:var(--fs-body);
   line-height:var(--lh-body);
-  color:var(--s-text-dim);
+  color:rgba(232,236,244,0.9);
   max-width:var(--s-measure);
 }
 /* Action area: one column, 8px between the row and whatever it reports. */
@@ -1201,6 +1235,9 @@
   max-width:260px;
   overflow:hidden;
   text-overflow:ellipsis;
+  background:rgba(11,16,24,0.62);
+  border-color:rgba(232,236,244,0.22);
+  color:rgba(232,236,244,0.94);
 }
 .settings-page .st-int .st-status .wa-status-label{
   min-width:0;
@@ -1210,10 +1247,10 @@
 }
 .settings-page .st-status .wa-glyph{width:15px;height:15px;stroke-width:1.75;}
 .settings-page .wa-glyph-check{display:none;}
-.settings-page .st-status.is-off{color:var(--ivory-dim);}
+.settings-page .st-status.is-off{color:rgba(232,236,244,0.9);}
 .settings-page .st-status.is-off .st-dot{
   background:transparent;
-  box-shadow:inset 0 0 0 1.5px var(--ivory-faint);
+  box-shadow:inset 0 0 0 1.5px rgba(232,236,244,0.75);
 }
 .settings-page .st-status.is-on{
   color:var(--s-ok);
