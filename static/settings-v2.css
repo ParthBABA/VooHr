@@ -60,7 +60,11 @@
      reaches 3.5:1 on --amber-soft in light, so it is mixed a quarter of the
      way to --s-text: dark 7.7:1, light 5.2:1, with no hard-coded colour. */
   --s-accent-text:color-mix(in srgb, var(--s-accent) 75%, var(--s-text));
+  /* OK, named for the teal .st-status.ok already paints with: --s-ok is
+     --teal, --s-ok-soft its 8% tint, --s-ok-line its 34% border. */
   --s-ok:var(--teal);
+  --s-ok-soft:var(--teal-soft);
+  --s-ok-line:color-mix(in srgb, var(--s-ok) 34%, transparent);
   --s-danger:var(--red);
 
   font-family:var(--font-d);
@@ -1083,11 +1087,142 @@
   display:flex;flex-direction:column;gap:var(--s-2);
 }
 
-/* Integration cards are ordinary cards: header + help text + action row.
-   `.st-int` is a branding hook only. It must not set display or padding, or
-   the card loses its own padding and the header collapses into one column. */
-.settings-page .wa-glyph{width:18px;height:18px;flex:0 0 auto;}
-.settings-page .wa-glyph-check{width:20px;height:20px;}
+/* 19b - INTEGRATIONS ──────────────────────────────────────────────────── */
+/* An integration card is a banner plus a body. The illustrated banner owns the
+   top edge, clipped by the card radius, and every existing child moves inside
+   .st-int__body, which carries the padding the card gives up. `.st-int` is a
+   scoping hook only: it must never set the body padding or a display value, or
+   the card loses its padding and the header collapses into one column. */
+.settings-page .st-card.st-int{padding:0;overflow:hidden;}
+.settings-page .st-int__banner{
+  display:block;
+  width:100%;
+  /* The width/height attributes would otherwise fix the box at their intrinsic
+     ratio and max-height would clip it on every width; height:auto hands the box
+     to the ratio below, so the cap only bites on a wide card. */
+  height:auto;
+  aspect-ratio:2.7 / 1;
+  max-height:220px;
+  object-fit:cover;
+  border-bottom:var(--card-border);
+  background:var(--surface);
+}
+/* The WhatsApp plate is 3:2, so a 2.7:1 box keeps only about a third of its
+   height. Its wordmarks and the link sit in the upper third of the artwork
+   (roughly rows 12%-42%, white ink over the dark field and the top of the
+   white panel) and the chat bubbles run on below them, so the band is anchored
+   high enough to hold that text and crop the bubbles. Gmail's plate is 2.69:1
+   and needs no anchor. */
+.settings-page .st-int--whatsapp .st-int__banner{object-position:50% 30%;}
+.settings-page .st-int--gmail .st-int__banner{object-position:50% 50%;}
+.settings-page .st-int__body{padding:var(--s-5) var(--s-6) var(--s-6);}
+
+/* Help copy sits 16px under the header divider, in the same measure and ink as
+   every other card description. `.st-help` also appears on Manager Roles, so
+   this rule is scoped to the integration bodies and leaves that tab alone. */
+.settings-page .st-int__body .st-help{
+  display:block;
+  margin:var(--s-4) 0 0;
+  font-size:var(--fs-body);
+  line-height:var(--lh-body);
+  color:var(--s-text-dim);
+  max-width:var(--s-measure);
+}
+/* Action area: one column, 8px between the row and whatever it reports. */
+.settings-page .st-int__actions{
+  display:flex;
+  flex-direction:column;
+  gap:var(--s-2);
+  margin-top:var(--s-5);
+}
+/* An empty error or note reserves nothing, so a card does not grow a gap when
+   there is nothing to say. The global .field-error is display:none until JS
+   reveals it, which the WhatsApp handler never does, so it is shown here from
+   the moment it holds a message. */
+.settings-page .st-int__actions .field-error{
+  display:block;
+  margin:0;
+  font-family:var(--font-d);
+  font-weight:500;
+  letter-spacing:normal;
+}
+.settings-page .st-int__actions .field-error:empty,
+.settings-page .st-int__actions .st-note:empty,
+.settings-page .st-int__actions .st-hint:empty{display:none;}
+/* Field and its button share one 40px row; the field takes the slack. */
+.settings-page .st-int__actions .st-form-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  column-gap:var(--s-3);
+  align-items:center;
+}
+.settings-page .st-int__actions .st-form-row .form-input{
+  width:100%;
+  min-width:0;
+  height:var(--s-ctl);
+  min-height:var(--s-ctl);
+  padding:0 var(--s-3);
+  border-radius:var(--r-sm);
+  border:var(--card-border);
+  background:var(--s-bg-nested);
+  color:var(--s-text);
+  font-family:var(--font-d);
+  font-size:var(--fs-body);
+}
+.settings-page .st-int__actions .st-form-row .form-input::placeholder{color:var(--s-text-faint);}
+/* Field and button are the same 40px control, so the row reads as one unit. */
+.settings-page .st-int__actions .st-form-row .btn{
+  height:var(--s-ctl);
+  min-height:var(--s-ctl);
+}
+.settings-page .st-int__actions .st-form-row .form-input:focus-visible{
+  outline:none;
+  border-color:var(--s-accent);
+  box-shadow:var(--focus);
+}
+/* The single Gmail action keeps its own width instead of filling the grid. */
+.settings-page .st-int__actions .st-form-row--end{
+  display:flex;
+  justify-content:flex-start;
+}
+/* The OTP row is revealed by JS through an inline display toggle, so it fades
+   and slides in on appearance. Transform-only, so the card never jumps. */
+@keyframes st-row-in{
+  from{opacity:0;transform:translateY(-4px);}
+  to{opacity:1;transform:none;}
+}
+.settings-page #waOtpRow{animation:st-row-in .15s ease both;}
+
+/* Connection chip: 28px pill. A linked number makes the label long, so the
+   chip caps its own width and the label truncates rather than pushing the
+   header out of shape. */
+.settings-page .st-int .st-status{
+  height:28px;
+  max-width:260px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.settings-page .st-int .st-status .wa-status-label{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.settings-page .st-status .wa-glyph{width:15px;height:15px;stroke-width:1.75;}
+.settings-page .wa-glyph-check{display:none;}
+.settings-page .st-status.is-off{color:var(--ivory-dim);}
+.settings-page .st-status.is-off .st-dot{
+  background:transparent;
+  box-shadow:inset 0 0 0 1.5px var(--ivory-faint);
+}
+.settings-page .st-status.is-on{
+  color:var(--s-ok);
+  background:var(--s-ok-soft);
+  border-color:var(--s-ok-line);
+}
+.settings-page .st-status.is-on .st-dot,
+.settings-page .st-status.is-on .wa-glyph-wa{display:none;}
+.settings-page .st-status.is-on .wa-glyph-check{display:block;}
 
 /* 20 - RESPONSIVE ────────────────────────────────────────────────────── */
 @media (max-width:900px){
@@ -1169,6 +1304,22 @@
   .settings-page .st-row-actions{flex-wrap:wrap;}
   .settings-page .st-actions,
   .settings-page .st-savebar{justify-content:stretch;}
+
+  /* Integration cards: the banner keeps a taller proportion on a phone, the
+     body tightens to the card padding, the chip drops under the title at full
+     measure, and field and button stack so both are a 40px tap target. */
+  .settings-page .st-int__banner{aspect-ratio:2 / 1;}
+  .settings-page .st-int__body{padding:var(--s-4) var(--s-4) var(--s-5);}
+  .settings-page .st-int .st-sec-head--action{
+    flex-direction:column;
+    gap:var(--s-3);
+  }
+  .settings-page .st-int .st-status{
+    max-width:100%;
+    align-self:flex-start;
+  }
+  .settings-page .st-int__actions .st-form-row{grid-template-columns:minmax(0,1fr);}
+  .settings-page .st-int__actions .st-form-row .btn{width:100%;}
 }
 
 /* 21 - MOTION ────────────────────────────────────────────────────────── */

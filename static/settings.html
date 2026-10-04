@@ -419,59 +419,71 @@
         <!-- ═══ INTEGRATIONS ═══ -->
         <div class="settings-panel" data-panel="integrations">
           <div class="st-card st-int st-int--whatsapp">
-            <div class="st-sec-head st-sec-head--action">
-              <div>
-                <h2 class="st-sec-title">Connect WhatsApp</h2>
-                <span class="st-sec-desc">Dictate sessions by voice, right from your phone.</span>
+            <img class="st-int__banner" src="/img/whatsapp-connect-banner.webp"
+                 alt="" aria-hidden="true" width="1536" height="1024" loading="lazy" decoding="async">
+            <div class="st-int__body">
+              <div class="st-sec-head st-sec-head--action">
+                <div>
+                  <h2 class="st-sec-title">Connect WhatsApp</h2>
+                  <span class="st-sec-desc">Dictate sessions by voice, right from your phone.</span>
+                </div>
+                <span class="st-status is-off" id="waStatusBadge" role="status">
+                  <svg class="wa-glyph wa-glyph-wa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-2.9-.4-4.1-1.1L4 20l1.2-3.2A8.5 8.5 0 1 1 20 11.5Z"/>
+                    <path d="M8.4 9.3c.5-.9 1.4-1 2.1-.9h.3l.9 1.5-.9.9c.3.8 1 1.6 1.8 1.9l.9-.9 1.5.9v.3c0 .6-.3 1.5-1.4 2-2 .9-5.1-1.2-6.2-3.4-1.1-2.2-1.2-3.4-.3-4.5Z"/>
+                  </svg>
+                  <svg class="wa-glyph wa-glyph-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <span class="st-dot"></span>
+                  <span class="wa-status-label" id="waStatusLabel">Not connected</span>
+                </span>
               </div>
-              <span class="st-status is-off" id="waStatusBadge" role="status">
-                <svg class="wa-glyph wa-glyph-wa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-2.9-.4-4.1-1.1L4 20l1.2-3.2A8.5 8.5 0 1 1 20 11.5Z"/>
-                  <path d="M8.4 9.3c.5-.9 1.4-1 2.1-.9h.3l.9 1.5-.9.9c.3.8 1 1.6 1.8 1.9l.9-.9 1.5.9v.3c0 .6-.3 1.5-1.4 2-2 .9-5.1-1.2-6.2-3.4-1.1-2.2-1.2-3.4-.3-4.5Z"/>
-                </svg>
-                <svg class="wa-glyph wa-glyph-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M5 13l4 4L19 7"/>
-                </svg>
-                <span class="st-dot"></span>
-                <span class="wa-status-label" id="waStatusLabel">Not connected</span>
-              </span>
-            </div>
 
-            <p class="st-help">Verify a phone number to (1) dictate sessions by messaging your VooVr WhatsApp number and (2) receive meeting-reminder texts. A one-time code is sent to the number over WhatsApp itself.</p>
+              <p class="st-help">Verify a phone number to (1) dictate sessions by messaging your VooVr WhatsApp number and (2) receive meeting-reminder texts. A one-time code is sent to the number over WhatsApp itself.</p>
 
-            <div class="st-form-row">
-              <input type="tel" class="form-input" id="waPhoneInput" placeholder="+1 555 123 4567" autocomplete="tel">
-              <button class="btn btn-primary" id="waSendCodeBtn" type="button">Send code</button>
+              <div class="st-int__actions">
+                <div class="st-form-row">
+                  <input type="tel" class="form-input" id="waPhoneInput" placeholder="+1 555 123 4567" autocomplete="tel">
+                  <button class="btn btn-primary" id="waSendCodeBtn" type="button">Send code</button>
+                </div>
+                <div class="field-error" id="waPhoneError"></div>
+                <div class="st-form-row" id="waOtpRow" style="display:none;">
+                  <input type="text" class="form-input" id="waOtpInput" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+                  <button class="btn btn-primary" id="waVerifyBtn" type="button">Verify</button>
+                </div>
+                <span class="st-note" id="waPhoneMsg"></span>
+                <span class="st-hint" id="waPhoneStatus" hidden></span>
+              </div>
             </div>
-            <div class="field-error" id="waPhoneError"></div>
-            <div class="st-form-row" id="waOtpRow" style="display:none;">
-              <input type="text" class="form-input" id="waOtpInput" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
-              <button class="btn btn-primary" id="waVerifyBtn" type="button">Verify</button>
-            </div>
-            <span class="st-note" id="waPhoneMsg"></span>
-            <span class="st-hint" id="waPhoneStatus" hidden></span>
           </div>
 
           <div class="st-card st-int st-int--gmail">
-            <div class="st-sec-head st-sec-head--action">
-              <div>
-                <h2 class="st-sec-title">Gmail Integration</h2>
-                <span class="st-sec-desc">Connect your Gmail account to enable automated follow-ups and email notifications.</span>
+            <img class="st-int__banner" src="/gmail_integeration.webp"
+                 alt="" aria-hidden="true" width="2057" height="764" loading="lazy" decoding="async">
+            <div class="st-int__body">
+              <div class="st-sec-head st-sec-head--action">
+                <div>
+                  <h2 class="st-sec-title">Gmail Integration</h2>
+                  <span class="st-sec-desc">Connect your Gmail account to enable automated follow-ups and email notifications.</span>
+                </div>
+                <span class="st-status is-off" id="gmailStatusBadge" role="status">
+                  <svg class="wa-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <path d="M22 6l-10 7L2 6"/>
+                  </svg>
+                  <span class="st-dot"></span>
+                  <span class="wa-status-label">Not connected</span>
+                </span>
               </div>
-              <span class="st-status is-off" id="gmailStatusBadge" role="status">
-                <svg class="wa-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                  <path d="M22 6l-10 7L2 6"/>
-                </svg>
-                <span class="st-dot"></span>
-                <span class="wa-status-label">Not connected</span>
-              </span>
-            </div>
 
-            <p class="st-help">Automated follow-ups on overdue 1:1 meetings and email notifications from VooVr will flow through your connected Gmail account.</p>
+              <p class="st-help">Automated follow-ups on overdue 1:1 meetings and email notifications from VooVr will flow through your connected Gmail account.</p>
 
-            <div class="st-form-row st-form-row--end">
-              <button class="btn btn-primary" id="gmailConnectBtn" type="button">Connect Gmail</button>
+              <div class="st-int__actions">
+                <div class="st-form-row st-form-row--end">
+                  <button class="btn btn-primary" id="gmailConnectBtn" type="button">Connect Gmail</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
