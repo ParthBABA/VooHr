@@ -41,7 +41,8 @@
       <img src="/voovr-logo-full.webp" alt="VooHr">
     </a>
     <span class="support-topbar-label" aria-current="page">Support</span>
-    <a class="support-signin" href="/signin">Sign in</a>
+    <a class="support-signin" style="margin-left:auto; background:transparent;" href="/support/contact">Contact</a>
+    <a class="support-signin" style="margin-left:0;" href="/signin">Sign in</a>
     <button class="support-menu-toggle" type="button" aria-expanded="false"
             aria-controls="support-sidebar" aria-label="Open support menu">
       <span aria-hidden="true">&#9776;</span>
@@ -143,7 +144,7 @@
         <header class="support-article-header">
           <p class="support-eyebrow">{{ support_page.group }}</p>
           <h1>{{ support_page.title }}</h1>
-          <p class="support-lede">{{ support_page.intro }}</p>
+          <p class="support-lede">{{ support_page.intro }} Still stuck? <a href="/support/contact">Contact support</a>.</p>
         </header>
         {% set faq_groups = ['General', 'Meetings', 'Analysis', 'Actions', 'Account and security', 'Privacy'] %}
         <nav class="support-contents" aria-label="FAQ topics">
@@ -196,7 +197,7 @@
         <header class="support-article-header">
           <p class="support-eyebrow">{{ support_page.group }}</p>
           <h1>{{ support_page.title }}</h1>
-          <p class="support-lede">{{ support_page.intro }}</p>
+          <p class="support-lede">{{ support_page.intro|safe }}</p>
         </header>
 
         <nav class="support-contents" aria-label="On this page">
@@ -356,7 +357,12 @@
         <header class="support-article-header">
           <p class="support-eyebrow">{{ support_page.group }}</p>
           <h1>{{ support_page.title }}</h1>
-          <p class="support-lede">{{ support_page.intro }}</p>
+          <p class="support-lede">
+            {{ support_page.intro }}
+            {% if support_slug in ['faq', 'accuracy'] %}
+            Still stuck? <a href="/support/contact">Contact support</a>.
+            {% endif %}
+          </p>
         </header>
         {% if support_page.sections %}
         <nav class="support-contents" aria-label="On this page">

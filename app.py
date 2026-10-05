@@ -48,6 +48,7 @@ from totp_routes import totp_bp
 from tts import tts_bp
 from surveys import surveys_bp
 from whatsapp_routes import whatsapp_bp
+from support import support_bp
 from page_rendering import metadata, render_page, render_support_page
 
 logger = logging.getLogger(__name__)
@@ -187,6 +188,7 @@ def create_app():
     app.register_blueprint(tts_bp, url_prefix="/api")
     app.register_blueprint(jobs_bp, url_prefix="/api")
     app.register_blueprint(whatsapp_bp, url_prefix="/api")
+    app.register_blueprint(support_bp, url_prefix="/api")
 
     # ── In-process reminder scheduler (APScheduler) ────────────────────
     # One BackgroundScheduler per worker process, started inside the app

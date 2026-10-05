@@ -706,6 +706,7 @@ class PresentationTests(unittest.TestCase):
         )
         landing = (ROOT / "templates" / "login.html").read_text(encoding="utf-8")
         self.assertIn('<a href="/support">Support</a>', landing)
+        self.assertIn('<a href="/support/contact">Contact</a>', landing)
         for legal in content["legal"]:
             self.assertIn(legal["url"], {"/privacy", "/terms"})
             self.assertTrue((ROOT / "static" / (

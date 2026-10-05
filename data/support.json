@@ -528,7 +528,7 @@
       "group": "FAQ",
       "description": "Answers to common questions about VooHr meetings, analysis, actions, accounts, and privacy.",
       "intro": "Quick answers to common product questions. Each answer links to a detailed guide; where a policy or deployment fact is unknown, the answer says so.",
-      "sections": [],
+      "sections": []
     },
     "contact": {
       "path": "contact",
