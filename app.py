@@ -48,7 +48,7 @@ from totp_routes import totp_bp
 from tts import tts_bp
 from surveys import surveys_bp
 from whatsapp_routes import whatsapp_bp
-from page_rendering import metadata, render_page
+from page_rendering import metadata, render_page, render_support_page
 
 logger = logging.getLogger(__name__)
 
@@ -316,6 +316,14 @@ def create_app():
         app.logger.info("Root route: is_logged_in=%s", is_logged_in)
         return render_template("login.html", is_logged_in=is_logged_in, **metadata(
             "VooVr — Private conversation memory for modern HR teams", public=True))
+
+    @app.route("/support", defaults={"slug": ""})
+    @app.route("/support/<path:slug>")
+    def support(slug):
+        response = render_support_page(slug)
+        if response is None:
+            return render_page("404.html"), 404
+        return response
 
     @app.route("/login")
     def login():

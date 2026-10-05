@@ -5,7 +5,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from flask import Flask, render_template
-from page_rendering import metadata, render_page
+from page_rendering import metadata, render_page, render_support_page
 
 app = Flask(__name__, static_folder=str(ROOT / "static"), static_url_path="",
             template_folder=str(ROOT / "templates"))
@@ -22,6 +22,13 @@ def preview(filename):
     if filename not in {p.name for p in (ROOT / "static").glob("*.html")}:
         return "Not found", 404
     return render_page(filename)
+
+
+@app.route("/support", defaults={"slug": ""})
+@app.route("/support/<path:slug>")
+def support(slug):
+    response = render_support_page(slug)
+    return response if response is not None else ("Not found", 404)
 
 
 if __name__ == "__main__":

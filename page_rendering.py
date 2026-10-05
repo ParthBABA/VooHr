@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from html.parser import HTMLParser
+import json
 from pathlib import Path
 import re
 
@@ -12,12 +13,13 @@ DESCRIPTION = (
     "VooVr brings employee records, conversation insights, meeting tracking, "
     "and thoughtful follow-ups together for modern HR teams."
 )
+SUPPORT_CONTENT_PATH = Path(__file__).parent / "data" / "support.json"
 
 
-def metadata(title, public=False):
+def metadata(title, public=False, description=None):
     # Do not put query strings (which can contain invite tokens) in previews.
     base = (current_app.config.get("SITE_URL") or request.url_root).rstrip("/")
-    return dict(page_title=title, page_description=DESCRIPTION,
+    return dict(page_title=title, page_description=description or DESCRIPTION,
                 page_url=base + request.path, site_base=base, public_page=public)
 
 
@@ -87,6 +89,83 @@ def render_page(filename):
     # Clean routes can be nested (/sync/room). Local assets and page links
     # were authored relative to the static root, not the current URL folder.
     # This runs after rendering so partials get the same treatment.
+    response = make_response(_RootAssetParser(page).normalized())
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@lru_cache(maxsize=1)
+def _support_content():
+    return json.loads(SUPPORT_CONTENT_PATH.read_text(encoding="utf-8"))
+
+
+def support_page_context(slug):
+    """Build the shared support-page context, or return None for an unknown URL."""
+    content = _support_content()
+    page = content["articles"].get(slug)
+    if page is None:
+        return None
+
+    ordered_pages = []
+
+    def collect(items):
+        for item in items:
+            ordered_pages.append(item)
+            collect(item.get("children", []))
+
+    for group in content["groups"]:
+        collect(group["items"])
+    article_paths = {article["path"]: article for article in content["articles"].values()}
+    article_tails = {
+        article["path"].rsplit("/", 1)[-1]: article
+        for article in content["articles"].values() if article["path"]
+    }
+
+    page_order = [item["path"] for item in ordered_pages]
+    if "faq" not in page_order:
+        page_order.append("faq")
+    current_path = page["path"]
+    current_index = page_order.index(current_path) if current_path in page_order else -1
+    previous_path = page_order[current_index - 1] if current_index > 0 else None
+    next_index = current_index + 1
+    next_path = page_order[next_index] if next_index < len(page_order) else None
+
+    title = "VooHr Support | Overview" if slug == "" else f"{page['title']} | VooHr Support"
+    description = page["description"]
+    search_items = [
+        {"label": article["title"], "url": "/support" + ("/" + key if key else "")}
+        for key, article in content["articles"].items() if key
+    ]
+    search_items.extend(
+        {"label": item["question"], "url": "/support/faq#" + item["id"]}
+        for item in content["faq"]
+    )
+    return {
+        **metadata(title, public=True, description=description),
+        "page_description": description,
+        "support_page": page,
+        "support_slug": slug,
+        "support_groups": content["groups"],
+        "support_articles": content["articles"],
+        "support_related": {
+            item: article_paths.get(item) or article_tails.get(item)
+            for item in page.get("related", [])
+        },
+        "support_faq": content["faq"],
+        "support_search_items": search_items,
+        "support_previous": content["articles"].get(previous_path) if previous_path else None,
+        "support_next": content["articles"].get(next_path) if next_path else None,
+        "support_previous_path": previous_path,
+        "support_next_path": next_path,
+        "support_overview": content["articles"][""],
+    }
+
+
+def render_support_page(slug):
+    context = support_page_context(slug)
+    if context is None:
+        return None
+    page = render_template("support.html", **context)
     response = make_response(_RootAssetParser(page).normalized())
     response.headers["Cache-Control"] = "no-store"
     return response

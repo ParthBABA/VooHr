@@ -280,6 +280,115 @@ def _parse_confidence_score(val):
     return 0
 
 
+def _coerce_risk_score(val):
+    """Coerce a model-supplied 0-100 risk score to a number, or None.
+
+    The schema asks for a number, but the model occasionally answers with a
+    numeric string ("70", " 70 ", "70%") or with something unusable. Anything
+    non-numeric becomes None rather than 0, because a missing reading must
+    never be confused with a genuine zero risk. Out-of-range values are
+    clamped; booleans are rejected (True is not a risk level).
+    """
+    if val is None or isinstance(val, bool):
+        return None
+    if isinstance(val, (int, float)):
+        num = float(val)
+    elif isinstance(val, str):
+        stripped = val.strip().rstrip("%").strip()
+        if not stripped:
+            return None
+        try:
+            num = float(stripped)
+        except (TypeError, ValueError):
+            return None
+    else:
+        return None
+    if num != num or num in (float("inf"), float("-inf")):
+        return None
+    return max(0.0, min(100.0, num))
+
+
+# ── Output-quality patterns the prompt alone cannot enforce ──────────────
+# Narrow, targeted phrases for the two safety rules the prompt states as
+# absolute: (a) no clinical / trait labels attached to the employee, and
+# (b) no guessing at motives. The old blanket "you are" keyword fired on
+# ordinary sentences and was removed.
+_QUALITY_CHECKS = (
+    (
+        "clinical_label",
+        (
+            r"\bdiagnos(?:ed|is)\b",
+            r"\bdepressed\b",
+            r"\b(?:anxiety|anxious)\s+disorder\b",
+            r"\bbipolar\b",
+            r"\bpsychosis\b|\bpsychotic\b",
+            r"\bschizo(?:phrenia|phrenic)\b",
+            r"\bnarciss(?:ist|istic|ism)\w*",
+            r"\bpersonality\s+(?:type|disorder)\b",
+            r"\bsuffers?\s+from\b",
+            r"\bmental\s+illness\b",
+            r"\b(?:clinical|personality)\s+disorder\b",
+        ),
+    ),
+    (
+        "motive_attribution",
+        (
+            r"\bdeliberately\b",
+            r"\bintentionally\b",
+            r"\bon\s+purpose\b",
+            r"\bpretending\b",
+            r"\bhiding\b",
+        ),
+    ),
+)
+_QUALITY_RE = tuple(
+    (kind, re.compile(pattern)) for kind, patterns in _QUALITY_CHECKS for pattern in patterns
+)
+
+
+def _iter_text_values(node):
+    """Yield every string found in a nested analysis payload."""
+    if isinstance(node, str):
+        yield node
+    elif isinstance(node, dict):
+        for value in node.values():
+            yield from _iter_text_values(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _iter_text_values(value)
+
+
+def _scan_quality_violations(result):
+    """Return human-readable warnings for clinical labels / motive guessing.
+
+    Policy: the analysis is NOT discarded and the offending field is NOT
+    rewritten — silently editing the model's wording would misrepresent what
+    was generated. Instead the violation is surfaced as a visible
+    ``quality_warnings`` list on the analysis (rendered by the frontend), and
+    logged. ``_validation_errors`` keeps the machine-facing copy.
+    """
+    warnings = []
+    seen = set()
+    for text in _iter_text_values(result):
+        lowered = text.lower()
+        for kind, pattern in _QUALITY_RE:
+            match = pattern.search(lowered)
+            if not match:
+                continue
+            key = (kind, match.group(0))
+            if key in seen:
+                continue
+            seen.add(key)
+            label = (
+                "possible clinical or trait label"
+                if kind == "clinical_label"
+                else "possible motive attribution"
+            )
+            warnings.append(f"{label}: '{match.group(0)}'")
+            logger.warning("analysis_quality_violation kind=%s term=%r", kind, match.group(0))
+    return warnings
+
+
 def _coerce_step_section(key, val):
     """Coerce a wrongly-typed step section into a dict, preserving content."""
     if isinstance(val, str) and val.strip():
@@ -300,6 +409,7 @@ def validate_analysis(result, depth=0):
     if depth == 0 and not isinstance(result, dict):
         logger.warning("Top-level response is not a dict: %s", type(result).__name__)
         result = dict(FALLBACK_ANALYSIS)
+        result["is_fallback"] = True
         result["_validation_errors"] = ["Top-level response was not a JSON object"]
         return result
 
@@ -404,15 +514,46 @@ def validate_analysis(result, depth=0):
             })
         result["topics_to_avoid"] = cleaned
 
-    # Check for hallucination keywords (diagnosis, labels)
-    hallucination_keywords = [
-        "diagnosed with", "clinical", "disorder", "suffers from",
-        "personality type", "you are", "the employee is definitely"
-    ]
-    result_str = json.dumps(result).lower()
-    for kw in hallucination_keywords:
-        if kw in result_str:
-            errors.append(f"Possible hallucination keyword: '{kw}'")
+    # ── Numeric risk fields ──
+    # Coerced (not merely checked) so downstream arithmetic can never raise:
+    # "70" + "60" would otherwise concatenate to "7060" and then raise.
+    risks = result.get("risks")
+    if isinstance(risks, dict):
+        for field in ("burnout_index", "attrition_risk_pct"):
+            if field not in risks:
+                continue
+            coerced = _coerce_risk_score(risks.get(field))
+            if coerced is None:
+                if risks.get(field) is not None:
+                    errors.append(f"Unusable value for 'risks.{field}'")
+                risks[field] = None
+            elif coerced != risks.get(field):
+                errors.append(f"Coerced value for 'risks.{field}' to {coerced:g}")
+                risks[field] = coerced
+        rf = risks.get("risk_factors")
+        if isinstance(rf, str):
+            risks["risk_factors"] = [rf] if rf.strip() else []
+        elif rf is not None and not isinstance(rf, list):
+            risks["risk_factors"] = []
+
+    safety = result.get("psychological_safety")
+    if isinstance(safety, dict) and "safety_score" in safety:
+        coerced = _coerce_risk_score(safety.get("safety_score"))
+        if coerced is None:
+            if safety.get("safety_score") is not None:
+                errors.append("Unusable value for 'psychological_safety.safety_score'")
+            safety["safety_score"] = None
+        elif coerced != safety.get("safety_score"):
+            errors.append(f"Coerced value for 'psychological_safety.safety_score' to {coerced:g}")
+            safety["safety_score"] = coerced
+
+    # ── Quality checks the prompt alone cannot enforce ──
+    # Clinical/trait labels and motive attribution are prose-level, so a
+    # schema validator cannot prevent them. Violations are surfaced to the UI
+    # (see _scan_quality_violations for the policy).
+    quality_warnings = _scan_quality_violations(result)
+    if quality_warnings:
+        errors.extend(quality_warnings)
 
     # ── Section-level content check for steps 2-5 ──
     # Only trigger fallback when a section has ZERO meaningful content across
@@ -470,6 +611,10 @@ def validate_analysis(result, depth=0):
                 errors.append(f"EMPTY LIST in {step_key}.{f}")
 
     result["_validation_errors"] = errors
+    # Machine-facing copy stays under the underscore-prefixed key; the
+    # UI-facing key is what the frontend can render. Always present (possibly
+    # empty) so consumers never have to test for its existence.
+    result["quality_warnings"] = list(quality_warnings)
     return result
 
 
@@ -557,7 +702,7 @@ INTERNAL REASONING FRAMEWORKS (silently evaluate every transcript using these):
 8. Action Intelligence — Every recommendation must pass: Realistic → Evidence-based → Low-cost → Immediately actionable → Measurable. Reject advice that fails.
 
 GOLDEN RULES
-- This tool exists to help HR remember what to follow up on — it does not score, rank, or rate the employee. Never phrase output as a judgment of the employee (e.g. avoid framing like "Harshit scored 75% positive sentiment"). Frame output as guidance for HR's next action (e.g. "These are the things worth following up on next time").
+- This tool exists to help HR remember what to follow up on. The schema does contain numbers (safety_score, burnout_index, attrition_risk_pct, underlying_drivers confidence), and they are required — so be honest about what they are: they are probabilistic indicators drawn from THIS ONE conversation, not a judgement of the person and not a clinical or performance assessment. Never present a score as a fact about the employee's worth or potential, and never phrase output as a verdict (e.g. avoid framing like "Harshit scored 75% positive sentiment" or "Harshit is a 70% attrition risk"). Frame output as guidance for HR's next action (e.g. "These are the things worth following up on next time"), and use probabilistic language around every number ("evidence from this conversation suggests...").
 - Never attach a clinical or trait label to the employee (e.g. "perfectionist tendency", "self-critical inner dialogue", "anxiety pattern"). Instead, describe the specific behaviour in plain, descriptive language anchored to what they actually said — e.g. "Harshit named a pattern of blaming himself after small mistakes" rather than "perfectionist tendency".
 - Do not speculate about the employee's underlying motives, fears, or psychological needs beyond what they explicitly said. Avoid phrases like "possibly because...", "this suggests he may be...", "indicating a need for..." — these are unstated inferences, not observations. Stick to describing what was said and what pattern it forms in behavior, not why it exists internally. If a reasonable behavioral observation is useful, phrase it as a description of the pattern itself, not a theory about its psychological cause — e.g. write "Harshit shared this without being asked" rather than "this suggests he may feel isolated and needs to unload."
 - Never emit a bare status word for a signal or flag field (e.g. "None observed", "N/A", "Not observed"). If nothing is flagged, write a brief natural sentence such as "Nothing flagged — the conversation felt open and low-stress."
@@ -746,7 +891,7 @@ STRICT RULES
 5. Maximum paragraph length: 2 lines. No essays. Be concise.
 6. If transcript evidence is weak, explicitly say "Insufficient evidence to draw a reliable conclusion."
 7. Tone: 50% Professional, 30% Calm Stoic, 20% Casual Human. Never sound like therapy or corporate HR templates.
-8. This tool exists to help HR remember what to follow up on — it does not score, rank, or rate the employee. Never phrase output as a judgment of the employee (e.g. avoid framing like "Harshit scored 75% positive sentiment"). Frame output as guidance for HR's next action (e.g. "These are the things worth following up on next time").
+8. This tool exists to help HR remember what to follow up on. The schema does contain numbers (safety_score, burnout_index, attrition_risk_pct) and they are required, so be honest about what they are: probabilistic indicators drawn from THIS ONE conversation, not a judgement of the person and not a performance or clinical assessment. Never present a score as a fact about the employee (e.g. avoid "Harshit scored 75% positive sentiment" or "Harshit is a 70% attrition risk"). Frame output as guidance for HR's next action (e.g. "These are the things worth following up on next time"), and use probabilistic language around every number.
 9. Never attach a clinical or trait label to the employee (e.g. "perfectionist tendency", "self-critical inner dialogue", "anxiety pattern"). Instead, describe the specific behaviour in plain, descriptive language anchored to what they actually said — e.g. "Harshit named a pattern of blaming himself after small mistakes" rather than "perfectionist tendency".
 10. Do not speculate about the employee's underlying motives, fears, or psychological needs beyond what they explicitly said. Avoid phrases like "possibly because...", "this suggests he may be...", "indicating a need for..." — these are unstated inferences, not observations. Stick to describing what was said and what pattern it forms in behavior, not why it exists internally. If a reasonable behavioral observation is useful, phrase it as a description of the pattern itself, not a theory about its psychological cause — e.g. write "Harshit shared this without being asked" rather than "this suggests he may feel isolated and needs to unload."
 11. Never emit a bare status word for a signal or flag field (e.g. "None observed", "N/A", "Not observed"). If nothing is flagged, write a brief natural sentence such as "Nothing flagged — the conversation felt open and low-stress."
@@ -1132,7 +1277,15 @@ Return ONLY valid JSON with EXACTLY these fields:
 Return ONLY valid JSON, no markdown formatting, no code fences."""
 
 
+# ── Fallback payload ─────────────────────────────────────────────────────
+# Returned when the model's reply cannot be parsed as the analysis JSON at all.
+# It carries an EXPLICIT ``is_fallback`` marker: a zero-risk placeholder must
+# never be stored or scored as if it were a real reading (an unparseable
+# response would otherwise look like a perfectly healthy employee). Callers
+# (sessions.analyze_session) check ``is_fallback`` and treat the analysis as a
+# failure instead of saving it.
 FALLBACK_ANALYSIS = {
+    "is_fallback": True,
     "summary": "Analysis failed — could not parse AI response.",
     "psychology": {"sentiment_label": "", "behavioural_interpretation": []},
     "conversation_coach": [],

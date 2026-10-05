@@ -1,11 +1,12 @@
 """Presentation regressions, without database or external services."""
 from html.parser import HTMLParser
+import json
 from pathlib import Path
 import re
 import unittest
 
 from flask import Flask
-from page_rendering import metadata, render_page
+from page_rendering import metadata, render_page, render_support_page, support_page_context
 
 
 ROOT = Path(__file__).parent
@@ -616,6 +617,225 @@ class PresentationTests(unittest.TestCase):
                 self.assertTrue(
                     "voovr-theme" in html or "voovrSetTheme" in html,
                     f"{path.name} renders a #themeToggle button but no theme handler")
+
+    def test_support_routes_metadata_navigation_and_landing_link(self):
+        content = json.loads((ROOT / "data" / "support.json").read_text(encoding="utf-8"))
+        route_slugs = list(content["articles"])
+        rendered_titles = set()
+        valid_paths = {"/", "/signin", "/privacy", "/terms"}
+        valid_paths.update("/support" + ("/" + slug if slug else "") for slug in route_slugs)
+        def serve_support(slug):
+            response = render_support_page(slug)
+            return response if response is not None else ("Not found", 404)
+
+        self.app.add_url_rule(
+            "/support", defaults={"slug": ""}, endpoint="support_overview",
+            view_func=serve_support,
+        )
+        self.app.add_url_rule(
+            "/support/<path:slug>", endpoint="support_article",
+            view_func=serve_support,
+        )
+        client = self.app.test_client()
+
+        class LinkParser(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.links = []
+                self.ids = []
+                self.title = None
+                self.in_title = False
+
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if attrs.get("id"):
+                    self.ids.append(attrs["id"])
+                if tag == "a" and attrs.get("href"):
+                    self.links.append(attrs["href"])
+                if tag == "link" and attrs.get("rel") == "canonical":
+                    self.links.append(attrs["href"])
+                if tag == "title":
+                    self.in_title = True
+
+            def handle_endtag(self, tag):
+                if tag == "title":
+                    self.in_title = False
+
+            def handle_data(self, data):
+                if self.in_title:
+                    self.title = (self.title or "") + data
+
+        for slug in route_slugs:
+            url = "/support" + ("/" + slug if slug else "")
+            with self.subTest(route=url):
+                response = client.get(url)
+                self.assertEqual(response.status_code, 200)
+                parser = LinkParser()
+                parser.feed(response.get_data(as_text=True))
+                self.assertTrue(parser.title)
+                self.assertNotIn(parser.title, rendered_titles)
+                rendered_titles.add(parser.title)
+                self.assertEqual(len(parser.ids), len(set(parser.ids)))
+                self.assertIn(url, parser.links)
+                for href in parser.links:
+                    path = href.split("#", 1)[0]
+                    if path.startswith("/"):
+                        self.assertIn(path, valid_paths, (url, href))
+
+                with self.app.test_request_context(url):
+                    context = support_page_context(slug)
+                for target in (context["support_previous_path"], context["support_next_path"]):
+                    if target:
+                        self.assertIn("/support/" + target, valid_paths)
+
+        self.assertEqual(len(rendered_titles), len(route_slugs))
+        self.assertEqual(client.get("/support/not-a-real-page").status_code, 404)
+        self.assertGreaterEqual(len(content["faq"]), 30)
+        self.assertEqual(
+            {item["group"] for item in content["faq"]},
+            {"General", "Meetings", "Analysis", "Actions", "Account and security", "Privacy"},
+        )
+        landing = (ROOT / "templates" / "login.html").read_text(encoding="utf-8")
+        self.assertIn('<a href="/support">Support</a>', landing)
+        for legal in content["legal"]:
+            self.assertIn(legal["url"], {"/privacy", "/terms"})
+            self.assertTrue((ROOT / "static" / (
+                "privacy-policy.html" if legal["url"] == "/privacy" else "terms-of-service.html"
+            )).is_file())
+
+    def test_support_article_word_counts_and_faq_links(self):
+        content = json.loads((ROOT / "data" / "support.json").read_text(encoding="utf-8"))
+        guidance = (
+            "This page describes the current product workflow; it is not an HR policy or a promise "
+            "about every deployment. Before acting on information about an employee, verify the "
+            "source record, consider context the system cannot see, and use your organization's "
+            "process. If a control behaves differently from this guide, check the current workspace "
+            "UI and confirm the saved result rather than assuming an action completed."
+        )
+        for slug, article in content["articles"].items():
+            if slug in ("", "faq"):
+                continue
+            text = " ".join(
+                [article["title"], article["intro"]]
+                + [section["heading"] + " " + " ".join(section["paragraphs"])
+                   for section in article["sections"]]
+            ) + " " + guidance
+            words = re.findall(r"\b[\w'-]+\b", text)
+            with self.subTest(article=slug):
+                self.assertGreaterEqual(len(words), 250)
+                self.assertLessEqual(len(words), 600)
+        for item in content["faq"]:
+            self.assertIn(item["article"], content["articles"])
+            self.assertTrue(item["id"])
+
+
+class SyncRoomHonestyTests(unittest.TestCase):
+    """The Analysis View must not state anything the analysis cannot support,
+    and must not claim a persistence or scheduling effect it does not have."""
+
+    SOURCE = (ROOT / "static" / "sync_room.html").read_text(encoding="utf-8")
+
+    @staticmethod
+    def _strip_comments(text):
+        """Drop HTML comments and JS comments so the explanatory notes that
+        quote the fabrications they replaced don't trip the assertions."""
+        text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+        text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+        out = []
+        for line in text.split("\n"):
+            idx = None
+            i = 0
+            while i < len(line):
+                if line.startswith("//", i):
+                    # Ignore the "//" in "https://" and friends.
+                    if line[max(0, i - 1):i] != ":":
+                        idx = i
+                        break
+                    i += 2
+                    continue
+                i += 1
+            out.append(line if idx is None else line[:idx])
+        return "\n".join(out)
+
+    VISIBLE = _strip_comments(SOURCE)
+
+    def _assert_absent(self, needle, label=None):
+        # assertNotIn would dump this whole 6.8k-line file on failure.
+        if needle in self.VISIBLE:
+            self.fail(f"{label or needle!r} is still present in sync_room.html")
+
+    def test_no_hardcoded_substitute_for_analysis_values(self):
+        banned = {
+            "generic opener": "I want to start by saying something that might be a little hard to hear.",
+            "hardcoded signal": "Stress Indicators",
+            "hardcoded signal": "Engagement Level",
+            "fake follow-up window": "Recommended &middot; 7&ndash;10 days",
+            "invented recommendation": "Keep momentum this week",
+        }
+        for label, needle in banned.items():
+            with self.subTest(label=label):
+                self._assert_absent(needle, label)
+
+    def test_no_unsupported_progress_or_autosave_claim(self):
+        """The footer claimed autosave on every step while the note textareas
+        had no read and no write path, and a progress meter drew a permanently
+        full bar before completion."""
+        for needle in ("Progress autosaved", "Conversation Ready", "Reminder set"):
+            with self.subTest(needle=needle):
+                self._assert_absent(needle)
+        self._assert_absent("fs-meter-fill")
+
+    def test_manager_notes_are_persisted_and_restored(self):
+        for step in range(1, 6):
+            with self.subTest(step=step):
+                self.assertIn(f'id="stepNotes_{step}"', self.SOURCE)
+        self.assertIn("function saveStepNotes(", self.SOURCE)
+        self.assertIn("function loadStepNotes(", self.SOURCE)
+        self.assertIn("function saveStepAndGo(", self.SOURCE)
+        self.assertIn("kind: 'step_notes'", self.SOURCE)
+        # Continue buttons must actually save rather than only navigate.
+        self.assertNotIn('onclick="goToStep(2)">Save', self.SOURCE)
+        for nxt in (2, 3, 4, 5):
+            self.assertIn(f'saveStepAndGo({nxt})', self.SOURCE)
+
+    def test_followup_is_not_prescheduled_and_says_when_it_saves(self):
+        self.assertIn('id="fsScheduleNote"', self.SOURCE)
+        self.assertIn("Nothing is scheduled until you complete the sync", self.SOURCE)
+        self.assertIn("window.__syncRoomFollowUp", self.SOURCE)
+        # The staged follow-up must reach the API as a real FOLLOW_UP.
+        self.assertIn("postMemory('FOLLOW_UP', 'PENDING', followUpText, stagedFollowUp.due_at)",
+                      self.SOURCE)
+        # No fabricated default date may be pre-filled on load.
+        self.assertNotIn("later.getTime() + 9 *", self.SOURCE)
+
+    def test_root_cause_confirmation_round_trips(self):
+        """Confirmation writes a NOTE, so it must read it back and be able to
+        remove it rather than only restyling the card."""
+        self.assertIn("kind: 'confirmed_root_cause'", self.SOURCE)
+        self.assertIn("method: 'DELETE'", self.SOURCE)
+        self.assertIn("Confirmed root cause: ' + text", self.SOURCE)
+
+    def test_quality_warnings_from_the_backend_are_shown(self):
+        self.assertIn('id="analysisQualityWarnings"', self.SOURCE)
+        self.assertIn("analysis.quality_warnings", self.SOURCE)
+
+    def test_transcript_link_carries_both_ids(self):
+        """/workspace requires session_id AND employee_id; it renders a blank
+        transcript with only one of them."""
+        link = re.search(r"href=\"/workspace\?[^\"]*'", self.SOURCE)
+        self.assertIsNotNone(link, "no transcript link found")
+        self.assertIn("session_id", link.group(0))
+        self.assertIn("employee_id", link.group(0))
+
+    def test_inline_scripts_are_balanced(self):
+        """A stray <script> left an unclosed block that swallowed the narration
+        layer into the previous script body."""
+        self.assertEqual(self.SOURCE.lower().count("<script"),
+                         self.SOURCE.lower().count("</script>"))
+        self.assertEqual(self.SOURCE.count("<div"), self.SOURCE.count("</div>"))
+
+    def test_no_byte_order_mark(self):
+        self.assertFalse(self.SOURCE.startswith("\ufeff"))
 
 
 if __name__ == "__main__":

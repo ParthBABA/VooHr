@@ -586,127 +586,8 @@
     box-shadow: 0 8px 22px rgba(52,211,153,0.28);
   }
 
-  /* ---------- 2. Read the Room ---------- */
-  #stepContent .ps-rtw-title{
-    display: flex; align-items: center; gap: 0.7rem;
-    font-family: var(--step-heading-font);
-    font-size: 19px; font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--step-text);
-    margin: 0;
-  }
-  #stepContent .ps-rtw-title::before{
-    content: ''; width: 10px; height: 10px; border-radius: 3px;
-    background: linear-gradient(135deg, var(--step-primary), rgba(139,92,246,0.35));
-    box-shadow: 0 0 12px rgba(139,92,246,0.45);
-  }
-  #stepContent .ps-rtw-desc{
-    font-family: var(--step-body-font);
-    font-size: 14.5px; line-height: 1.7;
-    color: var(--step-text-secondary);
-    max-width: 660px;
-    margin: 0.55rem 0 0;
-  }
-  #stepContent .ps-states{
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0,1fr));
-    gap: 1rem;
-    margin-top: 1.6rem;
-  }
-  #stepContent .ps-state{
-    display: flex; flex-direction: column;
-    padding: 1.6rem 1.5rem 1.5rem;
-    border-radius: 14px;
-    border: 1px solid;
-    background: var(--step-card-bg);
-    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-  #stepContent .ps-state:hover{ transform: translateY(-2px); }
-  #stepContent .ps-state--calm{
-    border-color: rgba(52,211,153,0.20);
-    background: linear-gradient(165deg, rgba(52,211,153,0.05), transparent 55%), var(--step-card-bg);
-  }
-  #stepContent .ps-state--calm:hover{ border-color: rgba(52,211,153,0.40); }
-  #stepContent .ps-state--guarded{
-    border-color: rgba(251,191,36,0.34);
-    background: linear-gradient(165deg, rgba(251,191,36,0.09), transparent 55%), var(--step-card-bg);
-    box-shadow: 0 0 0 1px rgba(251,191,36,0.06), 0 0 28px rgba(251,191,36,0.08);
-  }
-  #stepContent .ps-state--guarded:hover{ border-color: rgba(251,191,36,0.55); }
-  #stepContent .ps-state--uncertain{
-    border-color: rgba(248,113,113,0.20);
-    background: linear-gradient(165deg, rgba(248,113,113,0.05), transparent 55%), var(--step-card-bg);
-  }
-  #stepContent .ps-state--uncertain:hover{ border-color: rgba(248,113,113,0.40); }
-  #stepContent .ps-state-icon{
-    width: 46px; height: 46px; border-radius: 13px;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 1.05rem;
-  }
-  #stepContent .ps-state-icon svg{ width: 24px; height: 24px; }
-  #stepContent .ps-state--calm .ps-state-icon{
-    color: var(--step-success);
-    background: rgba(52,211,153,0.10);
-    box-shadow: 0 0 20px rgba(52,211,153,0.14);
-  }
-  #stepContent .ps-state--guarded .ps-state-icon{
-    color: var(--step-warning);
-    background: rgba(251,191,36,0.13);
-    box-shadow: 0 0 22px rgba(251,191,36,0.20);
-  }
-  #stepContent .ps-state--uncertain .ps-state-icon{
-    color: var(--step-danger);
-    background: rgba(248,113,113,0.10);
-    box-shadow: 0 0 20px rgba(248,113,113,0.14);
-  }
-  #stepContent .ps-state-name{
-    font-family: var(--step-heading-font);
-    font-size: 15px; font-weight: 600;
-    letter-spacing: 0.02em;
-    margin-bottom: 0.4rem;
-  }
-  #stepContent .ps-state--calm .ps-state-name{ color: var(--step-success); }
-  #stepContent .ps-state--guarded .ps-state-name{ color: var(--step-warning); }
-  #stepContent .ps-state--uncertain .ps-state-name{ color: var(--step-danger); }
-  #stepContent .ps-state-desc{
-    font-family: var(--step-body-font);
-    font-size: 13.5px; line-height: 1.65;
-    color: var(--step-text-secondary);
-    margin: 0 0 1.35rem;
-  }
-  #stepContent .ps-state-status{
-    display: inline-flex; align-items: center; gap: 0.5rem;
-    align-self: flex-start;
-    margin-top: auto;
-    padding: 0.4rem 0.75rem;
-    border-radius: 100px;
-    border: 1px solid;
-    font-family: var(--step-body-font);
-    font-size: 10.5px; font-weight: 600;
-    letter-spacing: 0.1em; text-transform: uppercase;
-  }
-  #stepContent .ps-state-status::before{
-    content: ''; width: 6px; height: 6px; border-radius: 50%;
-    background: currentColor;
-    box-shadow: 0 0 8px currentColor;
-  }
-  #stepContent .ps-state--calm .ps-state-status{
-    color: var(--step-success);
-    border-color: rgba(52,211,153,0.22);
-    background: rgba(52,211,153,0.08);
-  }
-  #stepContent .ps-state--guarded .ps-state-status{
-    color: var(--step-warning);
-    border-color: rgba(251,191,36,0.34);
-    background: rgba(251,191,36,0.14);
-  }
-  #stepContent .ps-state--uncertain .ps-state-status{
-    color: var(--step-danger);
-    border-color: rgba(248,113,113,0.22);
-    background: rgba(248,113,113,0.08);
-  }
 
-  /* ---------- 3. Listen For / Avoid coaching panel ---------- */
+  /* ---------- 2. Do / Avoid coaching panel ---------- */
   #stepContent .ps-coach-split{
     display: grid;
     grid-template-columns: repeat(2, minmax(0,1fr));
@@ -837,7 +718,6 @@
     }
     #stepContent .ps-opener-body{ text-align: center; }
     #stepContent .ps-opener-badge{ justify-content: center; }
-    #stepContent .ps-states{ grid-template-columns: 1fr; }
     #stepContent .ps-coach-split{ grid-template-columns: 1fr; }
     #stepContent .ps-coach-panel--listen{
       border-right: 0;
@@ -1018,6 +898,14 @@
     color: var(--step-success);
     background: rgba(52,211,153,0.10);
   }
+  /* A "not offered" row is information, not an alert — it must not read as a
+     warning about the employee. */
+  #stepContent2 .step2-signal--muted{ border-color: var(--step-border); }
+  #stepContent2 .step2-signal--muted .step2-signal-icon{
+    color: var(--step-text-muted);
+    background: rgba(255,255,255,0.04);
+  }
+  #stepContent2 .step2-signal--muted .step2-signal-value{ color: var(--step-text-muted); }
   #stepContent2 .step2-signal-top > div:not(.step2-signal-icon){ min-width: 0; }
   #stepContent2 .step2-signal-name{
     font-family: var(--step-body-font);
@@ -1164,6 +1052,16 @@
     border-radius: 12px;
     padding: 0.95rem 1.15rem;
   }
+  #stepContent2 #step2Cards .analysis-evidence-link{
+    display: block;
+    margin-top: 0.45rem;
+    font-family: var(--step-body-font);
+    font-size: 12.5px;
+    color: var(--step-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  #stepContent2 #step2Cards .analysis-evidence-link:hover{ color: var(--step-text); }
   #stepContent2 #step2Cards.step2-feed-expanded .analysis-card{
     grid-template-columns: 1fr;
     gap: 0.35rem;
@@ -1550,6 +1448,30 @@
     color: var(--step-text-muted);
     border-top: 1px dashed var(--step-border-strong);
   }
+
+  /* Session-wide quality warnings surfaced from providers/llm.py. */
+  .analysis-quality-warnings{
+    margin: 0 0 1rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid rgba(245,158,11,0.4);
+    border-left: 3px solid var(--step-warning, #f59e0b);
+    border-radius: 10px;
+    background: rgba(245,158,11,0.07);
+    font-family: var(--step-body-font);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--step-text-secondary);
+  }
+  .analysis-quality-warnings strong{
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--step-warning, #f59e0b);
+    margin-bottom: 0.35rem;
+  }
+  .analysis-quality-warnings ul{ margin: 0; padding-left: 1.1rem; }
+  .analysis-quality-warnings li{ margin-bottom: 0.2rem; }
 
   /* ---------- Responsive (main content only) ---------- */
   @media (max-width: 1280px){
@@ -2004,11 +1926,26 @@
     transition: all 0.15s ease;
   }
   #stepContent3 .rc-confirm:hover{ background: rgba(139,92,246,0.2); }
+  #stepContent3 .rc-confirm:disabled{
+    opacity: 0.4; cursor: not-allowed; background: rgba(139,92,246,0.06);
+  }
+  #stepContent3 .rc-confirm:disabled:hover{ background: rgba(139,92,246,0.06); }
+  /* Spells out where the confirmation goes, so the button is not a
+     state-only toggle that appears to save nothing. */
+  #stepContent3 .rc-confirm-note{
+    font-family: var(--step-body-font);
+    font-size: 11px;
+    color: var(--step-text-muted);
+    letter-spacing: 0;
+    text-transform: none;
+  }
   #stepContent3 .rc-eyebrow--rc.is-confirmed .rc-confirm{
     background: rgba(52,211,153,0.12);
     border-color: rgba(52,211,153,0.45);
     color: var(--step-success);
   }
+  #stepContent3 .rc-eyebrow--rc.is-confirmed .rc-confirm-note{ color: var(--step-success); }
+  #stepContent3 .rc-eyebrow--gaps .rc-eyebrow-title{ color: var(--step-warning); }
 
   /* ---------- 5. Analysis confidence meter ---------- */
   #stepContent3 .rc-confidence{
@@ -2058,6 +1995,8 @@
   #stepContent3 .rc-actions-label--teal{ color: var(--step-success); }
   #stepContent3 .rc-actions-label--red{ color: var(--step-danger); }
   #stepContent3 #step3ManagerNotesContainer{ grid-row: 13; grid-column: 1 / 7; margin: 0; }
+  #stepContent3 #step3GapsEyebrow{ grid-row: 12; grid-column: 1 / 7; margin: 0; }
+  #stepContent3 #step3Gaps{ grid-row: 12; grid-column: 1 / 7; margin: -1.4rem 0 0; }
   #stepContent3 .rc-notes{ grid-row: 14; grid-column: 1 / 7; margin-top: 0; }
   #stepContent3 .step-nav{ grid-row: 15; grid-column: 1 / 7; margin: 0; }
 
@@ -2789,19 +2728,6 @@
     font-size: 13.5px; line-height: 1.55;
     color: var(--step-text);
   }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-goal .fs-prio{
-    flex: 0 0 auto; align-self: center;
-    padding: 0.3rem 0.65rem;
-    border: 1px solid var(--step-accent-line);
-    border-radius: 99px;
-    font-family: var(--step-heading-font);
-    font-size: 8px; font-weight: 600;
-    letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--step-primary-soft);
-    background: var(--step-accent-tint);
-    white-space: nowrap;
-  }
-
   /* The three plan cards: Focus / Opening / Follow-up (3 across, compact) */
   #stepContent5 #step5Cards > .analysis-card.fs-card-focus{ grid-column: 1; }
   #stepContent5 #step5Cards > .analysis-card.fs-card-opening{ grid-column: 2; }
@@ -2833,21 +2759,6 @@
     font-size: 12px; line-height: 1.5; color: var(--step-text-secondary);
     min-width: 0;
   }
-  #stepContent5 #step5Cards > .analysis-card.fs-card-focus .fs-prio,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-opening .fs-prio,
-  #stepContent5 #step5Cards > .analysis-card.fs-card-followup .fs-prio{
-    align-self: flex-start;
-    margin-top: auto;
-    padding: 0.2rem 0.5rem;
-    border: 1px solid var(--step-accent-line);
-    border-radius: 99px;
-    font-family: var(--step-heading-font);
-    font-size: 7.5px; font-weight: 600;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--step-primary-soft); background: var(--step-accent-tint);
-    white-space: nowrap;
-  }
-
   /* Expected exchange: response / reply / listen (3 across) + success */
   #stepContent5 #step5Cards > .analysis-card.fs-card-response{ grid-column: 1; }
   #stepContent5 #step5Cards > .analysis-card.fs-card-reply{ grid-column: 2; }
@@ -3246,15 +3157,12 @@
   #stepContent5 .fs-field input:focus{
     border-color: var(--step-primary); box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
   }
-  #stepContent5 .fs-reco{
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    padding: 0.28rem 0.55rem;
-    border: 1px dashed rgba(34,211,238,0.35);
-    border-radius: 99px;
-    font-family: var(--step-body-font); font-size: 9px; font-weight: 500;
-    color: var(--step-text-secondary); background: rgba(34,211,238,0.05);
+  #stepContent5 .fs-schedule-note{
+    font-family: var(--step-body-font);
+    font-size: 11px;
+    color: var(--step-text-muted);
+    margin: 0.5rem 0 0;
   }
-  #stepContent5 .fs-reco svg{ color: var(--step-info); width: 11px; height: 11px; }
   #stepContent5 .fs-reminder{
     display: inline-flex; align-items: center; gap: 0.6rem;
   }
@@ -3289,10 +3197,18 @@
     width: 180px; height: 5px; border-radius: 99px;
     background: var(--step-border); overflow: hidden;
   }
-  #stepContent5 .fs-meter-fill{
-    display: block; height: 100%; width: 100%; border-radius: 99px;
-    background: linear-gradient(90deg, var(--step-success), var(--step-primary));
-    box-shadow: 0 0 10px rgba(52,211,153,0.35);
+  /* The old meter drew a permanently 100%-filled bar, so the panel reported
+     the sync as finished before Complete & Save was ever pressed. The bar is
+     gone; status is now a chip bound to the session's actual status. */
+  #stepContent5 .fs-status-chip{
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.3rem 0.7rem; border-radius: 99px;
+    border: 1px solid var(--step-border);
+    font-family: var(--step-body-font); font-size: 11px; font-weight: 600;
+    color: var(--step-text-secondary); background: transparent;
+  }
+  #stepContent5 .fs-status-chip.is-done{
+    border-color: var(--step-success); color: var(--step-success);
   }
   #stepContent5 .fs-meter-note{
     font-family: var(--step-body-font); font-size: 10px; color: var(--step-text-muted);
@@ -3347,8 +3263,6 @@
   }
   @media (max-width: 480px){
     #stepContent5{ padding: 1.6rem 1.1rem; }
-    #stepContent5 #step5Cards > .analysis-card.fs-card-goal{ flex-wrap: wrap; }
-    #stepContent5 #step5Cards > .analysis-card.fs-card-goal .fs-prio{ margin-left: auto; }
   }
 
   /* ---------- Readability and action sizing ---------- */
@@ -3385,7 +3299,6 @@
   #stepContent5 #step5Cards > .analysis-card.fs-card-reply .analysis-card-value,
   #stepContent5 #step5Cards > .analysis-card.fs-card-listen .analysis-list-item,
   #stepContent5 #step5Cards > .analysis-card.fs-card-success .analysis-card-value{font-size:0.98rem;line-height:1.65;}
-  #stepContent5 .fs-prio{font-size:0.65rem!important;padding:0.35rem 0.65rem!important;}
   #stepContent5 .fs-use-followup{align-self:flex-start;margin-top:auto;min-height:44px;padding:0.65rem 1rem;border:1px solid var(--step-primary);border-radius:8px;background:var(--step-accent-tint);color:var(--step-primary-soft);font-family:var(--step-body-font);font-size:0.85rem;font-weight:600;cursor:pointer;transition:background 0.2s,border-color 0.2s,transform 0.2s;}
   #stepContent5 .fs-use-followup:hover{background:rgba(139,92,246,0.14);border-color:var(--step-primary-soft);transform:translateY(-1px);}
   #stepContent5 .fs-use-followup:focus-visible,#stepContent5 #fsScheduleDate:focus-visible,#stepContent5 #fsScheduleTime:focus-visible,#stepContent5 #capPanel input:focus-visible,#stepContent5 .cap-add button:focus-visible,#stepContent5 #completeSyncBtn:focus-visible{outline:3px solid rgba(167,139,250,0.45);outline-offset:2px;}
@@ -3415,7 +3328,6 @@
   #stepContent5 .fs-field{gap:0.55rem;}
   #stepContent5 .fs-field-label{font-size:0.7rem;letter-spacing:0.1em;}
   #stepContent5 .fs-field input{min-height:46px;padding:0.65rem 0.7rem;font-size:0.95rem;}
-  #stepContent5 .fs-reco{padding:0.4rem 0.7rem;font-size:0.78rem;}
   #stepContent5 .fs-hint{font-size:0.8rem;}
   #stepContent5 .fs-progress,#stepContent5 .fs-stats{padding:1.25rem 1.3rem;}
   #stepContent5 .fs-progress-title,#stepContent5 .fs-stats::before{font-size:0.72rem;}
@@ -3567,8 +3479,15 @@
               <p class="step-desc" data-lang="hi" style="display:none;">Kisi bhi performance discussion se pehle mahaul set karein. Employee ko safe feel hona chahiye ki ye baat growth ke baare mein hai, sazaa ke nahi.</p>
             </div>
 
+            <!-- providers/llm.py records quality_warnings when generated text
+                 contains a clinical label or motive attribution. The analysis
+                 is deliberately NOT silently rewritten, so the manager has to
+                 be told here or the warning is invisible. -->
+            <div class="analysis-quality-warnings" id="analysisQualityWarnings" style="display:none;" role="status"></div>
+
             <section class="ps-section ps-opener-wrap">
               <div class="ps-section-label">Conversation Opener</div>
+              <p class="step-desc" id="analysisLangNotice" style="display:none;margin-bottom:0.75rem;color:var(--amber);"></p>
 
               <div class="ps-opener script-block">
                 <div class="ps-opener-art">
@@ -3580,11 +3499,10 @@
                   </div>
                 </div>
                 <div class="ps-opener-body">
-                  <div class="script-text" data-lang="en" id="psychSafetyScriptEn">"I want you to know that this conversation is about how we can support you. Your role here is valued, and I want to understand what you have been going through."</div>
-                  <div class="script-text" data-lang="hi" style="display:none;" id="psychSafetyScriptHi">"Main chahta hoon ki tum jaano ki ye baat is baare mein hai ki hum tumhari kaise madad kar sakte hain. Yahan tumhari value hai, aur main samajhna chahta hoon ki tum kya face kar rahe ho."</div>
-                  <div class="ps-opener-badge" id="psychSafetyBadge">
+                  <div class="script-text" id="psychSafetyScriptEn"></div>
+                  <div class="ps-opener-badge" id="psychSafetyBadge" style="display:none;">
                     <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    <span>Personalized from this employee's last sync</span>
+                    <span>Written from this conversation's transcript</span>
                   </div>
                 </div>
                 <div class="ps-opener-action">
@@ -3596,98 +3514,24 @@
               </div>
             </section>
 
-            <section class="ps-section ps-rtw">
-              <div class="ps-rtw-head">
-                <h3 class="ps-rtw-title">Read the Room</h3>
-                <p class="ps-rtw-desc">Before you speak, notice how the employee is showing up. Adjust your pace and tone to match the signal you are reading.</p>
-              </div>
-              <div class="ps-states">
-                <article class="ps-state ps-state--calm">
-                  <div class="ps-state-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                  </div>
-                  <div class="ps-state-name">Comfortable</div>
-                  <p class="ps-state-desc">Relaxed and open — steady tone, natural speech, no hesitation before responding.</p>
-                  <span class="ps-state-status">At ease</span>
-                </article>
-                <article class="ps-state ps-state--guarded">
-                  <div class="ps-state-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-                  </div>
-                  <div class="ps-state-name">Guarded</div>
-                  <p class="ps-state-desc">Short answers, closed posture, carefully chosen words — the key signal to read in a pressured sync.</p>
-                  <span class="ps-state-status">Proceed with care</span>
-                </article>
-                <article class="ps-state ps-state--uncertain">
-                  <div class="ps-state-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  </div>
-                  <div class="ps-state-name">Uncertain</div>
-                  <p class="ps-state-desc">Hesitation, trailing-off sentences, repeated "I don't know" — slow down and clarify before moving on.</p>
-                  <span class="ps-state-status">Slow down</span>
-                </article>
-              </div>
-            </section>
-
             <section class="ps-section ps-coach">
+
               <div class="ps-coach-split">
                 <div class="ps-coach-panel ps-coach-panel--listen">
                   <div class="ps-coach-title">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-                    <span>Listen For</span>
+                    <span id="psDoTitle">Do This</span>
                   </div>
-                  <p class="ps-coach-sub">What you should notice</p>
-                  <div class="guidelines" id="psychSafetyDoList">
-                  <div class="guideline" data-anim="do-0">
-                    <div class="g-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg></div>
-                    <span data-lang="en">Maintain open body language</span>
-                    <span data-lang="hi" style="display:none;">Khuli body language rakho</span>
-                  </div>
-                  <div class="guideline" data-anim="do-1">
-                    <div class="g-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg></div>
-                    <span data-lang="en">Use their first name</span>
-                    <span data-lang="hi" style="display:none;">Unka pehla naam lo</span>
-                  </div>
-                  <div class="guideline" data-anim="do-2">
-                    <div class="g-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg></div>
-                    <span data-lang="en">Make eye contact naturally</span>
-                    <span data-lang="hi" style="display:none;">Aankh se aankh milaao</span>
-                  </div>
-                  <div class="guideline" data-anim="do-3">
-                    <div class="g-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg></div>
-                    <span data-lang="en">Speak in a calm, steady tone</span>
-                    <span data-lang="hi" style="display:none;">Shaant, steady awaaz mein bolo</span>
-                  </div>
-                  </div>
+                  <p class="ps-coach-sub" id="psDoSub">Suggested for this conversation</p>
+                  <div class="guidelines" id="psychSafetyDoList"></div>
                 </div>
                 <div class="ps-coach-panel ps-coach-panel--avoid">
                   <div class="ps-coach-title">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                    <span>Avoid</span>
+                    <span>Avoid This</span>
                   </div>
-                  <p class="ps-coach-sub">What you should not do</p>
-                  <div class="guidelines" id="psychSafetyDontList">
-                  <div class="guideline" data-anim="dont-0">
-                    <div class="g-icon avoid"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-                    <span data-lang="en">Do NOT start with the problem</span>
-                    <span data-lang="hi" style="display:none;">Problem se mat shuru karo</span>
-                  </div>
-                  <div class="guideline" data-anim="dont-1">
-                    <div class="g-icon avoid"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-                    <span data-lang="en">Avoid phrases like "We need to talk"</span>
-                    <span data-lang="hi" style="display:none;">"Humhe baat karni hai" jaise words mat bolo</span>
-                  </div>
-                  <div class="guideline" data-anim="dont-2">
-                    <div class="g-icon avoid"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-                    <span data-lang="en">Never threaten job security</span>
-                    <span data-lang="hi" style="display:none;">Kabhi job ka risk mat do</span>
-                  </div>
-                  <div class="guideline" data-anim="dont-3">
-                    <div class="g-icon avoid"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-                    <span data-lang="en">Do not have this in a public space</span>
-                    <span data-lang="hi" style="display:none;">Public jagah pe ye mat karo</span>
-                  </div>
-                  </div>
+                  <p class="ps-coach-sub">Suggested for this conversation</p>
+                  <div class="guidelines" id="psychSafetyDontList"></div>
                 </div>
               </div>
             </section>
@@ -3699,8 +3543,7 @@
               <div class="ps-tip-body">
                 <div class="ps-tip-eyebrow">Psychological Safety Tip</div>
                 <div class="ps-tip-content">
-                  <span data-lang="en" id="psychSafetyTipEn">Duration: 2-3 minutes. This step is the foundation. If the employee is still defensive, slow down and revisit before proceeding.</span>
-                  <span data-lang="hi" style="display:none;" id="psychSafetyTipHi">Duration: 2-3 minute. Ye step neev hai. Agar employee abhi bhi defensive hai, toh ruko aur fir se samjhaao.</span>
+                  <span id="psychSafetyTipEn"></span>
                 </div>
                 <div class="ps-tip-phrase">Be present. Be curious. Be calm.</div>
               </div>
@@ -3709,7 +3552,7 @@
             <div id="aiCoachContainer" style="display:none;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);">
               <div style="display:flex;align-items:center;gap:0.5rem;font-family:var(--font-b);font-size:1.05rem;font-weight:700;color:var(--ivory);margin-bottom:1rem;">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <span data-lang="en">AI Conversation Coach</span><span data-lang="hi" style="display:none;">AI Conversation Coach</span>
+                <span data-lang="en">AI Conversation Coach</span><span data-lang="hi" style="display:none;">AI Conversation Coach (English)</span>
               </div>
               <div id="aiCoachList"></div>
             </div>
@@ -3722,7 +3565,7 @@
             <div class="step-nav">
               <div></div>
               <div style="display:flex;gap:0.8rem;">
-                <button class="btn btn-primary btn-sm" onclick="goToStep(2)">Save &amp; Continue</button>
+                <button class="btn btn-primary btn-sm" onclick="saveStepAndGo(2)">Save &amp; Continue</button>
               </div>
             </div>
           </div>
@@ -3759,55 +3602,10 @@
               </div>
             </div>
 
-            <!-- CURRENT SIGNAL MAP -->
-            <section class="step2-map">
+            <!-- CURRENT SIGNAL MAP — populated from the analysis payload only -->
+            <section class="step2-map" id="step2MapSection">
               <div class="step2-label">Current Signal Map</div>
-              <div class="step2-signals">
-                <article class="step2-signal step2-signal--amber">
-                  <div class="step2-signal-top">
-                    <div class="step2-signal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
-                    <div>
-                      <div class="step2-signal-name">Emotional Tone</div>
-                      <div class="step2-signal-value">Guarded</div>
-                    </div>
-                    <span class="step2-signal-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>
-                  </div>
-                  <p class="step2-signal-desc">Responding but holding back more.</p>
-                </article>
-                <article class="step2-signal step2-signal--amber">
-                  <div class="step2-signal-top">
-                    <div class="step2-signal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 8L9 4l-3 8H2"/></svg></div>
-                    <div>
-                      <div class="step2-signal-name">Engagement Level</div>
-                      <div class="step2-signal-value">Dipping</div>
-                    </div>
-                    <span class="step2-signal-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>
-                  </div>
-                  <p class="step2-signal-desc">Present on tasks, shorter on feelings.</p>
-                </article>
-                <article class="step2-signal step2-signal--red">
-                  <div class="step2-signal-top">
-                    <div class="step2-signal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a8 8 0 1 0-8-8"/><path d="M12 13l3.5-2"/><path d="M4 12H2"/><path d="M6 6.5L4.5 5"/></svg></div>
-                    <div>
-                      <div class="step2-signal-name">Stress Indicators</div>
-                      <div class="step2-signal-value">Elevated</div>
-                    </div>
-                    <span class="step2-signal-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>
-                  </div>
-                  <p class="step2-signal-desc">Tension surfaced in tone and pacing.</p>
-                </article>
-                <article class="step2-signal step2-signal--teal">
-                  <div class="step2-signal-top">
-                    <div class="step2-signal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 5-3 8-7 9-4-1-7-4-7-9V7l7-4z"/><circle cx="12" cy="12" r="3"/></svg></div>
-                    <div>
-                      <div class="step2-signal-name">Openness</div>
-                      <div class="step2-signal-value">Reduced</div>
-                    </div>
-                    <span class="step2-signal-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>
-                  </div>
-                  <p class="step2-signal-desc">Sharing less detail than usual.</p>
-                </article>
-              </div>
+              <div class="step2-signals" id="step2Signals"></div>
             </section>
 
             <!-- PATTERNS + INTERPRETATION -->
@@ -3816,7 +3614,7 @@
                 <div class="step2-label">Behavioral Patterns Detected</div>
                 <div id="step2Cards" class="step2-feed"></div>
                 <button type="button" class="step2-timeline" id="step2TimelineBtn">
-                  <span class="step2-timeline-label">View full behavioral timeline</span>
+                  <span class="step2-timeline-label">Show full card detail</span>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,18 15,12 9,6"/></svg>
                 </button>
               </div>
@@ -3834,27 +3632,10 @@
               </div>
             </section>
 
-            <!-- DEEPER PROBE SUGGESTIONS -->
-            <section class="step2-probes">
+            <!-- DEEPER PROBE SUGGESTIONS — populated from questions the analysis actually wrote -->
+            <section class="step2-probes" id="step2ProbesSection">
               <div class="step2-label">Deeper Probe Suggestions</div>
-              <div class="step2-probe-row">
-                <button type="button" class="step2-probe" data-copy="What's been the most challenging part recently?">
-                  <span class="step2-probe-q">"What's been the most challenging part recently?"</span>
-                  <span class="step2-probe-use"><span class="step2-probe-use-text">Use this</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                </button>
-                <button type="button" class="step2-probe" data-copy="What's getting in the way of your focus?">
-                  <span class="step2-probe-q">"What's getting in the way of your focus?"</span>
-                  <span class="step2-probe-use"><span class="step2-probe-use-text">Use this</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                </button>
-                <button type="button" class="step2-probe" data-copy="How do you feel about the current priorities?">
-                  <span class="step2-probe-q">"How do you feel about the current priorities?"</span>
-                  <span class="step2-probe-use"><span class="step2-probe-use-text">Use this</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                </button>
-                <button type="button" class="step2-probe" data-copy="Is there anything you wish was different right now?">
-                  <span class="step2-probe-q">"Is there anything you wish was different right now?"</span>
-                  <span class="step2-probe-use"><span class="step2-probe-use-text">Use this</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                </button>
-              </div>
+              <div class="step2-probe-row" id="step2Probes"></div>
             </section>
 
             <!-- RECOMMENDED / AVOID -->
@@ -3887,10 +3668,10 @@
               <div class="step2-progress">
                 <span class="step2-progress-label">Conversation Progress</span>
                 <div class="step2-progress-track"><span class="step2-progress-fill"></span></div>
-                <span class="step2-progress-note">Progress autosaved</span>
+                <span class="step2-progress-note">Notes save when you continue</span>
               </div>
               <div style="display:flex;gap:0.8rem;">
-                <button class="btn btn-primary btn-sm" onclick="goToStep(3)">Save &amp; Continue</button>
+                <button class="btn btn-primary btn-sm" onclick="saveStepAndGo(3)">Save &amp; Continue</button>
               </div>
             </div>
           </div>
@@ -3918,12 +3699,12 @@
               <div class="rc-eyebrow rc-eyebrow--evsnap">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>
                 <span class="rc-eyebrow-title">What We've Heard So Far</span>
-                <span class="rc-eyebrow-sub">Verified transcript evidence — the foundation of this investigation</span>
+                <span class="rc-eyebrow-sub">Evidence the analysis was able to ground in the transcript</span>
               </div>
 
               <div class="rc-snapshot">
                 <div class="rc-quote" id="step3Quote">
-                  <span class="rc-quote-label">Employee Words</span>
+                  <span class="rc-quote-label">Question This Analysis Answers</span>
                   <div class="rc-quote-text">Loading analysis...</div>
                 </div>
                 <div class="rc-observation rc-observation--snap">
@@ -3980,23 +3761,7 @@
                     <span class="rc-stage-title">Follow-Up Questions</span>
                   </div>
                   <p class="rc-questions-lead">Probes to validate or rule out each potential driver before you confirm the root cause.</p>
-                  <div class="rc-fqlist">
-                    <button type="button" class="rc-fq" data-copy="When did you first notice this becoming a problem?">
-                      <span class="rc-fq-no">Q1</span>
-                      <span class="rc-fq-q">&quot;When did you first notice this becoming a problem?&quot;</span>
-                      <span class="rc-fq-use"><span class="rc-fq-use-text">Use this</span><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                    </button>
-                    <button type="button" class="rc-fq" data-copy="If you had to name one thing driving this, what would it be?">
-                      <span class="rc-fq-no">Q2</span>
-                      <span class="rc-fq-q">&quot;If you had to name one thing driving this, what would it be?&quot;</span>
-                      <span class="rc-fq-use"><span class="rc-fq-use-text">Use this</span><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                    </button>
-                    <button type="button" class="rc-fq" data-copy="What would change most if we tackled this together?">
-                      <span class="rc-fq-no">Q3</span>
-                      <span class="rc-fq-q">&quot;What would change most if we tackled this together?&quot;</span>
-                      <span class="rc-fq-use"><span class="rc-fq-use-text">Use this</span><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
-                    </button>
-                  </div>
+                  <div class="rc-fqlist" id="step3Questions"></div>
                 </div>
 
                 <div class="rc-connector rc-connector--top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></div>
@@ -4019,9 +3784,10 @@
                   <div class="rc-root-value" id="step3RootName">Loading analysis...</div>
                   <div class="rc-root-conf" id="step3RootConf">Confidence: unavailable</div>
                   <div class="rc-root-meter" id="step3RootMeter"></div>
-                  <div class="rc-root-label">Likely Root Cause</div>
+                  <div class="rc-root-label">Most Likely Root Cause</div>
                   <div class="rc-eyebrow rc-eyebrow--rc">
-                    <button type="button" class="rc-confirm" id="step3ConfirmBtn">Confirm as likely cause</button>
+                    <button type="button" class="rc-confirm" id="step3ConfirmBtn" disabled>Confirm as likely cause</button>
+                    <span class="rc-confirm-note" id="step3ConfirmNote">Nothing to confirm yet</span>
                   </div>
                 </div>
 
@@ -4051,6 +3817,13 @@
                 </div>
               </div>
 
+              <div class="rc-eyebrow rc-eyebrow--gaps" id="step3GapsEyebrow" style="display:none;">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span class="rc-eyebrow-title">Not Answered in This Transcript</span>
+                <span class="rc-eyebrow-sub">Gaps the model flagged — this is why confidence may be limited</span>
+              </div>
+              <div class="guidelines" id="step3Gaps"></div>
+
               <div class="guideline tip rc-manager" style="border-left:3px solid var(--violet);background:rgba(139,92,246,0.06);" id="step3ManagerNotesContainer">
                 <div class="g-icon tip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
                 <div id="step3ManagerNotes"></div>
@@ -4066,10 +3839,10 @@
                 <div class="rc-progress">
                   <span class="rc-progress-label">Conversation Progress</span>
                   <div class="rc-progress-track"><span class="rc-progress-fill"></span></div>
-                  <span class="rc-progress-note">Progress autosaved</span>
+                  <span class="rc-progress-note">Notes save when you continue</span>
                 </div>
                 <div style="display:flex;gap:0.8rem;">
-                  <button class="btn btn-primary btn-sm" onclick="goToStep(4)">Save &amp; Continue</button>
+                  <button class="btn btn-primary btn-sm" onclick="saveStepAndGo(4)">Save &amp; Continue</button>
                 </div>
               </div>
             </div>
@@ -4274,10 +4047,10 @@
                 <div class="ab-progress">
                   <span class="ab-progress-label">Readiness</span>
                   <div class="ab-progress-track"><span class="ab-progress-fill"></span></div>
-                  <span class="ab-progress-note">Progress autosaved</span>
+                  <span class="ab-progress-note">Notes save when you continue</span>
                 </div>
                 <div style="display:flex;gap:0.8rem;">
-                  <button class="btn btn-primary btn-sm" onclick="goToStep(5)">Save &amp; Continue</button>
+                  <button class="btn btn-primary btn-sm" onclick="saveStepAndGo(5)">Save &amp; Continue</button>
                 </div>
               </div>
             </div>
@@ -4436,16 +4209,14 @@
 
                 <div class="fs-progress">
                   <div class="fs-progress-head">
-                    <span class="fs-progress-title">Stage 1 of 4</span>
-                    <span class="fs-progress-meta">Status</span>
+                    <span class="fs-progress-title" id="fsProgressTitle">Session Status</span>
+                    <span class="fs-progress-meta">From the session record</span>
                   </div>
-                  <div class="fs-track">
-                    <div class="fs-track-stage is-done"><span class="fs-dot"></span>Action Planned<span class="fs-stage-tag">Done</span></div>
-                    <div class="fs-track-stage is-active"><span class="fs-dot"></span>In Progress<span class="fs-stage-tag">Now</span></div>
-                    <div class="fs-track-stage"><span class="fs-dot"></span>Review Impact<span class="fs-stage-tag">Next</span></div>
-                    <div class="fs-track-stage"><span class="fs-dot"></span>Outcome Achieved<span class="fs-stage-tag">Target</span></div>
+                  <div class="fs-track" id="fsTrack">
+                    <div class="fs-track-stage" id="fsStageAnalysis"><span class="fs-dot"></span>Analysis Ready<span class="fs-stage-tag" id="fsStageAnalysisTag">Checking</span></div>
+                    <div class="fs-track-stage" id="fsStageSync"><span class="fs-dot"></span>Sync Completed<span class="fs-stage-tag" id="fsStageSyncTag">Not yet</span></div>
                   </div>
-                  <div class="fs-progress-note">Review impact after the follow-up sync. The full journey is mapped &mdash; ready to close this conversation.</div>
+                  <div class="fs-progress-note" id="fsProgressNote">This session is not marked completed yet.</div>
                 </div>
 
                 <div class="fs-stats">
@@ -4487,27 +4258,29 @@
                     <span class="fs-field-label">Time</span>
                     <input type="time" id="fsScheduleTime">
                   </div>
-                  <span class="fs-reco">
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1010 10"/><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                    Recommended &middot; 7&ndash;10 days
-                  </span>
+                  <!-- The old control was a "Set reminder" button that only
+                       toggled a CSS class and told the manager "Reminder set".
+                       Nothing was ever scheduled. It is now an explicit
+                       follow-up commitment that is saved as a tracked
+                       FOLLOW_UP with a due date when the sync is completed. -->
                   <div class="fs-reminder">
                     <button class="btn btn-sm" id="fsReminderBtn" type="button" aria-pressed="false">
                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-                      Set reminder
+                      <span id="fsReminderLabel">Add follow-up to plan</span>
                     </button>
                     <span class="fs-hint" id="fsScheduleHint"></span>
                   </div>
                 </div>
+                <p class="fs-schedule-note" id="fsScheduleNote">Pick a date to create a tracked follow-up. Nothing is scheduled until you complete the sync.</p>
 
               </div>
 
               <div class="step-nav">
                 <button class="btn btn-sm" onclick="goToStep(4)">Back</button>
                 <div class="fs-progress-meter">
-                  <span class="fs-meter-label">Conversation Ready &middot; 5 of 5</span>
-                  <div class="fs-meter-track"><span class="fs-meter-fill"></span></div>
-                  <span class="fs-meter-note">Progress autosaved</span>
+                  <span class="fs-meter-label">Sync status</span>
+                  <span class="fs-status-chip" id="fsMeterStatus">Not completed</span>
+                  <span class="fs-meter-note">Notes save when you complete</span>
                 </div>
                 <div style="display:flex;gap:0.8rem;">
                   <button class="btn btn-primary btn-sm" id="completeSyncBtn">Complete &amp; Save</button>
@@ -4617,6 +4390,27 @@ function applySyncLanguage(lang) {
 }
 applySyncLanguage(localStorage.getItem('voovr-analysis-lang') || 'en');
 
+/* The analysis payload is English-only — there is no Hindi variant of
+   psychological_safety.statement, the tip, or any Step 2-5 field. The opener
+   and tip spans used to be [data-lang] pairs, so picking Hindi hid the English
+   text and the JS then wrote that same English string into the Hindi span:
+   English prose presented as a Hindi translation. Those two spans are now
+   language-independent (no data-lang), so the analysed text is always shown
+   verbatim, and a short notice tells the reader when they have selected a
+   language the analysis does not cover. */
+function renderAnalysisLanguageNotice() {
+  var lang = localStorage.getItem('voovr-analysis-lang') || 'en';
+  var note = document.getElementById('analysisLangNotice');
+  if (!note) return;
+  if (lang === 'hi') {
+    note.textContent = 'Analysis is generated in English only — it is shown here untranslated.';
+    note.style.display = '';
+  } else {
+    note.style.display = 'none';
+  }
+}
+renderAnalysisLanguageNotice();
+
 // ── Step navigation ──
 var currentStep = 1;
 function goToStep(n) {
@@ -4667,6 +4461,97 @@ function populateStep(n) {
   }
 }
 
+/* ── Manager notes: real persistence ────────────────────────────────────
+   The five "Manager Notes for This Step" textareas had no read and no write
+   path anywhere in the page while the footer claimed "Progress autosaved"
+   on every step, and "Save & Continue" was a bare goToStep(n). Notes are now
+   stored as NOTE memories against the session, keyed by step in metadata, so
+   they reappear on reload and travel with the employee record. */
+var notesCache = {};
+
+function noteBoxFor(step) {
+  return document.getElementById('stepNotes_' + step);
+}
+
+function saveStepNotes(step) {
+  var box = noteBoxFor(step);
+  if (!box) return Promise.resolve(false);
+  var text = (box.value || '').trim();
+  var existing = notesCache[step];
+  if (!text) {
+    // Nothing typed and nothing stored: no request at all.
+    if (!existing || !existing.id) return Promise.resolve(false);
+    return fetch('/api/conversation-memory/' + encodeURIComponent(existing.id), {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    }).then(function(r) {
+      delete notesCache[step];
+      return r.ok;
+    }).catch(function() { return false; });
+  }
+  if (existing && existing.id && existing.content === text) return Promise.resolve(true);
+
+  var body = {
+    session_id: sessionId,
+    employee_id: employeeId,
+    type: 'NOTE',
+    status: 'SAVED',
+    content: text,
+    metadata: { kind: 'step_notes', step: step }
+  };
+  var request = existing && existing.id
+    ? fetch('/api/conversation-memory/' + encodeURIComponent(existing.id), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: text, metadata: body.metadata })
+      })
+    : fetch('/api/conversation-memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+  return request.then(function(r) {
+    if (!r.ok) throw new Error('notes_not_saved');
+    return r.json().catch(function() { return null; });
+  }).then(function(saved) {
+    if (saved && saved.id) notesCache[step] = { id: String(saved.id), content: text };
+    return true;
+  }).catch(function() { return false; });
+}
+
+function saveStepAndGo(nextStep) {
+  var step = currentStep;
+  var box = noteBoxFor(step);
+  if (!box || !(box.value || '').trim()) {
+    // No notes to write — do not claim a save that did not happen.
+    if (notesCache[step] && notesCache[step].id) saveStepNotes(step);
+    goToStep(nextStep);
+    return;
+  }
+  saveStepNotes(step).then(function() { goToStep(nextStep); });
+}
+
+function loadStepNotes() {
+  if (!sessionId) return Promise.resolve();
+  return fetch('/api/conversation-memory?type=NOTE&session_id=' + encodeURIComponent(sessionId))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(payload) {
+      var list = payload && Array.isArray(payload.items) ? payload.items : [];
+      list.forEach(function(m) {
+        if (!m || m.type !== 'NOTE') return;
+        var meta = m.metadata || {};
+        if (meta.kind !== 'step_notes') return;
+        var step = Number(meta.step);
+        if (!(step >= 1 && step <= 5)) return;
+        notesCache[step] = { id: String(m.id), content: m.content || '' };
+        var box = noteBoxFor(step);
+        if (box && !box.value.trim()) box.value = m.content || '';
+      });
+    })
+    .catch(function() { /* notes are best-effort; the page still works */ });
+}
+
 function buildGuidelineItems(list, containerId, isAvoid) {
   var container = document.getElementById(containerId);
   if (!container) return;
@@ -4710,12 +4595,20 @@ function renderCard(label, value, extra) {
     '<div class="analysis-card-value">' + escHtml(value) + '</div>' + followupAction + '</div>';
 }
 
-function renderConfidence(score) {
-  if (score == null || score === 0) return '';
-  var level = score > 80 ? 'is-high' : score > 50 ? 'is-mid' : 'is-low';
+/* Confidence is reported qualitatively. The step-2 payload carries
+   `confidence_label` (the same Strong/Moderate/Light vocabulary Step 3 and
+   Step 4 use) — this used to read `d.confidence` and print it as a hard "82%",
+   which the model never actually produced and which implies a precision the
+   single-transcript basis cannot support. */
+function renderConfidence(label) {
+  var text = String(label == null ? '' : label).trim();
+  if (!text) return '';
+  var low = text.toLowerCase();
+  var level = low.indexOf('strong') > -1 ? 'is-high'
+            : (low.indexOf('moderate') > -1 || low.indexOf('medium') > -1) ? 'is-mid' : 'is-low';
   return '<div class="analysis-confidence">' +
     '<span class="analysis-confidence-label">Confidence</span>' +
-    '<span class="analysis-confidence-value ' + level + '">' + score + '%</span></div>';
+    '<span class="analysis-confidence-value ' + level + '">' + escHtml(text) + '</span></div>';
 }
 
 function asList(v) {
@@ -4763,10 +4656,200 @@ function sparseNote(cardParts) {
   return '<div class="sparse-note">Limited data for this step — shows only what could be reliably inferred from the transcript so far.</div>';
 }
 
+/* Supporting evidence is a LIST of quoted fragments in the payload, so it
+   belongs in renderListCard, not renderCard — passing the array to renderCard
+   stringified it to "a,b,c" behind a single "Supporting Evidence" label. The
+   panel is the analyst's route back to the source, so it carries a link to the
+   session transcript alongside the quotes. */
+function renderEvidenceSection(d) {
+  var items = asList(d.supporting_evidence).filter(function(x) {
+    return x && String(x).trim();
+  });
+  if (!items.length) return '';
+  var html = renderListCard('Supporting Evidence', items, {
+    borderColor: 'var(--teal)',
+    typeClass: 'analysis-list-card--evidence'
+  });
+  /* The transcript page requires employee_id as well as session_id — it
+     bails out with no transcript when either is missing — so a link carrying
+     only session_id dead-ended on a blank workspace. */
+  if (sessionId && employeeId) {
+    html += '<a class="analysis-evidence-link" href="/workspace?session_id=' +
+      encodeURIComponent(sessionId) + '&employee_id=' +
+      encodeURIComponent(employeeId) + '">Open the transcript to check these quotes</a>';
+  }
+  return html;
+}
+
+/* ── Signal map (Step 2) ────────────────────────────────────────────────
+   This panel used to be four hardcoded articles — "Emotional Tone:
+   Guarded", "Engagement Level: Dipping", "Stress Indicators: Elevated",
+   "Openness: Reduced" — with fixed meters and hand-written descriptions,
+   identical for every employee and every conversation. Nothing in the
+   analysis payload can produce those values.
+
+   It is now built only from fields the model actually returned:
+     · Supporting evidence   — how many evidence points were cited
+     · Confidence            — the qualitative confidence_label
+     · Narrative signals     — how many observation fields were written
+     · Alternative view      — whether a competing read was offered
+   A row is emitted only when its source value exists, and the whole section
+   is hidden when the payload supports none of them. */
+function step2SignalRows(d) {
+  d = d || {};
+  var rows = [];
+
+  var evidence = asList(d.supporting_evidence).filter(function(x) {
+    return x && String(x).trim();
+  });
+  if (evidence.length) {
+    rows.push({
+      name: 'Supporting Evidence',
+      value: evidence.length + (evidence.length === 1 ? ' point cited' : ' points cited'),
+      desc: 'Quoted directly from this transcript.',
+      tone: 'step2-signal--teal'
+    });
+  }
+
+  var confLabel = String(d.confidence_label == null ? '' : d.confidence_label).trim();
+  if (confLabel) {
+    rows.push({
+      name: 'Confidence',
+      value: confLabel.replace(/\s*Signal$/i, ''),
+      desc: 'Model-reported strength for this reading.',
+      tone: 'step2-signal--amber'
+    });
+  }
+
+  var observed = ['observed_behaviour', 'behaviour_pattern', 'behaviour_summary'];
+  var written = observed.filter(function(k) {
+    return d[k] && String(d[k]).trim();
+  }).length;
+  if (written) {
+    rows.push({
+      name: 'Behavioural Detail',
+      value: written + ' of ' + observed.length + ' described',
+      desc: 'How much of the observable picture the model could fill in.',
+      tone: 'step2-signal--amber'
+    });
+  }
+
+  var alt = d.alternative_interpretation && String(d.alternative_interpretation).trim();
+  rows.push({
+    name: 'Alternative Reading',
+    value: alt ? 'Offered' : 'Not offered',
+    desc: alt ? 'A competing explanation was recorded alongside this one.'
+              : 'The analysis recorded no competing explanation.',
+    tone: alt ? 'step2-signal--teal' : 'step2-signal--muted'
+  });
+
+  return rows;
+}
+
+var STEP2_SIGNAL_ICONS = {
+  'Supporting Evidence': '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  'Confidence': '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  'Behavioural Detail': '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>',
+  'Alternative Reading': '<polyline points="9,18 15,12 9,6"/>'
+};
+
+function renderStep2Signals(d) {
+  var box = document.getElementById('step2Signals');
+  var section = document.getElementById('step2MapSection');
+  if (!box || !section) return;
+  var rows = step2SignalRows(d);
+  if (!rows.length) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+  box.innerHTML = rows.map(function(r) {
+    var icon = STEP2_SIGNAL_ICONS[r.name] || '';
+    return '<article class="step2-signal ' + r.tone + '">' +
+      '<div class="step2-signal-top">' +
+        '<div class="step2-signal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + icon + '</svg></div>' +
+        '<div>' +
+          '<div class="step2-signal-name">' + escHtml(r.name) + '</div>' +
+          '<div class="step2-signal-value">' + escHtml(r.value) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<p class="step2-signal-desc">' + escHtml(r.desc) + '</p>' +
+    '</article>';
+  }).join('');
+}
+
+/* ── Probe questions (Steps 2 and 3) ─────────────────────────────────────
+   Both panels used to ship four/three hardcoded English probes that had no
+   connection to the conversation. They are now collected from the question
+   strings the analysis itself wrote (step-5 opening/follow-up questions and
+   any recommendation phrased as a question). Nothing is invented, and the
+   section is hidden when the analysis contains no questions. */
+function collectProbeQuestions(analysis) {
+  var out = [];
+  var push = function(v) {
+    var s = String(v == null ? '' : v).trim().replace(/^["“]+|["”]+$/g, '').trim();
+    if (!s || s.indexOf('?') === -1) return;
+    for (var i = 0; i < out.length; i++) if (out[i].toLowerCase() === s.toLowerCase()) return;
+    out.push(s);
+  };
+  analysis = analysis || {};
+  var s5 = analysis.step5_conversation_strategy || {};
+  push(s5.opening_question);
+  push(s5.follow_up_question);
+  push(s5.possible_response);
+
+  var s2 = analysis.step2_behavioural_intelligence || {};
+  var s3 = analysis.step3_root_cause_analysis || {};
+  [s2.recommended_actions, s3.recommended_actions].forEach(function(list) {
+    asList(list).forEach(push);
+  });
+
+  var coach = analysis.conversation_coach;
+  if (Array.isArray(coach)) {
+    coach.forEach(function(cc) {
+      if (cc) push(cc.better_follow_up_question);
+    });
+  }
+  return out;
+}
+
+function renderProbeQuestions(analysis, containerId, sectionId, limit, numbered) {
+  var box = document.getElementById(containerId);
+  var section = sectionId ? document.getElementById(sectionId) : null;
+  if (!box) return;
+  var questions = collectProbeQuestions(analysis).slice(0, limit || 4);
+  if (!questions.length) {
+    box.innerHTML = '';
+    if (section) section.style.display = 'none';
+    return;
+  }
+  if (section) section.style.display = '';
+  box.innerHTML = '';
+  questions.forEach(function(q, qi) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = numbered ? 'rc-fq' : 'step2-probe';
+    btn.setAttribute('data-copy', q);
+    var useCls = numbered ? 'rc-fq-use' : 'step2-probe-use';
+    var useTextCls = numbered ? 'rc-fq-use-text' : 'step2-probe-use-text';
+    var noSpan = numbered ? '<span class="rc-fq-no">Q' + (qi + 1) + '</span>' : '';
+    var qCls = numbered ? 'rc-fq-q' : 'step2-probe-q';
+    btn.innerHTML = noSpan +
+      '<span class="' + qCls + '">&quot;' + escHtml(q) + '&quot;</span>' +
+      '<span class="' + useCls + '"><span class="' + useTextCls + '">Use this</span>' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>';
+    box.appendChild(btn);
+  });
+}
+
 // ── Step 2 Population ──
 function populateStep2(d) {
+  d = d || {};
   var el = document.getElementById('step2Script');
   if (el) el.textContent = d.suggested_script || 'Limited transcript evidence.';
+
+  renderStep2Signals(d);
+  renderProbeQuestions(analysisData, 'step2Probes', 'step2ProbesSection', 4);
 
   var cards = document.getElementById('step2Cards');
   if (cards) {
@@ -4774,13 +4857,16 @@ function populateStep2(d) {
     cparts.push(renderCard('Behaviour Summary', d.behaviour_summary, {borderColor:'var(--amber)'}));
     cparts.push(renderCard('Observed Behaviour', d.observed_behaviour, {borderColor:'var(--amber)'}));
     cparts.push(renderCard('Behaviour Pattern', d.behaviour_pattern));
-    cparts.push(renderCard('Supporting Evidence', d.supporting_evidence));
     cparts.push(renderCard('AI Interpretation', d.ai_interpretation, {borderColor:'var(--teal)'}));
     cparts.push(renderCard('Alternative Interpretation', d.alternative_interpretation, {borderColor:'var(--ivory-faint)', valueColor:'var(--ivory-dim)'}));
     cparts.push(renderCard('Conversation Direction', d.conversation_direction, {borderColor:'var(--violet)'}));
-    var html = renderQuote(d.title_question);
+    // `title_question` is the model's framing prompt for this step ("What
+    // behaviour stands out?"), not something the employee said. It used to be
+    // rendered through renderQuote(), which wrapped it in quotation marks above
+    // a "Supporting Evidence" card and read as a verbatim employee quote.
+    var html = renderEvidenceSection(d);
     html += cparts.join('');
-    var confHtml = renderConfidence(d.confidence);
+    var confHtml = renderConfidence(d.confidence_label);
     if (confHtml) html += confHtml;
     html += renderTakeaway(d.key_takeaway);
     cards.innerHTML = sparseNote(cparts) + html;
@@ -5304,11 +5390,17 @@ function populateStep3(d) {
   var obs = document.getElementById('step3Script');
   if (obs) obs.textContent = d.suggested_script || 'Limited transcript evidence.';
 
+  // `title_question` is the model's own framing prompt ("What most likely
+  // explains that behaviour?"), not a quote from the employee. It used to be
+  // shown under an "Employee Words" label and a "No employee statement
+  // recorded." fallback, which implied the employee had said it.
   var quote = document.getElementById('step3Quote');
   if (quote) {
     var qt = quote.querySelector('.rc-quote-text');
-    if (qt) qt.textContent = d.title_question || 'No employee statement recorded.';
+    if (qt) qt.textContent = d.title_question || 'No question was framed for this analysis.';
   }
+
+  renderProbeQuestions(analysisData, 'step3Questions', null, 3, true);
 
   // 1) Hypothesis board — ranked candidate causes
   var drivers = document.getElementById('step3Drivers');
@@ -5427,6 +5519,51 @@ function populateStep3(d) {
   buildGuidelineItems(d.recommended_actions, 'step3Recommended', false);
   buildGuidelineItems(d.avoid_actions, 'step3Avoid', true);
 
+  // 6) Information gaps. The model has always returned `missing_information`
+  //    (and the /phrasing endpoint prompts for it), but the wizard never
+  //    rendered it, so a low-confidence reading looked as solid as a
+  //    well-evidenced one. Surfacing the gaps is what makes the confidence
+  //    meter below mean something.
+  var gaps = asList(d.missing_information).filter(function(x) {
+    return x && String(x).trim();
+  });
+  var gapsBox = document.getElementById('step3Gaps');
+  var gapsEyebrow = document.getElementById('step3GapsEyebrow');
+  if (gapsBox && gapsEyebrow) {
+    if (gaps.length) {
+      gapsEyebrow.style.display = '';
+      gapsBox.innerHTML = gaps.map(function(g) {
+        return '<div class="guideline"><div class="g-icon tip">' +
+          '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">' +
+          '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+          '</div><span>' + escHtml(String(g).trim()) + '</span></div>';
+      }).join('');
+    } else {
+      gapsEyebrow.style.display = 'none';
+      gapsBox.innerHTML = '';
+    }
+  }
+
+  // 7) Confirmation is only offered when there is a cause to confirm, and it
+  //    saves to the employee record — the button stays disabled until then.
+  var confirmBtn = document.getElementById('step3ConfirmBtn');
+  var confirmNote = document.getElementById('step3ConfirmNote');
+  var confirmHeader = document.querySelector('#stepContent3 .rc-eyebrow--rc');
+  if (confirmBtn) {
+    var hasTrigger = !!(d.primary_trigger && String(d.primary_trigger).trim());
+    confirmBtn.disabled = !hasTrigger;
+    /* This block re-runs on every visit to Step 3. It used to clear
+       `is-confirmed` unconditionally, which threw away a confirmation the
+       manager had already saved (and that still existed on the record) the
+       moment they navigated away and back. Leave a real confirmation alone. */
+    var alreadyConfirmed = !!(confirmHeader && confirmHeader.classList.contains('is-confirmed'));
+    if (confirmNote && !alreadyConfirmed) {
+      confirmNote.textContent = hasTrigger
+        ? 'Saves this as the confirmed cause on the employee record'
+        : 'No candidate cause to confirm';
+    }
+  }
+
   var mn = document.getElementById('step3ManagerNotes');
   if (mn) mn.textContent = d.manager_notes || '';
 }
@@ -5471,14 +5608,11 @@ function populateStep4(d) {
   var type = document.getElementById('abxType');
   if (type) type.textContent = 'Immediate Action';
 
-  var checks = [
-    { t: 'Top priorities to clarify', v: d.recommended_actions },
-    { t: 'Keep momentum this week', v: d.this_week }
-  ];
-  var checkList = [];
-  checks.forEach(function(c) {
-    abxItems(c.v).forEach(function(x) { checkList.push(x); });
-  });
+  /* The two `t:` labels here ("Top priorities to clarify", "Keep momentum
+     this week") were never rendered — only `v` was read — but "Keep momentum
+     this week" reads like a week-one commitment the analysis never made, so
+     the dead label is gone too. */
+  var checkList = abxItems(d.recommended_actions).concat(abxItems(d.this_week));
   var chk = document.getElementById('abxChecks');
   if (chk) {
     if (!checkList.length) { chk.innerHTML = '<div class="abx-checkrow"><span class="abx-check-ic"></span><span>Limited transcript evidence.</span></div>'; }
@@ -5489,46 +5623,74 @@ function populateStep4(d) {
     }
   }
 
-  // 2. Who Owns It — employee owner + manager support
+  // 2. Who does what — the model proposes an action per person; it does not
+  //    assign ownership. "Employee / Owner" and "Manager / Support" were
+  //    hardcoded role labels presented as if the plan had assigned them, and
+  //    the two fallback sentences ("Takes the lead on this plan.", "Provides
+  //    support and removes blockers.") were invented when the payload had
+  //    nothing. Both are gone: the role is labelled only from what exists.
   var owner = document.getElementById('abxOwner');
   if (owner) {
+    var empAction = d.employee_action && String(d.employee_action).trim();
     owner.innerHTML = '<span class="abx-avatar abx-avatar--emp">EE</span>' +
       '<span class="abx-owner-body"><b class="abx-owner-name">Employee</b>' +
-      '<span class="abx-owner-role">Owner</span>' +
-      '<span class="abx-owner-tx">' + escHtml(d.employee_action || 'Takes the lead on this plan.') + '</span></span>';
+      '<span class="abx-owner-tx">' +
+      (empAction ? escHtml(empAction) : '<span style="color:var(--step-text-muted);">No employee action proposed.</span>') +
+      '</span></span>';
   }
   var mgr = document.getElementById('abxManager');
   if (mgr) {
+    var mgrAction = d.manager_action && String(d.manager_action).trim();
     mgr.innerHTML = '<span class="abx-avatar abx-avatar--mgr">MG</span>' +
       '<span class="abx-owner-body"><b class="abx-owner-name">Manager</b>' +
-      '<span class="abx-owner-role abx-owner-role--mgr">Support</span>' +
-      '<span class="abx-owner-tx">' + escHtml(d.manager_action || 'Provides support and removes blockers.') + '</span></span>';
+      '<span class="abx-owner-tx">' +
+      (mgrAction ? escHtml(mgrAction) : '<span style="color:var(--step-text-muted);">No manager action proposed.</span>') +
+      '</span></span>';
   }
 
-  // 3. When & Milestones — connected vertical timeline
+  // 3. Sequence — the four payload fields in the order the model wrote them.
+  //    The old markup stamped each row with a fabricated deadline ("NOW",
+  //    "1 WEEK", "3 WEEKS", "ONGOING") and filled any gap with an invented
+  //    instruction. A single transcript cannot commit either party to a
+  //    schedule, so only the action text is shown, and rows are omitted
+  //    entirely when the analysis proposed nothing for that slot.
   var tl = document.getElementById('abxTimeline');
   if (tl) {
     var miles = [
-      { when: 'NOW', caption: d.immediate || 'Act on the immediate action' },
-      { when: '1 WEEK', caption: d.this_week || 'Check in and follow through' },
-      { when: '3 WEEKS', caption: d.manager_action || 'Manager evaluates impact and adjusts' },
-      { when: 'ONGOING', caption: d.employee_action || 'Continue and reinforce the new approach' }
-    ];
-    var th = '';
-    miles.forEach(function(m, i) {
-      th += '<div class="abx-mile' + (i === 0 ? ' is-now' : i === miles.length - 1 ? ' is-last' : '') + '">' +
-        '<span class="abx-mile-dot"></span>' +
-        '<div class="abx-mile-body"><div class="abx-mile-when">' + m.when + '</div>' +
-        '<div class="abx-mile-tx">' + escHtml(m.caption) + '</div></div></div>';
-    });
-    tl.innerHTML = th;
+      { label: 'Immediate', text: d.immediate },
+      { label: 'This Week', text: d.this_week },
+      { label: 'Manager Action', text: d.manager_action },
+      { label: 'Employee Action', text: d.employee_action }
+    ].map(function(m) {
+      return { label: m.label, text: m.text && String(m.text).trim() };
+    }).filter(function(m) { return !!m.text; });
+
+    if (!miles.length) {
+      tl.innerHTML = '<div class="abx-empty">No action steps proposed for this conversation.</div>';
+    } else {
+      var th = '';
+      miles.forEach(function(m, i) {
+        th += '<div class="abx-mile' + (i === 0 ? ' is-now' : i === miles.length - 1 ? ' is-last' : '') + '">' +
+          '<span class="abx-mile-dot"></span>' +
+          '<div class="abx-mile-body"><div class="abx-mile-when">' + escHtml(m.label) + '</div>' +
+          '<div class="abx-mile-tx">' + escHtml(m.text) + '</div></div></div>';
+      });
+      tl.innerHTML = th;
+    }
   }
 
   // Desired outcome
   var out = document.getElementById('abxOutcome');
-  if (out) out.textContent = d.expected_outcome || 'Improved clarity and balanced priorities.';
+  if (out) {
+    var outcome = d.expected_outcome && String(d.expected_outcome).trim();
+    out.textContent = outcome || 'Not stated in this analysis.';
+    out.style.color = outcome ? '' : 'var(--step-text-muted)';
+  }
   var outSub = document.getElementById('abxOutcomeSub');
-  if (outSub) outSub.textContent = d.title_question || 'The change we are aiming for';
+  // title_question is the framing prompt for the step, not the outcome, and
+  // "The change we are aiming for" was a hardcoded stand-in. Nothing is
+  // written here, so the sub-line stays out of the way.
+  if (outSub) { outSub.textContent = ''; outSub.style.display = 'none'; }
 
   // Support & Resources
   var sup = document.getElementById('abxSupport');
@@ -5545,13 +5707,12 @@ function populateStep4(d) {
       meas.innerHTML = '<div class="abx-empty">Limited transcript evidence.</div>';
     } else {
       var mh = '';
-      mItems.forEach(function(x, i) {
-        var status = i === 0 ? 'pending' : 'pending';
+      mItems.forEach(function(x) {
         mh += '<div class="abx-measurerow">' +
           '<span class="abx-measure-dot"></span>' +
           '<span class="abx-measure-ic"></span>' +
           '<span class="abx-measure-tx">' + escHtml(x) + '</span>' +
-          '<span class="abx-measure-status">Check-in</span></div>';
+          '<span class="abx-measure-status">Proposed</span></div>';
       });
       meas.innerHTML = mh;
     }
@@ -5592,8 +5753,10 @@ function populateStep5(d) {
     cparts.push(renderCard('Suggested HR Reply', d.suggested_reply, {borderColor:'var(--teal)', typeClass:'fs-card-reply'}));
     cparts.push(renderListCard('What to Listen For', d.what_to_listen_for, {borderColor:'var(--red)', typeClass:'fs-card-listen'}));
     cparts.push(renderCard('Success Indicator', d.success_indicator, {borderColor:'var(--teal)', typeClass:'fs-card-success'}));
-    var html = renderQuote(d.title_question);
-    html += cparts.join('');
+    // No renderQuote(title_question) here: title_question is the model's
+    // framing prompt ("What should happen next?"), and wrapping it in
+    // quotation marks at the top of the card feed presented it as a quote.
+    var html = cparts.join('');
     html += renderTakeaway(d.key_takeaway);
     cards.innerHTML = sparseNote(cparts) + html;
   }
@@ -5664,55 +5827,90 @@ function applyAnalysis(session) {
   if (!analysisData) return;
   var analysis = analysisData;
 
+    /* Surface the backend's quality_warnings. providers/llm.py deliberately
+       leaves a flagged phrase in place rather than rewriting it, so this is
+       the only place the manager learns the wording needs a second look. */
+    (function() {
+      var box = document.getElementById('analysisQualityWarnings');
+      if (!box) return;
+      var warnings = analysis.quality_warnings;
+      if (!Array.isArray(warnings)) { box.style.display = 'none'; return; }
+      var items = warnings.filter(function(w) { return w && String(w).trim(); });
+      if (!items.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+      var html = '<strong>Review this wording before you use it</strong><ul>';
+      items.forEach(function(w) {
+        html += '<li>' + escHtml(String(w).trim()) + '</li>';
+      });
+      box.innerHTML = html + '</ul>';
+      box.style.display = 'block';
+    })();
+
     var cardStyle = 'background:var(--surface);border:1px solid var(--border-lit);border-radius:10px;padding:0.9rem 1rem;margin-bottom:0.8rem;box-shadow:var(--shadow-sm);';
     var labelStyle = 'font-family:var(--font-m);font-size:0.62rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px;';
     var textStyle = 'font-family:var(--font-b);font-size:0.88rem;font-weight:500;line-height:1.6;color:var(--ivory);';
     var textStyleWhy = 'font-family:var(--font-b);font-size:0.85rem;font-weight:400;font-style:italic;line-height:1.6;color:var(--ivory-dim);';
 
     // ── Personalize Step 1 "Establish Psychological Safety" using AI analysis ──
+    // Every word on this step comes from the analysis payload. Nothing is
+    // pre-written: the opener, the do/avoid lists and the tip are all empty in
+    // the markup, so a session with no usable analysis shows an explicit
+    // "not available" state instead of a plausible-sounding generic script.
     var ps = analysis.psychological_safety;
     var INSUFFICIENT = 'Insufficient evidence to draw a reliable conclusion.';
-    if (ps && ps.statement && ps.statement !== INSUFFICIENT) {
-      var scriptEn = document.getElementById('psychSafetyScriptEn');
-      var scriptHi = document.getElementById('psychSafetyScriptHi');
-      if (scriptEn) scriptEn.textContent = '"' + ps.statement + '"';
-      if (scriptHi) scriptHi.textContent = '"' + ps.statement + '"';
+    var psReal = function(v) {
+      var s = String(v == null ? '' : v).trim();
+      return s && s !== INSUFFICIENT ? s : '';
+    };
 
-      var buildItem = function(text, isAvoid, idx) {
-        var iconSvg = isAvoid
-          ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
-          : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>';
-        var div = document.createElement('div');
-        div.className = 'guideline';
-        div.setAttribute('data-anim', (isAvoid ? 'dont-' : 'do-') + idx);
-        div.innerHTML = '<div class="g-icon' + (isAvoid ? ' avoid' : '') + '">' + iconSvg + '</div><span>' + escHtml(text) + '</span>';
-        return div;
-      };
+    var openerText = psReal(ps && ps.statement);
+    var tipText = psReal(ps && ps.tip);
+    var doItems = (ps && asList(ps.do)).map(psReal).filter(Boolean);
+    var dontItems = (ps && asList(ps.dont)).map(psReal).filter(Boolean);
 
-      if (ps.do && ps.do.length) {
-        var doList = document.getElementById('psychSafetyDoList');
-        if (doList) {
-          doList.innerHTML = '';
-          ps.do.forEach(function(t, idx) { doList.appendChild(buildItem(t, false, idx)); });
-        }
-      }
-      if (ps.dont && ps.dont.length) {
-        var dontList = document.getElementById('psychSafetyDontList');
-        if (dontList) {
-          dontList.innerHTML = '';
-          ps.dont.forEach(function(t, idx) { dontList.appendChild(buildItem(t, true, idx)); });
-        }
-      }
-      if (ps.tip && ps.tip !== INSUFFICIENT) {
-        var tipEn = document.getElementById('psychSafetyTipEn');
-        var tipHi = document.getElementById('psychSafetyTipHi');
-        if (tipEn) tipEn.textContent = ps.tip;
-        if (tipHi) tipHi.textContent = ps.tip;
-      }
+    var scriptEn = document.getElementById('psychSafetyScriptEn');
+    if (scriptEn) scriptEn.textContent = openerText ? '"' + openerText + '"' : '';
+    var badge = document.getElementById('psychSafetyBadge');
+    if (badge) badge.style.display = openerText ? 'block' : 'none';
 
-      var badge = document.getElementById('psychSafetyBadge');
-      if (badge) badge.style.display = 'block';
-    }
+    var buildItem = function(text, isAvoid, idx) {
+      var iconSvg = isAvoid
+        ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+        : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>';
+      var div = document.createElement('div');
+      div.className = 'guideline';
+      div.setAttribute('data-anim', (isAvoid ? 'dont-' : 'do-') + idx);
+      div.innerHTML = '<div class="g-icon' + (isAvoid ? ' avoid' : '') + '">' + iconSvg + '</div><span>' + escHtml(text) + '</span>';
+      return div;
+    };
+
+    var fillList = function(items, containerId, isAvoid) {
+      var box = document.getElementById(containerId);
+      if (!box) return;
+      box.innerHTML = '';
+      if (!items.length) {
+        var empty = document.createElement('div');
+        empty.className = 'guideline';
+        empty.innerHTML = '<span style="color:var(--ivory-dim);">Not available for this conversation.</span>';
+        box.appendChild(empty);
+        return;
+      }
+      items.forEach(function(t, idx) { box.appendChild(buildItem(t, isAvoid, idx)); });
+    };
+    fillList(doItems, 'psychSafetyDoList', false);
+    fillList(dontItems, 'psychSafetyDontList', true);
+
+    var tipEn = document.getElementById('psychSafetyTipEn');
+    if (tipEn) tipEn.textContent = tipText;
+    var tipBlock = document.querySelector('#stepContent .ps-tip');
+    if (tipBlock) tipBlock.style.display = tipText ? '' : 'none';
+
+    // The opener block is only meaningful with real text in it.
+    var openerBlock = document.querySelector('#stepContent .ps-opener');
+    if (openerBlock) openerBlock.style.display = openerText ? '' : 'none';
+    var openerSection = document.querySelector('#stepContent .ps-opener-wrap');
+    if (openerSection) openerSection.style.display = openerText ? '' : 'none';
+    var useOpener = document.getElementById('useOpenerBtn');
+    if (useOpener) useOpener.style.display = openerText ? '' : 'none';
 
     // ── Render Conversation Coach inside Step 1 ──
     if (analysis.conversation_coach && analysis.conversation_coach.length) {
@@ -5809,6 +6007,46 @@ sessionPromise.then(function(s) {
 
   // ── Analysis-driven context (AI Insights panel) ──
   applyAnalysis(session);
+
+  // ── Restore manager notes saved on a previous visit ──
+  loadStepNotes();
+
+  // ── Step 5 progress reflects the real session status, not a fixed track ──
+  (function() {
+    var stage = document.getElementById('fsStageSync');
+    var tag = document.getElementById('fsStageSyncTag');
+    var note = document.getElementById('fsProgressNote');
+    var chip = document.getElementById('fsMeterStatus');
+    var aStage = document.getElementById('fsStageAnalysis');
+    var aTag = document.getElementById('fsStageAnalysisTag');
+    var status = session && session.status ? String(session.status) : 'draft';
+    var done = status === 'completed';
+
+    // "Analysis Ready" was hardcoded as done. It now reports what the session
+    // actually carries — a real analysis, or a fallback, or nothing at all.
+    var hasAnalysis = !!(session && session.analysis && !session.analysis.is_fallback);
+    var isFallback = !!(session && session.analysis && session.analysis.is_fallback);
+    if (aStage) {
+      aStage.classList.toggle('is-done', hasAnalysis);
+      aStage.classList.toggle('is-active', !hasAnalysis);
+    }
+    if (aTag) {
+      aTag.textContent = hasAnalysis ? 'Done' : (isFallback ? 'Unavailable' : 'Checking');
+    }
+
+    if (stage) stage.classList.toggle('is-active', !done);
+    if (stage) stage.classList.toggle('is-done', done);
+    if (tag) tag.textContent = done ? 'Done' : 'Not yet';
+    if (chip) {
+      chip.textContent = done ? 'Completed' : 'Not completed';
+      chip.classList.toggle('is-done', done);
+    }
+    if (note) {
+      note.textContent = done
+        ? 'This session is marked completed.'
+        : 'This session is marked "' + status + '" — it is not completed yet.';
+    }
+  })();
 
   // ── Now fire GSAP animation ──
   var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
@@ -5910,7 +6148,7 @@ sessionPromise.then(function(s) {
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
-    function postMemory(type, status, text, dueAt) {
+    function postMemory(type, status, text, dueAt, metadata) {
       return fetch('/api/conversation-memory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -5920,7 +6158,8 @@ sessionPromise.then(function(s) {
           type: type,
           status: status,
           content: text,
-          due_at: dueAt || null
+          due_at: dueAt || null,
+          metadata: metadata || null
         })
       });
     }
@@ -5931,14 +6170,12 @@ sessionPromise.then(function(s) {
     var used = document.getElementById('capOpenerUsed');
     if (canCapture && used && used.checked) {
       var openerText = (function(){
-        var lang = document.documentElement.getAttribute('data-lang') || (window.localStorage && localStorage.getItem('voovr-lang')) || 'en';
-        var el = lang === 'hi'
-          ? document.getElementById('psychSafetyScriptHi')
-          : document.getElementById('psychSafetyScriptEn');
-        return (el && el.textContent.trim()) || 'Suggested psych-safety opener';
+        var el = document.getElementById('psychSafetyScriptEn');
+        return (el && el.textContent.trim()) || '';
       })();
-      // Backend always creates openers as SAVED; mark USED explicitly after.
-      jobs.push(postMemory('OPENER', 'SAVED', openerText, null).then(function(r) {
+      // The opener box is hidden entirely when the analysis carries no real
+      // statement, so an empty capture here means nothing was ever displayed.
+      if (openerText) jobs.push(postMemory('OPENER', 'SAVED', openerText, null).then(function(r) {
         if (!r || !r.ok) return null;
         return r.json().then(function(created) {
           if (!created || !created.id) return null;
@@ -5958,6 +6195,31 @@ sessionPromise.then(function(s) {
     if (canCapture) capFollowups.forEach(function(f) {
       jobs.push(postMemory('FOLLOW_UP', 'PENDING', f.text, capDeco(f).due_at));
     });
+
+    // Manager notes for every step. These textareas were previously inert
+    // while the footer claimed "Progress autosaved", so anything typed was
+    // silently lost. Save whatever was actually written, across all steps,
+    // not just the one currently on screen.
+    if (canCapture) {
+      [1, 2, 3, 4, 5].forEach(function(step) {
+        var box = document.getElementById('stepNotes_' + step);
+        var text = box ? (box.value || '').trim() : '';
+        if (!text) return;
+        jobs.push(postMemory('NOTE', 'SAVED', text, null, { kind: 'step_notes', step: step }));
+      });
+    }
+
+    // The follow-up staged from the Step 5 date picker. Previously the button
+    // claimed "Reminder set" while writing nothing anywhere.
+    var stagedFollowUp = window.__syncRoomFollowUp;
+    if (canCapture && stagedFollowUp && stagedFollowUp.due_at) {
+      var goal = (analysisData && analysisData.step5_conversation_strategy &&
+                  analysisData.step5_conversation_strategy.conversation_goal) || '';
+      var followUpText = goal
+        ? String(goal).trim().replace(/\s+/g, ' ').slice(0, 400)
+        : 'Follow-up conversation';
+      jobs.push(postMemory('FOLLOW_UP', 'PENDING', followUpText, stagedFollowUp.due_at));
+    }
 
     function finish() {
       fetch('/api/sessions/' + sessionId, {
@@ -5997,11 +6259,8 @@ sessionPromise.then(function(s) {
 (function() {
   var btn = document.getElementById('useOpenerBtn');
   if (!btn) return;
-  var lang = document.documentElement.getAttribute('data-lang') || (localStorage.getItem('voovr-lang') || 'en');
   function activeScript() {
-    var el = lang === 'hi'
-      ? document.getElementById('psychSafetyScriptHi')
-      : document.getElementById('psychSafetyScriptEn');
+    var el = document.getElementById('psychSafetyScriptEn');
     return (el && el.textContent.trim()) || '';
   }
   btn.addEventListener('click', function() {
@@ -6045,7 +6304,7 @@ sessionPromise.then(function(s) {
     if (!feed) return;
     var expanded = feed.classList.toggle('step2-feed-expanded');
     var label = btn.querySelector('.step2-timeline-label');
-    if (label) label.textContent = expanded ? 'Hide extra detail' : 'View full behavioral timeline';
+    if (label) label.textContent = expanded ? 'Show less detail' : 'Show full card detail';
   });
 })();
 </script>
@@ -6067,85 +6326,148 @@ sessionPromise.then(function(s) {
 })();
 </script>
 <script>
+// ── STEP 3 — Confirm root cause ─────────────────────────────────────────
+// This toggle writes a real NOTE, so it must also read that note back and be
+// able to retract it. Previously the state lived only in a CSS class: a reload
+// showed "unconfirmed" even after a successful save, clicking again created a
+// second duplicate note, and "unconfirming" left the original on the employee
+// record while the UI claimed it was gone.
 (function() {
-  var probes = document.querySelectorAll('#stepContent2 .step2-probe');
-  probes.forEach(function(p) {
-    p.addEventListener('click', function() {
-      var q = p.getAttribute('data-copy') || '';
-      var textEl = p.querySelector('.step2-probe-use-text');
-      if (textEl) textEl.textContent = 'Copied';
-      p.classList.add('is-copied');
-      function write() {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(q).catch(function() { fallback(); });
-        } else {
-          fallback();
-        }
-        function fallback() {
-          try {
-            var ta = document.createElement('textarea');
-            ta.value = q;
-            ta.style.position = 'fixed';
-            ta.style.opacity = '0';
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
-          } catch (e) {}
-        }
-      }
-      write();
-      setTimeout(function() {
-        p.classList.remove('is-copied');
-        if (textEl) textEl.textContent = 'Use this';
-      }, 1800);
+  var btn = document.getElementById('step3ConfirmBtn');
+  if (!btn) return;
+
+  var confirmedId = null;
+
+  function header() {
+    var root = document.getElementById('stepContent3');
+    return root ? root.querySelector('.rc-eyebrow--rc') : null;
+  }
+  function cause() {
+    var d = (window.analysisData && window.analysisData.step3_root_cause_analysis) || {};
+    return String(d.primary_trigger || '').trim();
+  }
+  function paint(on, note) {
+    var el = header();
+    var hint = document.getElementById('step3ConfirmNote');
+    if (el) el.classList.toggle('is-confirmed', !!on);
+    if (btn) {
+      btn.textContent = on ? 'Root Cause Confirmed' : 'Confirm as likely cause';
+    }
+    if (hint) hint.textContent = note;
+  }
+
+  // Restore any previously saved confirmation for this session.
+  if (sessionId) {
+    fetch('/api/conversation-memory?type=NOTE&session_id=' + encodeURIComponent(sessionId))
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(payload) {
+        var items = payload && Array.isArray(payload.items) ? payload.items : [];
+        var hit = items.filter(function(m) {
+          return m && (m.metadata || {}).kind === 'confirmed_root_cause';
+        });
+        if (!hit.length) return;
+        confirmedId = String(hit[0].id);
+        paint(true, 'Saved to the employee record');
+      })
+      .catch(function() { /* confirmation stays unconfirmed until proven */ });
+  }
+
+  btn.addEventListener('click', function() {
+    var head = header();
+    var note = document.getElementById('step3ConfirmNote');
+    if (!head) return;
+    var already = head.classList.contains('is-confirmed');
+    var text = cause();
+    if (!text) {
+      if (note) note.textContent = 'This analysis names no root cause to confirm';
+      return;
+    }
+
+    if (!sessionId || !employeeId) {
+      if (note) note.textContent = 'Cannot save — this view has no session';
+      return;
+    }
+
+    btn.disabled = true;
+
+    // Retract: actually remove the record rather than only restyling the card.
+    if (already) {
+      fetch('/api/conversation-memory/' + encodeURIComponent(confirmedId), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      }).then(function(r) {
+        if (!r.ok) throw new Error('delete failed');
+        confirmedId = null;
+        paint(false, 'Removed from the employee record');
+      }).catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Root Cause Confirmed';
+        if (note) note.textContent = 'Could not remove — try again';
+      });
+      return;
+    }
+
+    var body = JSON.stringify({
+      session_id: sessionId,
+      employee_id: employeeId,
+      type: 'NOTE',
+      status: 'SAVED',
+      content: 'Confirmed root cause: ' + text,
+      metadata: { kind: 'confirmed_root_cause', source: 'sync_room' }
+    });
+    btn.textContent = 'Saving…';
+
+    fetch('/api/conversation-memory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body
+    }).then(function(r) {
+      if (!r.ok) throw new Error('save failed');
+      return r.json().catch(function() { return null; });
+    }).then(function(created) {
+      if (created && created.id) confirmedId = String(created.id);
+      paint(true, 'Saved to the employee record');
+    }).catch(function() {
+      paint(false, 'Could not save — try again');
+    }).then(function() {
+      btn.disabled = false;
     });
   });
 })();
 </script>
 <script>
-// ── STEP 3 — Confirm root cause toggle ──
+// ── STEP 2 / 3 — probe copy, bound by delegation so dynamically rendered
+//    question buttons work. The old handler bound to the three hardcoded
+//    nodes at load time, so it silently did nothing for any other question.
 (function() {
-  var btn = document.getElementById('step3ConfirmBtn');
-  if (!btn) return;
-  btn.addEventListener('click', function() {
-    var header = document.getElementById('stepContent3').querySelector('.rc-eyebrow--rc');
-    if (!header) return;
-    var confirmed = header.classList.toggle('is-confirmed');
-    btn.textContent = confirmed ? 'Root Cause Confirmed' : 'Confirm as likely cause';
-  });
-})();
-</script>
-<script>
-// ── STEP 3 — Follow-up question copy ──
-(function() {
-  var questions = document.querySelectorAll('#stepContent3 .rc-fq[data-copy]');
-  questions.forEach(function(q) {
-    q.addEventListener('click', function() {
+  var useText = function(root) { return root.querySelector('.rc-fq-use-text, .step2-probe-use-text'); };
+  var fallback = function(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    } catch (e) {}
+  };
+  ['step2Probes', 'step3Questions'].forEach(function(containerId) {
+    var box = document.getElementById(containerId);
+    if (!box) return;
+    box.addEventListener('click', function(e) {
+      var q = e.target.closest('.rc-fq[data-copy], .step2-probe[data-copy]');
+      if (!q) return;
       var text = q.getAttribute('data-copy') || '';
-      var label = q.querySelector('.rc-fq-use-text');
+      var label = useText(q);
       if (label) label.textContent = 'Copied';
       q.classList.add('is-copied');
-      function write() {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).catch(function() { fallback(); });
-        } else {
-          fallback();
-        }
-        function fallback() {
-          try {
-            var ta = document.createElement('textarea');
-            ta.value = text;
-            ta.style.position = 'fixed';
-            ta.style.opacity = '0';
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
-          } catch (e) {}
-        }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(function() { fallback(text); });
+      } else {
+        fallback(text);
       }
-      write();
       setTimeout(function() {
         q.classList.remove('is-copied');
         if (label) label.textContent = 'Use this';
@@ -6314,66 +6636,72 @@ sessionPromise.then(function(s) {
 })();
 </script>
 <script>
-// ── STEP 5 — Follow-up scheduling defaults + reminder toggle (visual only) ──
+// ── STEP 5 — Follow-up date picker ──────────────────────────────────────
+// The date/time inputs are left EMPTY. They used to be pre-filled with
+// now + 9 days at 10:15 and the hint read "In 9 days · Tue 14 Oct", so a
+// manager who skimmed the panel saw a specific, pre-decided follow-up date
+// that nobody had agreed to. Nothing is assumed; the manager picks.
 (function() {
   var dateInput = document.getElementById('fsScheduleDate');
   var timeInput = document.getElementById('fsScheduleTime');
   var hint = document.getElementById('fsScheduleHint');
-  var remBtn = document.getElementById('fsReminderBtn');
+  var note = document.getElementById('fsScheduleNote');
   if (!dateInput || !timeInput) return;
-  var now = new Date();
-  var later = new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000);
-  var pad = function(n) { return String(n).padStart ? String(n).padStart(2, '0') : (n < 10 ? '0' + n : '' + n); };
-  dateInput.value = later.getFullYear() + '-' + pad(later.getMonth() + 1) + '-' + pad(later.getDate());
-  timeInput.value = '10:15';
-  if (hint) {
-    var dayName = later.toLocaleDateString('en-IN', { weekday: 'short' });
-    hint.textContent = 'In 9 days · ' + dayName + ' ' + later.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+  function describe() {
+    if (!dateInput.value) {
+      if (hint) hint.textContent = 'No date chosen';
+      if (note) note.textContent = 'Pick a date to create a tracked follow-up. Nothing is scheduled until you complete the sync.';
+      window.__syncRoomFollowUp = null;
+      return;
+    }
+    var parts = dateInput.value.split('-');
+    var when = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    var stamp = dateInput.value + 'T' + (timeInput.value || '09:00') + ':00';
+    if (hint) {
+      hint.textContent = timeInput.value
+        ? when.toLocaleDateString('en-IN', { weekday: 'short' }) + ' ' +
+          when.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) +
+          ' at ' + timeInput.value
+        : when.toLocaleDateString('en-IN', { weekday: 'short' }) + ' ' +
+          when.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) +
+          ' (no time set)';
+    }
+    if (note) note.textContent = 'This follow-up is saved as a tracked item when you complete the sync.';
+    window.__syncRoomFollowUp = { due_at: stamp, date: dateInput.value };
   }
-  if (remBtn) {
-    var on = function() { remBtn.classList.toggle('is-set'); remBtn.setAttribute('aria-pressed', remBtn.classList.contains('is-set') ? 'true' : 'false'); remBtn.lastChild.textContent = remBtn.classList.contains('is-set') ? ' Reminder set' : ' Set reminder'; };
-    var label = document.createTextNode(' Set reminder');
-    remBtn.appendChild(label);
-    remBtn.addEventListener('click', on);
-  }
+
+  dateInput.addEventListener('change', describe);
+  timeInput.addEventListener('change', describe);
+  dateInput.addEventListener('input', describe);
+  timeInput.addEventListener('input', describe);
+  describe();
 })();
 </script>
 <script>
-// ── STEP 5 — Priority chips on the four key-focus rows (presentational) ──
+// ── STEP 5 — the follow-up commitment is collected, not "set" ───────────
+// The old handler flipped a class and rewrote the button to "Reminder set",
+// implying a reminder had been scheduled. Nothing was persisted and there is
+// no reminder service behind this page. The button now only stages the
+// follow-up captured by the date picker above, and states plainly that it is
+// saved on completion.
 (function() {
-  var FOCUS_LABELS = ['Conversation Goal', 'Conversation Focus', 'Opening Question', 'Follow-up Question'];
-  function tag() {
-    var cards = document.getElementById('step5Cards');
-    if (!cards) return false;
-    var rows = [];
-    for (var i = 0; i < cards.children.length; i++) {
-      var card = cards.children[i];
-      if (!card.classList || !card.classList.contains('analysis-card')) continue;
-      var labelEl = card.querySelector('.analysis-card-label');
-      var label = labelEl ? labelEl.textContent.trim() : '';
-      if (FOCUS_LABELS.indexOf(label) > -1 && !card.querySelector('.fs-prio')) rows.push(card);
+  var remBtn = document.getElementById('fsReminderBtn');
+  var label = document.getElementById('fsReminderLabel');
+  var dateInput = document.getElementById('fsScheduleDate');
+  if (!remBtn || !label) return;
+
+  remBtn.addEventListener('click', function() {
+    if (!dateInput.value) {
+      dateInput.focus();
+      label.textContent = 'Choose a date first';
+      return;
     }
-    if (!rows.length) return false;
-    rows.forEach(function(card, idx) {
-      var chip = document.createElement('span');
-      chip.className = 'fs-prio';
-      chip.textContent = 'Priority · ' + (idx + 1);
-      card.appendChild(chip);
-    });
-    return true;
-  }
-  if (tag()) return;
-  var t = document.getElementById('stepContent5');
-  if (!t) return;
-  var tries = 0;
-  var iv = setInterval(function() {
-    tries++;
-    if (tag() || tries > 40) clearInterval(iv);
-  }, 250);
-  var mo = new MutationObserver(function() {
-    if (tag()) mo.disconnect();
+    var set = remBtn.classList.contains('is-set');
+    remBtn.classList.toggle('is-set', !set);
+    remBtn.setAttribute('aria-pressed', set ? 'false' : 'true');
+    label.textContent = set ? 'Add follow-up to plan' : 'Follow-up staged';
   });
-  mo.observe(t, { childList: true, subtree: true });
 })();
 </script>
 

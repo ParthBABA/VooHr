@@ -1,0 +1,413 @@
+{
+  "articles": {
+    "": {
+      "path": "",
+      "title": "Overview",
+      "group": "Overview",
+      "description": "Guides to VooHr's current meeting, analysis, account, and privacy workflows.",
+      "intro": "Find practical guidance for using VooHr with care. Search page titles and common questions, or choose a topic below.",
+      "sections": []
+    },
+    "getting-started": {
+      "path": "getting-started",
+      "title": "How VooHr works",
+      "group": "Start here",
+      "description": "Understand how employee records, conversations, analysis, and follow-ups fit together in VooHr.",
+      "intro": "VooHr brings an employee directory and conversation records into one HR workspace. Its analysis is generated from text you provide; people remain responsible for checking the source and deciding what to do.",
+      "sections": [
+        {"heading": "Start with an employee record", "paragraphs": ["An administrator can add employees individually or import a CSV. Directory fields include name, email, phone, department, position, employment type, work mode, joining date, and reporting manager. Employee names and contact details are encrypted as fields; other directory fields are stored separately. Managers see a scoped directory for their team, while administrators can access the organization roster.", "To connect a conversation to a person, select the employee when creating a session. The employee record and the session are separate records, so check the selected person before saving. A conversation can also exist without an employee association when created through other supported intake paths."]},
+        {"heading": "Create a conversation record", "paragraphs": ["From the recording workspace, you can record browser microphone audio, upload supported audio for transcription, extract text from an image, or paste/type a transcript. Review and edit the transcript before saving. Saving creates a session record; the transcript is the input used for analysis. A saved transcript can be re-opened in the workspace and changed.", "The current upload controls accept audio up to 25 MB in the browser, images up to 10 MB, and plain-text TXT uploads without a separate client-side size limit. The application also enforces its own request and record limits."]},
+        {"heading": "Review, then decide", "paragraphs": ["When you request an analysis, VooHr sends transcript text to the configured language-model provider and stores returned output against that session. It can also retain analyses by output language. The analysis offers possible interpretations and suggested actions, not verified facts about a person.", "Use the transcript and your knowledge of the situation to test each suggestion. VooHr does not make an employment decision for you. Commitments and follow-ups can be recorded as explicit HR-confirmed memory items; the visual reminder button in the five-step page is not connected to reminder creation."]}
+      ],
+      "related": ["meetings", "transcription", "analysis"]
+    },
+    "meetings": {
+      "path": "meetings",
+      "title": "Recording and uploading a meeting",
+      "group": "Start here",
+      "description": "Learn what VooHr's recording, audio upload, screenshot OCR, and transcript inputs actually do.",
+      "intro": "VooHr provides browser microphone recording and alternate ways to prepare a transcript. You choose what to submit, and should follow your organization's consent and recording rules before capturing a conversation.",
+      "sections": [
+        {"heading": "Record with the browser", "paragraphs": ["The Dictation page asks the browser for microphone access and records audio as WebM using MediaRecorder. When you stop, the browser sends the recording to the transcription endpoint. The resulting text is placed in an editable transcript field; recording audio is not saved automatically as a separate audio archive by this path.", "Recording requires a supported browser, microphone permission, and a successful transcription service request. If permission is denied or the browser cannot create a WebM recording, use a permitted alternative such as a transcript file or pasted text."]},
+        {"heading": "Upload audio, an image, or text", "paragraphs": ["Audio uploads accept MP3, WAV, M4A, OGG, and WEBM in the interface, with a 25 MB client-side limit. The backend accepts selected audio MIME types up to 26 MiB. Image upload accepts PNG, JPG/JPEG, and WEBP up to 10 MB in the interface; the server verifies the image and extracts text using its configured vision provider. Plain .TXT files are read in the browser and placed in the transcript field.", "These are different workflows: OCR reads visible text in an image; it does not transcribe speech from an image. Inspect any generated transcription or extracted text for omissions and errors."]},
+        {"heading": "Save and review", "paragraphs": ["After recording or uploading, read the transcript field and correct names, speaker attribution, numbers, and context before saving. The page lets you edit the text before creating a session. When a saved transcript is edited later, the edited version is preferred for analysis; the original raw text remains part of the session data.", "The system request limit is not a promise about maximum recording duration. Actual usable length depends on the file size, browser, transcription provider, network, and server request cap."]}
+      ],
+      "related": ["transcription", "accuracy", "security"]
+    },
+    "transcription": {
+      "path": "transcription",
+      "title": "Languages and transcription",
+      "group": "Start here",
+      "description": "See how transcript language hints and analysis output languages work in VooHr.",
+      "intro": "Transcription and analysis language are separate choices. A language hint can guide speech recognition, while analysis language controls the language requested for the generated interpretation.",
+      "sections": [
+        {"heading": "Speech recognition", "paragraphs": ["For audio, the transcription page sends a selected language hint with the file. The configured Deepgram speech-to-text provider maps supported hints to provider language/model settings; unknown hints fall back to English. The recognition result is text, not a guaranteed word-for-word record, so review names, code-switching, accents, specialist terms, and speaker changes.", "The implementation includes hints such as English, English (India), Hindi, Hinglish, Spanish, French, German, Portuguese, Russian, Japanese, Korean, Chinese, Dutch, Italian, and automatic detection. Availability and quality depend on the configured provider/model and audio conditions."]},
+        {"heading": "Analysis language", "paragraphs": ["Analysis has its own language selection. English is the default; additional options are drawn from the server's configured enabled-language list. The backend stores analysis results per language, so a later analysis in another language does not overwrite the earlier language entry. Some language instructions exist in code but are not enabled by default, and deployment configuration can affect the available list.", "Choosing a different language requests another analysis; it is not simply a translation of the saved analysis. The model may express nuance differently across languages. Compare it with the transcript and use a fluent human reviewer when wording matters."]},
+        {"heading": "If a language looks wrong", "paragraphs": ["Check the selected transcription hint and make sure it matches the spoken language or mix. If the transcript is already poor, correct it in the editor before analysis rather than expecting the analysis model to repair recognition. For mixed-language speech, automatic detection is available as a hint but is best-effort, not a guarantee.", "A language mismatch can alter names, negation, and the meaning of short phrases. Do not rely on a score or suggestion until you can verify the underlying text."]}
+      ],
+      "related": ["meetings", "accuracy", "analysis"]
+    },
+    "analysis": {
+      "path": "analysis",
+      "title": "The 5-step Analysis View",
+      "group": "Understanding the analysis",
+      "description": "A grounded guide to the five generated analysis sections and how to review them.",
+      "intro": "The Analysis View presents generated summaries, possible patterns, possible drivers, action ideas, and conversation prompts. It is produced from the selected transcript, and each section can be incomplete or wrong.",
+      "sections": [
+        {"heading": "What goes into the view", "paragraphs": ["The analysis request uses the edited transcript when one exists, otherwise the raw transcript. Text longer than 50,000 characters is truncated for the model request; the stored transcript itself is not truncated by that operation. The backend sends the text and selected output language to the configured language-model provider, validates the returned structure, and saves the result against the conversation.", "The five steps are structured parts of a generated response, not five independent investigations. A missing section or empty field can mean there was not enough supported material, the model omitted it, or the response could not be used. An unsuccessful fallback is marked failed rather than presented as a healthy reading."]},
+        {"heading": "Read claims as possibilities", "paragraphs": ["The model is instructed to use evidence and probabilistic wording. Where available, the interface shows supporting phrases and signal-confidence labels. These do not prove that an interpretation is correct: quotes can be incomplete, transcript text can be inaccurate, and the model can infer the wrong cause from limited context.", "Check the original transcript, separate direct observations from interpretations, and ask the employee rather than treating a possible driver as known. Analysis outputs do not become confirmed commitments automatically."]},
+        {"heading": "Features that are not actions", "paragraphs": ["Some parts of the five-step screen are presentation-only. The Signal Map and hardcoded probe questions are not live analysis features. The visible Set reminder control only toggles its appearance and does not schedule a reminder; Progress autosaved is static interface text, not proof that this screen autosaves. Use the actual supported meeting, follow-up, or conversation-memory workflows when you need a persisted record.", "If a control's status is unclear, verify whether a saved record appears in the relevant workspace before relying on it."]}
+      ],
+      "related": ["psychological-safety", "behavioural-intelligence", "root-cause", "action-blueprint", "conversation-strategy", "scores", "limitations"]
+    },
+    "analysis/psychological-safety": {
+      "path": "analysis/psychological-safety",
+      "title": "Psychological Safety",
+      "group": "Understanding the analysis",
+      "description": "How VooHr presents conversation-specific psychological-safety signals and their limits.",
+      "intro": "This section summarizes possible safety-related signals in one transcript. It is an interpretation of text, not a measurement of an employee's actual psychological state.",
+      "sections": [
+        {"heading": "What it shows", "paragraphs": ["The generated analysis can include a safety score, evidence, defensive-behaviour notes, a sentiment label, and a qualitative confidence label. The separate phrasing review can identify exact HR phrases and suggest alternative wording. These outputs are based on the transcript content provided for that run.", "The displayed score should be read as an indicator for the conversation being reviewed. It is not a validated organizational survey result, a clinical assessment, or a stable trait score for the employee."]},
+        {"heading": "What can affect it", "paragraphs": ["Speech recognition mistakes, missing turns, unclear speaker labels, sarcasm, cultural context, translated wording, and omitted events can change the interpretation. A transcript may contain an HR observation but not the employee's broader circumstances. Some fields may be absent when evidence is limited.", "Confidence labels describe a model-generated signal level; they are not a calibrated probability that an assertion is true. A visible quote helps locate a passage, but does not guarantee the interpretation drawn from it."]},
+        {"heading": "How to use it responsibly", "paragraphs": ["Read the source transcript before using the section. Ask an open, non-leading question to check your understanding and allow the employee to correct the account. Record only facts you have confirmed through the appropriate process.", "If the page shows no data, do not interpret that as a positive or negative result. It means the relevant analysis field is not available for this conversation."]}
+      ],
+      "related": ["analysis", "confidence", "limitations"]
+    },
+    "analysis/behavioural-intelligence": {
+      "path": "analysis/behavioural-intelligence",
+      "title": "Behavioural Intelligence",
+      "group": "Understanding the analysis",
+      "description": "How VooHr surfaces possible behavioural patterns from a conversation transcript.",
+      "intro": "Behavioural Intelligence describes patterns the model believes may appear in the words provided. It is not a personality profile and should not be treated as a fact about an employee.",
+      "sections": [
+        {"heading": "What it shows", "paragraphs": ["The generated step may summarize observed behaviour, offer an interpretation, point to supporting evidence, give an alternative interpretation, and provide a qualitative confidence label. The interface can also surface selected behavioural interpretations in its overview panel. It uses the conversation transcript rather than independently collected behavioural data.", "The model is asked to avoid definitive labels and to ground observations in text. Still, the model may miss context, mistake a speech pattern for intent, or repeat assumptions in the source transcript."]},
+        {"heading": "Separate observation from interpretation", "paragraphs": ["An observation should be something you can point to in the record, such as a phrase or a change in topic. An interpretation is one possible explanation for that observation. The latter is less certain and should be checked with the employee, not written down as a confirmed cause.", "Signal strength labels are descriptive categories in the generated result. They do not supply an independently calibrated confidence percentage or establish that a behavioural pattern is recurring across time."]},
+        {"heading": "Review before acting", "paragraphs": ["Open the source transcript and verify the quote and speaker. Consider other reasonable readings, especially where the transcript is short or language is mixed. If the evidence does not support a conclusion, set it aside rather than forcing a pattern.", "This analysis cannot diagnose, assess personality, or establish misconduct. Human judgement and your organization's fair-process requirements remain essential."]}
+      ],
+      "related": ["analysis", "root-cause", "confidence", "limitations"]
+    },
+    "analysis/root-cause": {
+      "path": "analysis/root-cause",
+      "title": "Root Cause",
+      "group": "Understanding the analysis",
+      "description": "Understand the AI-generated possible triggers and missing information in Root Cause.",
+      "intro": "Root Cause offers possible explanations for what was discussed in one conversation. A plausible explanation in the output is a hypothesis to check, not a verified cause.",
+      "sections": [
+        {"heading": "What it shows", "paragraphs": ["The generated section may name a primary trigger, secondary contributors, evidence, missing information, a reasoning summary, and possible next actions. Its source is the transcript sent for analysis, not an investigation across all records or a direct interview conducted by the system.", "The model may connect statements that are not causally related or overstate what a short exchange can establish. A well-written narrative can still be speculative, and a missing-information field does not mean the system has found every gap."]},
+        {"heading": "Why causes are uncertain", "paragraphs": ["A transcript records only selected words from a particular setting. It may leave out workload, workplace events, health, personal preferences, organizational context, or information the employee did not choose to share. These factors can change the meaning of what was said.", "A confidence label or quoted passage can help you find the basis for a suggestion, but neither establishes causation. Root-cause statements are probabilistic model output and should not be copied into a formal record as confirmed facts without verification."]},
+        {"heading": "Check the hypothesis", "paragraphs": ["Compare the explanation with the source text and what you know from legitimate, relevant records. Ask the employee what else may be contributing and give them room to disagree. Keep more than one explanation open until there is reliable evidence.", "Use the result to prepare a thoughtful question, not to decide an employment outcome. If the evidence is sparse or conflicting, say so and gather appropriate context through your normal HR process."]}
+      ],
+      "related": ["analysis", "behavioural-intelligence", "action-blueprint", "limitations"]
+    },
+    "analysis/action-blueprint": {
+      "path": "analysis/action-blueprint",
+      "title": "Action Blueprint",
+      "group": "Understanding the analysis",
+      "description": "Review generated action suggestions, their transcript source, and their limits.",
+      "intro": "The Action Blueprint turns model interpretations into possible next steps. Suggestions are drafts for HR consideration; VooHr does not carry them out for you.",
+      "sections": [
+        {"heading": "What it may contain", "paragraphs": ["The generated step can include immediate and this-week actions, manager and employee actions, an environmental consideration, a success measure, an expected outcome, and a reason for the suggestion. The content comes from the selected conversation transcript and the model's interpretation of it.", "The suggestions may be generic, impractical, based on an incorrect inferred cause, or unsuitable for your policies. A proposed success measure is not a system-tracked KPI unless you separately record and measure it."]},
+        {"heading": "Review feasibility and fairness", "paragraphs": ["Before using an action, check whether the source supports it, whether the employee has been heard, and whether the action fits their role and circumstances. Separate commitments the employee actually made from ideas the model proposed. Do not represent suggested action as agreement.", "If you decide to proceed, discuss the step with the employee and record a commitment only when it has been explicitly confirmed. A visible Set reminder button in the five-step analysis is visual-only; it does not create a reminder or calendar event."]},
+        {"heading": "Follow through outside the suggestion", "paragraphs": ["Use the actual conversation-memory and meeting tools to save confirmed commitments or follow-ups where those features are available. Set due dates and owners explicitly there, then review the saved record to confirm it persisted.", "The analysis does not automatically modify employee records, send an action to a manager, or schedule a meeting. You remain responsible for permissions, documentation, and follow-up."]}
+      ],
+      "related": ["analysis", "actions", "reminders", "limitations"]
+    },
+    "analysis/conversation-strategy": {
+      "path": "analysis/conversation-strategy",
+      "title": "Conversation Strategy",
+      "group": "Understanding the analysis",
+      "description": "Use VooHr's generated conversation goals and prompts as editable preparation, not scripts to follow blindly.",
+      "intro": "Conversation Strategy offers possible goals, focus areas, opening and follow-up questions, replies, and listening cues. These are generated suggestions, not a required script or an automated conversation.",
+      "sections": [
+        {"heading": "What the suggestions use", "paragraphs": ["The model creates this section from the transcript and its preceding analysis. It may include a conversation goal, focus, example questions, a possible response, a suggested reply, things to listen for, and an indicator of success.", "A proposed question may assume facts not established in the conversation or may sound unnatural in your setting. A predicted employee response is only an example generated by the model; it is not evidence of what the employee thinks or will say."]},
+        {"heading": "Adapt before speaking", "paragraphs": ["Verify the context, replace any leading premise, and use language that fits the employee and your relationship. Ask one clear question at a time, listen to the answer, and allow the employee to correct the record. Do not treat the model's suggested response as a script the employee should match.", "The prompts are generated content, not connected to a live interview, calendar, or employee messaging action. Hardcoded probe questions elsewhere in the view are not functioning generated recommendations."]},
+        {"heading": "Define success with the people involved", "paragraphs": ["A generated success indicator is a suggestion, not a stored outcome metric. Agree with the employee on a practical next step and how you will know whether it helped. Record a commitment only after confirming the wording, owner, and due date.", "If important facts are missing, use a clarifying conversation rather than drawing a conclusion from the generated strategy."]}
+      ],
+      "related": ["analysis", "actions", "psychological-safety", "limitations"]
+    },
+    "scores": {
+      "path": "scores",
+      "title": "Scores explained",
+      "group": "Understanding the analysis",
+      "description": "Learn which score types appear in VooHr and why they should be interpreted cautiously.",
+      "intro": "VooHr displays several numbers and signal labels that come from different sources. They are not interchangeable and do not provide a diagnosis or a definitive prediction about a person.",
+      "sections": [
+        {"heading": "Two different score sources", "paragraphs": ["The employee directory's wellness score and derived attrition-risk percentage come from a rule-based function using available overtime, absence, performance-change, missed-deadline, and recent engagement-survey signals. Missing inputs do not apply their penalty. This is distinct from the conversation analysis, which is generated by a language model from transcript text.", "The analysis may also contain burnout-index and attrition-risk values, and the workspace can display a psychological-safety score. Review the labels and source before comparing numbers. A score from one conversation is not the same thing as the directory's rule-based roll-up."]},
+        {"heading": "What a number cannot establish", "paragraphs": ["Scores compress context and can mislead when data is missing, stale, inaccurate, or not representative. The AI-generated indicators are probabilistic and may be wrong. The rule-based directory score is mechanical: it reflects configured thresholds, not a complete assessment of wellbeing or intent to leave.", "Use the transcript or signal inputs and your own review. A blank or 'No data' state means an input or analysis result is unavailable; it does not mean zero risk, no concern, or a positive result."]},
+        {"heading": "Use with care", "paragraphs": ["Do not use a single indicator as the basis for hiring, promotion, discipline, termination, or another consequential decision. Check the underlying evidence, confirm data quality, and give the employee a fair opportunity to share context.", "The linked pages describe the implementation and limitations of each measure in more detail."]}
+      ],
+      "related": ["burnout-index", "attrition-risk", "safety-score", "confidence", "limitations"]
+    },
+    "scores/burnout-index": {
+      "path": "scores/burnout-index",
+      "title": "Burnout index",
+      "group": "Understanding the analysis",
+      "description": "Understand the conversation-derived burnout indicator and separate rule-based wellness scoring.",
+      "intro": "The label 'burnout index' can refer to an indicator in a generated conversation analysis. It is not a clinical measure and must not be treated as an assessment of an employee's health.",
+      "sections": [
+        {"heading": "Where it comes from", "paragraphs": ["The analysis payload can include a burnout-index value under its risks section. The language model generates that value from the transcript text supplied for that run, subject to the output validation and storage flow. It is therefore about one conversation and may be absent when the model provides no usable evidence.", "Separately, the directory's wellness score uses a rule-based calculation. One input is overtime hours in the trailing three weeks, with specified penalties at configured thresholds; the page may also display a burnout-related indicator derived from other employee signals. Do not conflate these sources."]},
+        {"heading": "What it does not say", "paragraphs": ["A transcript-derived number cannot diagnose burnout or determine its cause. It cannot show whether a person's experience is persistent, whether the account is complete, or whether workplace and personal factors have been considered.", "The directory's rule-based result is only as complete as its inputs. New employee records initialize several signals to zero and the engagement score to no value, so verify that relevant fields are maintained before interpreting the result."]},
+        {"heading": "How to review", "paragraphs": ["Read the source transcript or underlying signal inputs and look for evidence, dates, and missing context. Ask the employee about their experience without presenting a number as a conclusion. Where the measure conflicts with what the employee says or other reliable evidence, investigate the discrepancy rather than preferring the score.", "See Scores explained and What the AI can and cannot tell you before using any indicator in an HR discussion."]}
+      ],
+      "related": ["scores", "safety-score", "limitations"]
+    },
+    "scores/attrition-risk": {
+      "path": "scores/attrition-risk",
+      "title": "Attrition risk",
+      "group": "Understanding the analysis",
+      "description": "Understand why VooHr's attrition risk is an indicator rather than a prediction.",
+      "intro": "VooHr can show an attrition-risk percentage from the employee score calculation and a separate model-generated risk in conversation analysis. Neither is a reliable prediction of an individual's future decision.",
+      "sections": [
+        {"heading": "Directory calculation", "paragraphs": ["The rule-based employee scoring function computes attrition_risk_pct as 100 minus wellness_score, bounded between zero and one hundred. Wellness starts at 100 and configured penalties or a small survey adjustment depend on overtime, absence, performance change, missed deadlines, and engagement survey score.", "This is a deterministic transformation of those inputs, not a model trained to forecast resignations. Missing signals are not penalized, so an apparently low risk can reflect absent data rather than evidence that an employee plans to stay."]},
+        {"heading": "Conversation analysis value", "paragraphs": ["The AI analysis may also provide an attrition-risk field in the risks section. That value is generated from one transcript, so it may capture a topic or phrase without seeing broader context, and it can be mistaken. It is not the same calculation as the directory value.", "Do not compare or combine these percentages as if they were calibrated on a shared scale. Check which screen and source produced the value before discussing it."]},
+        {"heading": "Use it as a prompt, not a forecast", "paragraphs": ["Ask what data supports the indicator, when it was collected, and what may be missing. If you need to understand an employee's plans, ask them respectfully rather than presenting an AI estimate as their intention.", "Do not use an indicator by itself for an employment decision. Keep the conversation, organizational policies, privacy requirements, and human judgement at the center."]}
+      ],
+      "related": ["scores", "burnout-index", "limitations"]
+    },
+    "scores/safety-score": {
+      "path": "scores/safety-score",
+      "title": "Safety score",
+      "group": "Understanding the analysis",
+      "description": "How to interpret a psychological-safety score shown for one analyzed conversation.",
+      "intro": "A safety score in the Analysis View is a generated indicator about the transcript, not a survey of an employee or a measured property of a workplace.",
+      "sections": [
+        {"heading": "What appears in the product", "paragraphs": ["The conversation analysis can include a safety_score and related evidence, defensive-behaviour information, and a qualitative confidence label. The interface displays the number when it can parse it and may show an evidence phrase from the analysis. A separate phrasing review can assess HR wording and offer alternatives.", "These values originate in language-model output based on the transcript. They are not collected through a validated safety questionnaire and are not a clinical or organizational assessment."]},
+        {"heading": "What changes the result", "paragraphs": ["The transcript's accuracy, completeness, speaker attribution, language, cultural context, and the specific topic discussed may all affect what the model returns. A single conversation cannot represent every interaction or a person's experience over time.", "The interface may show an unavailable state when the relevant result is missing. Do not interpret an absent score as either safe or unsafe, and do not convert the number to a probability without an independently validated basis."]},
+        {"heading": "Discuss the underlying experience", "paragraphs": ["Check any cited phrase and ask the employee open questions about how the conversation felt. A score can help you decide what to explore, but the employee's account and the surrounding facts matter more than the display.", "Use care with sensitive information and avoid making adverse decisions from this indicator alone."]}
+      ],
+      "related": ["scores", "psychological-safety", "confidence", "limitations"]
+    },
+    "scores/confidence": {
+      "path": "scores/confidence",
+      "title": "Confidence",
+      "group": "Understanding the analysis",
+      "description": "Understand VooHr's qualitative confidence labels and why they are not probabilities.",
+      "intro": "Some analysis sections show labels such as Strong Signal, Moderate Signal, or Light Signal. These labels describe the model's output and do not certify that the underlying claim is true.",
+      "sections": [
+        {"heading": "What the labels mean", "paragraphs": ["The analysis schema normalizes some confidence values into qualitative signal labels. The workspace displays these labels beside generated interpretation or evidence. A label can help signal that the model presents an item more or less tentatively, but code does not define these strings as calibrated statistical probabilities.", "The label applies to generated text in context; it is not a confidence rating assigned by a human reviewer, and it is not a measure of the employee's credibility."]},
+        {"heading": "What the labels cannot fix", "paragraphs": ["A Strong Signal label does not correct a transcription error, prove that a quotation is complete, establish causation, or account for information outside the transcript. Conversely, a Light Signal does not establish that the topic is unimportant.", "The model may include no label at all. Empty or missing confidence information should not be interpreted as a hidden score or a neutral conclusion."]},
+        {"heading": "Verify each statement", "paragraphs": ["Open the transcript, check the exact wording and speaker, and review any additional evidence independently. If there is no reliable support, do not rely on the generated interpretation regardless of its label.", "Use confidence as a reason to ask better questions, never as a substitute for fact-checking, employee input, or human judgement."]}
+      ],
+      "related": ["scores", "analysis", "accuracy", "limitations"]
+    },
+    "limitations": {
+      "path": "limitations",
+      "title": "What the AI can and cannot tell you",
+      "group": "Understanding the analysis",
+      "description": "Important boundaries for VooHr's probabilistic conversation analysis and HR decision-making.",
+      "intro": "VooHr's generated analysis is decision support, not a diagnosis, investigation, or source of verified facts. It can help organize a conversation, but it can also misunderstand it.",
+      "sections": [
+        {"heading": "One conversation is limited evidence", "paragraphs": ["The analysis is based on a single transcript selected for the request. It does not independently interview the employee, verify events, observe workplace conditions, or know what was left unsaid. A score or pattern may reflect only this conversation and may change with different text or language.", "Transcripts above 50,000 characters are truncated before they are sent for analysis. The full saved transcript remains separate, but the model does not receive text beyond that request limit. Review whether important context falls near or after the cutoff."]},
+        {"heading": "No diagnosis or clinical label", "paragraphs": ["VooHr does not provide a clinical diagnosis through this analysis. Generated labels are not a mental-health assessment, personality assessment, or professionally validated instrument. A risk indicator is not a statement about what an employee will do.", "Even if a generated paragraph sounds certain, its claims remain probabilistic. The model can produce plausible but incorrect interpretations, unsupported causes, or suggestions that do not fit your workplace."]},
+        {"heading": "Human judgement stays with HR", "paragraphs": ["Verify statements against the transcript and reliable context, ask the employee for their perspective, and follow your organization's policies and applicable requirements. Do not base a consequential employment decision on a model output or one conversation score alone.", "When no evidence is available, 'No data' is intentional: the interface is not substituting a zero or claiming that no concern exists. Treat missingness as a reason to check inputs, not draw a conclusion."]}
+      ],
+      "related": ["analysis", "scores", "accuracy", "security"]
+    },
+    "accuracy": {
+      "path": "accuracy",
+      "title": "Why does my analysis look wrong or fail?",
+      "group": "Understanding the analysis",
+      "description": "Troubleshoot failed analysis, a stuck Analyzing state, poor transcripts, and missing data.",
+      "intro": "A generated result depends on the text that reached the analysis request and whether the provider returned a usable response. Check the source transcript first, then retry when the session is marked failed.",
+      "sections": [
+        {"heading": "Stuck on Analyzing", "paragraphs": ["A session left in processing for more than 180 seconds is considered stale and is marked failed when a session read performs the recovery check. This handles a request that ended without saving a final status; it does not mean all analyses finish within 180 seconds.", "Once the session is failed, the workspace can offer a retry. Avoid starting repeated requests while a session is still processing. Provider errors, timeouts, invalid model output, network interruption, or request throttling can prevent a result from being saved."]},
+        {"heading": "Poor transcript or wrong language", "paragraphs": ["Review the transcript for missing phrases, names, negation, punctuation, and speaker attribution. Correct text in the editable transcript and save the change before requesting another analysis. Speech recognition uses a language hint; unknown hints fall back to English in the configured Deepgram provider.", "The analysis language is a separate setting. Choosing another output language triggers a new analysis rather than translating the current one. Analysis requests use no more than the first 50,000 transcript characters, even when the saved transcript is longer."]},
+        {"heading": "Missing data is not zero", "paragraphs": ["'No data' is intentional when a field has no available value or the analysis did not return that item. It should not be read as no risk or a clean result. Some employee score inputs begin empty or with initialized values, so confirm that the source records are maintained.", "If a retry also fails, preserve the session ID and note the displayed error for your administrator. Do not repeatedly edit away context just to produce a score."]}
+      ],
+      "related": ["transcription", "analysis", "confidence", "limitations"]
+    },
+    "actions": {
+      "path": "actions",
+      "title": "Action blueprint and conversation strategy",
+      "group": "Acting on it",
+      "description": "Turn generated action ideas into human-reviewed conversations and confirmed follow-up records.",
+      "intro": "The Action Blueprint and Conversation Strategy are generated suggestions from the transcript. They do not execute actions, contact an employee, or create a commitment automatically.",
+      "sections": [
+        {"heading": "Review before deciding", "paragraphs": ["Check each suggestion against the original transcript, what the employee has said, and your organizational context. Separate observable statements from the model's interpretation. A proposed task, outcome, script, or question can be unsuitable or based on an incorrect assumption.", "Adapt any phrasing so it is respectful, open, and appropriate. Avoid treating generated text as a mandatory script or presenting an AI prediction as the employee's actual view."]},
+        {"heading": "Record only confirmed commitments", "paragraphs": ["Conversation memory supports saved openers, questions, notes, commitments, and follow-ups. A commitment or follow-up is stored as pending until its status is explicitly changed; it may have an owner, due date, and priority. Creating the memory record is the confirmation point in the current implementation.", "The analysis output does not automatically populate that record. Confirm the exact wording, owner, date, and employee understanding before saving anything as agreed."]},
+        {"heading": "Do not rely on visual-only controls", "paragraphs": ["The Set reminder control on the five-step analysis page is visual-only: it changes its appearance but does not schedule a reminder. Progress autosaved is static text in that screen and does not establish that progress has been saved.", "Use the dedicated supported follow-up and meeting workflows and verify the resulting record. Your HR team remains responsible for checking completion and handling exceptions."]}
+      ],
+      "related": ["analysis/action-blueprint", "analysis/conversation-strategy", "reminders", "accuracy"]
+    },
+    "reminders": {
+      "path": "reminders",
+      "title": "Commitments and reminders",
+      "group": "Acting on it",
+      "description": "How confirmed follow-ups and meeting reminders are stored and delivered in VooHr.",
+      "intro": "VooHr has stored commitment and follow-up records and a meeting reminder delivery workflow. These are distinct from the nonfunctional Set reminder control shown in the Analysis View.",
+      "sections": [
+        {"heading": "Commitments and follow-ups", "paragraphs": ["Conversation memory can store an HR-confirmed commitment or follow-up linked to an employee and, where supplied, a session. Records can include content, due date, priority, owner, and status. Newly created trackable items begin pending; overdue is derived when a pending or in-progress item's due date has passed.", "The model does not create these records automatically. Confirm the promise or task with the people involved, then save an accurate summary. Update status when work changes; do not assume a saved item has been completed."]},
+        {"heading": "Meeting reminders", "paragraphs": ["A separate reminder service can surface reminders for scheduled meetings and open follow-ups. Depending on configured account destinations and service settings, it can create in-app notifications and attempt email or WhatsApp delivery; external delivery can fail and is retried with bounded backoff.", "Users can opt out of meeting email/WhatsApp reminders. In-app reminders are not gated by that preference. Do not assume every channel is configured or that a sent notification guarantees the recipient read it."]},
+        {"heading": "Important interface distinction", "paragraphs": ["The Set reminder button in the five-step Analysis View is explicitly visual-only. Clicking it toggles its label and pressed state in the browser; it does not call a reminder API, create a calendar event, or persist the setting.", "For an actual follow-up, use the supported meeting/reminder flow and confirm the saved item in the appropriate list."]}
+      ],
+      "related": ["actions", "analysis/action-blueprint", "meetings", "roles"]
+    },
+    "surveys-reports": {
+      "path": "surveys-reports",
+      "title": "Surveys and reports",
+      "group": "Acting on it",
+      "description": "What VooHr's survey templates, responses, and score summaries actually provide.",
+      "intro": "VooHr supports HR-created survey templates and recorded employee responses. Survey-derived engagement data can feed the directory's rule-based wellness calculation; it is not an anonymous research service.",
+      "sections": [
+        {"heading": "Survey templates and responses", "paragraphs": ["Authorized signed-in users can create, update, publish, archive, and list survey templates, then record structured answers for an employee. Question types include five- or ten-point Likert scales, numeric values, and text. Templates are organization-scoped and responses are attached to employee records.", "The response workflow stores answers and computes an engagement score from eligible numeric questions. Updating or deleting responses can refresh the employee's latest engagement value. Check the survey screen's actual permissions before collecting sensitive answers."]},
+        {"heading": "How survey data is used", "paragraphs": ["The most recent survey response's normalized engagement score is copied to the employee signal used by the existing wellness calculation. The scoring function gives only a small configured adjustment for high or low engagement values; other missing signals are handled separately.", "A survey score is not a clinical measure and does not establish an employee's overall engagement. Response selection, question wording, participation, and recency all affect how useful it is."]},
+        {"heading": "Reports and limits", "paragraphs": ["VooHr includes employee summaries, meeting and conversation views, alerts, and analysis outputs. Do not assume a report is an audited export or a complete record of all organization activity. Confirm what screen and filters are active before relying on counts or averages.", "There is no claim here about anonymity or survey response confidentiality. [CONFIRM: survey privacy and reporting policy for customer deployments] Commercial and support details are not inferred from product code: [CONFIRM: current pricing] [CONFIRM: refund policy] [CONFIRM: support response times]"]}
+      ],
+      "related": ["scores", "directory", "security", "data-requests"]
+    },
+    "roles": {
+      "path": "roles",
+      "title": "Roles and permissions",
+      "group": "Team and account",
+      "description": "How administrator and manager access are scoped in the current application.",
+      "intro": "VooHr has administrator and manager roles with different employee-data access. Permissions are enforced by the server for protected routes; the exact controls depend on the operation.",
+      "sections": [
+        {"heading": "Administrators", "paragraphs": ["An administrator can access the organization-scoped employee roster and administrator-only actions such as employee deletion and manager invitations. New email sign-up creates an administrator account. Administrative access can include sensitive employee and account information, so use it only for people who need it.", "Some administrator flows require time-based two-factor authentication. Role checks are performed server-side and do not rely only on hiding a button in the page."]},
+        {"heading": "Managers", "paragraphs": ["A manager's employee queries are scoped to their linked employee record and direct reports. A missing or malformed manager link fails closed rather than widening access to the whole organization. Managers can access permitted records for their scope but cannot permanently delete employees through the employee-delete endpoint.", "A manager should not assume they can see all organization conversations or survey records. Access rules apply in the APIs as well as in the interface; the data returned depends on the endpoint's scope checks."]},
+        {"heading": "Check access before sharing", "paragraphs": ["Do not share account credentials to work around a role restriction. Ask an administrator to review the user's role and linked employee record if the expected team list is missing.", "Specific legal or contractual access commitments are not established by the role code alone. [CONFIRM: customer-specific role and data-access policy]"]}
+      ],
+      "related": ["account", "directory", "security", "data-requests"]
+    },
+    "account": {
+      "path": "account",
+      "title": "Sign-in, 2FA and password",
+      "group": "Team and account",
+      "description": "Sign-in, authenticator setup, backup-code recovery, and the current password-reset limitation.",
+      "intro": "VooHr supports email/password and Google sign-in paths, and uses time-based one-time codes for two-factor verification in applicable accounts. Password-reset emails are not currently available.",
+      "sections": [
+        {"heading": "Sign in and password", "paragraphs": ["Email/password sign-in verifies the stored password hash and starts an authenticated session. Google sign-in is also implemented. If a password is entered incorrectly in the email flow, the application may use an emailed one-time code recovery path for the registered address.", "The Forgot password form does not send a reset link or change a password. Its backend responds that password reset emails are unavailable. If you cannot access your account, follow the message shown by that flow and contact the currently listed support address; do not expect an automated reset."]},
+        {"heading": "Two-factor authentication", "paragraphs": ["TOTP setup shows a QR code/URI for an authenticator app. After a valid code is verified, the account stores TOTP settings and generates ten single-use backup codes, shown once. Save those codes somewhere safe; the stored versions are hashed.", "During sign-in, a user who has lost their authenticator device can verify with an unused backup code. Each code can be used once. Regenerating backup codes invalidates the prior set and requires an already TOTP-verified session."]},
+        {"heading": "Keep recovery information safe", "paragraphs": ["Never send a password, authenticator secret, or backup code in a support request. If you still have an active verified session, review the security settings and regenerate backup codes if needed. Losing both the authenticator and all unused backup codes can prevent access.", "Password reset and account recovery policy beyond these implemented paths: [CONFIRM: account recovery process and support contact ownership]"]}
+      ],
+      "related": ["roles", "security", "data-requests"]
+    },
+    "directory": {
+      "path": "directory",
+      "title": "Employee directory and org chart CSV import",
+      "group": "Team and account",
+      "description": "Add, edit, remove, import, and export employee directory records in VooHr.",
+      "intro": "The directory stores employee details and reporting relationships. Administrators and managers have different access, and managers' employee data is scoped to their linked team.",
+      "sections": [
+        {"heading": "Add and update employees", "paragraphs": ["Employees can be added with individual records or in bulk from a CSV. Directory fields include name, email, phone, department, position, employment type, work mode, joining date, and reporting manager. Names and contact fields are encrypted in the employee record; work and organization fields are stored as separate document values.", "Check spelling, organization details, and the correct reporting relationship before saving. Updating a record changes provided values; it does not validate the organization chart against your HR system."]},
+        {"heading": "CSV import and org chart links", "paragraphs": ["CSV import reads UTF-8 data with an optional byte-order mark and expects named columns such as name, email, department, position, and reports_to_email. It validates rows and can partially succeed: invalid rows are returned as failures while valid rows are created. A second pass resolves manager emails against the same import batch or existing employees.", "An unresolved or self-referential manager is returned as a warning rather than silently linked. Review the results and fix relationships after import. Import size and row limits are enforced by the server, so a very large file can be rejected or capped."]},
+        {"heading": "Remove or export records", "paragraphs": ["Employee export downloads a CSV within the caller's allowed scope and logs a bulk export event. Employee deletion is administrator-only and deletes that employee's sessions and notifications along with the employee record. Do not assume this removes every associated record in every subsystem; confirm before promising complete erasure.", "Review the export contents and access permissions carefully because it contains personal information."]}
+      ],
+      "related": ["roles", "security", "data-requests"]
+    },
+    "security": {
+      "path": "security",
+      "title": "How your data is protected",
+      "group": "Privacy and security",
+      "description": "A code-grounded overview of VooHr field encryption, access scoping, and external processing.",
+      "intro": "The application implements field-level encryption for selected personal details and organization-scoped access checks. Those mechanisms do not by themselves establish a certification or guarantee every data-handling outcome.",
+      "sections": [
+        {"heading": "Selected fields are encrypted", "paragraphs": ["Employee and user name/contact values are encrypted with AES-256-GCM using a fresh data-encryption key per record. The data key is wrapped and unwrapped through Google Cloud KMS; the encrypted field values and wrapped key are stored with the record. This is field-level protection, not a claim that every database field or every stored file is encrypted in the same way.", "The KMS integration depends on deployment credentials and configuration. Access to decrypted values occurs in application code when an authorized workflow needs them."]},
+        {"heading": "Access and audit controls", "paragraphs": ["API routes generally scope records to an organization. Manager employee queries are further limited to the manager's linked employee and direct reports; invalid links fail closed. Some sensitive actions, including exports and deletions, create audit events. Sign-in sessions and TOTP checks are also implemented.", "These controls should not be confused with independent security certification, a penetration-test claim, or a guarantee that no authorized user can access personal data. [CONFIRM: current independent security certifications and audit status]"]},
+        {"heading": "External services and storage", "paragraphs": ["Audio transcription, image text extraction, language-model analysis, email, WhatsApp, and encryption can involve separately configured services. The code selects providers from application configuration, but the applicable provider, region, retention, and use-of-data terms may vary by deployment.", "Provider data-processing terms, retention periods, and the production provider configuration are not verified by this code review. [CONFIRM: deployed AI, speech, OCR, storage providers and their data policies]"]}
+      ],
+      "related": ["data-requests", "roles", "meetings", "analysis"]
+    },
+    "data-requests": {
+      "path": "data-requests",
+      "title": "Data access, export and deletion",
+      "group": "Privacy and security",
+      "description": "What export and deletion actions exist in VooHr and what is not established by the code.",
+      "intro": "VooHr has specific employee export and deletion operations, but those operations do not establish a universal data-subject request process or full deletion from every system.",
+      "sections": [
+        {"heading": "Available exports", "paragraphs": ["The employee directory offers CSV export of employee records in the caller's allowed scope. The bulk export is audit-logged. There are also employee-level export paths and other product screens that display session, survey, meeting, or memory information, but do not assume those screens form a complete account-wide archive.", "Handle downloaded data as sensitive, share it only through approved channels, and check that you selected the intended organization, scope, and filters."]},
+        {"heading": "Available deletion actions", "paragraphs": ["An administrator can delete an employee record through the directory API. That operation also deletes sessions and notifications attached to the employee before deleting the employee record. Sessions can be deleted through their own endpoint; conversation-memory and survey records have their own operations.", "These are separate application records and endpoints. The employee-delete code does not establish deletion from backups, logs, third-party providers, email, WhatsApp, or all related collections. Do not promise complete erasure based only on one delete action."]},
+        {"heading": "Requests and retention", "paragraphs": ["The code reviewed for this guide does not define a universal user-facing data-access request form, deletion-request workflow, retention schedule, or response deadline. Follow your organization's approved privacy process and consult the existing Privacy Policy.", "Customer request process, retention and backup deletion timelines: [CONFIRM: data request and retention policy]"]}
+      ],
+      "related": ["security", "directory", "account"]
+    },
+    "faq": {
+      "path": "faq",
+      "title": "Frequently asked questions",
+      "group": "FAQ",
+      "description": "Answers to common questions about VooHr meetings, analysis, actions, accounts, and privacy.",
+      "intro": "Quick answers to common product questions. Each answer links to a detailed guide; where a policy or deployment fact is unknown, the answer says so.",
+      "sections": [],
+      "related": ["getting-started", "meetings", "analysis", "actions", "account", "security"]
+    }
+  },
+  "groups": [
+    {"label": "Start here", "card_title": "Start here", "card_description": "Prepare a transcript and understand the basic workflow.", "items": [
+      {"path": "getting-started", "title": "How VooHr works"},
+      {"path": "meetings", "title": "Recording and uploading a meeting"},
+      {"path": "transcription", "title": "Languages and transcription"}
+    ]},
+    {"label": "Understanding the analysis", "card_title": "Understanding the analysis", "card_description": "Learn what analysis shows, where it comes from, and what its limits are.", "items": [
+      {"path": "analysis", "title": "The 5-step Analysis View", "children": [
+        {"path": "analysis/psychological-safety", "title": "Psychological Safety"},
+        {"path": "analysis/behavioural-intelligence", "title": "Behavioural Intelligence"},
+        {"path": "analysis/root-cause", "title": "Root Cause"},
+        {"path": "analysis/action-blueprint", "title": "Action Blueprint"},
+        {"path": "analysis/conversation-strategy", "title": "Conversation Strategy"}
+      ]},
+      {"path": "scores", "title": "Scores explained", "children": [
+        {"path": "scores/burnout-index", "title": "Burnout index"},
+        {"path": "scores/attrition-risk", "title": "Attrition risk"},
+        {"path": "scores/safety-score", "title": "Safety score"},
+        {"path": "scores/confidence", "title": "Confidence"}
+      ]},
+      {"path": "limitations", "title": "What the AI can and cannot tell you"},
+      {"path": "accuracy", "title": "Why does my analysis look wrong or fail?"}
+    ]},
+    {"label": "Acting on it", "card_title": "Acting on it", "card_description": "Record confirmed follow-ups and understand reminder and survey workflows.", "items": [
+      {"path": "actions", "title": "Action blueprint and conversation strategy"},
+      {"path": "reminders", "title": "Commitments and reminders"},
+      {"path": "surveys-reports", "title": "Surveys and reports"}
+    ]},
+    {"label": "Team and account", "card_title": "Team and account", "card_description": "Manage roles, sign-in, and employee records.", "items": [
+      {"path": "roles", "title": "Roles and permissions"},
+      {"path": "account", "title": "Sign-in, 2FA and password"},
+      {"path": "directory", "title": "Employee directory and org chart CSV import"}
+    ]},
+    {"label": "Privacy and security", "card_title": "Privacy and security", "card_description": "Understand protection mechanisms and available data operations.", "items": [
+      {"path": "security", "title": "How your data is protected"},
+      {"path": "data-requests", "title": "Data access, export and deletion"}
+    ]}
+  ],
+  "legal": [
+    {"title": "Privacy Policy", "url": "/privacy"},
+    {"title": "Terms of Service", "url": "/terms"}
+  ],
+  "faq": [
+    {"id": "what-is-voohr", "group": "General", "question": "What is VooHr for?", "answer": "VooHr combines employee records, meeting/conversation transcripts, generated insights, and follow-up records in an HR workspace. It is decision support; a person reviews the source and decides what action is appropriate.", "article": "getting-started"},
+    {"id": "does-ai-decide", "group": "General", "question": "Does VooHr make HR decisions for me?", "answer": "No. The analysis suggests possible interpretations and actions from text, but it does not make employment decisions or verify the underlying events. HR remains responsible for checking evidence and applying human judgement.", "article": "limitations"},
+    {"id": "record-a-meeting", "group": "Meetings", "question": "Can I record a meeting in VooHr?", "answer": "The Dictation page records browser microphone audio as WebM after you grant microphone permission. Follow your organization's consent and recording rules before starting.", "article": "meetings"},
+    {"id": "upload-audio", "group": "Meetings", "question": "Can I upload an audio file?", "answer": "Yes. The interface accepts MP3, WAV, M4A, OGG, and WEBM up to 25 MB, then sends the file for transcription. Review the transcript before saving.", "article": "meetings"},
+    {"id": "upload-transcript", "group": "Meetings", "question": "Can I upload an existing transcript?", "answer": "You can upload a plain-text .TXT file or paste/type text into the transcript field. The TXT file is read in the browser and is not subject to a separate client-side file-size check.", "article": "meetings"},
+    {"id": "upload-screenshot", "group": "Meetings", "question": "Can VooHr read a screenshot or photo?", "answer": "The image upload accepts PNG, JPG/JPEG, and WEBP up to 10 MB and uses OCR to extract visible text. It does not transcribe spoken audio from an image, so review the extracted text.", "article": "meetings"},
+    {"id": "audio-storage", "group": "Meetings", "question": "Is my recorded audio kept after transcription?", "answer": "The browser recording flow sends audio for transcription and then saves the transcript as a session; it does not automatically save a separate audio archive in that flow. Other intake paths may differ, so check the session source and current deployment behavior.", "article": "meetings"},
+    {"id": "edit-transcript", "group": "Meetings", "question": "Can I edit the transcript before analysis?", "answer": "Yes. The transcript field is editable before saving, and a saved session can be updated with edited text. The edited transcript is preferred for analysis when present.", "article": "transcription"},
+    {"id": "languages", "group": "Meetings", "question": "Which languages can VooHr transcribe?", "answer": "The configured speech provider supports a set of language hints including English, Hindi, Hinglish, Japanese, Korean, Chinese, and others. Recognition quality and the active provider settings can vary; check the language guide and verify the transcript.", "article": "transcription"},
+    {"id": "analysis-duration", "group": "Analysis", "question": "How long does analysis take?", "answer": "There is no fixed completion-time promise in the code; provider response and network conditions affect duration. A processing session that remains stale for over 180 seconds is marked failed on a later read, and retry is possible.", "article": "accuracy"},
+    {"id": "rerun-analysis", "group": "Analysis", "question": "Can I run an analysis again?", "answer": "Yes. A failed analysis can be retried, and an edited transcript can be analyzed again. The server stores results by output language, so a new-language run does not replace the earlier language result.", "article": "accuracy"},
+    {"id": "other-language", "group": "Analysis", "question": "Can I analyze the same conversation in another language?", "answer": "Yes, for languages enabled in the current deployment. This requests another model analysis rather than translating the existing result, so compare the output with the same source transcript.", "article": "transcription"},
+    {"id": "score-meaning", "group": "Analysis", "question": "What do the scores mean?", "answer": "Different screens use different sources: a rule-based employee wellness calculation and transcript-derived AI indicators. They are not equivalent measurements or predictions; read the score guide and check the underlying data.", "article": "scores"},
+    {"id": "no-data", "group": "Analysis", "question": "Why does a score or section say No data?", "answer": "'No data' is intentional when the relevant field or analysis result is unavailable. It does not mean zero risk, no concern, or a positive result; check the source inputs.", "article": "accuracy"},
+    {"id": "analysis-accuracy", "group": "Analysis", "question": "Why does an analysis look wrong?", "answer": "Transcription errors, missing context, language mismatch, and probabilistic model interpretation can all affect a result. Check and edit the source transcript, then retry when appropriate.", "article": "accuracy"},
+    {"id": "diagnosis", "group": "Analysis", "question": "Does VooHr diagnose an employee?", "answer": "No. Analysis is decision support, not a diagnosis or clinical assessment, and its indicators come from one conversation. HR must verify evidence and use human judgement.", "article": "limitations"},
+    {"id": "long-transcript", "group": "Analysis", "question": "What if my transcript is very long?", "answer": "The full saved transcript is retained by the session workflow, but analysis sends at most the first 50,000 characters to the model. Content after that point is not part of that analysis request.", "article": "limitations"},
+    {"id": "reminder-action-button", "group": "Actions", "question": "Does Set reminder in Analysis View schedule a reminder?", "answer": "No. That control only changes its visual state and does not call the reminder API or persist a schedule. Use the actual meeting/follow-up workflow instead.", "article": "reminders"},
+    {"id": "commitments", "group": "Actions", "question": "Does AI create commitments automatically?", "answer": "No. Conversation memory items are created through a supported workflow and creation marks the item as confirmed. Review the wording with the people involved before saving it.", "article": "actions"},
+    {"id": "follow-up-status", "group": "Actions", "question": "How do I mark a commitment complete?", "answer": "Commitment and follow-up records have explicit statuses such as pending, in progress, completed, and cancelled. Update the stored item when its status changes; the analysis suggestion itself is not a tracked commitment.", "article": "reminders"},
+    {"id": "reminder-delivery", "group": "Actions", "question": "Are reminders sent by email or WhatsApp?", "answer": "The meeting reminder service can attempt email and WhatsApp delivery when the corresponding destination and deployment configuration exist. Delivery can fail; in-app notification and external delivery are separate channels.", "article": "reminders"},
+    {"id": "survey-use", "group": "Actions", "question": "What happens to survey responses?", "answer": "Survey responses are stored against an employee and a template. The latest normalized engagement score can feed the employee wellness calculation; the survey feature is not described as anonymous.", "article": "surveys-reports"},
+    {"id": "sign-in", "group": "Account and security", "question": "How can I sign in?", "answer": "The application implements email/password and Google sign-in paths. A wrong password may trigger an emailed one-time-code recovery flow for the registered address.", "article": "account"},
+    {"id": "two-factor", "group": "Account and security", "question": "Does VooHr support two-factor authentication?", "answer": "TOTP authenticator verification is implemented for applicable accounts. Setup generates ten single-use backup codes that are shown once, so store them safely.", "article": "account"},
+    {"id": "lost-authenticator", "group": "Account and security", "question": "What if I lose my authenticator?", "answer": "During login, an unused backup code can be used instead of the authenticator. Each code works once; if you have lost both the device and all codes, the code does not establish another recovery path.", "article": "account"},
+    {"id": "forgot-password", "group": "Account and security", "question": "Can I reset my password by email?", "answer": "Password-reset emails are not available in the current implementation. The Forgot password endpoint returns an explicit unavailable message rather than sending a reset link.", "article": "account"},
+    {"id": "manager-admin", "group": "Account and security", "question": "What is the difference between an administrator and a manager?", "answer": "Administrators can access the organization roster and certain administrative actions; managers are scoped to their linked employee and direct reports. Access is enforced by server-side route checks.", "article": "roles"},
+    {"id": "add-employee", "group": "Account and security", "question": "How can I add an employee?", "answer": "Employees can be added individually in the directory or created from a CSV import. CSV import validates rows and may partially succeed, so review both failed rows and reporting-relationship warnings.", "article": "directory"},
+    {"id": "remove-employee", "group": "Account and security", "question": "What happens when an employee is removed?", "answer": "Administrator-only employee deletion removes that employee record and associated sessions and notifications in the deletion operation. It does not establish removal from every possible log, backup, or external system.", "article": "directory"},
+    {"id": "csv-import", "group": "Account and security", "question": "Can I import an org chart from CSV?", "answer": "Yes. The CSV can include reports_to_email values; manager links are resolved against employees in the file or existing employees in the organization. Unresolved links are returned as warnings for review.", "article": "directory"},
+    {"id": "conversation-access", "group": "Privacy", "question": "Who can see conversations?", "answer": "Conversation and employee APIs use organization scoping, with manager access further scoped to their linked team where the route applies those checks. Exact visibility can vary by endpoint and role, so consult your administrator.", "article": "roles"},
+    {"id": "encryption", "group": "Privacy", "question": "Is employee data encrypted?", "answer": "Selected name and contact fields use AES-256-GCM field encryption, with per-record data keys wrapped using Cloud KMS. This does not establish that every field, transcript, database, or file uses the same encryption mechanism.", "article": "security"},
+    {"id": "storage", "group": "Privacy", "question": "Where is data stored and how long is it kept?", "answer": "The code uses a database and configured external services, but it does not establish a single deployment region or universal retention period. See the existing Privacy Policy and ask your administrator about the deployed configuration.", "article": "security"},
+    {"id": "delete-data", "group": "Privacy", "question": "Can I request deletion of all my data?", "answer": "Specific delete endpoints exist for employee, session, memory, and survey records, but no universal end-user deletion request workflow or full backup/provider purge guarantee is established here. Follow the existing privacy request process for your organization.", "article": "data-requests"},
+    {"id": "export-data", "group": "Privacy", "question": "Can I export employee data?", "answer": "The directory offers CSV export scoped to the caller's permitted employees, and bulk exports are audit-logged. It is not an account-wide data archive, so check the exported columns and records.", "article": "data-requests"},
+    {"id": "provider-policy", "group": "Privacy", "question": "Do AI providers use my data to train their models?", "answer": "That depends on the configured provider and its current terms. The source code does not verify provider data-use or retention policies; confirm the deployed provider and contract before making a claim.", "article": "security"}
+  ]
+}

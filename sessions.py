@@ -44,6 +44,11 @@ def _check_api_rate_limit(user_id_str: str, endpoint: str, max_events: int) -> t
 # Detection check fires. New employees with fewer analyzed syncs are skipped.
 DRIFT_WINDOW_SIZE = 3
 
+# How many times the drift window size to fetch before dropping fallback
+# (unparseable-analysis) sessions in Python. Keeps the window full when a
+# few of the most recent sessions were AI failures rather than real readings.
+_DRIFT_LOOKBACK_FACTOR = 3
+
 # ── Per-language analysis storage ────────────────────────────────────────
 # A session keeps ONE analysis per output language under ``analyses``, keyed by
 # language code (e.g. ``analyses["japanese"]``). ``analysis_language`` is only a
@@ -136,11 +141,58 @@ def session_risks(s) -> dict:
     """Return the ``risks`` block of the viewed analysis, always as a dict.
 
     The LLM occasionally returns "risks" as a list instead of an object, so
-    the shape is never trusted blindly.
+    the shape is never trusted blindly. A fallback (unparseable-response)
+    analysis is always reported as empty, so its placeholder zeros can never
+    be mixed into drift-detection windows or notifications.
     """
     analysis = session_analysis(s) or {}
+    if isinstance(analysis, dict) and analysis.get("is_fallback"):
+        return {}
     risks = analysis.get("risks") or {}
     return risks if isinstance(risks, dict) else {}
+
+
+def _as_risk_number(val):
+    """Return *val* as a finite 0-100 number, or None when it is not one.
+
+    Used by the wellness roll-up so a malformed LLM value can never raise
+    mid-arithmetic and can never be silently treated as 0 risk.
+    """
+    if val is None or isinstance(val, bool):
+        return None
+    if isinstance(val, (int, float)):
+        num = float(val)
+    elif isinstance(val, str):
+        try:
+            num = float(val.strip().rstrip("%").strip())
+        except (TypeError, ValueError):
+            return None
+    else:
+        return None
+    if num != num or num in (float("inf"), float("-inf")):
+        return None
+    return max(0.0, min(100.0, num))
+
+
+def is_fallback_analysis(analysis) -> bool:
+    """True when *analysis* is a provider fallback, not a real reading.
+
+    Fallbacks carry an explicit ``is_fallback`` marker (added when the
+    placeholder is built). Analyses written before that marker existed, and
+    normal analyses, both report False.
+    """
+    return isinstance(analysis, dict) and bool(analysis.get("is_fallback"))
+
+
+def session_has_fallback_analysis(s) -> bool:
+    """True when ANY language entry of this session is a fallback reading.
+
+    Checked across the whole per-language map (not just the viewed entry)
+    because a document may hold a real reading in one language and a
+    placeholder in another; either way the session cannot contribute a
+    trustworthy risk trend.
+    """
+    return any(is_fallback_analysis(a) for a in session_analyses(s).values())
 
 # Image OCR: only raster formats the vision provider understands, and a
 # ~10MB cap so a huge screenshot/photo can't blow up the request buffer.
@@ -461,6 +513,14 @@ def update_session(session_id: str):
     if "status" in data:
         valid_statuses = {"draft", "transcribed", "processing", "completed", "failed"}
         if data["status"] in valid_statuses:
+            # A client may move a session back to an earlier editable state or
+            # mark a failed one for retry, but it must never DECLARE itself
+            # "completed": completion is the server's verdict (an analysis
+            # exists and passed validation), and letting a client assert it
+            # would show a healthy-looking session with no analysis behind it.
+            if data["status"] == "completed":
+                if not (session_analysis(s) or {}):
+                    return jsonify({"error": "analysis_required_to_complete_session"}), 400
             set_fields["status"] = data["status"]
 
     if "audio" in data:
@@ -531,10 +591,23 @@ def analyze_session(session_id: str):
     # the LLM call.
     llm_transcript = transcript[:MAX_LLM_TRANSCRIPT_CHARS]
 
-    db.sessions.update_one(
-        {"_id": ObjectId(session_id)},
+    # ── Concurrency guard ───────────────────────────────────────────
+    # /analyze flips the session to "processing" and only this request writes
+    # the terminal status. Two overlapping requests (double-click, a retry
+    # fired before the first finished) would race: both would run an LLM call
+    # and both would write, so the stored analysis could be the older one while
+    # analysis_version counted two increments. The claim is therefore
+    # conditional — only the request that actually flips a non-processing
+    # session may proceed. A session left in "processing" by a killed worker
+    # is recovered by _demote_stale_processing on the next read.
+    claim = db.sessions.find_one_and_update(
+        {"_id": ObjectId(session_id), "status": {"$ne": "processing"}},
         {"$set": {"status": "processing", "updated_at": datetime.now(timezone.utc)}},
     )
+    if not claim:
+        return jsonify({
+            "error": "Analysis is already running for this session. Please wait."
+        }), 409
 
     try:
         llm = get_llm_provider()
@@ -547,6 +620,24 @@ def analyze_session(session_id: str):
             language = raw_lang.strip().lower()
 
         analysis = llm.analyze(llm_transcript, language=language)
+
+        # ── An AI failure is never a "healthy employee" reading ──
+        # When the model's reply cannot be parsed at all, the provider hands
+        # back FALLBACK_ANALYSIS (burnout 0 / attrition 0). Storing or scoring
+        # that would tell HR the employee is perfectly fine at the exact moment
+        # the analysis failed, so it is treated like the timeout path: no
+        # analysis is written and no wellness score is touched.
+        if not isinstance(analysis, dict) or analysis.get("is_fallback"):
+            logger.warning(
+                "Session analysis returned a fallback payload (session=%s)", session_id
+            )
+            db.sessions.update_one(
+                {"_id": ObjectId(session_id)},
+                {"$set": {"status": "failed", "updated_at": datetime.now(timezone.utc)}},
+            )
+            return jsonify({
+                "error": "Analysis could not be completed. Please try again."
+            }), 500
 
         now = datetime.now(timezone.utc)
         # Store under analyses.<language> rather than a single flat slot, so a
@@ -578,37 +669,56 @@ def analyze_session(session_id: str):
         # Roll the AI's read of this transcript into the employee's
         # wellness score — this is what actually drives Directory/Dashboard
         # now, instead of the old static default.
-        risks = analysis.get("risks") or {}
-        if not isinstance(risks, dict):
-            # Defensive fallback: the LLM occasionally returns "risks" as a
-            # list instead of an object. Never trust the shape blindly.
-            risks = {}
-        burnout_index = risks.get("burnout_index")
-        attrition_risk_pct = risks.get("attrition_risk_pct")
+        #
+        # This block runs AFTER the analysis is saved, so it must never be able
+        # to raise: a failure here used to be swallowed by the outer handler,
+        # which then flipped the already-analyzed session to "failed" while
+        # still holding a stored analysis. The score is only computed when
+        # BOTH risk values are real numbers — a missing value is never
+        # defaulted to 0, because 0 means "no risk" and would manufacture a
+        # healthy reading out of missing data.
+        try:
+            risks = analysis.get("risks") or {}
+            if not isinstance(risks, dict):
+                # Defensive fallback: the LLM occasionally returns "risks" as a
+                # list instead of an object. Never trust the shape blindly.
+                risks = {}
+            burnout_index = risks.get("burnout_index")
+            attrition_risk_pct = risks.get("attrition_risk_pct")
+            burnout_index = _as_risk_number(burnout_index)
+            attrition_risk_pct = _as_risk_number(attrition_risk_pct)
 
-        if burnout_index is not None or attrition_risk_pct is not None:
-            burnout_index = burnout_index if burnout_index is not None else 0
-            attrition_risk_pct = attrition_risk_pct if attrition_risk_pct is not None else 0
-            ai_wellness_score = round(100 - ((burnout_index + attrition_risk_pct) / 2))
-            ai_wellness_score = max(0, min(100, ai_wellness_score))
+            if burnout_index is None or attrition_risk_pct is None:
+                logger.info(
+                    "Skipping wellness update: incomplete risk values "
+                    "(session=%s burnout=%r attrition=%r)",
+                    session_id, burnout_index, attrition_risk_pct,
+                )
+            else:
+                ai_wellness_score = round(100 - ((burnout_index + attrition_risk_pct) / 2))
+                ai_wellness_score = max(0, min(100, ai_wellness_score))
 
-            db.employees.update_one(
-                {"_id": s["employee_id"]},
-                {
-                    "$set": {
-                        "ai_wellness": {
-                            "score": ai_wellness_score,
-                            "status": _status_for(ai_wellness_score),
-                            "attrition_risk_pct": attrition_risk_pct,
-                            "burnout_index": burnout_index,
-                            "risk_factors": risks.get("risk_factors", []),
-                            "source_session_id": str(session_id),
+                db.employees.update_one(
+                    {"_id": s["employee_id"]},
+                    {
+                        "$set": {
+                            "ai_wellness": {
+                                "score": ai_wellness_score,
+                                "status": _status_for(ai_wellness_score),
+                                "attrition_risk_pct": attrition_risk_pct,
+                                "burnout_index": burnout_index,
+                                "risk_factors": risks.get("risk_factors", []),
+                                "source_session_id": str(session_id),
+                                "updated_at": now,
+                            },
                             "updated_at": now,
-                        },
-                        "updated_at": now,
-                    }
-                },
-            )
+                        }
+                    },
+                )
+        except Exception:
+            # Logged and swallowed: the analysis itself is valid and already
+            # saved, so the session stays "completed" and HR can still read it.
+            logger.exception("Wellness update failed (session=%s)", session_id)
 
         # ── Silent background: Risk Drift Detection ──
         # Fires automatically after the wellness update above, never on user
@@ -622,8 +732,15 @@ def analyze_session(session_id: str):
             #    Two independent `$or` clauses cannot share one query document
             #    (a repeated key would silently drop the first), so they are
             #    nested under `$and`. `$exists` is required on `analyses`
-            #    because `$nin` alone also matches documents missing the field.
-            qualifying_sessions = list(
+            #    because `$nin` alone also matches documents matching nothing.
+            #
+            #    A wider slice is fetched and then narrowed in Python, because
+            #    the fallback marker lives at `analyses.<language>.is_fallback`
+            #    and the language keys are dynamic — Mongo cannot express
+            #    "no language entry is a fallback" in one query. Without this,
+            #    a session whose parse failed (0/0 placeholder risks) would sit
+            #    in the window as if it were a genuine healthy reading.
+            candidates = list(
                 db.sessions.find(
                     {
                         "employee_id": s["employee_id"],
@@ -649,8 +766,13 @@ def analyze_session(session_id: str):
                             },
                         ],
                     }
-                ).sort("created_at", -1).limit(DRIFT_WINDOW_SIZE)
+                ).sort("created_at", -1).limit(DRIFT_WINDOW_SIZE * _DRIFT_LOOKBACK_FACTOR)
             )
+            # Legacy documents have no `is_fallback` key at all and are kept;
+            # only documents explicitly marked as a fallback are dropped.
+            qualifying_sessions = [
+                sess for sess in candidates if not session_has_fallback_analysis(sess)
+            ][:DRIFT_WINDOW_SIZE]
             qualifying_sessions.reverse()
 
             # 2. Not enough completed syncs yet — expected for new employees,
@@ -742,10 +864,12 @@ def analyze_session(session_id: str):
 
     except LLMTimeoutError:
         # Retryable: the upstream LLM was slow/hung, not permanently broken.
-        # Do NOT store the fallback analysis here — writing a mostly-empty
-        # fallback would zero out the employee's wellness score as if it were
-        # a real reading. Surface a distinct message so the user knows a retry
-        # is likely to work.
+        # Do NOT store the fallback analysis here — the placeholder carries
+        # burnout 0 / attrition 0, and the wellness formula
+        # (100 - (burnout + attrition) / 2) would turn those zeros into a
+        # wellness score of 100, i.e. report a perfectly healthy employee at
+        # the exact moment the analysis failed. Surface a distinct message so
+        # the user knows a retry is likely to work.
         logger.warning("Session analysis timed out (session=%s)", session_id)
         db.sessions.update_one(
             {"_id": ObjectId(session_id)},

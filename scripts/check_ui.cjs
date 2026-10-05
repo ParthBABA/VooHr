@@ -7,6 +7,9 @@ const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const root = path.resolve(__dirname, '..');
 const files = fs.readdirSync(path.join(root, 'static')).filter(f => f.endsWith('.html'));
+const supportContent = JSON.parse(fs.readFileSync(path.join(root, 'data', 'support.json'), 'utf8'));
+const supportRoutes = Object.values(supportContent.articles).map(article =>
+  article.path ? 'support/' + article.path : 'support');
 const server = spawn(process.env.PYTHON || 'python', ['scripts/preview_ui.py'], {cwd: root, stdio: 'ignore'});
 const origin = 'http://127.0.0.1:5099';
 const me = {id:'111111111111111111111111', name:'Alex Morgan', email:'alex@example.test', role:'admin', organization:{name:'Example organization',industry:'Technology',company_size:'11-50'}};
@@ -16,7 +19,10 @@ const failures = [];
   for (const file of files) {
     const source = fs.readFileSync(path.join(root, 'static', file), 'utf8');
     for (const match of source.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
-      if (!/\bsrc=|application\/ld\+json|application\/json/i.test(match[1])) new vm.Script(match[2], {filename: file});
+      if (!/\bsrc=|application\/ld\+json|application\/json/i.test(match[1])) {
+        const inlineScript = match[2].replace(/\{%[\s\S]*?%\}/g, '');
+        new vm.Script(inlineScript, {filename: file});
+      }
     }
   }
   for (let i = 0; i < 60; i++) {
@@ -37,11 +43,17 @@ const failures = [];
     await context.route('**/auth/**', route => route.fulfill({json:{ok:false,error:'invalid_credentials'}}));
     const page = await context.newPage();
     page.on('dialog', dialog => { failures.push('Unexpected native dialog: ' + dialog.message()); dialog.dismiss(); });
-    for (const file of [...files, 'landing']) {
+    const pages = [
+      ...files.map(file => ({name:file, url:origin + '/preview/' + file})),
+      ...supportRoutes.map(route => ({name:route, url:origin + '/' + route})),
+      {name:'landing', url:origin}
+    ];
+    for (const item of pages) {
+      const file = item.name;
       const errors = [];
       const onError = error => errors.push(error.message);
       page.on('pageerror', onError);
-      await page.goto(file === 'landing' ? origin : origin + '/preview/' + file, {waitUntil:'domcontentloaded'});
+      await page.goto(item.url, {waitUntil:'domcontentloaded'});
       await page.waitForTimeout(600);
       for (const width of [480,768,1024,1280]) {
         await page.setViewportSize({width,height:900});
@@ -176,7 +188,7 @@ const failures = [];
     assert.equal(deleteReq[0].csrf, 'test-token', 'DELETE must carry the auto-added X-CSRF-Token header');
     assert.equal(await cardDel.count(), 2, 'board must re-render after delete (no full page refresh)');
 
-    console.log(JSON.stringify({pages:files.length+1,widths:[480,768,1024,1280],failures},null,2));
+    console.log(JSON.stringify({pages:files.length+supportRoutes.length+1,widths:[480,768,1024,1280],failures},null,2));
     if (failures.length) process.exitCode = 1;
   } finally { await browser.close(); }
 })().catch(error => {console.error(error);process.exitCode=1;}).finally(() => server.kill());
