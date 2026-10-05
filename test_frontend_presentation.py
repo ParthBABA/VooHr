@@ -145,6 +145,15 @@ class PresentationTests(unittest.TestCase):
         self.assertTrue(re.search(r"closeModal\(\).*VooVrUI\.show\('Meeting deleted\..*loadData\(\)",
                                   del_fn, re.S), "success path must close the modal, toast, and re-loadData")
 
+    # ── NOTE: Layout overlap regressions (e.g. Step 3 Analysis View) ──────
+    #
+    # Layout overlaps and grid collisions (like the one in Step 3 where the
+    # "missing_information" block rendered on top of its header and the actions grid)
+    # are tested via Playwright in scripts/check_ui.cjs. check_ui.cjs renders the
+    # UI at multiple breakpoints (375px, 768px, 1024px, 1280px) and computes
+    # bounding boxes to assert non-intersection.
+    #
+
     # ── Signed-in identity actually reaches the sidebar footer ────────────
     #
     # Every page ships the same #userName / #userRole / #userAvatar markup

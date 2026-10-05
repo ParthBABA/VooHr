@@ -552,3 +552,73 @@ def send_reminder_email(
         stage,
     )
     return True
+
+def send_support_email(reply_to: str, topic: str, subject: str, message: str, attachments: list = None) -> bool:
+    """Send a contact form submission to the support inbox.
+    
+    attachments: list of dicts with 'name' and 'content' (base64 encoded string)
+    """
+    api_key = os.environ.get("BREVO_API_KEY", "")
+    sender_email = os.environ.get("BREVO_SENDER_EMAIL", "")
+    
+    # [CONFIRM: support email] Support inbox address
+    support_inbox = "support@voohr.example.com"
+    
+    if not api_key or not sender_email:
+        logger.error(
+            "email_failed=missing_config type=support_contact sender_email_set=%s",
+            bool(sender_email)
+        )
+        return False
+        
+    safe_topic = _escape_html(topic)
+    safe_reply_to = _escape_html(reply_to)
+    safe_subject = _escape_html(subject) if subject else "(No subject)"
+    
+    # Very basic text to HTML: replace newlines with <br>
+    safe_message = _escape_html(message).replace("\n", "<br>")
+    
+    html_content = (
+        f"<h2>New Support Request</h2>"
+        f"<p><strong>From:</strong> {safe_reply_to}</p>"
+        f"<p><strong>Topic:</strong> {safe_topic}</p>"
+        f"<p><strong>Subject:</strong> {safe_subject}</p>"
+        f"<hr>"
+        f"<p>{safe_message}</p>"
+    )
+    
+    payload = {
+        "sender": {"email": sender_email, "name": "VooHr Contact Form"},
+        "replyTo": {"email": reply_to},
+        "to": [{"email": support_inbox}],
+        "subject": f"Support: {safe_topic} - {safe_subject}",
+        "htmlContent": html_content
+    }
+    
+    if attachments:
+        payload["attachment"] = attachments
+        
+    try:
+        resp = requests.post(
+            BREVO_API_URL,
+            headers={
+                "api-key": api_key,
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=15,
+        )
+    except Exception as exc:
+        logger.error("email_failed=network type=support_contact error=%s", exc)
+        return False
+        
+    if resp.status_code >= 400:
+        logger.error(
+            "email_failed=brevo_error type=support_contact status=%s body=%s",
+            resp.status_code,
+            _brevo_error_message(resp)
+        )
+        return False
+        
+    return True

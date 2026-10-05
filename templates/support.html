@@ -90,6 +90,8 @@
         {% endfor %}
         <a class="support-nav-overview{% if support_slug == 'faq' %} is-active{% endif %}"
            href="/support/faq"{% if support_slug == 'faq' %} aria-current="page"{% endif %}>FAQ</a>
+        <a class="support-nav-overview{% if support_slug == 'contact' %} is-active{% endif %}"
+           href="/support/contact"{% if support_slug == 'contact' %} aria-current="page"{% endif %}>Contact support</a>
         <section class="support-nav-group" aria-label="Legal">
           <h2 class="support-nav-label">Legal</h2>
           <ul>
@@ -176,6 +178,166 @@
             {% endfor %}
           </ul>
         </nav>
+        <nav class="support-pager" aria-label="Article navigation">
+          {% if support_previous %}
+          <a class="support-pager-link" href="/support/{{ support_previous_path }}">
+            <span>Previous</span><strong>&larr; {{ support_previous.title }}</strong>
+          </a>
+          {% else %}<span></span>{% endif %}
+          {% if support_next %}
+          <a class="support-pager-link support-pager-next" href="/support/{{ support_next_path }}">
+            <span>Next</span><strong>{{ support_next.title }} &rarr;</strong>
+          </a>
+          {% endif %}
+        </nav>
+      </article>
+      {% elif support_slug == 'contact' %}
+      <article class="support-article support-contact">
+        <header class="support-article-header">
+          <p class="support-eyebrow">{{ support_page.group }}</p>
+          <h1>{{ support_page.title }}</h1>
+          <p class="support-lede">{{ support_page.intro }}</p>
+        </header>
+
+        <nav class="support-contents" aria-label="On this page">
+          <h2>On this page</h2>
+          <ul>
+            <li><a href="#send-a-message">Send a message</a></li>
+            <li><a href="#other-ways-to-reach-us">Other ways to reach us</a></li>
+            {% for section in support_page.sections %}
+            <li><a href="#section-{{ loop.index }}">{{ section.heading }}</a></li>
+            {% endfor %}
+          </ul>
+        </nav>
+
+        <div class="support-prose">
+          <section class="support-prose-section" id="send-a-message">
+            <h2>Send a message <a href="#send-a-message" class="support-anchor" aria-label="Link to Send a message">#</a></h2>
+            <p>If your question is about an account or a workspace, please send it from the email address you use to sign in.</p>
+            <form id="contactForm" class="contact-form" action="/api/support/contact" method="POST" enctype="multipart/form-data">
+              <div class="form-group">
+                <label class="form-label" for="contactTopic">Topic <span aria-hidden="true">*</span></label>
+                <select id="contactTopic" name="topic" required aria-required="true" class="form-input">
+                  <option value="" disabled selected>Select a topic</option>
+                  <option value="General question">General question</option>
+                  <option value="Bug or technical problem">Bug or technical problem</option>
+                  <option value="Analysis accuracy or failed analysis">Analysis accuracy or failed analysis</option>
+                  <option value="Account or sign-in">Account or sign-in</option>
+                  <option value="Privacy or data request">Privacy or data request</option>
+                  <option value="Something else">Something else</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="contactEmail">Reply to <span aria-hidden="true">*</span></label>
+                <input id="contactEmail" name="email" type="email" required aria-required="true" class="form-input" placeholder="Your email address">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="contactSubject">Subject (optional)</label>
+                <input id="contactSubject" name="subject" type="text" maxlength="120" class="form-input" placeholder="Brief summary">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="contactMessage">Message <span aria-hidden="true">*</span></label>
+                <textarea id="contactMessage" name="message" required aria-required="true" class="form-input" rows="6" minlength="10" maxlength="4000" placeholder="Describe your question or issue in detail..."></textarea>
+                <div class="char-counter" id="contactMessageCount">0 / 4000</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Screenshots (optional)</label>
+                <div class="attachments-ui" id="contactAttachments" aria-live="polite">
+                  <p class="attachment-help">Attach up to 4 images (JPEG, PNG, WebP, GIF). Max 5MB per file.</p>
+                  <input type="file" id="contactFileInput" name="attachments" accept="image/jpeg,image/png,image/webp,image/gif" multiple class="sr-only" aria-hidden="true" tabindex="-1">
+                  <button type="button" class="btn btn-sm" id="contactAddImageBtn">Add images</button>
+                  <div class="attachment-previews" id="contactPreviewList"></div>
+                </div>
+              </div>
+              <!-- Honeypot -->
+              <div style="position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;" aria-hidden="true">
+                <label for="contactWebsite">Website</label>
+                <input type="text" id="contactWebsite" name="website" tabindex="-1" autocomplete="off">
+              </div>
+              
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="contactSubmitBtn">Send message</button>
+                <p class="support-alternative">Or email <a href="mailto:support@voohr.example.com">support@voohr.example.com</a> [CONFIRM: support email]</p>
+              </div>
+              <div id="contactStatus" class="form-status" aria-live="polite"></div>
+            </form>
+          </section>
+
+          <section class="support-prose-section" id="other-ways-to-reach-us">
+            <h2>Other ways to reach us <a href="#other-ways-to-reach-us" class="support-anchor" aria-label="Link to Other ways to reach us">#</a></h2>
+            <div class="support-category-grid">
+              <div class="support-category-card">
+                <span class="support-category-title">Email support</span>
+                <span class="support-category-description">Account, sign-in, bugs and anything else.</span>
+                <a href="mailto:support@voohr.example.com">support@voohr.example.com</a> [CONFIRM: support email]
+              </div>
+              <div class="support-category-card">
+                <span class="support-category-title">Privacy requests</span>
+                <span class="support-category-description">Data access, export and deletion requests.</span>
+                <a href="mailto:privacy@voohr.example.com">privacy@voohr.example.com</a> [CONFIRM: privacy email]
+              </div>
+              <a class="support-category-card" href="/support/faq">
+                <span class="support-category-title">Common answers</span>
+                <span class="support-category-description">Fastest fixes for most questions.</span>
+                <span class="support-card-arrow" aria-hidden="true">&rarr;</span>
+              </a>
+              <a class="support-category-card" href="/support/accuracy">
+                <span class="support-category-title">Fixing analysis problems</span>
+                <span class="support-category-description">Why it failed or looks wrong.</span>
+                <span class="support-card-arrow" aria-hidden="true">&rarr;</span>
+              </a>
+            </div>
+          </section>
+
+          {% for section in support_page.sections %}
+          <section class="support-prose-section" id="section-{{ loop.index }}">
+            <h2>{{ section.heading }} <a href="#section-{{ loop.index }}" class="support-anchor" aria-label="Link to {{ section.heading }}">#</a></h2>
+            {% for paragraph in section.paragraphs %}<p>{{ support_inline(paragraph, support_page.get("inline_code", [])) }}</p>{% endfor %}
+            {% for block in support_page.get("presentation", {}).get(section.heading, []) %}
+              {% if block["type"] == "paragraph" %}
+              <p>{{ support_text(block["text"], support_page.get("inline_code", [])) }}</p>
+              {% elif block["type"] == "steps" %}
+              <div class="support-steps">
+                <ol>
+                  {% for item in block["items"] %}
+                  <li>
+                    <div>{{ support_text(item["text"], support_page.get("inline_code", [])) }}</div>
+                    {% if item.get("hint") %}<p class="support-step-hint">{{ support_text(item["hint"], support_page.get("inline_code", [])) }}</p>{% endif %}
+                  </li>
+                  {% endfor %}
+                </ol>
+              </div>
+              {% elif block["type"] == "bullets" %}
+              <ul class="support-bullets">
+                {% for item in block["items"] %}<li>{{ support_text(item, support_page.get("inline_code", [])) }}</li>{% endfor %}
+              </ul>
+              {% elif block["type"] == "table" %}
+              <div class="support-table-scroll" role="region" tabindex="0"
+                   aria-label="{{ block['caption'] }} (scroll horizontally if needed)">
+                <table class="support-table">
+                  <caption>{{ block["caption"] }}</caption>
+                  <thead><tr>{% for header in block["headers"] %}<th scope="col">{{ header }}</th>{% endfor %}</tr></thead>
+                  <tbody>{% for row in block["rows"] %}
+                    <tr>{% for cell in row %}<td>{{ support_text(cell, support_page.get("inline_code", [])) }}</td>{% endfor %}</tr>
+                  {% endfor %}</tbody>
+                </table>
+              </div>
+              {% elif block["type"] == "callout" %}
+              <aside class="support-callout">
+                <p class="support-callout-label">{{ block["label"] }}</p>
+                <p>{{ support_text(block["text"], support_page.get("inline_code", [])) }}</p>
+              </aside>
+              {% endif %}
+            {% endfor %}
+          </section>
+          {% endfor %}
+          
+          <section class="support-prose-section support-guidance">
+            <h2>Use this guidance thoughtfully</h2>
+            <p>This page describes the current product workflow; it is not an HR policy or a promise about every deployment. Before acting on information about an employee, verify the source record, consider context the system cannot see, and use your organization's process. If a control behaves differently from this guide, check the current workspace UI and confirm the saved result rather than assuming an action completed.</p>
+          </section>
+        </div>
+
         <nav class="support-pager" aria-label="Article navigation">
           {% if support_previous %}
           <a class="support-pager-link" href="/support/{{ support_previous_path }}">

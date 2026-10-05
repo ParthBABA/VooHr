@@ -124,6 +124,12 @@ def support_page_context(slug):
     page_order = [item["path"] for item in ordered_pages]
     if "faq" not in page_order:
         page_order.append("faq")
+    if "contact" not in page_order:
+        page_order.append("contact")
+    
+    # Fake privacy entry for the next chain
+    page_order.append("privacy")
+    
     current_path = page["path"]
     current_index = page_order.index(current_path) if current_path in page_order else -1
     previous_path = page_order[current_index - 1] if current_index > 0 else None
@@ -154,9 +160,11 @@ def support_page_context(slug):
         "support_faq": content["faq"],
         "support_search_items": search_items,
         "support_previous": content["articles"].get(previous_path) if previous_path else None,
-        "support_next": content["articles"].get(next_path) if next_path else None,
+        "support_next": content["articles"].get(next_path) or (
+            {"title": "Privacy Policy", "path": "../privacy"} if next_path == "privacy" else None
+        ) if next_path else None,
         "support_previous_path": previous_path,
-        "support_next_path": next_path,
+        "support_next_path": next_path if next_path != "privacy" else "../privacy",
         "support_overview": content["articles"][""],
     }
 

@@ -529,7 +529,30 @@
       "description": "Answers to common questions about VooHr meetings, analysis, actions, accounts, and privacy.",
       "intro": "Quick answers to common product questions. Each answer links to a detailed guide; where a policy or deployment fact is unknown, the answer says so.",
       "sections": [],
-      "related": ["getting-started", "meetings", "analysis", "actions", "account", "security"]
+    },
+    "contact": {
+      "path": "contact",
+      "title": "Contact support",
+      "group": "Support",
+      "description": "Send a message to the VooHr support team for help with your account or analysis.",
+      "intro": "Real people read every message. We typically reply within [CONFIRM: reply time]. If you need a fast fix, check our accuracy guide or FAQ first.",
+      "sections": [
+        {"heading": "What to include", "paragraphs": ["To help us resolve your issue faster, please include the following details in your message:"]},
+        {"heading": "Important", "paragraphs": ["Never include passwords, 2FA codes, or full conversation transcripts with sensitive details. Describe the problem instead."]}
+      ],
+      "presentation": {
+        "What to include": [
+          {"type": "bullets", "items": [
+            "Analysis problem: the session date, which of the five steps and which field looks wrong, and whether it failed or looked inaccurate.",
+            "Sign-in/account: the email you use and the sign-in method (Google or email code); never send passwords or 2FA codes.",
+            "Bugs: what you did, what you expected, what happened, device and browser, and a screenshot.",
+            "Privacy: which employee or session the request is about."
+          ]}
+        ],
+        "Important": [
+          {"type": "callout", "label": "Important", "text": "Never include passwords, 2FA codes, or full conversation transcripts with sensitive details; describe the problem instead."}
+        ]
+      }
     }
   },
   "groups": [

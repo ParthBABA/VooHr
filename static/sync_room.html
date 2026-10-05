@@ -389,7 +389,6 @@
     transition: background 0.15s ease, border-color 0.15s ease;
   }
   #stepContent2 .guideline:hover,
-  #stepContent3 .guideline:hover,
   #stepContent4 .guideline:hover,
   #stepContent5 .guideline:hover{
     background: var(--step-row-bg-hover);
@@ -1538,8 +1537,9 @@
     font-size: 11px; font-weight: 400;
     letter-spacing: 0.02em; text-transform: none;
     color: var(--step-text-muted); opacity: 0.75;
-    white-space: nowrap;
   }
+  #stepContent3 .rc-eyebrow--gaps .rc-eyebrow-title { font-size: 0.75rem; color: var(--step-warning); }
+  #stepContent3 .rc-eyebrow--gaps .rc-eyebrow-sub { font-size: 0.75rem; color: var(--step-text); opacity: 0.85; white-space: normal; }
   #stepContent3 .rc-eyebrow--evsnap{ grid-row: 1; grid-column: 1 / 7; }
   #stepContent3 .rc-eyebrow--hyp{ grid-row: 3; grid-column: 1 / 7; }
   #stepContent3 .rc-eyebrow--reason{ grid-row: 5; grid-column: 1 / 7; }
@@ -1977,9 +1977,10 @@
     white-space: nowrap;
   }
 
-  /* ---------- Actions / manager / notes / nav ---------- */
+  #stepContent3 #step3GapsEyebrow{ grid-row: 12; grid-column: 1 / 7; margin: 0; }
+  #stepContent3 #step3Gaps{ grid-row: 13; grid-column: 1 / 7; margin: 0; }
   #stepContent3 .rc-actions{
-    grid-row: 12; grid-column: 1 / 7;
+    grid-row: 14; grid-column: 1 / 7;
     display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
   }
   #stepContent3 .rc-actions-col{
@@ -1994,11 +1995,13 @@
   #stepContent3 .rc-actions-label svg{ flex: 0 0 auto; }
   #stepContent3 .rc-actions-label--teal{ color: var(--step-success); }
   #stepContent3 .rc-actions-label--red{ color: var(--step-danger); }
-  #stepContent3 #step3ManagerNotesContainer{ grid-row: 13; grid-column: 1 / 7; margin: 0; }
-  #stepContent3 #step3GapsEyebrow{ grid-row: 12; grid-column: 1 / 7; margin: 0; }
-  #stepContent3 #step3Gaps{ grid-row: 12; grid-column: 1 / 7; margin: -1.4rem 0 0; }
-  #stepContent3 .rc-notes{ grid-row: 14; grid-column: 1 / 7; margin-top: 0; }
-  #stepContent3 .step-nav{ grid-row: 15; grid-column: 1 / 7; margin: 0; }
+  #stepContent3 #step3ManagerNotesContainer{ grid-row: 15; grid-column: 1 / 7; margin: 0; }
+  #stepContent3 .rc-notes{ grid-row: 16; grid-column: 1 / 7; margin-top: 0; }
+  #stepContent3 .step-nav{ grid-row: 17; grid-column: 1 / 7; margin: 0; }
+  
+  @media (max-width: 768px) {
+    #stepContent3 .rc-actions { grid-template-columns: 1fr; }
+  }
 
   #stepContent3 .rc-progress{
     display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
@@ -5499,7 +5502,7 @@ function populateStep3(d) {
   // 5) Analysis confidence
   var conf = document.getElementById('step3Confidence');
   if (conf) {
-    var cHtml = '<div class="rci-conf-label">Analysis Confidence</div>';
+    var cHtml = '';
     if (d.confidence_label) {
       cHtml += '<div class="rci-conf-wide">' +
         '<div class="rci-conf-meter">';
@@ -5533,7 +5536,7 @@ function populateStep3(d) {
     if (gaps.length) {
       gapsEyebrow.style.display = '';
       gapsBox.innerHTML = gaps.map(function(g) {
-        return '<div class="guideline"><div class="g-icon tip">' +
+        return '<div class="guideline"><div class="g-icon tip" style="color:var(--step-warning);background:transparent;border:none;">' +
           '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">' +
           '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
           '</div><span>' + escHtml(String(g).trim()) + '</span></div>';

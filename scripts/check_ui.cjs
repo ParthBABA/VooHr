@@ -194,6 +194,69 @@ const failures = [];
     assert.match(deleteReq[0].path, /\/api\/meetings\/m7$/);
     assert.equal(deleteReq[0].csrf, 'test-token', 'DELETE must carry the auto-added X-CSRF-Token header');
     assert.equal(await cardDel.count(), 2, 'board must re-render after delete (no full page refresh)');
+    
+    // Step 3 Regression test
+    await page.goto(origin + '/preview/sync_room.html');
+    for (const width of [375, 768, 1024, 1280]) {
+      await page.setViewportSize({ width, height: 1200 });
+      await page.evaluate(() => {
+        document.querySelectorAll('.step-pane').forEach(el => el.classList.remove('is-active'));
+        document.getElementById('stepContent3').classList.add('is-active');
+        populateStep3({
+          confidence_label: "Low",
+          missing_information: ["Missing info 1", "Missing info 2", "Missing info 3"],
+          recommended_actions: ["Rec 1", "Rec 2", "Rec 3"],
+          avoid_actions: ["Avoid 1", "Avoid 2", "Avoid 3", "Avoid 4"]
+        });
+      });
+      await page.waitForTimeout(100);
+      
+      const step3Errors = await page.evaluate(() => {
+        const errs = [];
+        const gapsEyebrow = document.getElementById('step3GapsEyebrow');
+        const gaps = document.getElementById('step3Gaps');
+        const actions = document.querySelector('#stepContent3 .rc-actions');
+        function getBBox(el) { return el ? el.getBoundingClientRect() : null; }
+        function intersect(r1, r2) {
+          if (!r1 || !r2) return false;
+          if (r1.height === 0 || r2.height === 0) return false;
+          return !(r2.left >= r1.right || r2.right <= r1.left || r2.top >= r1.bottom || r2.bottom <= r1.top);
+        }
+        if (intersect(getBBox(gapsEyebrow), getBBox(gaps))) errs.push('header intersects rows');
+        if (intersect(getBBox(gaps), getBBox(actions))) errs.push('missing-info block intersects recommended grid');
+        const cols = document.querySelectorAll('#stepContent3 .rc-actions-col');
+        if (cols.length >= 2 && intersect(getBBox(cols[0]), getBBox(cols[1]))) errs.push('left column intersects right column');
+        return errs;
+      });
+      if (step3Errors.length) failures.push(`Step 3 @ ${width} overlap errors: ${step3Errors.join(', ')}`);
+      
+      const step3WidthErr = await page.evaluate(() => {
+        const overflows = [];
+        const contentWidth = document.documentElement.clientWidth;
+        const els = [document.getElementById('step3GapsEyebrow'), document.getElementById('step3Gaps'), document.querySelector('#stepContent3 .rc-actions')];
+        for (let el of els) {
+          if (el && el.getBoundingClientRect().right > contentWidth) overflows.push(el.className || el.id);
+        }
+        return overflows;
+      });
+      if (step3WidthErr.length) failures.push(`Step 3 @ ${width} overflows: ${step3WidthErr.join(', ')}`);
+      
+      await page.evaluate(() => {
+        populateStep3({
+          confidence_label: "Low", missing_information: [], recommended_actions: [], avoid_actions: []
+        });
+      });
+      await page.waitForTimeout(50);
+      const emptyCheck = await page.evaluate(() => {
+        const errs = [];
+        const gapsEyebrow = document.getElementById('step3GapsEyebrow');
+        const gaps = document.getElementById('step3Gaps');
+        if (gapsEyebrow.style.display !== 'none' || gapsEyebrow.offsetHeight > 0) errs.push('gapsEyebrow not hidden');
+        if (gaps.innerHTML.trim() !== '') errs.push('gaps content not empty');
+        return errs;
+      });
+      if (emptyCheck.length) failures.push(`Step 3 empty gaps @ ${width} errors: ${emptyCheck.join(', ')}`);
+    }
 
     console.log(JSON.stringify({pages:files.length+supportRoutes.length+1,widths:[480,768,1024,1280],failures},null,2));
     if (failures.length) process.exitCode = 1;
