@@ -19,7 +19,24 @@
         {"heading": "Create a conversation record", "paragraphs": ["From the recording workspace, you can record browser microphone audio, upload supported audio for transcription, extract text from an image, or paste/type a transcript. Review and edit the transcript before saving. Saving creates a session record; the transcript is the input used for analysis. A saved transcript can be re-opened in the workspace and changed.", "The current upload controls accept audio up to 25 MB in the browser, images up to 10 MB, and plain-text TXT uploads without a separate client-side size limit. The application also enforces its own request and record limits."]},
         {"heading": "Review, then decide", "paragraphs": ["When you request an analysis, VooHr sends transcript text to the configured language-model provider and stores returned output against that session. It can also retain analyses by output language. The analysis offers possible interpretations and suggested actions, not verified facts about a person.", "Use the transcript and your knowledge of the situation to test each suggestion. VooHr does not make an employment decision for you. Commitments and follow-ups can be recorded as explicit HR-confirmed memory items; the visual reminder button in the five-step page is not connected to reminder creation."]}
       ],
-      "related": ["meetings", "transcription", "analysis"]
+      "related": ["meetings", "transcription", "analysis"],
+      "presentation": {
+        "Start with an employee record": [
+          {"type": "steps", "items": [
+            {"text": "Add an employee record or import the organization CSV."},
+            {"text": "Choose the employee when creating a conversation session."},
+            {"text": "Record, upload, or enter a transcript, then review and save it."},
+            {"text": "Request an analysis and check its output against the transcript."},
+            {"text": "Record a follow-up only after confirming it with the people involved."}
+          ]},
+          {"type": "table", "caption": "The VooHr workflow at a glance", "headers": ["Stage", "What happens", "What to check"], "rows": [
+            ["Employee record", "A directory record is created or imported.", "Confirm the intended employee."],
+            ["Conversation", "A transcript is saved as a session.", "Review the text before saving."],
+            ["Analysis", "The selected transcript is sent for generated analysis.", "Treat claims as possibilities."],
+            ["Follow-up", "A confirmed commitment can be recorded separately.", "Check the saved owner and due date."]
+          ]}
+        ]
+      }
     },
     "meetings": {
       "path": "meetings",
@@ -32,7 +49,27 @@
         {"heading": "Upload audio, an image, or text", "paragraphs": ["Audio uploads accept MP3, WAV, M4A, OGG, and WEBM in the interface, with a 25 MB client-side limit. The backend accepts selected audio MIME types up to 26 MiB. Image upload accepts PNG, JPG/JPEG, and WEBP up to 10 MB in the interface; the server verifies the image and extracts text using its configured vision provider. Plain .TXT files are read in the browser and placed in the transcript field.", "These are different workflows: OCR reads visible text in an image; it does not transcribe speech from an image. Inspect any generated transcription or extracted text for omissions and errors."]},
         {"heading": "Save and review", "paragraphs": ["After recording or uploading, read the transcript field and correct names, speaker attribution, numbers, and context before saving. The page lets you edit the text before creating a session. When a saved transcript is edited later, the edited version is preferred for analysis; the original raw text remains part of the session data.", "The system request limit is not a promise about maximum recording duration. Actual usable length depends on the file size, browser, transcription provider, network, and server request cap."]}
       ],
-      "related": ["transcription", "accuracy", "security"]
+      "related": ["transcription", "accuracy", "security"],
+      "presentation": {
+        "Upload audio, an image, or text": [
+          {"type": "table", "caption": "Supported transcript inputs and interface limits", "headers": ["Input", "Interface limit", "Notes"], "rows": [
+            ["Audio", "25 MB", "MP3, WAV, M4A, OGG, and WEBM; backend accepts selected audio MIME types up to 26 MiB."],
+            ["Image", "10 MB", "PNG, JPG/JPEG, and WEBP; OCR extracts visible text, not speech."],
+            ["TXT file", "No separate client-side size limit", "Read in the browser and placed in the editable transcript field."],
+            ["Browser recording", "[CONFIRM: no stated client-side duration limit]", "Recorded as WebM and sent for transcription when stopped."]
+          ]},
+          {"type": "callout", "label": "Note", "text": "An upload or request limit is not a promised recording duration; actual use also depends on the browser, provider, network, and server."}
+        ],
+        "Save and review": [
+          {"type": "steps", "items": [
+            {"text": "Choose browser recording, supported file upload, or pasted transcript."},
+            {"text": "Grant microphone access or select an audio, image, or TXT file."},
+            {"text": "Wait for transcription or image text extraction."},
+            {"text": "Review and correct the transcript."},
+            {"text": "Save the session."}
+          ]}
+        ]
+      }
     },
     "transcription": {
       "path": "transcription",
@@ -45,10 +82,22 @@
         {"heading": "Analysis language", "paragraphs": ["Analysis has its own language selection. English is the default; additional options are drawn from the server's configured enabled-language list. The backend stores analysis results per language, so a later analysis in another language does not overwrite the earlier language entry. Some language instructions exist in code but are not enabled by default, and deployment configuration can affect the available list.", "Choosing a different language requests another analysis; it is not simply a translation of the saved analysis. The model may express nuance differently across languages. Compare it with the transcript and use a fluent human reviewer when wording matters."]},
         {"heading": "If a language looks wrong", "paragraphs": ["Check the selected transcription hint and make sure it matches the spoken language or mix. If the transcript is already poor, correct it in the editor before analysis rather than expecting the analysis model to repair recognition. For mixed-language speech, automatic detection is available as a hint but is best-effort, not a guarantee.", "A language mismatch can alter names, negation, and the meaning of short phrases. Do not rely on a score or suggestion until you can verify the underlying text."]}
       ],
-      "related": ["meetings", "accuracy", "analysis"]
+      "related": ["meetings", "accuracy", "analysis"],
+      "presentation": {
+        "Speech recognition": [
+          {"type": "bullets", "items": [
+            "Language hints include English, Hindi, Hinglish, Spanish, French, and German.",
+            "Other listed hints include Portuguese, Russian, Japanese, Korean, and Chinese.",
+            "Review names, accents, specialist terms, code-switching, and speaker changes.",
+            "For mixed-language speech, automatic detection is available but best-effort."
+          ]},
+          {"type": "callout", "label": "Tip", "text": "Correct the transcript before analysis; a language hint cannot guarantee recognition accuracy."}
+        ]
+      }
     },
     "analysis": {
       "path": "analysis",
+      "inline_code": ["Set reminder", "Progress autosaved"],
       "title": "The 5-step Analysis View",
       "group": "Understanding the analysis",
       "description": "A grounded guide to the five generated analysis sections and how to review them.",
@@ -58,7 +107,18 @@
         {"heading": "Read claims as possibilities", "paragraphs": ["The model is instructed to use evidence and probabilistic wording. Where available, the interface shows supporting phrases and signal-confidence labels. These do not prove that an interpretation is correct: quotes can be incomplete, transcript text can be inaccurate, and the model can infer the wrong cause from limited context.", "Check the original transcript, separate direct observations from interpretations, and ask the employee rather than treating a possible driver as known. Analysis outputs do not become confirmed commitments automatically."]},
         {"heading": "Features that are not actions", "paragraphs": ["Some parts of the five-step screen are presentation-only. The Signal Map and hardcoded probe questions are not live analysis features. The visible Set reminder control only toggles its appearance and does not schedule a reminder; Progress autosaved is static interface text, not proof that this screen autosaves. Use the actual supported meeting, follow-up, or conversation-memory workflows when you need a persisted record.", "If a control's status is unclear, verify whether a saved record appears in the relevant workspace before relying on it."]}
       ],
-      "related": ["psychological-safety", "behavioural-intelligence", "root-cause", "action-blueprint", "conversation-strategy", "scores", "limitations"]
+      "related": ["psychological-safety", "behavioural-intelligence", "root-cause", "action-blueprint", "conversation-strategy", "scores", "limitations"],
+      "presentation": {
+        "What goes into the view": [
+          {"type": "table", "caption": "The five generated Analysis View sections", "headers": ["Step", "Question it answers", "Main output"], "rows": [
+            ["1. Summary", "What does the conversation say?", "A generated overview."],
+            ["2. Behavioural Intelligence", "What patterns may appear in the words?", "Possible observations and interpretations."],
+            ["3. Root Cause", "What might explain the topic discussed?", "Possible triggers and contributors."],
+            ["4. Action Blueprint", "What could be considered next?", "Suggested actions and measures."],
+            ["5. Conversation Strategy", "How might a follow-up conversation be approached?", "Possible goals, questions, and listening cues."]
+          ]}
+        ]
+      }
     },
     "analysis/psychological-safety": {
       "path": "analysis/psychological-safety",
@@ -127,6 +187,7 @@
     },
     "scores": {
       "path": "scores",
+      "inline_code": ["No data"],
       "title": "Scores explained",
       "group": "Understanding the analysis",
       "description": "Learn which score types appear in VooHr and why they should be interpreted cautiously.",
@@ -136,7 +197,20 @@
         {"heading": "What a number cannot establish", "paragraphs": ["Scores compress context and can mislead when data is missing, stale, inaccurate, or not representative. The AI-generated indicators are probabilistic and may be wrong. The rule-based directory score is mechanical: it reflects configured thresholds, not a complete assessment of wellbeing or intent to leave.", "Use the transcript or signal inputs and your own review. A blank or 'No data' state means an input or analysis result is unavailable; it does not mean zero risk, no concern, or a positive result."]},
         {"heading": "Use with care", "paragraphs": ["Do not use a single indicator as the basis for hiring, promotion, discipline, termination, or another consequential decision. Check the underlying evidence, confirm data quality, and give the employee a fair opportunity to share context.", "The linked pages describe the implementation and limitations of each measure in more detail."]}
       ],
-      "related": ["burnout-index", "attrition-risk", "safety-score", "confidence", "limitations"]
+      "related": ["burnout-index", "attrition-risk", "safety-score", "confidence", "limitations"],
+      "presentation": {
+        "Two different score sources": [
+          {"type": "table", "caption": "Score reference", "headers": ["Score", "What it measures", "Range", "How to read it", "Limits"], "rows": [
+            ["Directory wellness", "Rule-based employee signals.", "0-100", "Higher values are better.", "Missing signals are not penalized; it is not a complete wellbeing assessment."],
+            ["Directory attrition risk", "Derived from directory wellness.", "0-100%", "Calculated as 100 minus wellness score.", "It is not a trained forecast of resignation."],
+            ["Analysis burnout index", "Model-generated from the submitted transcript.", "[CONFIRM: deployed schema range]", "Read with the source transcript and evidence.", "Not a clinical measure; may be absent or incorrect."],
+            ["Analysis safety score", "Model-generated signal for one conversation.", "[CONFIRM: deployed schema range]", "Treat as a prompt to review the conversation.", "Not a validated survey or workplace measurement."]
+          ]}
+        ],
+        "Use with care": [
+          {"type": "callout", "label": "Important", "text": "Do not base a consequential employment decision on a single score or conversation-derived indicator."}
+        ]
+      }
     },
     "scores/burnout-index": {
       "path": "scores/burnout-index",
@@ -192,6 +266,7 @@
     },
     "limitations": {
       "path": "limitations",
+      "inline_code": ["No data"],
       "title": "What the AI can and cannot tell you",
       "group": "Understanding the analysis",
       "description": "Important boundaries for VooHr's probabilistic conversation analysis and HR decision-making.",
@@ -201,10 +276,16 @@
         {"heading": "No diagnosis or clinical label", "paragraphs": ["VooHr does not provide a clinical diagnosis through this analysis. Generated labels are not a mental-health assessment, personality assessment, or professionally validated instrument. A risk indicator is not a statement about what an employee will do.", "Even if a generated paragraph sounds certain, its claims remain probabilistic. The model can produce plausible but incorrect interpretations, unsupported causes, or suggestions that do not fit your workplace."]},
         {"heading": "Human judgement stays with HR", "paragraphs": ["Verify statements against the transcript and reliable context, ask the employee for their perspective, and follow your organization's policies and applicable requirements. Do not base a consequential employment decision on a model output or one conversation score alone.", "When no evidence is available, 'No data' is intentional: the interface is not substituting a zero or claiming that no concern exists. Treat missingness as a reason to check inputs, not draw a conclusion."]}
       ],
-      "related": ["analysis", "scores", "accuracy", "security"]
+      "related": ["analysis", "scores", "accuracy", "security"],
+      "presentation": {
+        "No diagnosis or clinical label": [
+          {"type": "callout", "label": "Important", "text": "VooHr's conversation analysis is not a diagnosis, clinical assessment, or verified account of events."}
+        ]
+      }
     },
     "accuracy": {
       "path": "accuracy",
+      "inline_code": ["No data"],
       "title": "Why does my analysis look wrong or fail?",
       "group": "Understanding the analysis",
       "description": "Troubleshoot failed analysis, a stuck Analyzing state, poor transcripts, and missing data.",
@@ -214,10 +295,37 @@
         {"heading": "Poor transcript or wrong language", "paragraphs": ["Review the transcript for missing phrases, names, negation, punctuation, and speaker attribution. Correct text in the editable transcript and save the change before requesting another analysis. Speech recognition uses a language hint; unknown hints fall back to English in the configured Deepgram provider.", "The analysis language is a separate setting. Choosing another output language triggers a new analysis rather than translating the current one. Analysis requests use no more than the first 50,000 transcript characters, even when the saved transcript is longer."]},
         {"heading": "Missing data is not zero", "paragraphs": ["'No data' is intentional when a field has no available value or the analysis did not return that item. It should not be read as no risk or a clean result. Some employee score inputs begin empty or with initialized values, so confirm that the source records are maintained.", "If a retry also fails, preserve the session ID and note the displayed error for your administrator. Do not repeatedly edit away context just to produce a score."]}
       ],
-      "related": ["transcription", "analysis", "confidence", "limitations"]
+      "related": ["transcription", "analysis", "confidence", "limitations"],
+      "presentation": {
+        "Stuck on Analyzing": [
+          {"type": "bullets", "items": [
+            "Provider, timeout, or network errors can prevent saving.",
+            "Invalid model output or throttling can also fail a run.",
+            "Processing turns stale after 180 seconds; a later read marks it failed."
+          ]}
+        ],
+        "Poor transcript or wrong language": [
+          {"type": "steps", "items": [
+            {"text": "Check the saved transcript for names, negation, omissions, and speakers."},
+            {"text": "Correct and save the text."},
+            {"text": "If marked failed, retry instead of starting duplicate runs."},
+            {"text": "Compare the new result with its source text."}
+          ]}
+        ],
+        "Missing data is not zero": [
+          {"type": "table", "caption": "Analysis status meanings", "headers": ["Status", "What it means", "What to do"], "rows": [
+            ["draft", "Editable session draft.", "Finish transcript if ready."],
+            ["transcribed", "Transcript saved before analysis.", "Review before analysis."],
+            ["processing", "Analysis request in progress.", "Wait; avoid another request."],
+            ["completed", "Analysis result saved.", "Review result and source."],
+            ["failed", "No usable result saved.", "Check the error; retry if offered."]
+          ]}
+        ]
+      }
     },
     "actions": {
       "path": "actions",
+      "inline_code": ["Set reminder"],
       "title": "Action blueprint and conversation strategy",
       "group": "Acting on it",
       "description": "Turn generated action ideas into human-reviewed conversations and confirmed follow-up records.",
@@ -227,10 +335,21 @@
         {"heading": "Record only confirmed commitments", "paragraphs": ["Conversation memory supports saved openers, questions, notes, commitments, and follow-ups. A commitment or follow-up is stored as pending until its status is explicitly changed; it may have an owner, due date, and priority. Creating the memory record is the confirmation point in the current implementation.", "The analysis output does not automatically populate that record. Confirm the exact wording, owner, date, and employee understanding before saving anything as agreed."]},
         {"heading": "Do not rely on visual-only controls", "paragraphs": ["The Set reminder control on the five-step analysis page is visual-only: it changes its appearance but does not schedule a reminder. Progress autosaved is static text in that screen and does not establish that progress has been saved.", "Use the dedicated supported follow-up and meeting workflows and verify the resulting record. Your HR team remains responsible for checking completion and handling exceptions."]}
       ],
-      "related": ["analysis/action-blueprint", "analysis/conversation-strategy", "reminders", "accuracy"]
+      "related": ["analysis/action-blueprint", "analysis/conversation-strategy", "reminders", "accuracy"],
+      "presentation": {
+        "Record only confirmed commitments": [
+          {"type": "steps", "items": [
+            {"text": "Discuss the proposed follow-up with the employee."},
+            {"text": "Confirm the exact commitment, owner, and due date."},
+            {"text": "Create the commitment or follow-up in conversation memory."},
+            {"text": "Reopen the saved item and verify its details and pending status."}
+          ]}
+        ]
+      }
     },
     "reminders": {
       "path": "reminders",
+      "inline_code": ["Set reminder"],
       "title": "Commitments and reminders",
       "group": "Acting on it",
       "description": "How confirmed follow-ups and meeting reminders are stored and delivered in VooHr.",
@@ -240,7 +359,17 @@
         {"heading": "Meeting reminders", "paragraphs": ["A separate reminder service can surface reminders for scheduled meetings and open follow-ups. Depending on configured account destinations and service settings, it can create in-app notifications and attempt email or WhatsApp delivery; external delivery can fail and is retried with bounded backoff.", "Users can opt out of meeting email/WhatsApp reminders. In-app reminders are not gated by that preference. Do not assume every channel is configured or that a sent notification guarantees the recipient read it."]},
         {"heading": "Important interface distinction", "paragraphs": ["The Set reminder button in the five-step Analysis View is explicitly visual-only. Clicking it toggles its label and pressed state in the browser; it does not call a reminder API, create a calendar event, or persist the setting.", "For an actual follow-up, use the supported meeting/reminder flow and confirm the saved item in the appropriate list."]}
       ],
-      "related": ["actions", "analysis/action-blueprint", "meetings", "roles"]
+      "related": ["actions", "analysis/action-blueprint", "meetings", "roles"],
+      "presentation": {
+        "Commitments and follow-ups": [
+          {"type": "steps", "items": [
+            {"text": "Confirm the commitment or follow-up with the people involved."},
+            {"text": "Save an accurate summary and add an owner and due date where supplied."},
+            {"text": "Check the stored item and update its status when work changes."},
+            {"text": "Use the dedicated meeting reminder workflow when a meeting reminder is needed."}
+          ]}
+        ]
+      }
     },
     "surveys-reports": {
       "path": "surveys-reports",
@@ -266,10 +395,20 @@
         {"heading": "Managers", "paragraphs": ["A manager's employee queries are scoped to their linked employee record and direct reports. A missing or malformed manager link fails closed rather than widening access to the whole organization. Managers can access permitted records for their scope but cannot permanently delete employees through the employee-delete endpoint.", "A manager should not assume they can see all organization conversations or survey records. Access rules apply in the APIs as well as in the interface; the data returned depends on the endpoint's scope checks."]},
         {"heading": "Check access before sharing", "paragraphs": ["Do not share account credentials to work around a role restriction. Ask an administrator to review the user's role and linked employee record if the expected team list is missing.", "Specific legal or contractual access commitments are not established by the role code alone. [CONFIRM: customer-specific role and data-access policy]"]}
       ],
-      "related": ["account", "directory", "security", "data-requests"]
+      "related": ["account", "directory", "security", "data-requests"],
+      "presentation": {
+        "Administrators": [
+          {"type": "table", "caption": "Examples of role-scoped actions", "headers": ["Action", "Administrator", "Manager"], "rows": [
+            ["Access employee roster", "Organization-scoped roster.", "Linked employee and direct reports."],
+            ["Delete an employee", "Allowed through the administrator-only endpoint.", "Not allowed through the employee-delete endpoint."],
+            ["Invite a manager", "Administrator-only action.", "Not an administrator action."]
+          ]}
+        ]
+      }
     },
     "account": {
       "path": "account",
+      "inline_code": ["Forgot password"],
       "title": "Sign-in, 2FA and password",
       "group": "Team and account",
       "description": "Sign-in, authenticator setup, backup-code recovery, and the current password-reset limitation.",
@@ -279,7 +418,19 @@
         {"heading": "Two-factor authentication", "paragraphs": ["TOTP setup shows a QR code/URI for an authenticator app. After a valid code is verified, the account stores TOTP settings and generates ten single-use backup codes, shown once. Save those codes somewhere safe; the stored versions are hashed.", "During sign-in, a user who has lost their authenticator device can verify with an unused backup code. Each code can be used once. Regenerating backup codes invalidates the prior set and requires an already TOTP-verified session."]},
         {"heading": "Keep recovery information safe", "paragraphs": ["Never send a password, authenticator secret, or backup code in a support request. If you still have an active verified session, review the security settings and regenerate backup codes if needed. Losing both the authenticator and all unused backup codes can prevent access.", "Password reset and account recovery policy beyond these implemented paths: [CONFIRM: account recovery process and support contact ownership]"]}
       ],
-      "related": ["roles", "security", "data-requests"]
+      "related": ["roles", "security", "data-requests"],
+      "presentation": {
+        "Two-factor authentication": [
+          {"type": "steps", "items": [
+            {"text": "Start TOTP setup in the account security settings."},
+            {"text": "Add the displayed QR code or URI to an authenticator app."},
+            {"text": "Enter a valid authenticator code to verify and enable setup."},
+            {"text": "Save the ten single-use backup codes shown after verification."},
+            {"text": "If the authenticator is lost, use an unused backup code at sign-in."}
+          ]},
+          {"type": "callout", "label": "Important", "text": "Backup codes are shown once, each works once, and losing the authenticator plus all unused codes can prevent access."}
+        ]
+      }
     },
     "directory": {
       "path": "directory",
@@ -292,7 +443,28 @@
         {"heading": "CSV import and org chart links", "paragraphs": ["CSV import reads UTF-8 data with an optional byte-order mark and expects named columns such as name, email, department, position, and reports_to_email. It validates rows and can partially succeed: invalid rows are returned as failures while valid rows are created. A second pass resolves manager emails against the same import batch or existing employees.", "An unresolved or self-referential manager is returned as a warning rather than silently linked. Review the results and fix relationships after import. Import size and row limits are enforced by the server, so a very large file can be rejected or capped."]},
         {"heading": "Remove or export records", "paragraphs": ["Employee export downloads a CSV within the caller's allowed scope and logs a bulk export event. Employee deletion is administrator-only and deletes that employee's sessions and notifications along with the employee record. Do not assume this removes every associated record in every subsystem; confirm before promising complete erasure.", "Review the export contents and access permissions carefully because it contains personal information."]}
       ],
-      "related": ["roles", "security", "data-requests"]
+      "related": ["roles", "security", "data-requests"],
+      "presentation": {
+        "CSV import and org chart links": [
+          {"type": "steps", "items": [
+            {"text": "Prepare a UTF-8 CSV with a header row."},
+            {"text": "Include the required name field and any employee or manager columns you need."},
+            {"text": "Upload the file; the server can accept up to 500 data rows and enforces a byte limit."},
+            {"text": "Review created rows, failed rows, and unresolved manager warnings."},
+            {"text": "Correct any relationships that were not resolved as intended."}
+          ]},
+          {"type": "bullets", "items": [
+            "name — required employee name",
+            "email — optional employee email address",
+            "department — optional department field",
+            "position — optional employee position",
+            "reports_to_email — optional manager email for reporting links"
+          ]}
+        ],
+        "Remove or export records": [
+          {"type": "callout", "label": "Note", "text": "The import supports additional fields including phone, employment_type, work_mode, and joining_date; review the downloadable template for the full header set."}
+        ]
+      }
     },
     "security": {
       "path": "security",
@@ -305,7 +477,19 @@
         {"heading": "Access and audit controls", "paragraphs": ["API routes generally scope records to an organization. Manager employee queries are further limited to the manager's linked employee and direct reports; invalid links fail closed. Some sensitive actions, including exports and deletions, create audit events. Sign-in sessions and TOTP checks are also implemented.", "These controls should not be confused with independent security certification, a penetration-test claim, or a guarantee that no authorized user can access personal data. [CONFIRM: current independent security certifications and audit status]"]},
         {"heading": "External services and storage", "paragraphs": ["Audio transcription, image text extraction, language-model analysis, email, WhatsApp, and encryption can involve separately configured services. The code selects providers from application configuration, but the applicable provider, region, retention, and use-of-data terms may vary by deployment.", "Provider data-processing terms, retention periods, and the production provider configuration are not verified by this code review. [CONFIRM: deployed AI, speech, OCR, storage providers and their data policies]"]}
       ],
-      "related": ["data-requests", "roles", "meetings", "analysis"]
+      "related": ["data-requests", "roles", "meetings", "analysis"],
+      "presentation": {
+        "Access and audit controls": [
+          {"type": "bullets", "items": [
+            "Employee name and contact fields use field-level encryption.",
+            "Protected APIs apply organization and role-based access checks.",
+            "Some sensitive operations, including exports and deletions, create audit events."
+          ]}
+        ],
+        "External services and storage": [
+          {"type": "callout", "label": "Important", "text": "The deployed providers, regions, and retention terms are configuration- and contract-dependent; do not infer them from application code."}
+        ]
+      }
     },
     "data-requests": {
       "path": "data-requests",
@@ -318,7 +502,25 @@
         {"heading": "Available deletion actions", "paragraphs": ["An administrator can delete an employee record through the directory API. That operation also deletes sessions and notifications attached to the employee before deleting the employee record. Sessions can be deleted through their own endpoint; conversation-memory and survey records have their own operations.", "These are separate application records and endpoints. The employee-delete code does not establish deletion from backups, logs, third-party providers, email, WhatsApp, or all related collections. Do not promise complete erasure based only on one delete action."]},
         {"heading": "Requests and retention", "paragraphs": ["The code reviewed for this guide does not define a universal user-facing data-access request form, deletion-request workflow, retention schedule, or response deadline. Follow your organization's approved privacy process and consult the existing Privacy Policy.", "Customer request process, retention and backup deletion timelines: [CONFIRM: data request and retention policy]"]}
       ],
-      "related": ["security", "directory", "account"]
+      "related": ["security", "directory", "account"],
+      "presentation": {
+        "Available exports": [
+          {"type": "bullets", "items": [
+            "Employee CSV export is limited to the caller's permitted scope.",
+            "Bulk employee exports are audit-logged.",
+            "Available export screens do not establish a complete account-wide archive."
+          ]}
+        ],
+        "Available deletion actions": [
+          {"type": "steps", "items": [
+            {"text": "Identify the records and person covered by the request."},
+            {"text": "Follow your organization's approved privacy request process."},
+            {"text": "Ask an administrator to use the applicable export or deletion operation."},
+            {"text": "Verify the operation's scope and consult the privacy contact about backups and providers."}
+          ]},
+          {"type": "callout", "label": "Important", "text": "No single employee deletion operation guarantees removal from backups, logs, or third-party providers."}
+        ]
+      }
     },
     "faq": {
       "path": "faq",

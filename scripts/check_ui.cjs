@@ -55,9 +55,16 @@ const failures = [];
       page.on('pageerror', onError);
       await page.goto(item.url, {waitUntil:'domcontentloaded'});
       await page.waitForTimeout(600);
-      for (const width of [480,768,1024,1280]) {
+      const widths = item.name.startsWith('support')
+        ? [375,480,768,1024,1280]
+        : [480,768,1024,1280];
+      for (const width of widths) {
         await page.setViewportSize({width,height:900});
         await page.waitForTimeout(50);
+        if (item.name.startsWith('support') && width === 375) {
+          const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+          if (documentWidth > width) failures.push(`${file} @ ${width}: page scrolls horizontally (${documentWidth}px)`);
+        }
         const overflow = await page.evaluate(() => {
           return [...document.querySelectorAll('body *')].filter(el => {
             const rect = el.getBoundingClientRect();

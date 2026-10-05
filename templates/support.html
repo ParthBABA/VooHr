@@ -1,3 +1,28 @@
+{% macro support_inline(text, labels) -%}
+  {%- if not labels -%}
+    {{ text }}
+  {%- elif labels[0] in text -%}
+    {%- set pieces = text.split(labels[0]) -%}
+    {%- for piece in pieces -%}
+      {{- support_inline(piece, labels[1:]) -}}
+      {%- if not loop.last -%}<code>{{ labels[0] }}</code>{%- endif -%}
+    {%- endfor -%}
+  {%- else -%}
+    {{- support_inline(text, labels[1:]) -}}
+  {%- endif -%}
+{%- endmacro %}
+{% macro support_text(parts, labels) -%}
+  {%- if parts is string -%}
+    {{ support_inline(parts, labels) }}
+  {%- else -%}
+    {%- for part in parts -%}
+      {%- if part is string -%}{{ support_inline(part, labels) }}
+      {%- elif part.code is defined -%}<code>{{ part.code }}</code>
+      {%- elif part.kbd is defined -%}<kbd>{{ part.kbd }}</kbd>
+      {%- endif -%}
+    {%- endfor -%}
+  {%- endif -%}
+{%- endmacro %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -185,7 +210,43 @@
           {% for section in support_page.sections %}
           <section class="support-prose-section" id="section-{{ loop.index }}">
             <h2>{{ section.heading }} <a href="#section-{{ loop.index }}" class="support-anchor" aria-label="Link to {{ section.heading }}">#</a></h2>
-            {% for paragraph in section.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
+            {% for paragraph in section.paragraphs %}<p>{{ support_inline(paragraph, support_page.get("inline_code", [])) }}</p>{% endfor %}
+            {% for block in support_page.get("presentation", {}).get(section.heading, []) %}
+              {% if block["type"] == "paragraph" %}
+              <p>{{ support_text(block["text"], support_page.get("inline_code", [])) }}</p>
+              {% elif block["type"] == "steps" %}
+              <div class="support-steps">
+                <ol>
+                  {% for item in block["items"] %}
+                  <li>
+                    <div>{{ support_text(item["text"], support_page.get("inline_code", [])) }}</div>
+                    {% if item.get("hint") %}<p class="support-step-hint">{{ support_text(item["hint"], support_page.get("inline_code", [])) }}</p>{% endif %}
+                  </li>
+                  {% endfor %}
+                </ol>
+              </div>
+              {% elif block["type"] == "bullets" %}
+              <ul class="support-bullets">
+                {% for item in block["items"] %}<li>{{ support_text(item, support_page.get("inline_code", [])) }}</li>{% endfor %}
+              </ul>
+              {% elif block["type"] == "table" %}
+              <div class="support-table-scroll" role="region" tabindex="0"
+                   aria-label="{{ block['caption'] }} (scroll horizontally if needed)">
+                <table class="support-table">
+                  <caption>{{ block["caption"] }}</caption>
+                  <thead><tr>{% for header in block["headers"] %}<th scope="col">{{ header }}</th>{% endfor %}</tr></thead>
+                  <tbody>{% for row in block["rows"] %}
+                    <tr>{% for cell in row %}<td>{{ support_text(cell, support_page.get("inline_code", [])) }}</td>{% endfor %}</tr>
+                  {% endfor %}</tbody>
+                </table>
+              </div>
+              {% elif block["type"] == "callout" %}
+              <aside class="support-callout">
+                <p class="support-callout-label">{{ block["label"] }}</p>
+                <p>{{ support_text(block["text"], support_page.get("inline_code", [])) }}</p>
+              </aside>
+              {% endif %}
+            {% endfor %}
           </section>
           {% endfor %}
           <section class="support-prose-section support-guidance">

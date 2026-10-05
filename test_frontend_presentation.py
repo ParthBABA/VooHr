@@ -728,6 +728,94 @@ class PresentationTests(unittest.TestCase):
             self.assertIn(item["article"], content["articles"])
             self.assertTrue(item["id"])
 
+    def test_support_structured_blocks_render_semantically(self):
+        content = json.loads((ROOT / "data" / "support.json").read_text(encoding="utf-8"))
+        rendered_types = set()
+
+        class BlockParser(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.tags = []
+                self.labels = []
+                self._capture = None
+
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                self.tags.append((tag, attrs))
+                if tag == "p" and "support-callout-label" in attrs.get("class", "").split():
+                    self._capture = []
+
+            def handle_data(self, data):
+                if self._capture is not None:
+                    self._capture.append(data)
+
+            def handle_endtag(self, tag):
+                if tag == "p" and self._capture is not None:
+                    self.labels.append("".join(self._capture).strip())
+                    self._capture = None
+
+        for slug, article in content["articles"].items():
+            if not slug or slug == "faq":
+                continue
+            presentation = article.get("presentation", {})
+            if not presentation:
+                continue
+            with self.subTest(article=slug), self.app.test_request_context(
+                    "/support/" + slug, base_url="https://example.test"):
+                html = render_support_page(slug).get_data(as_text=True)
+                for label in article.get("inline_code", []):
+                    self.assertIn(f"<code>{label}</code>", html)
+                self.assertLess(
+                    html.index('<p class="support-lede">'),
+                    html.index('<section class="support-prose-section"'),
+                    "Every article must open with its intro paragraph",
+                )
+                parser = BlockParser()
+                parser.feed(html)
+                tags = parser.tags
+                all_blocks = [block for blocks in presentation.values() for block in blocks]
+                for block_type in {block["type"] for block in all_blocks}:
+                    rendered_types.add(block_type)
+                    if block_type == "steps":
+                        self.assertTrue(any(tag == "ol" for tag, _ in tags))
+                    elif block_type == "bullets":
+                        self.assertTrue(any(
+                            tag == "ul" and "support-bullets" in attrs.get("class", "").split()
+                            for tag, attrs in tags
+                        ))
+                    elif block_type == "table":
+                        tables = sum(
+                            1 for tag, attrs in tags
+                            if tag == "table" and "support-table" in attrs.get("class", "").split()
+                        )
+                        self.assertEqual(tables, sum(
+                            block["type"] == "table" for block in all_blocks
+                        ))
+                        captions = [tag for tag, _ in tags if tag == "caption"]
+                        headers = [
+                            attrs for tag, attrs in tags
+                            if tag == "th" and attrs.get("scope") == "col"
+                        ]
+                        self.assertEqual(len(captions), tables)
+                        self.assertEqual(
+                            len(headers),
+                            sum(len(block["headers"]) for block in all_blocks
+                                if block["type"] == "table"),
+                        )
+                    elif block_type == "callout":
+                        expected_labels = [
+                            block["label"] for block in all_blocks if block["type"] == "callout"
+                        ]
+                        self.assertTrue(all(label in parser.labels for label in expected_labels))
+                        self.assertTrue(any(
+                            tag == "aside" and "support-callout" in attrs.get("class", "").split()
+                            for tag, attrs in tags
+                        ))
+
+        self.assertEqual(
+            rendered_types, {"steps", "bullets", "table", "callout"},
+        )
+
 
 class SyncRoomHonestyTests(unittest.TestCase):
     """The Analysis View must not state anything the analysis cannot support,
