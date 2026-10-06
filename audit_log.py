@@ -52,6 +52,9 @@ ACTION_MEMORY_CREATE = "memory.create"
 ACTION_MEMORY_UPDATE = "memory.update"
 ACTION_MEMORY_DELETE = "memory.delete"
 ACTION_MEMORY_USE = "memory.usage"
+# Automated (no actor) — records only how many suggestions a post-analysis run
+# produced, never their text.
+ACTION_MEMORY_AI_SUGGEST = "memory.ai_suggest"
 ACTION_MEETING_CREATE = "meeting.create"
 ACTION_MEETING_UPDATE = "meeting.update"
 ACTION_MEETING_DELETE = "meeting.delete"

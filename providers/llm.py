@@ -3,6 +3,7 @@ import os
 import json
 import re
 from abc import ABC, abstractmethod
+from datetime import datetime
 from flask import current_app
 from openai import APITimeoutError
 from providers.translation_cache import TranslationCache
@@ -1459,6 +1460,264 @@ def validate_phrasing_analysis(result: dict) -> dict:
     return out
 
 
+# ── Commitment extraction & resolution ──────────────────────────────────
+# Reads a transcript and answers two questions at once:
+#   1. what NEW promises / next steps were actually stated in it, and
+#   2. which of the employee's EARLIER open promises this transcript shows
+#      as done / under way.
+# The model only ever *suggests* — nothing here is authoritative, and every
+# caller stores the result as an unconfirmed suggestion for a human to accept
+# or dismiss. Two prompt rules carry that contract: extract only what was
+# literally promised, and never call something done unless the transcript says
+# so.
+#
+# Open items are referenced by a short opaque ref ("i1", "i2", …) rather than
+# by Mongo id or any employee attribute, so the prompt carries conversation
+# text only (see docs/LLM_DATA_PRIVACY.md).
+
+COMMITMENT_ITEM_TYPES = {"COMMITMENT", "FOLLOW_UP"}
+COMMITMENT_OWNERS = {"employee", "manager", "unknown"}
+RESOLUTION_VERDICTS = {"done", "in_progress", "not_mentioned", "unclear"}
+
+# Bounds on the model's output. The validator enforces these because a model
+# can ignore the prompt's caps: without them one reply could inject hundreds of
+# records or multi-megabyte evidence strings into the database.
+MAX_NEW_COMMITMENT_ITEMS = 10
+MAX_COMMITMENT_ITEM_LEN = 500
+MAX_COMMITMENT_EVIDENCE_LEN = 200
+
+# Only these verdicts propose a state change, and only above this confidence.
+MIN_RESOLUTION_CONFIDENCE = 0.6
+
+
+def _clean_text(val, limit: int) -> str:
+    """Collapse whitespace and cap length on a model-supplied text field."""
+    if not isinstance(val, str):
+        return ""
+    text = " ".join(val.split())
+    return text[:limit].strip()
+
+
+def normalize_commitment_text(text: str) -> str:
+    """Comparison key for commitment/follow-up content (dedupe + the
+    validator's own duplicate guard). Lowercased with whitespace collapsed, so
+    "Send  the   Q3 report" and "send the q3 report" are the same promise."""
+    if not isinstance(text, str):
+        return ""
+    return " ".join(text.lower().split())
+
+
+def _clean_due_at(val):
+    """Return an ISO date string the caller can parse, or None.
+
+    The model resolves relative phrasing ("next Friday") against the session
+    date it was given; anything still unresolvable (or unparseable) becomes
+    None rather than an invented date.
+    """
+    if isinstance(val, datetime):
+        return val.isoformat()
+    if not isinstance(val, str):
+        return None
+    raw = val.strip()
+    if not raw:
+        return None
+    candidate = raw if raw.endswith("Z") else raw
+    try:
+        return datetime.fromisoformat(candidate).isoformat()
+    except (ValueError, TypeError):
+        return None
+
+
+def _build_commitment_prompt() -> str:
+    """Build the Commitment Extraction & Resolution system prompt."""
+    return """You are an HR Conversation Analyst. You read one HR conversation transcript and produce two things: the commitments and next steps that were actually stated in it, and a verdict on each already-open commitment you are given.
+
+PART 1 — NEW ITEMS
+Extract only explicit promises and next steps that someone actually stated in this conversation:
+- a COMMITMENT is a promise to do something ("I'll send the report by Friday").
+- a FOLLOW_UP is an agreed next step or topic to revisit ("let's check back on the deadline next week").
+Do NOT invent items from impressions, concerns, or general discussion. If nobody actually promised anything, return an empty list — a conversation can legitimately produce zero new items. Do not include wishes, opinions, descriptions of past events, or things the employee merely talked about.
+
+For each new item:
+- content: one short sentence, in the SAME language the transcript is spoken in (English, Hindi, Hinglish, or any other language present).
+- owner: who took it on — "employee" if the employee promised it, "manager" if the HR/manager did, "unknown" if it is genuinely ambiguous.
+- due_at_iso: the due date if one was stated. Resolve relative phrasing ("next Friday", "by tomorrow", "end of next month") against the session date provided below. If no date was stated or it cannot be resolved, use null. Never guess a date.
+- evidence: a short verbatim quote (max 200 characters) from the transcript that shows the promise. If you cannot quote it, drop the item.
+
+PART 2 — RESOLUTIONS
+For each open item you are given (labelled i1, i2, …), decide what this transcript shows about it:
+- done: the transcript clearly states it was finished ("I sent it yesterday", "that's wrapped up now").
+- in_progress: the transcript clearly shows it has started or is partway ("I'm halfway through the report").
+- not_mentioned: this transcript says nothing about it.
+- unclear: it is discussed but the evidence is ambiguous.
+Never mark an item done unless the transcript clearly says it was completed. A vague mention, a promise to do it later, or silence is NOT done — use in_progress, not_mentioned, or unclear. Being wrong here would silently erase a real promise, so when in doubt use "unclear".
+confidence is a number from 0 to 1 expressing how certain you are of the verdict.
+
+Return a JSON object with exactly these fields:
+- new_items: [
+    { "type": "COMMITMENT | FOLLOW_UP", "content": str, "owner": "employee | manager | unknown", "due_at_iso": str | null, "evidence": str }
+  ]
+- resolutions: [
+    { "ref": "the item's ref, exactly as given (e.g. i1)", "verdict": "done | in_progress | not_mentioned | unclear", "confidence": 0.0-1.0, "evidence": str }
+  ]
+Only reference refs that were given to you. Never invent a ref. At most 10 new_items.
+
+Return ONLY valid JSON, no markdown formatting, no code fences."""
+
+
+def _build_commitment_user_prompt(transcript: str, open_items, session_date_iso) -> str:
+    """Format the user message: session date, the open items with short refs,
+    then the transcript. Contains conversation text and opaque refs only —
+    never a name, email, department, or database id."""
+    lines = []
+    if session_date_iso:
+        lines.append(f"Session date: {session_date_iso}")
+        lines.append("(Resolve any relative date in the transcript against this date.)")
+    lines.append("")
+    lines.append("Open commitments and follow-ups already recorded for this person:")
+    items = list(open_items or [])
+    if not items:
+        lines.append("(none)")
+    for idx, it in enumerate(items, start=1):
+        ref = f"i{idx}"
+        if isinstance(it, dict):
+            ref = it.get("ref") or ref
+        parts = [f"- {ref}: {it.get('type', 'FOLLOW_UP')}"]
+        if it.get("content"):
+            parts.append(f"— {str(it['content']).strip()}")
+        if it.get("due_at"):
+            parts.append(f"(due {it['due_at']})")
+        lines.append(" ".join(parts))
+    lines.append("")
+    lines.append("Transcript:")
+    lines.append(transcript or "")
+    return "\n".join(lines)
+
+
+FALLBACK_COMMITMENT_EXTRACTION = {
+    # An unparseable reply must never be stored as "this transcript promised
+    # nothing new and resolved nothing" — the caller checks is_fallback and
+    # writes nothing at all.
+    "new_items": [],
+    "resolutions": [],
+    "is_fallback": True,
+}
+
+
+def validate_commitment_extraction(result: dict, allowed_refs=None) -> dict:
+    """Normalize the extraction reply into exactly the shape the store expects.
+
+    The model can return the wrong types, oversized strings, refs that were
+    never offered, or the same promise twice, so every field is coerced here:
+      * unknown/invalid refs are dropped (a resolution for an item nobody sent
+        to the model is not a fact about anything),
+      * confidence is clamped to 0..1 and non-numeric values become 0.0,
+      * verdicts outside the enum collapse to "unclear",
+      * text is whitespace-collapsed and length-capped,
+      * new_items are de-duplicated and capped at MAX_NEW_COMMITMENT_ITEMS.
+    ``allowed_refs`` is the set of refs actually offered in the prompt.
+    """
+    if not isinstance(result, dict):
+        return dict(FALLBACK_COMMITMENT_EXTRACTION)
+
+    out = {"new_items": [], "resolutions": []}
+
+    raw_new = result.get("new_items")
+    if isinstance(raw_new, dict):
+        raw_new = [raw_new]
+    seen = set()
+    if isinstance(raw_new, list):
+        for item in raw_new:
+            if not isinstance(item, dict):
+                continue
+            mtype = str(item.get("type") or "").strip().upper()
+            if mtype not in COMMITMENT_ITEM_TYPES:
+                continue
+            content = _clean_text(item.get("content"), MAX_COMMITMENT_ITEM_LEN)
+            if not content:
+                continue
+            key = normalize_commitment_text(content)
+            if key in seen:
+                continue
+            seen.add(key)
+            owner = str(item.get("owner") or "").strip().lower()
+            if owner not in COMMITMENT_OWNERS:
+                owner = "unknown"
+            out["new_items"].append({
+                "type": mtype,
+                "content": content,
+                "owner": owner,
+                "due_at_iso": _clean_due_at(item.get("due_at_iso") or item.get("due_at")),
+                "evidence": _clean_text(item.get("evidence"), MAX_COMMITMENT_EVIDENCE_LEN),
+            })
+            if len(out["new_items"]) >= MAX_NEW_COMMITMENT_ITEMS:
+                break
+
+    raw_res = result.get("resolutions")
+    if isinstance(raw_res, dict):
+        raw_res = [raw_res]
+    seen_refs = set()
+    if isinstance(raw_res, list):
+        for item in raw_res:
+            if not isinstance(item, dict):
+                continue
+            ref = str(item.get("ref") or "").strip()
+            if not ref or ref in seen_refs:
+                continue
+            if allowed_refs is not None and ref not in allowed_refs:
+                continue
+            seen_refs.add(ref)
+            verdict = str(item.get("verdict") or "").strip().lower()
+            if verdict not in RESOLUTION_VERDICTS:
+                verdict = "unclear"
+            try:
+                confidence = float(item.get("confidence"))
+            except (TypeError, ValueError):
+                confidence = 0.0
+            confidence = max(0.0, min(1.0, confidence))
+            out["resolutions"].append({
+                "ref": ref,
+                "verdict": verdict,
+                "confidence": confidence,
+                "evidence": _clean_text(item.get("evidence"), MAX_COMMITMENT_EVIDENCE_LEN),
+            })
+
+    return out
+
+
+def _extract_commitments(
+    client,
+    model: str,
+    supports_json_mode: bool,
+    transcript: str,
+    open_items: list,
+    session_date_iso: str,
+    language: str = "en",
+) -> dict:
+    """Shared body of both providers' extract_commitments().
+
+    Identical call/validate/fallback wiring as analyze(), except that the
+    validator is bound to the set of refs actually offered in the prompt so the
+    model cannot resolve an item it was never shown. Best-effort like the drift
+    check, so it uses the tighter per-call timeout budget.
+    """
+    items = list(open_items or [])
+    allowed_refs = {
+        str(it.get("ref")) for it in items
+        if isinstance(it, dict) and it.get("ref")
+    } or None
+
+    return _call_and_parse(
+        client, model,
+        _build_commitment_prompt() + _language_instruction(language),
+        _build_commitment_user_prompt(transcript, items, session_date_iso),
+        validator=lambda result: validate_commitment_extraction(result, allowed_refs),
+        fallback=FALLBACK_COMMITMENT_EXTRACTION,
+        temperature=0.2, supports_json_mode=supports_json_mode,
+        timeout=_llm_drift_timeout_seconds(),
+    )
+
+
 def _call_and_parse(
     client,
     model: str,
@@ -1561,6 +1820,24 @@ class BaseLLM(ABC):
         e.g. "Hindi"). Returns ONLY the translated text."""
         ...
 
+    @abstractmethod
+    def extract_commitments(
+        self, transcript: str, open_items: list, session_date_iso: str, language: str = "en"
+    ) -> dict:
+        """Suggest new commitments/follow-ups from a transcript and verdicts on
+        the caller's already-open items.
+
+        transcript: conversation text only — never any employee attribute.
+        open_items: list of {"ref", "type", "content", "due_at"} using short
+            opaque refs ("i1", "i2", …), never Mongo ids or names.
+        session_date_iso: the session date, used to resolve relative dates.
+
+        Returns {"new_items": [...], "resolutions": [...]}, or the
+        FALLBACK_COMMITMENT_EXTRACTION marker when the reply is unparseable.
+        The result is advisory only: no caller may act on it without a human.
+        """
+        ...
+
 
 class OpenAILLM(BaseLLM):
     def __init__(self):
@@ -1613,6 +1890,19 @@ class OpenAILLM(BaseLLM):
             client, self.model, _build_phrasing_prompt(), transcript,
             validator=validate_phrasing_analysis, fallback=FALLBACK_PHRASING_ANALYSIS,
             temperature=0.2, supports_json_mode=True,
+        )
+
+    def extract_commitments(
+        self, transcript: str, open_items: list, session_date_iso: str, language: str = "en"
+    ) -> dict:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=self.api_key, max_retries=0)
+
+        return _extract_commitments(
+            client, self.model, supports_json_mode=True,
+            transcript=transcript, open_items=open_items,
+            session_date_iso=session_date_iso, language=language,
         )
 
     def translate(self, text: str, target_language: str) -> str:
@@ -1701,6 +1991,19 @@ class DeepSeekLLM(BaseLLM):
             client, self.model, _build_phrasing_prompt(), transcript,
             validator=validate_phrasing_analysis, fallback=FALLBACK_PHRASING_ANALYSIS,
             temperature=0.2, supports_json_mode=False, log_label="DeepSeek analyze_phrasing",
+        )
+
+    def extract_commitments(
+        self, transcript: str, open_items: list, session_date_iso: str, language: str = "en"
+    ) -> dict:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=self.api_key, base_url=self.base_url, max_retries=0)
+
+        return _extract_commitments(
+            client, self.model, supports_json_mode=False,
+            transcript=transcript, open_items=open_items,
+            session_date_iso=session_date_iso, language=language,
         )
 
     def translate(self, text: str, target_language: str) -> str:

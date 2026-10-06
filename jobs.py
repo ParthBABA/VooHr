@@ -60,6 +60,7 @@ logger = logging.getLogger(__name__)
 # Reuse the same truncation the synchronous analysis path applies, so the
 # background re-run feeds the LLM the exact same (bounded) input.
 from sessions import MAX_LLM_TRANSCRIPT_CHARS, analysis_key, session_analyses  # noqa: E402
+from commitment_extraction import run_for_session as run_commitment_extraction  # noqa: E402
 
 # Same ceiling the synchronous /tts/synthesize route enforces.
 _MAX_TTS_TEXT_CHARS = 50_000
@@ -336,6 +337,20 @@ def _run_translation_job(db, job_id, llm, org_id, language: str) -> None:
                     "$unset": {"analysis": ""},
                 },
             )
+
+            # Same silent post-step the synchronous /analyze runs: ask the
+            # freshly analyzed transcript for new commitments and for verdicts
+            # on this employee's earlier open ones. AI only suggests (stored as
+            # "suggested" / metadata.ai_resolution, never a status change), it
+            # is env-gated by COMMITMENT_AI_ENABLED, and it runs inside its own
+            # try/except so it can never fail the job. Skipped on a cache hit —
+            # nothing new was generated for that language.
+            try:
+                run_commitment_extraction(db, org_id, s, llm, language=language)
+            except Exception:
+                logger.exception(
+                    "Commitment extraction failed (session=%s, job=%s)", session_id, job_id
+                )
 
         # Mirror the wellness roll-up the synchronous analyze does, so an
         # output-language re-run leaves dashboard/directory scores consistent.

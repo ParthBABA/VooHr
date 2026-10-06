@@ -33,6 +33,7 @@ from pymongo.errors import DuplicateKeyError
 import email_service
 import whatsapp
 from employees import _require_auth
+from conversation_memory import is_ai_suggestion
 from extensions import get_db
 from field_encryption import decrypt_fields
 
@@ -109,6 +110,12 @@ def surface_items(memory, upcoming_emp_ids, now):
     surfaces: dict = {}
     for m in memory:
         if m.get("archive"):
+            continue
+        # An unconfirmed AI suggestion is never surfaced: nobody has vouched
+        # for it yet, so it must not appear as a fact in front of HR or reach
+        # the employee over email/WhatsApp. It stays visible only in the
+        # Meeting Tracker's "AI suggestions" block until it is confirmed.
+        if is_ai_suggestion(m):
             continue
         eid = str(m.get("employee_id"))
         if eid not in upcoming_emp_ids:
@@ -547,6 +554,10 @@ def ensure_due_notifications(db, org_id, now=None) -> int:
     memory = list(db.conversation_memory.find({"org_id": org_oid}))
     for m in memory:
         if m.get("archive"):
+            continue
+        # Same rule as surfacing: a suggestion nobody confirmed can never
+        # generate an "overdue" notification about a promise that may not exist.
+        if is_ai_suggestion(m):
             continue
         mt = m.get("type")
         if mt not in ("COMMITMENT", "FOLLOW_UP"):

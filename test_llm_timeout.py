@@ -157,9 +157,14 @@ class TestTranslateTimeout:
         monkeypatch.setenv("LLM_DRIFT_TIMEOUT_SECONDS", "not-a-number")
         assert llm_mod._llm_drift_timeout_seconds() == 8.0
 
-    def test_both_explain_drift_calls_bind_the_tighter_cap(self, llm_mod):
+    def test_in_request_calls_bind_the_tighter_cap(self, llm_mod):
+        # explain_drift AND commitment extraction (providers/llm.extract_*
+        # in the shared _extract_commitments helper) run inside the SAME
+        # /analyze request as the main analysis. Each of those must bind the
+        # tighter budget so the stacked calls never exceed the platform's
+        # ~30s worker timeout (which would otherwise serve raw HTML).
         src = self._read_source(llm_mod)
-        assert src.count("timeout=_llm_drift_timeout_seconds(),") == 2
+        assert src.count("timeout=_llm_drift_timeout_seconds(),") == 3
 
     def test_call_and_parse_accepts_timeout_override(self, llm_mod):
         client = _CapturingClient('{"ok": true}')

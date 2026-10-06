@@ -150,6 +150,54 @@ the image itself.
 
 ---
 
+## 5. Commitment Extraction & Resolution
+
+**Trigger:** Post-session analysis (`sessions.analyze_session`) and inline in
+translation jobs (`jobs._run_translation_job`) when `COMMITMENT_AI_ENABLED=true`
+**Source files:** `commitment_extraction.py`, `providers/llm.py`
+**Provider:** `OpenAILLM` / `DeepSeekLLM` (same providers as section 1)
+
+After a transcript is analyzed, the LLM (`BaseLLM.extract_commitments`) is
+asked to (a) propose new commitments/follow-ups on a range of 0–10 items and
+(b) suggest a verdict (`done`/`in_progress`/`unclear`) with a confidence score
+for each previously open item.
+
+### Data Sent
+
+| Field | Included | Notes |
+|-------|----------|-------|
+| Transcript text | Yes | Same truncated transcript as drift detection |
+| Open item excerpts | Yes (reduced) | Up to 25 open items, each reduced to its content text (already a summary), due date and type |
+| Employee identifiers | No | No name, email, department, phone or employee/memory IDs are sent |
+| Suggested items | No | Previously AI-suggested items are not re-sent for verdicts |
+
+### Minimization Applied
+
+- Open items and suggested items are referenced by opaque integer labels
+  (`i1`, `i2`, …) rendered by the LLM; the mapping back to database IDs is
+  applied server-side only.
+- Newly suggested item text, its evidence quote and the resolution evidence
+  are truncated (`MAX_COMMITMENT_ITEM_LEN` 500, `MAX_COMMITMENT_EVIDENCE_LEN`
+  200) before storage.
+- The output is validated before any write; invalid items and
+  low-confidence resolutions (below 0.6) are dropped silently.
+
+### Storage / Human-in-the-loop
+
+- New items are stored as `conversation_memory` with
+  `confirmation_status="suggested"` and status `PENDING`. They never count
+  toward open-promise totals, reminders, or surfaced items until an HR user
+  confirms (`PATCH confirmation_status=confirmed`) or rejects (DELETE).
+- Resolution verdicts are stored under `metadata.ai_resolution` only. The
+  AI never mutates an item's status or due date — changing status is an HR
+  action via `POST /conversation-memory/<id>/ai-resolution` (accept/dismiss)
+  or the item edit endpoint.
+- The suggested items and evidence are shown in the Meeting Tracker ("AI
+  suggestions" block) and in `GET /api/meetings/<id>/prep` under
+  `suggested_topics`.
+
+---
+
 ## Summary of PII Minimization
 
 | Data Flow | Employee PII Sent | Auth Secrets Sent | Minimization Applied |
@@ -158,6 +206,7 @@ the image itself.
 | Drift detection | No | No | Yes |
 | Audio transcription | Voice/content only | No | N/A (core function) |
 | Image OCR | Image content only | No | N/A (core function) |
+| Commitment extraction | No | No | Yes |
 
 ### Key Design Decisions
 

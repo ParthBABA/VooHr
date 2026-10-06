@@ -72,6 +72,9 @@ class FakeCollection:
                 return dict(d)
         return None
 
+    def count_documents(self, filt, *a, **k):
+        return sum(1 for d in self._docs if self._match(d, filt))
+
     def find(self, filt=None, *args, **kw):
         filt = filt or {}
         wrapped = [dict(d) for d in self._docs if self._match(d, filt)]
@@ -309,6 +312,58 @@ def test_delete_meeting(client):
     mid = _create_meeting(client).get_json()["id"]
     assert client.delete(f"/api/meetings/{mid}").status_code == 200
     assert client.get(f"/api/meetings/{mid}").status_code == 404
+
+
+def _seed_overdue_commitment(fake, status="PENDING"):
+    fake.conversation_memory.insert_one({
+        "org_id": ObjectId(ORG_A),
+        "employee_id": ObjectId(EMP_1),
+        "type": "COMMITMENT",
+        "status": status,
+        "due_at": datetime.now(timezone.utc) - timedelta(days=1),
+        "archive": False,
+    })
+
+
+def test_delete_meeting_blocked_by_overdue_pending_commitment(client, fake):
+    mid = _insert_meeting(
+        fake, "missed 1:1", datetime.now(timezone.utc) - timedelta(days=1),
+        status="missed",
+    )
+    _seed_overdue_commitment(fake)
+
+    response = client.delete(f"/api/meetings/{mid}")
+
+    assert response.status_code == 409
+    assert response.get_json() == {"error": "open_promises", "open_promises": 1}
+    assert fake.meetings.find_one({"_id": ObjectId(str(mid))}) is not None
+
+
+def test_force_delete_meeting_with_overdue_pending_commitment(client, fake):
+    mid = _insert_meeting(
+        fake, "missed 1:1", datetime.now(timezone.utc) - timedelta(days=1),
+        status="missed",
+    )
+    _seed_overdue_commitment(fake)
+
+    response = client.delete(f"/api/meetings/{mid}?force=true")
+
+    assert response.status_code == 200
+    assert response.get_json() == {"ok": True}
+    assert fake.meetings.find_one({"_id": ObjectId(str(mid))}) is None
+
+
+def test_delete_meeting_allowed_when_commitment_completed(client, fake):
+    mid = _insert_meeting(
+        fake, "missed 1:1", datetime.now(timezone.utc) - timedelta(days=1),
+        status="missed",
+    )
+    _seed_overdue_commitment(fake, status="COMPLETED")
+
+    response = client.delete(f"/api/meetings/{mid}")
+
+    assert response.status_code == 200
+    assert fake.meetings.find_one({"_id": ObjectId(str(mid))}) is None
 
 
 # ── Conversation memory ───────────────────────────────────────────────────
@@ -787,6 +842,5 @@ def test_manager_dashboard_scoped(mgr_client):
     assert EMP_OTHER not in emp_ids
     # EMP_OTHER's meeting must never surface on the manager's board.
     assert all(p["id"] != EMP_OTHER for p in d["people"])
-
 
 

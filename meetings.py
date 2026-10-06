@@ -17,7 +17,7 @@ from audit_log import (
     ACTION_MEETING_DELETE,
     log_audit_event,
 )
-from conversation_memory import _effective_status
+from conversation_memory import _effective_status, is_ai_suggestion
 from extensions import get_db
 from reminders import MEETING_MISSED_GRACE
 from reminders import surface_items, ensure_reminder_notifications
@@ -33,6 +33,26 @@ MEETING_STATUSES = {"scheduled", "completed", "cancelled", "missed"}
 PREPARATION_STATUSES = {"not_started", "in_progress", "completed"}
 
 MAX_MEETING_TITLE_LEN = 200
+
+# What counts as an "open promise" that can block a meeting delete: a real
+# (HR-confirmed) commitment or follow-up still awaiting action.
+OPEN_PROMISE_TYPES = ("COMMITMENT", "FOLLOW_UP")
+OPEN_PROMISE_STATUSES = ("PENDING", "IN_PROGRESS")
+
+# AI-suggestion text (evidence quote) is trimmed before it ever reaches the UI.
+MAX_SUGGESTION_TEXT_LEN = 200
+
+# Mongo-side filter for the same rule, reused by the delete guard below.
+# ``$ne`` also matches documents written before confirmation_status existed
+# (legacy rows are confirmed facts), so nothing silently stops counting.
+OPEN_PROMISE_FILTER = {
+    "type": {"$in": list(OPEN_PROMISE_TYPES)},
+    "status": {"$in": list(OPEN_PROMISE_STATUSES)},
+    "archive": {"$ne": True},
+    # An unconfirmed AI suggestion is not a promise: it must never block HR
+    # from deleting their own meeting record.
+    "confirmation_status": {"$ne": "suggested"},
+}
 
 
 def _aware(dt):
@@ -363,14 +383,35 @@ def meetings_dashboard():
         if m.get("archive"):
             continue
         eid = str(m.get("employee_id"))
+        mt = m.get("type")
+        status = m.get("status")
+        due_at = m.get("due_at")
         agg = by_emp.setdefault(eid, {
             "pending_commitments": 0, "pending_followups": 0,
             "overdue_followups": 0, "openers_used": 0, "openers_saved": 0,
             "notes": 0, "questions_used": 0, "open_items": [],
+            "ai_suggestions": {"new_items": [], "resolutions": []},
         })
-        mt = m.get("type")
-        status = m.get("status")
-        due_at = m.get("due_at")
+
+        # An unconfirmed AI suggestion is not a fact about the employee, so it
+        # is excluded from every count, from open_items and from what gets
+        # surfaced. It is handed to the UI separately under ai_suggestions,
+        # where a human confirms, rejects or dismisses it explicitly.
+        if is_ai_suggestion(m):
+            metadata = m.get("metadata") if isinstance(m.get("metadata"), dict) else {}
+            evidence = str(metadata.get("evidence") or "")[:MAX_SUGGESTION_TEXT_LEN]
+            agg["ai_suggestions"]["new_items"].append({
+                "id": str(m["_id"]),
+                "type": mt,
+                "content": m.get("content", ""),
+                "evidence": evidence,
+                "due_at": due_at.isoformat() if due_at else None,
+                "session_id": str(m.get("session_id")) if m.get("session_id") else None,
+                "created_at": _aware(m.get("created_at")).isoformat()
+                if _aware(m.get("created_at")) else None,
+            })
+            continue
+
         effective = status
         if (
             mt in ("COMMITMENT", "FOLLOW_UP")
@@ -402,8 +443,24 @@ def meetings_dashboard():
                 "due_at": due_at.isoformat() if due_at else None,
                 "status": effective,
             })
+        # AI verdict on this item (set by commitment_extraction, never acted on
+        # automatically). Hidden once a human accepted or dismissed it.
+        metadata = m.get("metadata") if isinstance(m.get("metadata"), dict) else {}
+        resolution = metadata.get("ai_resolution")
+        if isinstance(resolution, dict) and not resolution.get("dismissed") \
+                and not resolution.get("accepted"):
+            agg["ai_suggestions"]["resolutions"].append({
+                "item_id": str(m["_id"]),
+                "content": m.get("content", ""),
+                "verdict": resolution.get("verdict") or "unclear",
+                "confidence": resolution.get("confidence") or 0,
+                "evidence": str(resolution.get("evidence") or "")[:MAX_SUGGESTION_TEXT_LEN],
+            })
     for agg in by_emp.values():
         agg["open_items"].sort(key=lambda o: o["due_at"] or "9999-12-31T00:00:00")
+        agg["ai_suggestions"]["new_items"].sort(
+            key=lambda o: o["created_at"] or "9999-12-31T00:00:00"
+        )
 
     people = []
     for e in employees:
@@ -412,6 +469,7 @@ def meetings_dashboard():
             "pending_commitments": 0, "pending_followups": 0,
             "overdue_followups": 0, "openers_used": 0, "openers_saved": 0,
             "notes": 0, "questions_used": 0, "open_items": [],
+            "ai_suggestions": {"new_items": [], "resolutions": []},
         })
         next_meeting = next(
             (
@@ -460,6 +518,9 @@ def meetings_dashboard():
             } if prev else None,
             "open_items": agg["open_items"],
             "counts": counts,
+            # Unconfirmed AI output awaiting a human decision. Never counted as
+            # open promises; the modal renders it with accept/dismiss controls.
+            "ai_suggestions": agg["ai_suggestions"],
             # Populated after the loop once surfaced items are computed.
             "surfaced": [],
         }
@@ -667,14 +728,27 @@ def delete_meeting(meeting_id: str):
     if _meeting_emp_denied(db, org_id, m):
         return jsonify({"error": "forbidden"}), 403
 
+    force = request.args.get("force", "").strip().lower() in ("1", "true", "yes")
+    open_promises = db.conversation_memory.count_documents({
+        "org_id": ObjectId(org_id),
+        "employee_id": m.get("employee_id"),
+        **OPEN_PROMISE_FILTER,
+    })
+    if open_promises and not force:
+        return jsonify({"error": "open_promises", "open_promises": open_promises}), 409
+
     db.meetings.delete_one({"_id": oid, "org_id": ObjectId(org_id)})
 
     try:
+        audit_kwargs = {}
+        if open_promises > 0:
+            audit_kwargs["meta"] = {"forced": True, "open_promises": open_promises}
         log_audit_event(
             db, org_id, str(session.get("user_id") or ""),
             session.get("user_name") or "", ACTION_MEETING_DELETE,
             target_type="meeting", target_id=str(oid),
             target_label=m.get("title", ""),
+            **audit_kwargs,
         )
     except Exception:
         logger.exception("audit log meeting.delete failed")
@@ -757,9 +831,10 @@ def meeting_prep(meeting_id: str):
 
     Only records belonging to the authenticated user's organization and
     accessible to that user (admin → full org, manager → their team).  The
-    ``suggested_topics`` array is reserved for AI-generated suggestions
-    (confirmation_status != "confirmed"); today the system never writes
-    memory automatically, so it is empty unless a future producer opts in.
+    ``suggested_topics`` array holds AI-generated suggestions
+    (confirmation_status != "confirmed") — commitments/follow-ups proposed by
+    the post-analysis extractor live here and are never listed as open
+    promises until HR confirms them.
     """
     org_id = _require_auth()
     if not org_id:
@@ -789,10 +864,15 @@ def meeting_prep(meeting_id: str):
     }).sort("created_at", 1))
 
     items = [_prep_memory_item(it, now) for it in memory]
-    openers = [i for i in items if i["type"] == "OPENER"]
-    notes = [i for i in items if i["type"] == "NOTE"]
-    commitments = [i for i in items if i["type"] == "COMMITMENT"]
-    follow_ups = [i for i in items if i["type"] == "FOLLOW_UP"]
+    # An unconfirmed AI suggestion belongs in suggested_topics only. Listing it
+    # alongside real promises would present a guess as a factual open item, so
+    # the open/overdue buckets below are built from confirmed records only.
+    suggested = [i for i in items if i["confirmation_status"] == "suggested"]
+    confirmed_items = [i for i in items if i["confirmation_status"] != "suggested"]
+    openers = [i for i in confirmed_items if i["type"] == "OPENER"]
+    notes = [i for i in confirmed_items if i["type"] == "NOTE"]
+    commitments = [i for i in confirmed_items if i["type"] == "COMMITMENT"]
+    follow_ups = [i for i in confirmed_items if i["type"] == "FOLLOW_UP"]
 
     open_commitments = [
         c for c in commitments if c["status"] in ("PENDING", "IN_PROGRESS", "OVERDUE")
@@ -817,7 +897,7 @@ def meeting_prep(meeting_id: str):
         "hr_commitments": [c for c in open_commitments if c.get("owner_user_id")],
         "follow_ups": follow_ups,
         "overdue_follow_ups": [f for f in follow_ups if f["status"] == "OVERDUE"],
-        "suggested_topics": [i for i in items if i["confirmation_status"] == "suggested"],
+        "suggested_topics": suggested,
         "meta": {
             "note": "suggested_topics are AI-generated suggestions that require HR confirmation before being treated as factual employee records."
         },

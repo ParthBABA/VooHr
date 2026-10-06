@@ -7,6 +7,7 @@ from bson.errors import InvalidId
 from flask import Blueprint, jsonify, request, session
 
 from employee_scoring import _status_for
+from commitment_extraction import run_for_session as run_commitment_extraction
 from employees import _require_auth
 from extensions import get_db, check_rate_limit, record_rate_limit_event
 from providers import get_llm_provider, get_storage_provider, get_stt_provider, get_vision_provider
@@ -849,6 +850,21 @@ def analyze_session(session_id: str):
                                 )
         except Exception:
             logger.exception("Drift detection failed (session=%s)", session_id)
+
+        # ── Silent background: AI commitment suggestions ──
+        # After the analysis is stored, ask the same transcript what it
+        # promised and whether it already answered an earlier open promise.
+        # The AI only *suggests*: new items are stored as
+        # confirmation_status="suggested" and resolutions are parked in
+        # metadata.ai_resolution for a human to accept or dismiss — no status
+        # is ever changed here. Env-gated (COMMITMENT_AI_ENABLED) and
+        # best-effort, in its own try/except, for the same reason the wellness
+        # and drift blocks are: this must never fail /analyze or disturb the
+        # session's stored analysis.
+        try:
+            run_commitment_extraction(db, org_id, s, llm, language=language)
+        except Exception:
+            logger.exception("Commitment extraction failed (session=%s)", session_id)
 
         # Build the response INSIDE the same try block so that any failure
         # here (e.g. the session vanishing, or an unexpected shape) is caught

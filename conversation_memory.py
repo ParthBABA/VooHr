@@ -45,6 +45,17 @@ MAX_MEMORY_CONTENT_LEN = 4000
 MAX_METADATA_KEYS = 60
 
 
+def is_ai_suggestion(m) -> bool:
+    """True when the record is an unconfirmed AI suggestion.
+
+    A missing ``confirmation_status`` means a legacy row written before the
+    field existed, i.e. an HR-confirmed fact — treated as "confirmed" so every
+    counting rule keeps counting real promises instead of silently dropping
+    them.
+    """
+    return (m.get("confirmation_status") or "confirmed") == "suggested"
+
+
 def _effective_status(m, now):
     status = m.get("status", "SAVED")
     due_at = m.get("due_at")
@@ -559,6 +570,105 @@ def update_memory(memory_id: str):
         )
     except Exception:
         logger.exception("audit log memory.update failed")
+
+    return jsonify(_memory_to_json(m))
+
+
+@conversation_memory_bp.route("/conversation-memory/<memory_id>/ai-resolution", methods=["POST"])
+def ai_resolution(memory_id: str):
+    """Act on one AI resolution suggestion — the only way AI output can change
+    a status.
+
+    ``{"action": "accept"}``  → same effect as ``PATCH {"status": "COMPLETED"}``
+    (completed_at + an appended status_history entry naming the acting user)
+    plus ``metadata.ai_resolution.accepted = True``.
+    ``{"action": "dismiss"}`` → ``metadata.ai_resolution.dismissed = True`` and
+    nothing else: the item keeps its status and simply stops being suggested.
+
+    Rejecting a *new* suggested item is not here — that is DELETE, and
+    confirming one is ``PATCH confirmation_status="confirmed"``.
+    """
+    org_id = _require_auth()
+    if not org_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        oid = ObjectId(memory_id)
+    except InvalidId:
+        return jsonify({"error": "invalid_id"}), 400
+
+    m = db.conversation_memory.find_one({"_id": oid, "org_id": ObjectId(org_id)})
+    if not m:
+        return jsonify({"error": "not_found"}), 404
+
+    # Manager-role isolation: a manager must not rule on another team's item.
+    if _memory_emp_denied(db, org_id, m):
+        return jsonify({"error": "forbidden"}), 403
+
+    data = request.get_json(silent=True) or {}
+    action = (data.get("action") or "").strip().lower()
+    if action not in ("accept", "dismiss"):
+        return jsonify({"error": "invalid_action"}), 400
+
+    trackable = m.get("type") in ("COMMITMENT", "FOLLOW_UP")
+    if action == "accept" and not trackable:
+        return jsonify({"error": "not_trackable"}), 400
+
+    metadata = m.get("metadata")
+    metadata = dict(metadata) if isinstance(metadata, dict) else {}
+    previous = metadata.get("ai_resolution")
+    if action == "dismiss" and not isinstance(previous, dict):
+        # Nothing was suggested for this item, so there is nothing to dismiss.
+        return jsonify({"error": "no_ai_resolution"}), 400
+
+    now = datetime.now(timezone.utc)
+    actor = _actor_user(db, org_id)
+    actor_oid = actor["_id"] if actor else None
+    resolution = dict(previous) if isinstance(previous, dict) else {}
+
+    set_fields: dict = {"metadata": metadata, "updated_at": now}
+    if action == "accept":
+        resolution["accepted"] = True
+        resolution["dismissed"] = False
+        resolution["resolved_at"] = now.isoformat()
+        resolution["resolved_by"] = str(actor_oid) if actor_oid else None
+        set_fields["metadata"]["ai_resolution"] = resolution
+        set_fields["status"] = "COMPLETED"
+        set_fields["completed_at"] = now
+        # Append-only, identical in shape to the PATCH status transition.
+        history = list(m.get("status_history") or [])
+        history.append({
+            "status": "COMPLETED",
+            "changed_at": now,
+            "changed_by": actor_oid,
+        })
+        set_fields["status_history"] = history
+        # A human just confirmed this item is real and finished, so it can
+        # never stay an unconfirmed suggestion.
+        if (m.get("confirmation_status") or "confirmed") != "confirmed":
+            set_fields["confirmation_status"] = "confirmed"
+    else:
+        resolution["dismissed"] = True
+        resolution["dismissed_at"] = now.isoformat()
+        set_fields["metadata"]["ai_resolution"] = resolution
+
+    db.conversation_memory.update_one(
+        {"_id": oid, "org_id": ObjectId(org_id)},
+        {"$set": set_fields},
+    )
+    m = db.conversation_memory.find_one({"_id": oid, "org_id": ObjectId(org_id)})
+
+    try:
+        log_audit_event(
+            db, org_id, str(actor_oid) if actor_oid else None,
+            session.get("user_name") or "", ACTION_MEMORY_UPDATE,
+            target_type="conversation_memory", target_id=str(oid),
+            target_label=(m.get("content") or "")[:120],
+            meta={"ai_resolution": action, "changed_fields": sorted(set_fields.keys())},
+        )
+    except Exception:
+        logger.exception("audit log memory.ai_resolution failed")
 
     return jsonify(_memory_to_json(m))
 
