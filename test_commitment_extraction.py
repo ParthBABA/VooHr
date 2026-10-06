@@ -25,7 +25,7 @@ import conversation_memory as cm_mod
 import meetings as meetings_mod
 import reminders as reminders_mod
 
-from audit_log import ACTION_MEMORY_AI_SUGGEST, ACTION_MEMORY_UPDATE, ACTION_MEETING_DELETE
+from audit_log import ACTION_MEMORY_AI_SUGGEST, ACTION_MEMORY_UPDATE, ACTION_MEMORY_DELETE, ACTION_MEETING_DELETE
 
 ORG_A = "aaaaaaaaaaaaaaaaaaaaaaaa"
 EMP_1 = "111111111111111111111111"
@@ -201,7 +201,7 @@ def _disabled(monkeypatch):
 
 def _seed_open_confirmed(db, content="fix the login flow", status="PENDING",
                          session_id=OTHER_SESSION, due_at=None, with_resolution=False,
-                         mtype="COMMITMENT"):
+                         mtype="COMMITMENT", archive=False):
     doc = {
         "org_id": ObjectId(ORG_A),
         "employee_id": ObjectId(EMP_1),
@@ -210,7 +210,7 @@ def _seed_open_confirmed(db, content="fix the login flow", status="PENDING",
         "content": content,
         "status": status,
         "due_at": due_at or (NOW + timedelta(days=2)),
-        "archive": False,
+        "archive": archive,
         "priority": "medium",
         "created_at": NOW - timedelta(days=3),
         "status_history": [{"status": status, "changed_at": NOW, "changed_by": None}],
@@ -691,3 +691,91 @@ def test_reminders_surface_and_overdue_skip_suggestions(fake, monkeypatch):
     notes = list(fake.notifications.find({"type": "memory_overdue"}))
     assert len(notes) == 1
     assert notes[0]["memory_id"] == confirmed_id
+
+
+# ── promise resolve/delete actions (View Meeting popup) ─────────────────
+
+
+def test_delete_open_confirmed_promise_requires_force(admin_client, fake):
+    mid = _seed_open_confirmed(fake, "a real open promise")
+
+    r = admin_client.delete(f"/api/conversation-memory/{mid}")
+    assert r.status_code == 409
+    assert r.get_json() == {"error": "open_promise", "message": "Promise abhi pura nahi hua"}
+    assert fake.conversation_memory.find_one({"_id": mid}) is not None
+
+    r = admin_client.delete(f"/api/conversation-memory/{mid}?force=true")
+    assert r.status_code == 200
+    assert fake.conversation_memory.find_one({"_id": mid}) is None
+    audit = list(fake.audit_log.find({"action": ACTION_MEMORY_DELETE}))
+    assert any(a["meta"].get("forced") is True and a["target_id"] == str(mid) for a in audit)
+
+
+def test_delete_open_followup_blocked_by_guard(admin_client, fake):
+    mid = _seed_open_confirmed(fake, "send the Q3 report", mtype="FOLLOW_UP")
+    r = admin_client.delete(f"/api/conversation-memory/{mid}")
+    assert r.status_code == 409
+    assert fake.conversation_memory.find_one({"_id": mid}) is not None
+    # Acceptable force values are honored.
+    for fw in ("1", "yes"):
+        m2 = _seed_open_confirmed(fake, f"follow-up force {fw}", mtype="FOLLOW_UP")
+        r = admin_client.delete(f"/api/conversation-memory/{m2}?force={fw}")
+        assert r.status_code == 200
+        assert fake.conversation_memory.find_one({"_id": m2}) is None
+
+
+def test_delete_open_overdue_promise_still_guarded(admin_client, fake):
+    mid = _seed_open_confirmed(fake, "overdue promise",
+                               due_at=NOW - timedelta(days=2))
+    r = admin_client.delete(f"/api/conversation-memory/{mid}")
+    assert r.status_code == 409
+    r = admin_client.delete(f"/api/conversation-memory/{mid}?force=true")
+    assert r.status_code == 200
+
+
+def test_delete_non_open_items_needs_no_force(admin_client, fake):
+    completed = _seed_open_confirmed(fake, "already done", status="COMPLETED")
+    note = fake.conversation_memory.insert_one({
+        "org_id": ObjectId(ORG_A), "employee_id": ObjectId(EMP_1),
+        "session_id": ObjectId(OTHER_SESSION), "type": "NOTE",
+        "content": "quick note", "status": "SAVED",
+        "archive": False, "created_at": NOW,
+    }).inserted_id
+    archived = _seed_open_confirmed(fake, "archived promise", archive=True)
+
+    for mid in (completed, note, archived):
+        r = admin_client.delete(f"/api/conversation-memory/{mid}")
+        assert r.status_code == 200
+        assert fake.conversation_memory.find_one({"_id": mid}) is None
+
+
+def test_patch_resolution_removes_counts_and_meeting_delete_block(admin_client, fake):
+    mid = _seed_meeting(fake)
+    done_mid = _seed_open_confirmed(fake, "ship the dashboard",
+                                    due_at=NOW - timedelta(days=1))
+    cancelled_mid = _seed_open_confirmed(fake, "park the backlog item",
+                                         due_at=NOW + timedelta(days=1))
+
+    r = admin_client.patch(f"/api/conversation-memory/{done_mid}",
+                           json={"status": "COMPLETED"})
+    assert r.status_code == 200
+    m = fake.conversation_memory.find_one({"_id": done_mid})
+    assert m["status"] == "COMPLETED" and m["completed_at"] is not None
+
+    r = admin_client.patch(f"/api/conversation-memory/{cancelled_mid}",
+                           json={"status": "CANCELLED"})
+    assert r.status_code == 200
+    assert fake.conversation_memory.find_one({"_id": cancelled_mid})["status"] == "CANCELLED"
+
+    # Dashboard no longer counts the resolved items as open (the person still
+    # has the scheduled meeting, so they remain in the people list).
+    d = admin_client.get("/api/meetings/dashboard").get_json()
+    person = next(p for p in d["people"] if p["id"] == EMP_1)
+    assert person["counts"]["pending_commitments"] == 0
+    assert person["counts"]["pending_followups"] == 0
+    assert d["counters"]["pending_commitments"] == 0
+
+    # Neither open promise blocks the meeting delete anymore.
+    r = admin_client.delete(f"/api/meetings/{mid}")
+    assert r.status_code == 200
+    assert fake.meetings.find_one({"_id": mid}) is None

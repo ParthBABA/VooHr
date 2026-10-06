@@ -793,6 +793,23 @@ def delete_memory(memory_id: str):
     if _memory_emp_denied(db, org_id, m):
         return jsonify({"error": "forbidden"}), 403
 
+    # A still-open HR-confirmed promise must not be deleted by accident on the
+    # View Meeting popup; the UI normally resolves these via status PATCH, and
+    # a force flag (1/true/yes) is only sent after an explicit "Delete anyway"
+    # confirmation.  Suggested items and non-promise records (openers,
+    # questions, notes) and completed/cancelled promises delete as before.
+    promise_types = ("COMMITMENT", "FOLLOW_UP")
+    open_statuses = ("PENDING", "IN_PROGRESS")
+    open_promise = (
+        m.get("type") in promise_types
+        and (m.get("status") or "SAVED") in open_statuses
+        and not m.get("archive")
+        and not is_ai_suggestion(m)
+    )
+    force = request.args.get("force")
+    if open_promise and force not in ("1", "true", "yes"):
+        return jsonify({"error": "open_promise", "message": "Promise abhi pura nahi hua"}), 409
+
     result = db.conversation_memory.delete_one({"_id": oid, "org_id": ObjectId(org_id)})
     if not result.deleted_count:
         return jsonify({"error": "not_found"}), 404
@@ -804,6 +821,7 @@ def delete_memory(memory_id: str):
             session.get("user_name") or "", ACTION_MEMORY_DELETE,
             target_type="conversation_memory", target_id=str(oid),
             target_label=(m.get("content") or "")[:120],
+            meta={"forced": True} if open_promise else None,
         )
     except Exception:
         logger.exception("audit log memory.delete failed")
