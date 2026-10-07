@@ -461,7 +461,7 @@
               <div class="st-sec-head st-sec-head--action">
                 <div>
                   <h2 class="st-sec-title">Gmail Integration</h2>
-                  <span class="st-sec-desc">Connect your Gmail account to enable automated follow-ups and email notifications.</span>
+                  <span class="st-sec-desc">Connect your Gmail account to send meeting reminders through your Gmail.</span>
                 </div>
                 <span class="st-status is-off" id="gmailStatusBadge" role="status">
                   <svg class="wa-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -473,10 +473,10 @@
                 </span>
               </div>
 
-              <p class="st-help">Automated follow-ups on overdue 1:1 meetings and email notifications from VooVr will flow through your connected Gmail account.</p>
+              <p class="st-help">Meeting reminders for "24 hours before" will be sent through your connected Gmail account. Other stages and WhatsApp reminders use the standard email service.</p>
 
               <div class="st-int__actions">
-                <div class="st-form-row st-form-row--end">
+                <div class="st-form-row st-form-row--end" id="gmailActions">
                   <button class="btn btn-primary" id="gmailConnectBtn" type="button">Connect Gmail</button>
                 </div>
               </div>
@@ -1282,13 +1282,153 @@ function clearFieldError(input){
   loadPhone();
 })();
 
-/* ── GMAIL INTEGRATION: static placeholder (no backend) — toast only ── */
+/* ── GMAIL INTEGRATION: connect/disconnect/status ── */
 (function(){
+  var badge = document.getElementById('gmailStatusBadge');
   var btn = document.getElementById('gmailConnectBtn');
-  if (!btn) return;
-  btn.addEventListener('click', function(){
-    showToast('Gmail integration is coming soon.');
-  });
+  var actions = document.getElementById('gmailActions');
+  if (!badge || !btn) return;
+
+  var dot = badge.querySelector('.st-dot');
+  var label = badge.querySelector('.wa-status-label');
+  var glyph = badge.querySelector('.wa-glyph');
+
+  function setConnected(email){
+    badge.classList.remove('is-off');
+    badge.classList.add('is-on');
+    if (dot) dot.classList.add('is-on');
+    if (label) label.textContent = 'Connected \u00b7 ' + escapeHtml(email);
+    if (glyph) glyph.style.display = 'none';
+    btn.textContent = 'Disconnect';
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-danger');
+    btn.onclick = handleDisconnect;
+  }
+
+  function setDisconnected(){
+    badge.classList.remove('is-on');
+    badge.classList.add('is-off');
+    if (dot) dot.classList.remove('is-on');
+    if (label) label.textContent = 'Not connected';
+    if (glyph) glyph.style.display = '';
+    btn.textContent = 'Connect Gmail';
+    btn.classList.remove('btn-danger');
+    btn.classList.add('btn-primary');
+    btn.onclick = handleConnect;
+  }
+
+  function setReauthNeeded(email){
+    badge.classList.remove('is-off');
+    badge.classList.add('is-on');
+    if (dot) dot.classList.add('is-on');
+    if (label) label.textContent = 'Reconnect needed \u00b7 ' + escapeHtml(email);
+    if (glyph) glyph.style.display = 'none';
+    btn.textContent = 'Reconnect';
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-danger');
+    btn.onclick = handleConnect;
+  }
+
+  function escapeHtml(str){
+    return (str || '').replace(/[&<>"']/g, function(c){
+      return {'&':'&','<':'<','>':'>','"':'"',"'":'''}[c];
+    });
+  }
+
+  async function fetchStatus(){
+    try {
+      var res = await fetch('/api/integrations/gmail/status', {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) throw new Error('status ' + res.status);
+      return await res.json();
+    } catch (e) {
+      console.warn('gmail status fetch failed', e);
+      return null;
+    }
+  }
+
+  async function handleConnect(){
+    var me = await fetchMe();
+    if (!me) return;
+    var mode = (me.auth_method === 'google') ? 'login' : 'choice';
+    if (mode === 'choice'){
+      var useLogin = await VooVrUI.ask(
+        'Use your login email (' + escapeHtml(me.email) + ') to connect Gmail?',
+        {title: 'Connect Gmail', accept: 'Use login email', cancel: 'Use a different Gmail account'}
+      );
+      mode = useLogin ? 'login' : 'other';
+    }
+    window.location.href = '/api/integrations/gmail/connect?mode=' + encodeURIComponent(mode);
+  }
+
+  async function handleDisconnect(){
+    if (!await VooVrUI.ask(
+      'Disconnect Gmail? Meeting reminders will fall back to the standard email service.',
+      {title: 'Disconnect Gmail?', accept: 'Disconnect'}
+    )) return;
+    btn.disabled = true;
+    btn.textContent = 'Disconnecting\u2026';
+    try {
+      var res = await fetch('/api/integrations/gmail/disconnect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': getCsrfToken()
+        }
+      });
+      if (!res.ok) throw new Error('disconnect failed');
+      await res.json();
+      showToast('Gmail disconnected');
+      setDisconnected();
+    } catch (e) {
+      showToast('Disconnect failed', true);
+      console.error('gmail disconnect failed', e);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function fetchMe(){
+    try {
+      var res = await fetch('/api/me', { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function getCsrfToken(){
+    return sessionStorage.getItem('voovr_csrf') || '';
+  }
+
+  function showToast(msg, isError){
+    var t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.toggle('toast-error', !!isError);
+    t.hidden = false;
+    clearTimeout(t._hideTimer);
+    t._hideTimer = setTimeout(function(){ t.hidden = true; }, 4000);
+  }
+
+  // Initialize on page load
+  (async function(){
+    var params = new URLSearchParams(window.location.search);
+    var gmailParam = params.get('gmail');
+    if (gmailParam === 'connected') showToast('Gmail connected');
+    else if (gmailParam === 'error') showToast('Gmail connection failed', true);
+
+    var status = await fetchStatus();
+    if (status && status.connected){
+      setConnected(status.email || 'Gmail');
+    } else if (status && status.status === 'reauth_required'){
+      setReauthNeeded(status.email || 'Gmail');
+    } else {
+      setDisconnected();
+    }
+  })();
 })();
 
 /* ── ACTIVE SESSIONS: real session tracking + revoke ── */

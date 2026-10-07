@@ -37,6 +37,7 @@ from employees import employees_bp
 from employees import _session_is_active
 from employees import TOTPRequired
 from geoip_db import start_background_download
+from gmail_integration import gmail_bp
 from jobs import jobs_bp
 from extensions import get_db, init_db, check_rate_limit, record_rate_limit_event, client_ip
 from meetings import meetings_bp
@@ -189,6 +190,7 @@ def create_app():
     app.register_blueprint(jobs_bp, url_prefix="/api")
     app.register_blueprint(whatsapp_bp, url_prefix="/api")
     app.register_blueprint(support_bp, url_prefix="/api")
+    app.register_blueprint(gmail_bp, url_prefix="/api/integrations/gmail")
 
     # ── In-process reminder scheduler (APScheduler) ────────────────────
     # One BackgroundScheduler per worker process, started inside the app

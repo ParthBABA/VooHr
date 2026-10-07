@@ -59,6 +59,10 @@ ACTION_MEETING_CREATE = "meeting.create"
 ACTION_MEETING_UPDATE = "meeting.update"
 ACTION_MEETING_DELETE = "meeting.delete"
 
+# Gmail Integration actions
+ACTION_GMAIL_CONNECT = "gmail.connect"
+ACTION_GMAIL_DISCONNECT = "gmail.disconnect"
+
 # Pagination for the audit-log endpoint.
 DEFAULT_PAGE_LIMIT = 50
 MAX_PAGE_LIMIT = 200

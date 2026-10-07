@@ -34,6 +34,9 @@ class Config:
     # (e.g. 127.0.0.1 vs localhost, or Render's URL).
     GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI") or ""
 
+    # Gmail Integration OAuth redirect URI (separate from Google Sign-In)
+    GMAIL_REDIRECT_URI = os.environ.get("GMAIL_REDIRECT_URI") or ""
+
     # Google Cloud KMS (field-level envelope encryption)
     GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
     GCP_KMS_LOCATION = os.environ.get("GCP_KMS_LOCATION", "asia-south1")

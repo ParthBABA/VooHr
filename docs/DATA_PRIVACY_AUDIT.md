@@ -273,3 +273,59 @@ Authentication middleware (`_require_auth`) validates user_id + org_id from sess
 ### Low Priority
 6. **Photo encryption**: Employee photos (base64 data-URLs) are stored unencrypted — acceptable for profile images but consider encryption if photos contain sensitive content.
 7. **TOTP secret rotation**: Consider periodic TOTP secret rotation for long-lived accounts.
+
+---
+
+## 9. Gmail Integration (Meeting Reminders)
+
+### 9.1 Data Stored
+
+When a user connects their Gmail account for meeting reminder delivery, the following data is stored in the `users` collection under the `gmail` field:
+
+| Data Field | Storage | Encrypted | Description |
+|---|---|---|---|
+| `gmail.status` | Plain | No | One of: "connected", "reauth_required", "not_connected" |
+| `gmail.encrypted.refresh_token` | AES-256-GCM | **Yes** | Google OAuth refresh token (offline access) |
+| `gmail.encrypted.email` | AES-256-GCM | **Yes** | Connected Gmail address (used as recipient for reminders) |
+| `gmail.wrapped_dek` | Base64 (KMS-wrapped) | No | Cloud KMS-wrapped Data Encryption Key |
+| `gmail.email_hash` | HMAC-SHA256 | No | Blind index for the connected Gmail address |
+| `gmail.connected_at` | Plain (datetime) | No | Timestamp when Gmail was connected |
+| `gmail.last_ok_at` | Plain (datetime) | No | Last successful Gmail API call |
+| `gmail.last_error` | Plain | No | Last error code (e.g., "invalid_grant") |
+| `gmail.last_error_at` | Plain (datetime) | No | Timestamp of last error |
+
+### 9.2 OAuth Scopes
+
+The integration requests **only** the following scopes:
+- `https://www.googleapis.com/auth/gmail.send` — Send-only access to Gmail
+- `openid email` — Required to verify the connected email address
+
+**Important**: The `gmail.readonly`, `gmail.modify`, or broader scopes are **NOT** requested. The application **cannot read, search, or modify** any emails in the user's Gmail account.
+
+### 9.3 Usage
+
+- Connected Gmail is used **only** for sending "upcoming_24h" meeting reminders (24 hours before a scheduled meeting)
+- Reminders are sent via Gmail API `users.messages.send` to the **connected Gmail address itself** (the user receives their own reminders)
+- If Gmail is not connected or sending fails (e.g., token expired, permission revoked), the system falls back to Brevo transactional email
+- Other reminder stages (soon_1h, day_of) and WhatsApp reminders are **unchanged** and continue using Brevo
+
+### 9.4 Token Handling
+
+- Access tokens are refreshed from the stored refresh token on-demand
+- Access tokens are cached in memory for ~50 minutes (never persisted to disk or database)
+- Refresh tokens are encrypted with the same envelope-encryption pattern used for user PII (AES-256-GCM + Cloud KMS)
+- On `invalid_grant` / 401 / 403 from Gmail API, the user's Gmail status is set to `reauth_required` and they must reconnect
+
+### 9.5 Privacy Notes
+
+- **No email content is stored** — only the minimal metadata needed to send reminders
+- **No Gmail data leaves the user's account** — reminders are sent TO the user's own Gmail address
+- **Encryption at rest** — refresh tokens use the same field-level envelope encryption as employee/user PII
+- **Audit logging** — `gmail.connect` and `gmail.disconnect` actions are logged (no secrets in meta)
+- **Testing mode limits** — Until Google verification is completed, the OAuth consent screen is limited to 100 users and refresh tokens expire after 7 days
+
+### 9.6 Compliance Considerations
+
+- **GDPR**: User can disconnect at any time (DELETE /api/integrations/gmail/disconnect), which revokes the token at Google and deletes all stored Gmail data
+- **Data minimization**: Only the refresh token and email address are stored — no message history, labels, or other Gmail data
+- **Purpose limitation**: Data is used exclusively for meeting reminder delivery
