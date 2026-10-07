@@ -535,9 +535,11 @@
       "title": "Contact support",
       "group": "Support",
       "description": "Send a message to the VooHr support team for help with your account or analysis.",
-      "intro": "Real people read every message. We typically reply within [CONFIRM: reply time]. If you need a fast fix, check our accuracy guide or FAQ first.",
+      "intro": "Real people read every message. We typically reply within [CONFIRM: reply time]. If you need a fast fix, check our accuracy guide or FAQ first. Your patience helps us help you better.",
       "sections": [
         {"heading": "What to include", "paragraphs": ["To help us resolve your issue faster, please include the following details in your message:"]},
+        {"heading": "Before you write", "paragraphs": ["Many questions are answered in the FAQ or the accuracy guide. Checking those first can save you time and help us focus on issues that need direct attention.", "If you are reporting a bug, try to reproduce it once more and note the exact steps. A clear, minimal reproduction is the fastest path to a fix."]},
+        {"heading": "Response times and follow-up", "paragraphs": ["We aim to reply within one business day. Complex issues involving multiple systems or data exports may take longer. If you have not heard back after two business days, reply to the thread to bump it.", "For urgent security or privacy incidents, mark the topic as 'Privacy or data request' and we will prioritize it."]},
         {"heading": "Important", "paragraphs": ["Never include passwords, 2FA codes, or full conversation transcripts with sensitive details. Describe the problem instead."]}
       ],
       "presentation": {
@@ -547,6 +549,17 @@
             "Sign-in/account: the email you use and the sign-in method (Google or email code); never send passwords or 2FA codes.",
             "Bugs: what you did, what you expected, what happened, device and browser, and a screenshot.",
             "Privacy: which employee or session the request is about."
+          ]}
+        ],
+        "Before you write": [
+          {"type": "callout", "label": "Tip", "text": "Search the FAQ and accuracy guide first; most common issues are already documented there."}
+        ],
+        "Response times and follow-up": [
+          {"type": "steps", "items": [
+            {"text": "Submit the form or email with all relevant details."},
+            {"text": "Watch for the confirmation that your message was received."},
+            {"text": "Allow one business day for the initial response."},
+            {"text": "If needed, reply to the thread to add information or follow up."}
           ]}
         ],
         "Important": [

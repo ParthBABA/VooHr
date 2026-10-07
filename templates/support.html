@@ -181,12 +181,12 @@
         </nav>
         <nav class="support-pager" aria-label="Article navigation">
           {% if support_previous %}
-          <a class="support-pager-link" href="/support/{{ support_previous_path }}">
+          <a class="support-pager-link" href="{{ '/support/' + support_previous_path if not support_previous_path.startswith('/') else support_previous_path }}">
             <span>Previous</span><strong>&larr; {{ support_previous.title }}</strong>
           </a>
           {% else %}<span></span>{% endif %}
           {% if support_next %}
-          <a class="support-pager-link support-pager-next" href="/support/{{ support_next_path }}">
+          <a class="support-pager-link support-pager-next" href="{{ '/support/' + support_next_path if not support_next_path.startswith('/') else support_next_path }}">
             <span>Next</span><strong>{{ support_next.title }} &rarr;</strong>
           </a>
           {% endif %}
@@ -341,12 +341,12 @@
 
         <nav class="support-pager" aria-label="Article navigation">
           {% if support_previous %}
-          <a class="support-pager-link" href="/support/{{ support_previous_path }}">
+          <a class="support-pager-link" href="{{ '/support/' + support_previous_path if not support_previous_path.startswith('/') else support_previous_path }}">
             <span>Previous</span><strong>&larr; {{ support_previous.title }}</strong>
           </a>
           {% else %}<span></span>{% endif %}
           {% if support_next %}
-          <a class="support-pager-link support-pager-next" href="/support/{{ support_next_path }}">
+          <a class="support-pager-link support-pager-next" href="{{ '/support/' + support_next_path if not support_next_path.startswith('/') else support_next_path }}">
             <span>Next</span><strong>{{ support_next.title }} &rarr;</strong>
           </a>
           {% endif %}

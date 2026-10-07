@@ -1132,7 +1132,7 @@
   position:relative;
   z-index:1;
   padding:var(--s-5) var(--s-6) var(--s-6);
-  background:linear-gradient(180deg, rgba(10,14,20,0.2) 0%, rgba(10,14,20,0.72) 24%, var(--s-bg) 32%, var(--s-bg) 100%);
+  background:linear-gradient(180deg, rgba(10,14,20,0.15) 0, rgba(10,14,20,0.55) 110px, var(--s-bg) 210px, var(--s-bg) 100%);
 }
 
 /* Help copy sits 16px under the header divider, in the same measure and ink as
