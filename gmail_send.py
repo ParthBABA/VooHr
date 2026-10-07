@@ -72,8 +72,13 @@ def _get_access_token(user) -> str | None:
             "gmail_send=refresh_failed user_id=%s status=%s body=%s",
             user.get("_id"), resp.status_code, resp.text[:300]
         )
-        if resp.status_code in (400, 401):
-            _mark_reauth_required(user)
+        # Only mark reauth_required for invalid_grant errors
+        try:
+            err_json = resp.json()
+            if err_json.get("error") == "invalid_grant":
+                _mark_reauth_required(user)
+        except Exception:
+            pass
         return None
 
     tokens = resp.json()
@@ -165,10 +170,36 @@ def send_html(user_doc, subject: str, html: str, text: str | None = None) -> boo
         logger.error("gmail_send=network_error user_id=%s error=%s", user_doc.get("_id"), exc)
         return False
 
-    if resp.status_code in (401, 403):
-        logger.warning("gmail_send=auth_error user_id=%s status=%s", user_doc.get("_id"), resp.status_code)
-        _mark_reauth_required(user_doc)
-        return False
+    # Determine if we should mark reauth_required
+        should_reauth = False
+        if resp.status_code == 401:
+            should_reauth = True
+        elif resp.status_code == 403:
+            try:
+                err_json = resp.json()
+                error_info = err_json.get("error", {})
+                # Google API error format: {"error": {"code": 403, "message": "...", "errors": [{"reason": "rateLimitExceeded", ...}]}}
+                reasons = set()
+                for err in error_info.get("errors", []):
+                    reason = err.get("reason")
+                    if reason:
+                        reasons.add(reason)
+                # Reauth only for auth/permission errors, not quota/rate limits
+                if not reasons:
+                    # No specific reason, treat as auth error
+                    should_reauth = True
+                else:
+                    auth_reasons = {"insufficientPermissions", "authError", "forbidden", "invalidCredentials"}
+                    if reasons & auth_reasons:
+                        should_reauth = True
+                    # else quota/rate limit etc -> do not reauth
+            except Exception:
+                # If cannot parse, be conservative and treat as auth error
+                should_reauth = True
+        if should_reauth:
+            logger.warning("gmail_send=auth_error user_id=%s status=%s", user_doc.get("_id"), resp.status_code)
+            _mark_reauth_required(user_doc)
+            return False
 
     if not resp.ok:
         logger.error(

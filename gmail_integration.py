@@ -191,8 +191,13 @@ def connect():
 
     user_email = ""
     if mode == "login":
-        pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
-        user_email = pii.get("email", "")
+        try:
+            pii = decrypt_fields(user.get("encrypted"), user.get("wrapped_dek", ""))
+            user_email = pii.get("email", "")
+        except Exception:
+            # If decryption fails, fall back to "other" mode (no login_hint)
+            mode = "other"
+            user_email = ""
 
     state = secrets.token_urlsafe(32)
     session["gmail_oauth_state"] = state
@@ -211,7 +216,8 @@ def callback():
 
     state = request.args.get("state", "")
     stored_state = session.pop("gmail_oauth_state", None)
-    session.pop("gmail_oauth_mode", None)
+    # read mode before popping
+    oauth_mode = session.pop("gmail_oauth_mode", "login")
 
     if not stored_state or state != stored_state:
         logger.warning("gmail_oauth=invalid_state user_id=%s", user_id)
@@ -278,8 +284,8 @@ def callback():
         ACTION_GMAIL_CONNECT,
         target_type="gmail_integration",
         target_id=user_id,
-        target_label=email,
-        meta={"mode": session.get("gmail_oauth_mode", "login")},
+        target_label=_mask_email(email),
+        meta={"mode": oauth_mode},
     )
 
     logger.info("gmail_oauth=connected user_id=%s email=%s", user_id, _mask_email(email))
@@ -347,7 +353,7 @@ def disconnect():
         ACTION_GMAIL_DISCONNECT,
         target_type="gmail_integration",
         target_id=user_id,
-        target_label=email,
+        target_label=_mask_email(email) if email else "unknown",
     )
 
     logger.info("gmail_oauth=disconnected user_id=%s email=%s", user_id, _mask_email(email) if email else "unknown")

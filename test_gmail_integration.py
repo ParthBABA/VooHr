@@ -14,6 +14,7 @@ Tests:
 import json
 import logging
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 from unittest import mock
 
@@ -31,6 +32,26 @@ os.environ.setdefault("BREVO_SENDER_EMAIL", "no-reply@example.com")
 os.environ.setdefault("GCP_PROJECT_ID", "test-project")
 os.environ.setdefault("GOOGLE_CREDENTIALS_JSON", '{"type":"service_account","project_id":"test"}')
 
+# ---------------------------------------------------------------------------
+# Mock external dependencies before importing modules that need them
+# ---------------------------------------------------------------------------
+# Mock kms for field_encryption
+_KMS_STUB = mock.MagicMock()
+_KMS_STUB.wrap_data_key.side_effect = lambda dek: dek
+_KMS_STUB.unwrap_data_key.side_effect = lambda wrapped: wrapped
+sys.modules.setdefault("kms", _KMS_STUB)
+sys.modules.pop("field_encryption", None)
+
+# Mock geoip_db and login_flow to avoid maxminddb import
+_geoip_stub = mock.MagicMock()
+sys.modules.setdefault("geoip_db", _geoip_stub)
+
+_login_flow_stub = mock.MagicMock()
+_login_flow_stub._hash_session_token = lambda token: "hashed"
+sys.modules.setdefault("login_flow", _login_flow_stub)
+
+# Mock audit_log's dependencies (it imports login_flow, but we already stubbed)
+# Now import modules
 import gmail_integration as gi_mod
 import gmail_send as gs_mod
 import reminders as rm_mod
@@ -118,8 +139,8 @@ class FakeDB:
         self.organizations = FakeCollection()
 
 
-def _seed_user(db, user_email=USER_EMAIL, gmail_data=None):
-    """Create a test user with optional Gmail data."""
+def _seed_user(db, user_email=USER_EMAIL, gmail_data=None, prefs=None):
+    """Create a test user with optional Gmail data and notification prefs."""
     from field_encryption import encrypt_fields
     pii = {"name": "HR User", "email": user_email}
     encrypted, wrapped_dek = encrypt_fields(pii)
@@ -133,6 +154,8 @@ def _seed_user(db, user_email=USER_EMAIL, gmail_data=None):
     }
     if gmail_data:
         user_doc["gmail"] = gmail_data
+    if prefs is not None:
+        user_doc["notification_prefs"] = prefs
     db.users.insert_one(user_doc)
     return user_doc
 
@@ -561,6 +584,274 @@ def test_opted_out_user_gets_no_email(monkeypatch):
     assert len(brevo_called) == 0
     # But in-app notification should still be created
     assert db.notifications.count_documents({"type": "meeting_reminder"}) == 1
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Additional tests for gmail_integration audit fixes
+# ═══════════════════════════════════════════════════════════════════════════
+
+def test_callback_audit_mode_correct(monkeypatch):
+    """Audit log meta.mode should reflect the original mode (login/other), not default."""
+    db = FakeDB()
+    _seed_user(db)
+
+    captured = {}
+    def mock_exchange(code):
+        return {
+            "refresh_token": REFRESH_TOKEN,
+            "access_token": "access-123",
+            "scope": "https://www.googleapis.com/auth/gmail.send openid email",
+            "id_token": "dummy",
+        }
+    monkeypatch.setattr(gi_mod, "_exchange_code_for_tokens", mock_exchange)
+    monkeypatch.setattr(gi_mod, "_get_userinfo", lambda t: {"email": GMAIL_ADDR, "email_verified": True})
+    monkeypatch.setattr(gi_mod, "get_db", lambda: db)
+    # simulate session with mode "other"
+    monkeypatch.setattr(gi_mod, "session", {
+        "user_id": OWNER, "org_id": ORG_A,
+        "gmail_oauth_state": "match",
+        "gmail_oauth_mode": "other",
+        "user_name": "HR User"
+    })
+    monkeypatch.setattr(gi_mod, "log_audit_event", lambda *a, **k: captured.update(k.get("meta", {})))
+
+    # call internal callback logic via the view function? We'll just invoke the callback function directly
+    from flask import Flask
+    app = Flask(__name__)
+    app.secret_key = "test"
+    with app.test_request_context("/api/integrations/gmail/callback?state=match&code=abc"):
+        # need to set session in flask
+        from flask import session
+        session["gmail_oauth_state"] = "match"
+        session["gmail_oauth_mode"] = "other"
+        session["user_id"] = OWNER
+        session["org_id"] = ORG_A
+        session["user_name"] = "HR User"
+        # call the view
+        gi_mod.callback()
+
+    assert captured.get("mode") == "other"
+
+
+def test_audit_target_label_masked(monkeypatch):
+    """Connect and disconnect audit target_label should be masked email."""
+    db = FakeDB()
+    _seed_user(db)
+
+    captured = {}
+    def mock_exchange(code):
+        return {
+            "refresh_token": REFRESH_TOKEN,
+            "access_token": "access-123",
+            "scope": "https://www.googleapis.com/auth/gmail.send openid email",
+            "id_token": "dummy",
+        }
+    monkeypatch.setattr(gi_mod, "_exchange_code_for_tokens", mock_exchange)
+    monkeypatch.setattr(gi_mod, "_get_userinfo", lambda t: {"email": GMAIL_ADDR, "email_verified": True})
+    monkeypatch.setattr(gi_mod, "get_db", lambda: db)
+    monkeypatch.setattr(gi_mod, "session", {
+        "user_id": OWNER, "org_id": ORG_A,
+        "gmail_oauth_state": "match",
+        "gmail_oauth_mode": "login",
+        "user_name": "HR User"
+    })
+    def capture_audit(*a, **k):
+        captured["target_label"] = k.get("target_label")
+    monkeypatch.setattr(gi_mod, "log_audit_event", capture_audit)
+
+    from flask import Flask, session
+    app = Flask(__name__)
+    app.secret_key = "test"
+    with app.test_request_context("/api/integrations/gmail/callback?state=match&code=abc"):
+        session["gmail_oauth_state"] = "match"
+        session["gmail_oauth_mode"] = "login"
+        session["user_id"] = OWNER
+        session["org_id"] = ORG_A
+        session["user_name"] = "HR User"
+        gi_mod.callback()
+
+    assert captured.get("target_label") == "u***@gmail.com"
+
+    # Now test disconnect
+    captured.clear()
+    # set up user with gmail connected
+    from field_encryption import encrypt_fields
+    encrypted, wrapped_dek = encrypt_fields({"refresh_token": REFRESH_TOKEN, "email": GMAIL_ADDR})
+    _seed_user(db, gmail_data={
+        "status": "connected",
+        "encrypted": encrypted,
+        "wrapped_dek": wrapped_dek,
+        "email_hash": blind_index(GMAIL_ADDR),
+        "connected_at": datetime.now(timezone.utc),
+    })
+    monkeypatch.setattr(gi_mod, "get_db", lambda: db)
+    monkeypatch.setattr(gi_mod.requests, "post", lambda *a, **k: mock.Mock(ok=True))
+    monkeypatch.setattr(gi_mod, "session", {
+        "user_id": OWNER, "org_id": ORG_A,
+        "user_name": "HR User"
+    })
+    def capture_audit2(*a, **k):
+        captured["target_label"] = k.get("target_label")
+    monkeypatch.setattr(gi_mod, "log_audit_event", capture_audit2)
+
+    with app.test_request_context("/api/integrations/gmail/disconnect", method="POST"):
+        session["user_id"] = OWNER
+        session["org_id"] = ORG_A
+        session["user_name"] = "HR User"
+        gi_mod.disconnect()
+
+    assert captured.get("target_label") == "u***@gmail.com"
+
+
+def test_connect_fallback_mode_when_decrypt_fails(monkeypatch):
+    """If decrypt_fields raises, connect should fall back to mode 'other'."""
+    db = FakeDB()
+    # user with encrypted data that will cause decrypt to fail (e.g., missing wrapped_dek)
+    _seed_user(db)  # normal user but we'll make decrypt_fields raise via monkeypatch
+
+    monkeypatch.setattr(gi_mod, "get_db", lambda: db)
+    monkeypatch.setattr(gi_mod, "session", {
+        "user_id": OWNER, "org_id": ORG_A,
+        "user_name": "HR User"
+    })
+    # force decrypt_fields to raise
+    monkeypatch.setattr(gi_mod, "decrypt_fields", lambda *a, **k: (_ for _ in ()).throw(Exception("decrypt fail")))
+
+    from flask import Flask, session
+    app = Flask(__name__)
+    app.secret_key = "test"
+    with app.test_request_context("/api/integrations/gmail/connect?mode=login"):
+        session["user_id"] = OWNER
+        session["org_id"] = ORG_A
+        session["user_name"] = "HR User"
+        resp = gi_mod.connect()
+    # Should redirect to auth URL with mode=other (no login_hint)
+    assert resp.location is not None
+    assert "prompt=select_account+consent" in resp.location
+    assert "login_hint" not in resp.location
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Additional tests for gmail_send reauth logic
+# ═══════════════════════════════════════════════════════════════════════════
+
+def test_gmail_send_403_rateLimitExceeded_no_reauth(monkeypatch):
+    """403 with rateLimitExceeded should NOT mark reauth_required."""
+    db = FakeDB()
+    from field_encryption import encrypt_fields
+    encrypted, wrapped_dek = encrypt_fields({"refresh_token": REFRESH_TOKEN, "email": GMAIL_ADDR})
+    _seed_user(db, gmail_data={
+        "status": "connected",
+        "encrypted": encrypted,
+        "wrapped_dek": wrapped_dek,
+        "email_hash": blind_index(GMAIL_ADDR),
+        "connected_at": datetime.now(timezone.utc),
+    })
+    user = db.users.find_one({"_id": ObjectId(OWNER)})
+
+    # mock token refresh success
+    def mock_refresh_post(url, data, timeout):
+        return mock.Mock(ok=True, json=lambda: {"access_token": "new-access-token", "expires_in": 3600})
+    # mock send 403 rateLimitExceeded
+    def mock_send_post(url, headers, json, timeout):
+        err = {
+            "error": {
+                "code": 403,
+                "message": "Rate limit exceeded",
+                "errors": [{"reason": "rateLimitExceeded", "domain": "global"}]
+            }
+        }
+        return mock.Mock(ok=False, status_code=403, json=lambda: err)
+    with mock.patch("gmail_send.requests.post") as m:
+        m.side_effect = [mock_refresh_post(None, None, None), mock_send_post(None, None, None, None)]
+        result = gs_mod.send_html(user, "Test Subject", "<p>Test</p>", "Test")
+        assert result is False
+    # status should remain connected
+    user = db.users.find_one({"_id": ObjectId(OWNER)})
+    assert user.get("gmail", {}).get("status") == "connected"
+
+
+def test_gmail_send_403_accessNotConfigured_no_reauth(monkeypatch):
+    """403 with accessNotConfigured should NOT mark reauth_required."""
+    db = FakeDB()
+    from field_encryption import encrypt_fields
+    encrypted, wrapped_dek = encrypt_fields({"refresh_token": REFRESH_TOKEN, "email": GMAIL_ADDR})
+    _seed_user(db, gmail_data={
+        "status": "connected",
+        "encrypted": encrypted,
+        "wrapped_dek": wrapped_dek,
+        "email_hash": blind_index(GMAIL_ADDR),
+        "connected_at": datetime.now(timezone.utc),
+    })
+    user = db.users.find_one({"_id": ObjectId(OWNER)})
+
+    def mock_refresh_post(url, data, timeout):
+        return mock.Mock(ok=True, json=lambda: {"access_token": "new-access-token", "expires_in": 3600})
+    def mock_send_post(url, headers, json, timeout):
+        err = {
+            "error": {
+                "code": 403,
+                "message": "Gmail API not enabled",
+                "errors": [{"reason": "accessNotConfigured", "domain": "global"}]
+            }
+        }
+        return mock.Mock(ok=False, status_code=403, json=lambda: err)
+    with mock.patch("gmail_send.requests.post") as m:
+        m.side_effect = [mock_refresh_post(None, None, None), mock_send_post(None, None, None, None)]
+        result = gs_mod.send_html(user, "Test Subject", "<p>Test</p>", "Test")
+        assert result is False
+    user = db.users.find_one({"_id": ObjectId(OWNER)})
+    assert user.get("gmail", {}).get("status") == "connected"
+
+
+def test_gmail_send_401_marks_reauth(monkeypatch):
+    """401 should mark reauth_required."""
+    db = FakeDB()
+    from field_encryption import encrypt_fields
+    encrypted, wrapped_dek = encrypt_fields({"refresh_token": REFRESH_TOKEN, "email": GMAIL_ADDR})
+    _seed_user(db, gmail_data={
+        "status": "connected",
+        "encrypted": encrypted,
+        "wrapped_dek": wrapped_dek,
+        "email_hash": blind_index(GMAIL_ADDR),
+        "connected_at": datetime.now(timezone.utc),
+    })
+    user = db.users.find_one({"_id": ObjectId(OWNER)})
+
+    def mock_refresh_post(url, data, timeout):
+        return mock.Mock(ok=True, json=lambda: {"access_token": "new-access-token", "expires_in": 3600})
+    def mock_send_post(url, headers, json, timeout):
+        return mock.Mock(ok=False, status_code=401, json=lambda: {"error": {"code": 401, "message": "Invalid token"}})
+    with mock.patch("gmail_send.requests.post") as m:
+        m.side_effect = [mock_refresh_post(None, None, None), mock_send_post(None, None, None, None)]
+        result = gs_mod.send_html(user, "Test Subject", "<p>Test</p>", "Test")
+        assert result is False
+    user = db.users.find_one({"_id": ObjectId(OWNER)})
+    assert user.get("gmail", {}).get("status") == "reauth_required"
+
+
+def test_gmail_send_refresh_invalid_grant_marks_reauth(monkeypatch):
+    """Token refresh returning 400 with invalid_grant should mark reauth_required."""
+    db = FakeDB()
+    from field_encryption import encrypt_fields
+    encrypted, wrapped_dek = encrypt_fields({"refresh_token": REFRESH_TOKEN, "email": GMAIL_ADDR})
+    _seed_user(db, gmail_data={
+        "status": "connected",
+        "encrypted": encrypted,
+        "wrapped_dek": wrapped_dek,
+        "email_hash": blind_index(GMAIL_ADDR),
+        "connected_at": datetime.now(timezone.utc),
+    })
+    user = db.users.find_one({"_id": ObjectId(OWNER)})
+
+    def mock_refresh_post(url, data, timeout):
+        return mock.Mock(ok=False, status_code=400, json=lambda: {"error": "invalid_grant", "error_description": "Bad token"})
+    with mock.patch("gmail_send.requests.post") as m:
+        m.side_effect = [mock_refresh_post(None, None, None)]
+        result = gs_mod.send_html(user, "Test Subject", "<p>Test</p>", "Test")
+        assert result is False
+    user = db.users.find_one({"_id": ObjectId(OWNER)})
+    assert user.get("gmail", {}).get("status") == "reauth_required"
 
 
 if __name__ == "__main__":
