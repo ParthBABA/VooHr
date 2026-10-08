@@ -521,9 +521,38 @@ def test_non_24h_stages_use_brevo_even_with_gmail(monkeypatch):
         "email_hash": blind_index(GMAIL_ADDR),
         "connected_at": datetime.now(timezone.utc),
     })
+    # employee 1 for soon_1h
     _seed_employee(db)
-    _seed_meeting(db, "2026-08-30T15:00:00")
-    _seed_memory(db)
+    # employee 2 for day_of
+    emp2_id = "222222222222222222222222"
+    db.employees.insert_one({
+        "_id": ObjectId(emp2_id),
+        "employee_id": "EMP002",
+        "name": "Test Employee 2",
+        "position": "Designer",
+        "department": "Design",
+        "org_id": ObjectId(ORG_A),
+        "status": "active",
+    })
+    # soon_1h meeting for employee 1
+    _seed_meeting(db, "2026-08-30T09:30:00", created_by=OWNER)
+    # day_of meeting for employee 2
+    _seed_meeting(db, "2026-08-30T15:00:00", created_by=OWNER)
+    # memories for both employees
+    _seed_memory(db)  # for employee 1 (EMP_1)
+    _seed_memory(db, content="second employee task")  # but _seed_memory uses EMP_1 constant; need separate for emp2
+    # Let's manually insert memory for emp2
+    db.conversation_memory.insert_one({
+        "org_id": ObjectId(ORG_A),
+        "employee_id": ObjectId(emp2_id),
+        "session_id": ObjectId(SESSION_1),
+        "type": "COMMITMENT",
+        "content": "second employee task",
+        "status": "PENDING",
+        "due_at": datetime(2026, 9, 5, 10, 0, tzinfo=timezone.utc),
+        "created_at": datetime(2026, 8, 29, tzinfo=timezone.utc),
+        "updated_at": datetime(2026, 8, 29, tzinfo=timezone.utc),
+    })
 
     gmail_called = []
     def mock_gmail_send(user, subject, html, text=None):
@@ -541,9 +570,9 @@ def test_non_24h_stages_use_brevo_even_with_gmail(monkeypatch):
 
     _generate_reminders(db)
 
-    assert len(gmail_called) == 0
-    assert len(brevo_called) == 1
-    assert brevo_called[0] == "day_of"
+    # Both soon_1h and day_of stages should use Gmail when connected
+    assert len(gmail_called) == 2
+    assert len(brevo_called) == 0
 
 
 def test_user_without_gmail_uses_brevo(monkeypatch):

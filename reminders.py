@@ -44,7 +44,8 @@ reminders_bp = Blueprint("reminders", __name__)
 
 _RELEVANT_STATUSES = {"PENDING", "SAVED", "IN_PROGRESS"}
 
-GMAIL_REMINDER_STAGES = {"upcoming_24h"}
+# Stages for which Gmail (if connected) is attempted first; other stages fall back to Brevo.
+GMAIL_REMINDER_STAGES = {"soon_1h", "day_of", "upcoming_24h"}
 
 # A meeting that is still "scheduled" this far past its scheduled time is
 # treated as missed (swept to "missed" by meetings_dashboard) and generates no
