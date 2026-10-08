@@ -73,8 +73,16 @@
       document.querySelectorAll('.admin-only').forEach(function(el){
         el.style.display = '';
       });
-      loadManagerRolesOverview();
-      loadBillingUsage();
+      try {
+        loadManagerRolesOverview();
+      } catch (err) {
+        console.error('manager roles overview load error', err);
+      }
+      try {
+        loadBillingUsage();
+      } catch (err) {
+        console.error('billing usage load error', err);
+      }
     }
 
     revealPage();
@@ -93,7 +101,10 @@
   }
 
   withTimeout(fetch('/api/me').then(function(res){
-    if (!res.ok) { window.location.href = '/signin'; return null; }
+    if (!res.ok) {
+      if (res.status === 401) { window.location.href = '/signin'; return null; }
+      throw new Error('settings boot failed: ' + res.status);
+    }
     return res.json();
   }), 8000).then(function(data){
     if (!data) { revealPage(); return; }
@@ -102,8 +113,9 @@
     } else {
       populate(data);
     }
-  }).catch(function(){
-    window.location.href = '/signin';
+  }).catch(function(err){
+    console.error('settings boot error', err);
+    revealPage();
   });
 })();
 </script>
@@ -1331,7 +1343,7 @@ function clearFieldError(input){
 
   function escapeHtml(str){
     return (str || '').replace(/[&<>"']/g, function(c){
-      return {'&':'&','<':'<','>':'>','"':'"',"'":'''}[c];
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
   }
 
