@@ -51,14 +51,37 @@ _login_flow_stub._hash_session_token = lambda token: "hashed"
 sys.modules.setdefault("login_flow", _login_flow_stub)
 
 # Now import modules
+import pytest
 import gmail_integration as gi_mod
 import gmail_send as gs_mod
 import reminders as rm_mod
 import email_service as email_mod
 from field_encryption import decrypt_fields
+import field_encryption as fe_mod
 from blind_index import blind_index
 
-logging.disable(logging.CRITICAL)
+# Fixture: disable logging for each test only
+@pytest.fixture(autouse=True)
+def _disable_logging():
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(logging.NOTSET)
+
+# Fixture: mock KMS wrap/unwrap to identity in all relevant namespaces
+@pytest.fixture(autouse=True)
+def _mock_kms(monkeypatch):
+    identity = lambda x: x
+    namespaces = [
+        fe_mod.__dict__,
+        gi_mod.encrypt_fields.__globals__,
+        gs_mod.decrypt_fields.__globals__,
+        decrypt_fields.__globals__,
+    ]
+    for ns in namespaces:
+        if "wrap_data_key" in ns:
+            monkeypatch.setitem(ns, "wrap_data_key", identity)
+        if "unwrap_data_key" in ns:
+            monkeypatch.setitem(ns, "unwrap_data_key", identity)
 
 ORG_A = "aaaaaaaaaaaaaaaaaaaaaaaa"
 EMP_1 = "111111111111111111111111"
@@ -74,6 +97,26 @@ REFRESH_TOKEN = "test-refresh-token-123"
 class FakeCollection:
     def __init__(self):
         self._docs = []
+
+    @staticmethod
+    def _set_path(doc, path, value):
+        parts = path.split(".")
+        cur = doc
+        for part in parts[:-1]:
+            if part not in cur or not isinstance(cur[part], dict):
+                cur[part] = {}
+            cur = cur[part]
+        cur[parts[-1]] = value
+
+    @staticmethod
+    def _unset_path(doc, path):
+        parts = path.split(".")
+        cur = doc
+        for part in parts[:-1]:
+            if part not in cur or not isinstance(cur[part], dict):
+                return
+            cur = cur[part]
+        cur.pop(parts[-1], None)
 
     def _match(self, doc, filt):
         for k, v in filt.items():
@@ -116,10 +159,11 @@ class FakeCollection:
         for d in self._docs:
             if self._match(d, filt):
                 if "$set" in update:
-                    d.update(self._strip(update["$set"]))
+                    for k, v in update["$set"].items():
+                        self._set_path(d, k, self._strip(v))
                 if "$unset" in update:
                     for k in update["$unset"]:
-                        d.pop(k, None)
+                        self._unset_path(d, k)
                 return type("R", (), {"matched_count": 1, "modified_count": 1})()
         return type("R", (), {"matched_count": 0, "modified_count": 0})()
 
