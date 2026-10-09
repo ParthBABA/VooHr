@@ -439,7 +439,7 @@ def _format_meeting_time(meeting_time) -> str:
 def _reminder_html(
     employee_name: str,
     meeting_time,
-    reminder_summary: str,
+    items_summaries: list,
     stage: str,
 ) -> str:
     intro = _REMINDER_STAGE_INTRO.get(
@@ -448,11 +448,18 @@ def _reminder_html(
     when = _format_meeting_time(meeting_time)
     base = _site_base_url()
     meeting_url = f"{base}/meeting-tracker" if base else "/meeting-tracker"
+
+    items_html = ""
+    if items_summaries:
+        items_html = "<p><b>Open commitments & follow-ups:</b></p><ul>" + "".join(
+            f"<li>{_escape_html(s)}</li>" for s in items_summaries
+        ) + "</ul>"
+
     return (
         "<p>" + intro + "</p>"
         f"<p><b>Scheduled:</b> {_escape_html(when)}</p>"
-        f"<p><b>Open follow-up:</b> {_escape_html(reminder_summary)}</p>"
-        f"<p style=\"margin:24px 0;\"><a href=\"{meeting_url}\" "
+        + items_html
+        + f"<p style=\"margin:24px 0;\"><a href=\"{meeting_url}\" "
         "style=\"background:#f5b301;color:#121212;text-decoration:none;"
         "padding:12px 22px;border-radius:8px;font-weight:600;display:inline-block;\">"
         "Open Meeting Tracker</a></p>"
@@ -466,11 +473,14 @@ def send_reminder_email(
     to_email: str,
     employee_name: str,
     meeting_time,
-    reminder_summary: str,
+    items_summaries: list,
     stage: str,
 ) -> bool:
     """Send a meeting-reminder email via Brevo (mirrors the manager-invite
     pattern: same config guard, same POST, own subject/html per stage).
+
+    items_summaries is a list of strings (may be empty). Each string is an
+    already-formatted summary like "commitment pending: ship the handoff notes".
 
     Returns True on success, False on any failure — never raises.
     """
@@ -505,7 +515,7 @@ def send_reminder_email(
         "replyTo": {"email": "voovrhr@gmail.com", "name": "VooVr"},
         "to": [{"email": to_email}],
         "subject": subject,
-        "htmlContent": _reminder_html(employee_name, meeting_time, reminder_summary, stage),
+        "htmlContent": _reminder_html(employee_name, meeting_time, items_summaries, stage),
         "headers": _profile_avatar_headers(),
     }
 

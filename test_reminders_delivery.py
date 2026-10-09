@@ -3,7 +3,7 @@ Reminder delivery channels — email + (stubbed) WhatsApp on top of the
 in-app reminder system.
 
 Verifies (hand-rolled in-memory Mongo facade + patched outbound channels):
-  - one email send per (meeting, memory, stage) at every stage, with the
+  - one email send per (meeting, stage) at every stage, with the
     right stage, recipient, employee name and reminder summary
   - WhatsApp is skipped when the owning user has no phone_number
   - WhatsApp is attempted when a phone_number is present (stub is invoked)
@@ -12,6 +12,8 @@ Verifies (hand-rolled in-memory Mongo facade + patched outbound channels):
   - the send_reminder_email() return value is honored: a False result is
     recorded as delivery_status=failed (not delivered) and is retried on a
     later sweep; a skip/owner_unavailable is terminal and logged with reason
+  - meeting with NO items still creates 1 notification and sends 1 email
+  - meeting with multiple items creates 1 notification with all items in email body
 """
 import logging
 from datetime import datetime, timedelta, timezone
@@ -173,11 +175,12 @@ def test_email_sent_once_per_stage(monkeypatch):
 
         assert created == 1, stage
         assert send.call_count == 1, stage
-        email, emp_name, meeting_time, summary, sent_stage = send.call_args.args
+        email, emp_name, meeting_time, summaries, sent_stage = send.call_args.args
         assert email == "hr@voovr.com", stage
         assert emp_name == "Harshit Rana", stage
         assert sent_stage == stage, stage
-        assert "ship the handoff notes" in summary, stage
+        assert len(summaries) == 1, stage
+        assert "ship the handoff notes" in summaries[0], stage
         # In-app notification still created alongside the email.
         assert db.notifications.count_documents(
             {"type": "meeting_reminder", "stage": stage}
@@ -206,7 +209,7 @@ def test_whatsapp_sent_when_phone_present(monkeypatch):
     assert wa.call_count == 1
     phone, text = wa.call_args.args
     assert phone == "+919000000000"
-    assert "ship the handoff notes" in text
+    assert "Open items: 1" in text
     assert "/meeting-tracker" in text
 
 
@@ -244,6 +247,9 @@ def test_opt_in_default_sends_email(monkeypatch):
     _generate(db)
 
     assert send.call_count == 1
+    email, emp_name, meeting_time, summaries, sent_stage = send.call_args.args
+    assert len(summaries) == 1
+    assert "ship the handoff notes" in summaries[0]
 
 
 # ── Delivery never blocks generation ────────────────────────────────────
@@ -337,10 +343,106 @@ def test_send_reminder_email_missing_brevo_config_returns_false(monkeypatch):
         mock.Mock(side_effect=AssertionError("network must not be called")),
     )
     ok = email_mod.send_reminder_email(
-        "owner@example.com", "Harshit Rana", NOW, "summary", "day_of"
+        "owner@example.com", "Harshit Rana", NOW, ["summary"], "day_of"
     )
     assert ok is False
     email_mod.requests.post.assert_not_called()
+
+
+def test_meeting_with_no_items_creates_reminder_and_email(monkeypatch):
+    """Test (a): meeting with NO items still creates 1 notification and sends 1 email."""
+    db = FakeDB()
+    _seed(db)
+    # No memory items added
+    _add_meeting(db, "2026-08-30T15:00:00")
+
+    send = mock.Mock(return_value=True)
+    monkeypatch.setattr(email_mod, "send_reminder_email", send)
+    monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", mock.Mock(return_value=False))
+
+    created = _generate(db)
+
+    assert created == 1
+    assert send.call_count == 1
+    email, emp_name, meeting_time, summaries, sent_stage = send.call_args.args
+    assert summaries == []  # Empty list for no items
+    assert db.notifications.count_documents({"type": "meeting_reminder"}) == 1
+
+
+def test_meeting_with_multiple_items_creates_one_reminder_with_all_items(monkeypatch):
+    """Test (b): meeting with 3 items creates 1 notification and 1 email with all 3 items."""
+    db = FakeDB()
+    _seed(db)
+    # Add 3 memory items
+    _add_memory(db, content="first commitment")
+    _add_memory(db, content="second follow-up")
+    _add_memory(db, content="third note")
+    _add_meeting(db, "2026-08-30T15:00:00")
+
+    send = mock.Mock(return_value=True)
+    monkeypatch.setattr(email_mod, "send_reminder_email", send)
+    monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", mock.Mock(return_value=False))
+
+    created = _generate(db)
+
+    assert created == 1
+    assert send.call_count == 1
+    email, emp_name, meeting_time, summaries, sent_stage = send.call_args.args
+    assert len(summaries) == 3
+    assert any("first commitment" in s for s in summaries)
+    assert any("second follow-up" in s for s in summaries)
+    assert any("third note" in s for s in summaries)
+    assert db.notifications.count_documents({"type": "meeting_reminder"}) == 1
+
+
+def test_rerun_ensure_reminder_notifications_is_idempotent(monkeypatch):
+    """Test (c): re-running ensure_reminder_notifications creates nothing new."""
+    db = FakeDB()
+    _seed(db)
+    _add_memory(db)
+    _add_meeting(db, "2026-08-30T15:00:00")
+
+    send = mock.Mock(return_value=True)
+    monkeypatch.setattr(email_mod, "send_reminder_email", send)
+    monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", mock.Mock(return_value=False))
+
+    # First run
+    created1 = _generate(db)
+    assert created1 == 1
+    assert send.call_count == 1
+
+    # Second run
+    created2 = _generate(db)
+    assert created2 == 0
+    assert send.call_count == 1  # No new email sent
+
+
+def test_retry_failed_meeting_reminder_with_no_items_resends(monkeypatch):
+    """Test (e): retry of a failed meeting-level reminder with no items re-sends."""
+    db = FakeDB()
+    _seed(db)
+    # No memory items
+    _add_meeting(db, "2026-08-30T15:00:00")
+
+    send = mock.Mock(side_effect=[False, True])
+    monkeypatch.setattr(email_mod, "send_reminder_email", send)
+    monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", mock.Mock(return_value=False))
+
+    # Initial generation - email fails
+    created = _generate(db)
+    assert created == 1
+    n = db.notifications.find_one({"type": "meeting_reminder"})
+    assert n["delivery_status"] == "failed"
+    assert n["delivery_errors"] == ["email"]
+    assert n["memory_id"] is None  # Meeting-level reminder
+
+    # Retry - should succeed
+    retried = rm_mod.retry_pending_deliveries(db, ORG_A, NOW + timedelta(minutes=6))
+    assert retried == 1
+    n = db.notifications.find_one({"type": "meeting_reminder"})
+    assert n["delivery_status"] == "delivered"
+    assert n["delivery_errors"] == []
+    assert send.call_count == 2  # Called twice (initial + retry)
 
 
 def test_owner_not_found_logs_skip_reason(caplog, monkeypatch):

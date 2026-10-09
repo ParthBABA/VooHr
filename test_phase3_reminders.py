@@ -329,6 +329,7 @@ def test_generate_dedup_by_meeting_memory_stage(client, fake):
     assert created1 >= 1
     r2 = client.post("/api/reminders/generate")
     assert r2.get_json()["created"] == 0
+    # Now one notification per (meeting, stage), not per memory
     assert fake.notifications.count_documents({"type": "meeting_reminder"}) == created1
 
 
@@ -352,7 +353,9 @@ def test_generate_notifications_in_bell(client, fake, monkeypatch):
     client.post("/api/reminders/generate")
     n = fake.notifications.find_one({"type": "meeting_reminder"})
     assert n is not None
-    assert n["meeting_id"] and n["memory_id"] and n["stage"] == "day_of"
+    assert n["meeting_id"] and n["stage"] == "day_of"
+    assert n["memory_id"] is None  # Meeting-level reminder
+    assert "item_ids" in n
 
 
 # ── Dismiss separate from memory ────────────────────────────────────────
