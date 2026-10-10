@@ -237,6 +237,44 @@ def download_media(media_id: str) -> bytes | None:
     return None
 
 
+def send_reminder_template(to_phone: str, employee_name: str, when_phrase: str, items_line: str) -> bool:
+    """Send a meeting reminder using an approved WhatsApp template.
+
+    Requires env var WHATSAPP_REMINDER_TEMPLATE_NAME (template with three body
+    placeholders {{1}} employee_name, {{2}} when_phrase, {{3}} items_line).
+    No header or button components are sent because the template defines a
+    static URL button.
+    """
+    template_name = _env("WHATSAPP_REMINDER_TEMPLATE_NAME")
+    if not template_name:
+        logger.info("whatsapp_reminder_template=skipped reason=template_not_configured")
+        return False
+    if not to_phone:
+        return False
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to_phone,
+        "type": "template",
+        "template": {
+            "name": template_name,
+            "language": {"code": _env("WHATSAPP_REMINDER_LANG") or "en"},
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {"type": "text", "text": employee_name},
+                        {"type": "text", "text": when_phrase},
+                        {"type": "text", "text": items_line},
+                    ]
+                }
+            ]
+        }
+    }
+    return _post_message(to_phone, payload, kind="reminder_template")
+
+
 def verify_webhook_signature(payload_bytes: bytes, signature_header: str) -> bool:
     """Validate Meta's ``X-Hub-Signature-256`` header.
 

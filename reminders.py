@@ -475,9 +475,36 @@ def _deliver_reminder_channels(db, org_id, meeting, items: list, stage):
 
     phone = _reminder_phone_number(user)
     if phone:
+        # Build when_phrase per stage
+        if stage == "soon_1h":
+            when_phrase = "in about an hour"
+        elif stage == "day_of":
+            if meeting_time:
+                when_phrase = "today at " + meeting_time.strftime("%I:%M %p").lstrip('0')
+            else:
+                when_phrase = "today"
+        elif stage == "upcoming_24h":
+            if meeting_time:
+                from datetime import datetime, timezone, timedelta
+                now_local = datetime.now(timezone.utc).astimezone()
+                if meeting_time.date() == (now_local + timedelta(days=1)).date():
+                    when_phrase = "tomorrow at " + meeting_time.strftime("%I:%M %p").lstrip('0')
+                else:
+                    when_phrase = "on " + meeting_time.strftime("%a %d %b at %I:%M %p").lstrip('0')
+            else:
+                when_phrase = "soon"
+        else:
+            when_phrase = "soon"
+
+        # Build items_line
+        if items:
+            items_line = f"You have {len(items)} open commitment(s) or follow-up(s) to review."
+        else:
+            items_line = "No open items right now."
+
         try:
-            whatsapp_sent = bool(_send_reminder_whatsapp(
-                phone, _whatsapp_reminder_text(employee_name, meeting_time, items, stage)
+            whatsapp_sent = bool(whatsapp.send_reminder_template(
+                phone, employee_name, when_phrase, items_line
             ))
         except Exception:
             logger.exception(
