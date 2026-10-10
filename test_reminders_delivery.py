@@ -97,9 +97,15 @@ class FakeDB:
         self.sessions = FakeCollection()
         self.notifications = FakeCollection()
         self.users = FakeCollection()
+        self.organizations = FakeCollection()
 
 
 def _seed(db, owner_email="hr@voovr.com", phone=None, prefs=None):
+    # Ensure organization exists
+    db.organizations.insert_one({
+        "_id": ObjectId(ORG_A), "name": "Test Org", "industry": "Technology",
+        "company_size": "1-10", "created_at": datetime(2026, 1, 1, tzinfo=timezone.utc)
+    })
     db.employees.insert_one({
         "_id": ObjectId(EMP_1), "employee_id": "EMP001", "name": "Harshit Rana",
         "position": "Product Designer", "department": "Design",
@@ -794,3 +800,43 @@ def test_timezone_default_when_missing(monkeypatch):
     # Verify notification has owner_timezone set to default
     n = db.notifications.find_one({"type": "meeting_reminder"})
     assert n.get("owner_timezone") == "Asia/Kolkata"
+
+
+def test_api_me_returns_default_timezone_when_missing(monkeypatch):
+    """GET /api/me should return 200 and timezone Asia/Kolkata when user doc lacks timezone."""
+    from api import api_bp
+    from flask import Flask
+    import json
+
+    app = Flask(__name__)
+    app.register_blueprint(api_bp, url_prefix="/api")
+    app.config["TESTING"] = True
+    app.secret_key = "test"
+
+    # Setup fake DB
+    db = FakeDB()
+    _seed(db)
+    # Ensure user has no timezone
+    from bson import ObjectId
+    db.users.update_one(
+        {"_id": ObjectId("999999999999999999999999")},
+        {"$unset": {"timezone": "", "timezone_source": ""}}
+    )
+
+    # Provide DB via app.extensions
+    app.extensions = {"mongo_db": db}
+
+    # Bypass auth by patching _check_auth in api module
+    import api as api_mod
+    monkeypatch.setattr(api_mod, "_check_auth", lambda: "999999999999999999999999")
+
+    with app.test_client() as client:
+        with client.session_transaction() as sess:
+            sess["user_id"] = "999999999999999999999999"
+            sess["session_token"] = "dummy"
+
+        resp = client.get("/api/me")
+        assert resp.status_code == 200
+        data = json.loads(resp.data)
+        assert data["timezone"] == "Asia/Kolkata"
+        assert data["timezone_source"] == "default"

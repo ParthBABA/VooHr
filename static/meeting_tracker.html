@@ -456,10 +456,6 @@ function accentFor(id) {
   return ACCENTS[hash % ACCENTS.length];
 }
 
-for (var i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
-  return ACCENTS[hash % ACCENTS.length];
-}
-
 // ── Timezone auto-detection (runs on page load) ══════════════════════
 function maybeSyncTimezone() {
   try {

@@ -2,6 +2,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from flask import Blueprint, jsonify, make_response, request, session
 
+import os
 import re
 import threading
 import hashlib
@@ -141,7 +142,7 @@ def me():
             "phone_number": (user.get("phone_number") or "").strip() or None,
             "linked_employee_id": str(user["linked_employee_id"]) if user.get("linked_employee_id") else None,
             "just_registered": session.pop("just_registered", False),
-            "timezone": user.get("timezone") or os.environ.get("DEFAULT_TIMEZONE", "Asia/Kolkata"),
+            "timezone": user.get("timezone") or os.environ.get("DEFAULT_TIMEZONE") or "Asia/Kolkata",
             "timezone_source": user.get("timezone_source") or "default",
             "organization": (
                 {
