@@ -152,11 +152,12 @@ def _generate(db, now=NOW):
     return rm_mod.ensure_reminder_notifications(db, ORG_A, now)
 
 
-# ── One email per stage ─────────────────────────────────────────────────
+# ── One email per EXTERNAL stage ────────────────────────────────────────
 
-def test_email_sent_once_per_stage(monkeypatch):
+def test_email_sent_once_per_external_stage(monkeypatch):
+    """External delivery (email/WhatsApp) only for upcoming_24h and soon_1h.
+    day_of creates in-app notification only: no email, no WhatsApp."""
     cases = {
-        "day_of": "2026-08-30T15:00:00",        # same calendar day
         "soon_1h": "2026-08-30T09:30:00",        # within the hour
         "upcoming_24h": "2026-08-31T05:00:00",   # next day, < 24h out
     }
@@ -192,25 +193,50 @@ def test_email_sent_once_per_stage(monkeypatch):
         assert wa.call_count == 0, stage
 
 
+def test_day_of_creates_notification_no_external_delivery(monkeypatch):
+    """day_of stage creates in-app notification only, no email/WhatsApp."""
+    db = FakeDB()
+    _seed(db)
+    _add_memory(db)
+    _add_meeting(db, "2026-08-30T15:00:00")  # Same day as NOW (09:00)
+
+    send = mock.Mock(return_value=True)
+    wa = mock.Mock(return_value=False)
+    monkeypatch.setattr(email_mod, "send_reminder_email", send)
+    monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", wa)
+
+    created = _generate(db)
+
+    assert created == 1
+    assert send.call_count == 0  # No email for day_of
+    assert wa.call_count == 0    # No WhatsApp for day_of
+    n = db.notifications.find_one({"type": "meeting_reminder", "stage": "day_of"})
+    assert n is not None
+    assert n["delivery_status"] == "delivered"
+    assert n["delivery_channel"] == ["in_app"]
+    assert n["delivery_errors"] == []
+
+
 # ── WhatsApp gating ─────────────────────────────────────────────────────
 
 def test_whatsapp_sent_when_phone_present(monkeypatch):
     db = FakeDB()
     _seed(db, phone="+919000000000")
     _add_memory(db)
-    _add_meeting(db, "2026-08-30T15:00:00")
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
 
-    wa = mock.Mock(return_value=False)
+    import whatsapp as wa_mod
+    wa = mock.Mock(return_value=True)  # Return True to avoid error
     monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=True))
-    monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", wa)
+    monkeypatch.setattr(wa_mod, "send_reminder_template", wa)
 
     _generate(db)
 
     assert wa.call_count == 1
-    phone, text = wa.call_args.args
+    phone, employee_name, when_phrase, items_line = wa.call_args.args
     assert phone == "+919000000000"
-    assert "Open items: 1" in text
-    assert "/meeting-tracker" in text
+    assert "open commitment(s) or follow-up(s)" in items_line
+    assert when_phrase == "in about an hour"
 
 
 # ── Opt-out preference ──────────────────────────────────────────────────
@@ -238,7 +264,7 @@ def test_opt_in_default_sends_email(monkeypatch):
     db = FakeDB()
     _seed(db)  # no notification_prefs at all → default opt-in
     _add_memory(db)
-    _add_meeting(db, "2026-08-30T15:00:00")
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
 
     send = mock.Mock(return_value=True)
     monkeypatch.setattr(email_mod, "send_reminder_email", send)
@@ -293,7 +319,7 @@ def test_email_false_is_recorded_failed_with_retry_ready(monkeypatch):
     db = FakeDB()
     _seed(db)
     _add_memory(db)
-    _add_meeting(db, "2026-08-30T15:00:00")
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
 
     monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=False))
     monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", mock.Mock(return_value=False))
@@ -312,7 +338,7 @@ def test_failed_email_retried_and_delivered_on_next_sweep(monkeypatch):
     db = FakeDB()
     _seed(db)
     _add_memory(db)
-    _add_meeting(db, "2026-08-30T15:00:00")
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
 
     send = mock.Mock(side_effect=[False, True])
     monkeypatch.setattr(email_mod, "send_reminder_email", send)
@@ -354,7 +380,7 @@ def test_meeting_with_no_items_creates_reminder_and_email(monkeypatch):
     db = FakeDB()
     _seed(db)
     # No memory items added
-    _add_meeting(db, "2026-08-30T15:00:00")
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
 
     send = mock.Mock(return_value=True)
     monkeypatch.setattr(email_mod, "send_reminder_email", send)
@@ -377,7 +403,7 @@ def test_meeting_with_multiple_items_creates_one_reminder_with_all_items(monkeyp
     _add_memory(db, content="first commitment")
     _add_memory(db, content="second follow-up")
     _add_memory(db, content="third note")
-    _add_meeting(db, "2026-08-30T15:00:00")
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
 
     send = mock.Mock(return_value=True)
     monkeypatch.setattr(email_mod, "send_reminder_email", send)
@@ -400,7 +426,7 @@ def test_rerun_ensure_reminder_notifications_is_idempotent(monkeypatch):
     db = FakeDB()
     _seed(db)
     _add_memory(db)
-    _add_meeting(db, "2026-08-30T15:00:00")
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
 
     send = mock.Mock(return_value=True)
     monkeypatch.setattr(email_mod, "send_reminder_email", send)
@@ -422,7 +448,7 @@ def test_retry_failed_meeting_reminder_with_no_items_resends(monkeypatch):
     db = FakeDB()
     _seed(db)
     # No memory items
-    _add_meeting(db, "2026-08-30T15:00:00")
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
 
     send = mock.Mock(side_effect=[False, True])
     monkeypatch.setattr(email_mod, "send_reminder_email", send)
@@ -449,7 +475,7 @@ def test_owner_not_found_logs_skip_reason(caplog, monkeypatch):
     db = FakeDB()
     _seed(db)
     _add_memory(db)
-    r = _add_meeting(db, "2026-08-30T15:00:00")
+    r = _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
     db.meetings.update_one({"_id": r}, {"$set": {"created_by": None}})
 
     monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=True))
@@ -464,7 +490,7 @@ def test_owner_email_unavailable_logs_skip_reason(caplog, monkeypatch):
     db = FakeDB()
     _seed(db, owner_email="")
     _add_memory(db)
-    _add_meeting(db, "2026-08-30T15:00:00")
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
 
     monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=True))
     monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", mock.Mock(return_value=False))
@@ -480,7 +506,7 @@ def test_opted_out_logs_skip_reason(caplog, monkeypatch):
     db = FakeDB()
     _seed(db, prefs={"meeting_reminders": False})
     _add_memory(db)
-    _add_meeting(db, "2026-08-30T15:00:00")
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
 
     monkeypatch.setattr(email_mod, "send_reminder_email", mock.Mock(return_value=True))
     monkeypatch.setattr(rm_mod, "_send_reminder_whatsapp", mock.Mock(return_value=False))
@@ -489,3 +515,128 @@ def test_opted_out_logs_skip_reason(caplog, monkeypatch):
         assert _generate(db) == 1
     assert any("reason=opted_out" in m for m in caplog.messages)
     assert db.notifications.count_documents({"type": "meeting_reminder"}) == 1
+
+
+# ── New requirements tests ──────────────────────────────────────────────────
+
+def test_email_ok_whatsapp_4xx_only_one_email_across_retries(monkeypatch):
+    """Test (a): email ok + WhatsApp 4xx -> exactly 1 email sent total across 5 sweeps."""
+    db = FakeDB()
+    _seed(db, phone="+919000000000")
+    _add_memory(db)
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
+
+    import whatsapp as wa_mod
+    
+    # WhatsApp raises a 4xx error (permanent failure)
+    class WhatsApp4xxError(Exception):
+        pass
+    
+    wa_error = WhatsApp4xxError("HTTP 400: Meta error code 131047")
+    wa = mock.Mock(side_effect=wa_error)
+    send = mock.Mock(return_value=True)
+    monkeypatch.setattr(email_mod, "send_reminder_email", send)
+    monkeypatch.setattr(wa_mod, "send_reminder_template", wa)
+
+    # Initial generation
+    created = _generate(db)
+    assert created == 1
+    assert send.call_count == 1  # Email sent once
+    assert wa.call_count == 1    # WhatsApp attempted once
+
+    n = db.notifications.find_one({"type": "meeting_reminder"})
+    assert n["delivery_status"] == "delivered"  # Email succeeded, WhatsApp permanent failure
+    assert n["email_sent"] is True
+    assert n["whatsapp_sent"] is False
+    assert n.get("whatsapp_permanent_failure") is True
+
+    # Retry 5 times - email should NOT be re-sent
+    for i in range(5):
+        retried = rm_mod.retry_pending_deliveries(db, ORG_A, NOW + timedelta(minutes=6*(i+1)))
+        assert retried == 0  # No retries needed since email done and WhatsApp permanent failure
+
+    assert send.call_count == 1  # Still only 1 email sent total
+
+
+def test_whatsapp_5xx_then_success_on_retry(monkeypatch):
+    """Test (b): WhatsApp 5xx then success on retry -> email sent once, WhatsApp sent once."""
+    db = FakeDB()
+    _seed(db, phone="+919000000000")
+    _add_memory(db)
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
+
+    import whatsapp as wa_mod
+    
+    # WhatsApp fails with 5xx first, then succeeds
+    class WhatsApp5xxError(Exception):
+        pass
+    
+    wa = mock.Mock(side_effect=[WhatsApp5xxError("HTTP 500"), True])
+    send = mock.Mock(return_value=True)
+    monkeypatch.setattr(email_mod, "send_reminder_email", send)
+    monkeypatch.setattr(wa_mod, "send_reminder_template", wa)
+
+    # Initial generation - WhatsApp fails with 5xx
+    created = _generate(db)
+    assert created == 1
+    assert send.call_count == 1  # Email sent once
+    assert wa.call_count == 1    # WhatsApp attempted once (failed)
+
+    n = db.notifications.find_one({"type": "meeting_reminder"})
+    assert n["delivery_status"] == "failed"  # WhatsApp failed
+    assert n["email_sent"] is True
+    assert n["whatsapp_sent"] is False
+    assert n.get("whatsapp_permanent_failure") is False  # 5xx is retryable
+    assert "whatsapp" in n["delivery_errors"]
+
+    # Retry - WhatsApp should succeed
+    retried = rm_mod.retry_pending_deliveries(db, ORG_A, NOW + timedelta(minutes=6))
+    assert retried == 1
+    assert send.call_count == 1  # Email NOT re-sent
+    assert wa.call_count == 2    # WhatsApp retried once more
+
+    n = db.notifications.find_one({"type": "meeting_reminder"})
+    assert n["delivery_status"] == "delivered"
+    assert n["email_sent"] is True
+    assert n["whatsapp_sent"] is True
+    assert n["delivery_errors"] == []
+
+
+def test_email_fail_then_success_whatsapp_not_resent_if_succeeded(monkeypatch):
+    """Test (c): email fail then success on retry -> WhatsApp not re-sent if it already succeeded."""
+    db = FakeDB()
+    _seed(db, phone="+919000000000")
+    _add_memory(db)
+    _add_meeting(db, "2026-08-30T09:30:00")  # soon_1h stage
+
+    import whatsapp as wa_mod
+    
+    # Email fails first, then succeeds; WhatsApp succeeds on first try
+    send = mock.Mock(side_effect=[False, True])
+    wa = mock.Mock(return_value=True)
+    monkeypatch.setattr(email_mod, "send_reminder_email", send)
+    monkeypatch.setattr(wa_mod, "send_reminder_template", wa)
+
+    # Initial generation - email fails, WhatsApp succeeds
+    created = _generate(db)
+    assert created == 1
+    assert send.call_count == 1
+    assert wa.call_count == 1
+
+    n = db.notifications.find_one({"type": "meeting_reminder"})
+    assert n["delivery_status"] == "failed"
+    assert n["email_sent"] is False
+    assert n["whatsapp_sent"] is True
+    assert "email" in n["delivery_errors"]
+
+    # Retry - email should succeed, WhatsApp should NOT be re-sent
+    retried = rm_mod.retry_pending_deliveries(db, ORG_A, NOW + timedelta(minutes=6))
+    assert retried == 1
+    assert send.call_count == 2  # Email retried once
+    assert wa.call_count == 1    # WhatsApp NOT re-sent (already succeeded)
+
+    n = db.notifications.find_one({"type": "meeting_reminder"})
+    assert n["delivery_status"] == "delivered"
+    assert n["email_sent"] is True
+    assert n["whatsapp_sent"] is True
+    assert n["delivery_errors"] == []

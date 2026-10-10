@@ -365,7 +365,7 @@ def _send_reminder_whatsapp(to_phone: str, text: str) -> bool:
     return whatsapp.send_message(to_phone, text)
 
 
-def _deliver_reminder_channels(db, org_id, meeting, items: list, stage):
+def _deliver_reminder_channels(db, org_id, meeting, items: list, stage, skip_email=False, skip_whatsapp=False):
     """Send email + WhatsApp for one meeting reminder and report per-channel status.
 
     items is a list of surfaced item dicts (may be empty). The reminder is
@@ -376,10 +376,15 @@ def _deliver_reminder_channels(db, org_id, meeting, items: list, stage):
     The caller records ``delivery_status`` on the notification so the sweep
     can retry failed external delivery with bounded backoff.
 
-    Returns ``{"ok", "wanted", "email_sent", "whatsapp_sent", "errors"}``:
+    skip_email / skip_whatsapp: if True, that channel is not attempted (used
+    for retries when that channel already succeeded).
+
+    Returns ``{"ok", "wanted", "email_sent", "whatsapp_sent", "errors",
+              "whatsapp_permanent_failure"}``:
       ``wanted``   — how many external channels had a destination (0 → ok).
       ``ok``       — all wanted channels succeeded (or none were wanted).
       ``errors``   — short human reasons for what failed (for notifications).
+      ``whatsapp_permanent_failure`` — True if WhatsApp failed permanently (no retry).
     """
     user = _meeting_owner(db, org_id, meeting)
     if not user:
@@ -389,7 +394,7 @@ def _deliver_reminder_channels(db, org_id, meeting, items: list, stage):
             meeting.get("_id"), org_id, stage,
         )
         return {"ok": True, "wanted": 0, "email_sent": False,
-                "whatsapp_sent": False, "errors": []}
+                "whatsapp_sent": False, "errors": [], "whatsapp_permanent_failure": False}
     if not _meeting_reminders_enabled(user):
         logger.info(
             "meeting_reminder_email status=skipped reason=opted_out "
@@ -397,7 +402,7 @@ def _deliver_reminder_channels(db, org_id, meeting, items: list, stage):
             meeting.get("_id"), org_id, stage,
         )
         return {"ok": True, "wanted": 0, "email_sent": False,
-                "whatsapp_sent": False, "errors": []}
+                "whatsapp_sent": False, "errors": [], "whatsapp_permanent_failure": False}
 
     emp = None
     try:
@@ -425,9 +430,14 @@ def _deliver_reminder_channels(db, org_id, meeting, items: list, stage):
     email_channel = "brevo"
     whatsapp_sent = False
     errors = []
+    whatsapp_permanent_failure = False
+
+    # Day_of stage: no external delivery (email/WhatsApp)
+    external_stages = {"upcoming_24h", "soon_1h"}
+    is_external_stage = stage in external_stages
 
     owner_email = _user_email(user)
-    if owner_email:
+    if owner_email and is_external_stage and not skip_email:
         subject, html, text = _build_reminder_email(employee_name, meeting_time, items_summaries, stage)
 
         use_gmail = (
@@ -466,6 +476,11 @@ def _deliver_reminder_channels(db, org_id, meeting, items: list, stage):
             )
         else:
             errors.append("email")
+    elif owner_email and not is_external_stage:
+        logger.info(
+            "meeting_reminder_email status=skipped reason=stage_not_external stage=%s meeting_id=%s org_id=%s",
+            stage, meeting.get("_id"), org_id,
+        )
     else:
         logger.info(
             "meeting_reminder_email status=skipped reason=email_unavailable "
@@ -474,7 +489,7 @@ def _deliver_reminder_channels(db, org_id, meeting, items: list, stage):
         )
 
     phone = _reminder_phone_number(user)
-    if phone:
+    if phone and is_external_stage and not skip_whatsapp:
         # Build when_phrase per stage
         if stage == "soon_1h":
             when_phrase = "in about an hour"
@@ -506,22 +521,85 @@ def _deliver_reminder_channels(db, org_id, meeting, items: list, stage):
             whatsapp_sent = bool(whatsapp.send_reminder_template(
                 phone, employee_name, when_phrase, items_line
             ))
-        except Exception:
+        except Exception as e:
             logger.exception(
                 "reminder_whatsapp=failed meeting=%s stage=%s phone_set=True",
                 meeting.get("_id"), stage,
             )
+            # Check if it's a permanent WhatsApp failure
+            whatsapp_permanent_failure = _is_whatsapp_permanent_failure(e)
+            if whatsapp_permanent_failure:
+                logger.warning(
+                    "reminder_whatsapp=permanent_failure meeting=%s stage=%s error=%s",
+                    meeting.get("_id"), stage, str(e),
+                )
             errors.append("whatsapp")
-        if not whatsapp_sent:
+        if not whatsapp_sent and not whatsapp_permanent_failure:
             errors.append("whatsapp")
+    elif phone and not is_external_stage:
+        logger.info(
+            "meeting_reminder_whatsapp status=skipped reason=stage_not_external stage=%s meeting_id=%s org_id=%s",
+            stage, meeting.get("_id"), org_id,
+        )
 
-    wanted = (1 if owner_email else 0) + (1 if phone else 0)
+    # Adjust wanted count for permanent WhatsApp failure (don't count as wanted if permanent failure)
+    wanted = (1 if (owner_email and is_external_stage) else 0)
+    if phone and is_external_stage:
+        if whatsapp_permanent_failure:
+            # Permanent failure - don't count WhatsApp as wanted, treat as if no destination
+            pass
+        else:
+            wanted += 1
+    
     if wanted == 0:
         ok = True
     else:
-        ok = (email_sent or not owner_email) and (whatsapp_sent or not phone)
+        email_ok = email_sent or not (owner_email and is_external_stage)
+        whatsapp_ok = True
+        if phone and is_external_stage and not whatsapp_permanent_failure:
+            whatsapp_ok = whatsapp_sent
+        ok = email_ok and whatsapp_ok
+    
     return {"ok": ok, "wanted": wanted, "email_sent": email_sent,
-            "whatsapp_sent": whatsapp_sent, "errors": list(dict.fromkeys(errors))}
+            "whatsapp_sent": whatsapp_sent, "errors": list(dict.fromkeys(errors)),
+            "whatsapp_permanent_failure": whatsapp_permanent_failure}
+
+
+def _is_whatsapp_permanent_failure(exception: Exception) -> bool:
+    """Determine if a WhatsApp exception is a permanent failure that should not be retried.
+
+    Permanent failures:
+    - Missing WHATSAPP_REMINDER_TEMPLATE_NAME or not configured
+    - HTTP 4xx errors (except 429 rate limit)
+    - Meta error codes: 131047, 132000, 132001 (template not found, invalid, etc.)
+
+    Retryable failures:
+    - Network errors
+    - HTTP 429 (rate limit)
+    - HTTP 5xx (server errors)
+    """
+    error_str = str(exception).lower()
+    
+    # Check for missing config
+    if "whatsapp_reminder_template_name" in error_str or "template" in error_str:
+        if "not configured" in error_str or "missing" in error_str or "not found" in error_str:
+            return True
+    
+    # Check for HTTP status codes in exception
+    import re
+    status_match = re.search(r'\b(4\d{2}|5\d{2})\b', str(exception))
+    if status_match:
+        status = int(status_match.group(1))
+        if 400 <= status < 500 and status != 429:
+            return True
+    
+    # Check for Meta error codes
+    meta_permanent_codes = {131047, 132000, 132001}
+    for code in meta_permanent_codes:
+        if str(code) in str(exception):
+            return True
+    
+    return False
 
 
 def _deliver_reminder(db, org_id, meeting, items: list, stage):
@@ -605,6 +683,9 @@ def _deliver_and_record(db, org_id, meeting, stage, now):
         "delivery_status": "delivered" if status["ok"] else "failed",
         "last_attempt_at": now,
         "delivery_errors": status["errors"],
+        "email_sent": status.get("email_sent", False),
+        "whatsapp_sent": status.get("whatsapp_sent", False),
+        "whatsapp_permanent_failure": status.get("whatsapp_permanent_failure", False),
     }
     if status["ok"]:
         fields["next_attempt_at"] = None
@@ -625,6 +706,12 @@ def retry_pending_deliveries(db, org_id, now=None) -> int:
     wins each claim; the others skip to the next document.  Delivery never
     blocks — `next_attempt_at` is pushed out before sending so a crashed
     worker still gets a bounded retry.
+
+    Per-channel tracking: email_sent / whatsapp_sent are never reset from True
+    to False. Retry only attempts channels that haven't succeeded yet.
+    WhatsApp retries capped at 3 attempts. Permanent WhatsApp failures
+    (missing template, 4xx except 429, Meta codes 131047/132000/132001)
+    stop retries for WhatsApp and mark notification delivered if email succeeded.
 
     For meeting-level reminders (memory_id=None), items are loaded from
     notification.item_ids. For per-item reminders (memory_id set), the single
@@ -679,16 +766,69 @@ def retry_pending_deliveries(db, org_id, now=None) -> int:
                     "org_id": org_oid,
                 }))
 
-        status = _deliver_reminder_channels(db, org_id, meeting, items, n.get("stage"))
+        # Per-channel skip flags: don't retry a channel that already succeeded
+        skip_email = n.get("email_sent", False)
+        skip_whatsapp = n.get("whatsapp_sent", False)
+        
+        # WhatsApp retry cap: don't retry WhatsApp if already attempted 3+ times
+        whatsapp_attempts = n.get("whatsapp_attempts", 0)
+        if whatsapp_attempts >= 3:
+            skip_whatsapp = True
+        
+        # Permanent WhatsApp failure: don't retry WhatsApp at all
+        if n.get("whatsapp_permanent_failure"):
+            skip_whatsapp = True
+
+        status = _deliver_reminder_channels(
+            db, org_id, meeting, items, n.get("stage"),
+            skip_email=skip_email, skip_whatsapp=skip_whatsapp
+        )
+        
+        # Track per-channel attempts
+        whatsapp_attempts = n.get("whatsapp_attempts", 0)
+        if not skip_whatsapp and (n.get("whatsapp_sent") is not True):
+            whatsapp_attempts += 1
+
         fields = {
-            "delivery_status": "delivered" if status["ok"] else "failed",
             "delivery_errors": status["errors"],
+            "email_sent": n.get("email_sent", False) or status.get("email_sent", False),
+            "whatsapp_sent": n.get("whatsapp_sent", False) or status.get("whatsapp_sent", False),
+            "whatsapp_attempts": whatsapp_attempts,
         }
-        if status["ok"]:
+        if status.get("whatsapp_permanent_failure"):
+            fields["whatsapp_permanent_failure"] = True
+        
+        # Determine overall delivery status based on accumulated state
+        email_done = fields["email_sent"]
+        whatsapp_done = fields["whatsapp_sent"]
+        whatsapp_permanent = fields.get("whatsapp_permanent_failure", False)
+        whatsapp_capped = whatsapp_attempts >= 3
+        
+        # Check if any channel still needs retry
+        stage = n.get("stage")
+        external_stages = {"upcoming_24h", "soon_1h"}
+        is_external_stage = stage in external_stages
+        
+        if is_external_stage:
+            user = _meeting_owner(db, org_id, meeting)
+            owner_email = _user_email(user) if user else None
+            phone = _reminder_phone_number(user) if user else None
+            needs_email_retry = owner_email and not email_done
+            needs_whatsapp_retry = phone and not whatsapp_done and not whatsapp_permanent and not whatsapp_capped
+        else:
+            needs_email_retry = False
+            needs_whatsapp_retry = False
+        
+        # Overall delivery status: delivered if no channels need retry
+        if not (needs_email_retry or needs_whatsapp_retry):
+            fields["delivery_status"] = "delivered"
             fields["next_attempt_at"] = None
-        elif (attempts + 1) >= REMINDER_MAX_ATTEMPTS:
-            fields["next_attempt_at"] = None
-            _note_delivery_failure(db, org_id, meeting, n["_id"], n.get("stage"), now)
+        else:
+            fields["delivery_status"] = "failed"
+            if (attempts + 1) >= REMINDER_MAX_ATTEMPTS:
+                fields["next_attempt_at"] = None
+                _note_delivery_failure(db, org_id, meeting, n["_id"], n.get("stage"), now)
+        
         db.notifications.update_one({"_id": n["_id"]}, {"$set": fields})
         retried += 1
     return retried
@@ -910,6 +1050,20 @@ def ensure_reminder_notifications(db, org_id, now=None) -> int:
         else:
             summary = "No open commitments or follow-ups."
 
+        # For day_of stage: in-app only, no external delivery
+        external_stages = {"upcoming_24h", "soon_1h"}
+        is_external_stage = stage in external_stages
+        
+        if is_external_stage:
+            delivery_status = "pending"
+            delivery_channel = ["in_app", "email", "whatsapp"]
+            next_attempt_at = None
+        else:
+            # day_of: in-app only, no external delivery
+            delivery_status = "delivered"
+            delivery_channel = ["in_app"]
+            next_attempt_at = None
+
         try:
             db.notifications.insert_one({
                 "org_id": org_oid,
@@ -924,23 +1078,27 @@ def ensure_reminder_notifications(db, org_id, now=None) -> int:
                 "stage": stage,
                 "event_key": f"reminder:{meeting['_id']}:{stage}",
                 "recipient_user_id": None,
-                "delivery_status": "pending",
-                "delivery_channel": ["in_app", "email", "whatsapp"],
+                "delivery_status": delivery_status,
+                "delivery_channel": delivery_channel,
                 "delivery_errors": [],
                 "attempts": 0,
-                "next_attempt_at": None,
+                "next_attempt_at": next_attempt_at,
                 "last_attempt_at": None,
                 "read": False,
                 "dismissed": False,
                 "created_at": now,
                 "item_ids": item_ids,
+                "email_sent": False,
+                "whatsapp_sent": False,
+                "whatsapp_attempts": 0,
             })
         except DuplicateKeyError:
             # Another worker created the same (org, meeting, stage) reminder
             continue
 
         created += 1
-        _deliver_and_record(db, org_id, meeting, stage, now)
+        if is_external_stage:
+            _deliver_and_record(db, org_id, meeting, stage, now)
 
     if created:
         logger.debug("ensure_reminder_notifications: created=%d org=%s", created, org_id)

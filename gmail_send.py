@@ -5,8 +5,10 @@ import logging
 import os
 import time
 from datetime import datetime, timezone
+from email.header import Header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 
 import requests
 
@@ -115,11 +117,21 @@ def _mark_reauth_required(user):
         logger.warning("gmail_send=mark_reauth_failed user_id=%s error=%s", user.get("_id"), exc)
 
 
-def _build_mime_message(to_email: str, subject: str, html: str, text: str | None = None) -> str:
+def _build_mime_message(
+    to_email: str,
+    subject: str,
+    html: str,
+    text: str | None = None,
+    from_email: str | None = None,
+    from_name: str = "VooVr",
+) -> str:
     """Build a MIME message and return base64url encoded raw message."""
     msg = MIMEMultipart("alternative")
     msg["To"] = to_email
     msg["Subject"] = subject
+    if from_email is not None:
+        display_name = from_name if from_name.isascii() else Header(from_name, "utf-8").encode()
+        msg["From"] = formataddr((display_name, from_email))
 
     if text:
         msg.attach(MIMEText(text, "plain", "utf-8"))
@@ -143,10 +155,12 @@ def send_html(user_doc, subject: str, html: str, text: str | None = None) -> boo
     encrypted = gmail.get("encrypted") or {}
     wrapped_dek = gmail.get("wrapped_dek", "")
     to_email = None
+    from_email = None
     if encrypted and wrapped_dek:
         try:
             pii = decrypt_fields(encrypted, wrapped_dek)
-            to_email = pii.get("email")
+            from_email = pii.get("email")
+            to_email = from_email
         except Exception:
             pass
 
@@ -154,7 +168,14 @@ def send_html(user_doc, subject: str, html: str, text: str | None = None) -> boo
         logger.warning("gmail_send=no_recipient_email user_id=%s", user_doc.get("_id"))
         return False
 
-    raw_message = _build_mime_message(to_email, subject, html, text)
+    raw_message = _build_mime_message(
+        to_email,
+        subject,
+        html,
+        text,
+        from_email=from_email,
+        from_name=os.environ.get("GMAIL_FROM_NAME", "VooVr"),
+    )
 
     try:
         resp = requests.post(
@@ -208,8 +229,5 @@ def send_html(user_doc, subject: str, html: str, text: str | None = None) -> boo
         )
         return False
 
-    logger.info(
-        "gmail_send=sent user_id=%s to=%s subject_len=%d",
-        user_doc.get("_id"), to_email, len(subject)
-    )
+    logger.info("gmail_send=sent user_id=%s subject_len=%d", user_doc.get("_id"), len(subject))
     return True
