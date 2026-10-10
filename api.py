@@ -30,6 +30,10 @@ from password_utils import verify_password
 from providers.llm import _ALL_LANGUAGE_INSTRUCTIONS, SUPPORTED_ANALYSIS_LANGUAGES
 from totp_utils import verify_backup_code, verify_code
 from whatsapp import is_configured, normalize_phone, send_otp_message
+try:
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+except ImportError:
+    from backports.zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 api_bp = Blueprint("api", __name__)
 
@@ -137,6 +141,8 @@ def me():
             "phone_number": (user.get("phone_number") or "").strip() or None,
             "linked_employee_id": str(user["linked_employee_id"]) if user.get("linked_employee_id") else None,
             "just_registered": session.pop("just_registered", False),
+            "timezone": user.get("timezone") or os.environ.get("DEFAULT_TIMEZONE", "Asia/Kolkata"),
+            "timezone_source": user.get("timezone_source") or "default",
             "organization": (
                 {
                     "id": str(org["_id"]),
@@ -549,6 +555,80 @@ def update_user_notification_prefs():
     )
 
     return jsonify({"ok": True, "meeting_reminders": meeting_reminders})
+
+
+# ── User timezone setting ───────────────────────────────────────────────
+@api_bp.route("/settings/timezone", methods=["POST"])
+def update_user_timezone():
+    """Update the authenticated user's timezone.
+    
+    Body: {"timezone": "Asia/Kolkata", "source": "auto"|"manual"}
+    Validates against zoneinfo.ZoneInfo (rejects unknown timezones).
+    Audits the change like other settings endpoints.
+    """
+    from audit_log import ACTION_USER_TIMEZONE_UPDATE, log_audit_event
+    
+    user_id = _check_auth()
+    if not user_id:
+        return jsonify({"error": "not_authenticated"}), 401
+
+    db = get_db()
+    try:
+        user = db.users.find_one({"_id": ObjectId(user_id)})
+    except InvalidId:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    if not user:
+        session.clear()
+        return jsonify({"error": "not_authenticated"}), 401
+
+    data = request.get_json(silent=True) or {}
+    tz = (data.get("timezone") or "").strip()
+    source = (data.get("source") or "").strip()
+
+    if not tz:
+        return jsonify({"error": "timezone_required"}), 400
+    if len(tz) > 64:
+        return jsonify({"error": "timezone_too_long"}), 400
+    if source not in ("auto", "manual"):
+        return jsonify({"error": "invalid_source"}), 400
+
+    # Validate timezone using zoneinfo
+    try:
+        ZoneInfo(tz)
+    except Exception:
+        return jsonify({"error": "invalid_timezone"}), 400
+
+    old_tz = user.get("timezone")
+    old_source = user.get("timezone_source")
+
+    # Only update if different or source is manual (explicit user choice)
+    if old_tz == tz and old_source == source:
+        return jsonify({"ok": True, "timezone": tz, "source": source})
+
+    # Don't overwrite manual with auto
+    if old_source == "manual" and source == "auto":
+        return jsonify({"ok": True, "timezone": old_tz, "source": old_source})
+
+    db.users.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"timezone": tz, "timezone_source": source}},
+    )
+
+    log_audit_event(
+        db,
+        user.get("org_id"),
+        user_id,
+        session.get("user_name") or "",
+        ACTION_USER_TIMEZONE_UPDATE,
+        target_type="user",
+        target_id=str(user["_id"]),
+        target_label="Timezone",
+        meta={"old_timezone": old_tz, "new_timezone": tz, "source": source},
+    )
+
+    return jsonify({"ok": True, "timezone": tz, "source": source})
 
 
 # ── WhatsApp number linking (dictation intake + reminder delivery) ─────

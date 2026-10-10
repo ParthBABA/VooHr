@@ -63,6 +63,9 @@ ACTION_MEETING_DELETE = "meeting.delete"
 ACTION_GMAIL_CONNECT = "gmail.connect"
 ACTION_GMAIL_DISCONNECT = "gmail.disconnect"
 
+# User settings actions
+ACTION_USER_TIMEZONE_UPDATE = "user.timezone_update"
+
 # Pagination for the audit-log endpoint.
 DEFAULT_PAGE_LIMIT = 50
 MAX_PAGE_LIMIT = 200

@@ -176,7 +176,7 @@ def test_email_sent_once_per_external_stage(monkeypatch):
 
         assert created == 1, stage
         assert send.call_count == 1, stage
-        email, emp_name, meeting_time, summaries, sent_stage = send.call_args.args
+        email, emp_name, meeting_time, summaries, sent_stage, sent_tz = send.call_args.args
         assert email == "hr@voovr.com", stage
         assert emp_name == "Harshit Rana", stage
         assert sent_stage == stage, stage
@@ -273,7 +273,7 @@ def test_opt_in_default_sends_email(monkeypatch):
     _generate(db)
 
     assert send.call_count == 1
-    email, emp_name, meeting_time, summaries, sent_stage = send.call_args.args
+    email, emp_name, meeting_time, summaries, sent_stage, sent_tz = send.call_args.args
     assert len(summaries) == 1
     assert "ship the handoff notes" in summaries[0]
 
@@ -390,7 +390,7 @@ def test_meeting_with_no_items_creates_reminder_and_email(monkeypatch):
 
     assert created == 1
     assert send.call_count == 1
-    email, emp_name, meeting_time, summaries, sent_stage = send.call_args.args
+    email, emp_name, meeting_time, summaries, sent_stage, sent_tz = send.call_args.args
     assert summaries == []  # Empty list for no items
     assert db.notifications.count_documents({"type": "meeting_reminder"}) == 1
 
@@ -413,7 +413,7 @@ def test_meeting_with_multiple_items_creates_one_reminder_with_all_items(monkeyp
 
     assert created == 1
     assert send.call_count == 1
-    email, emp_name, meeting_time, summaries, sent_stage = send.call_args.args
+    email, emp_name, meeting_time, summaries, sent_stage, sent_tz = send.call_args.args
     assert len(summaries) == 3
     assert any("first commitment" in s for s in summaries)
     assert any("second follow-up" in s for s in summaries)
@@ -436,6 +436,7 @@ def test_rerun_ensure_reminder_notifications_is_idempotent(monkeypatch):
     created1 = _generate(db)
     assert created1 == 1
     assert send.call_count == 1
+    email, emp_name, meeting_time, summaries, sent_stage, sent_tz = send.call_args.args
 
     # Second run
     created2 = _generate(db)
@@ -461,6 +462,7 @@ def test_retry_failed_meeting_reminder_with_no_items_resends(monkeypatch):
     assert n["delivery_status"] == "failed"
     assert n["delivery_errors"] == ["email"]
     assert n["memory_id"] is None  # Meeting-level reminder
+    email, emp_name, meeting_time, summaries, sent_stage, sent_tz = send.call_args.args
 
     # Retry - should succeed
     retried = rm_mod.retry_pending_deliveries(db, ORG_A, NOW + timedelta(minutes=6))
@@ -640,3 +642,155 @@ def test_email_fail_then_success_whatsapp_not_resent_if_succeeded(monkeypatch):
     assert n["email_sent"] is True
     assert n["whatsapp_sent"] is True
     assert n["delivery_errors"] == []
+
+
+# ── Timezone tests ────────────────────────────────────────────────────────
+
+def test_format_local_kolkata(monkeypatch):
+    """Test format_local with Asia/Kolkata timezone."""
+    from email_service import format_local
+    from datetime import datetime, timezone
+    
+    # 2026-01-15 14:30 UTC = 2026-01-15 20:00 IST (UTC+5:30)
+    dt = datetime(2026, 1, 15, 14, 30, tzinfo=timezone.utc)
+    result = format_local(dt, "Asia/Kolkata")
+    assert "Thursday" in result or "Friday" in result  # Day name
+    assert "15 Jan" in result or "Jan 15" in result
+    assert "20:" in result or "8:" in result  # 8 PM in 12-hour format
+    assert "IST" in result or "+0530" in result or "IST" in result
+
+
+def test_format_local_new_york(monkeypatch):
+    """Test format_local with America/New_York timezone."""
+    from email_service import format_local
+    from datetime import datetime, timezone
+    
+    # 2026-01-15 14:30 UTC = 2026-01-15 09:30 EST (UTC-5)
+    dt = datetime(2026, 1, 15, 14, 30, tzinfo=timezone.utc)
+    result = format_local(dt, "America/New_York")
+    assert "Thursday" in result or "Friday" in result
+    assert "15 Jan" in result or "Jan 15" in result
+    assert "9:" in result or "09:" in result  # 9 AM
+    assert "EST" in result or "EDT" in result or "EST" in result
+
+
+def test_format_local_invalid_fallbacks_to_utc(monkeypatch):
+    """Test format_local falls back to UTC for invalid timezone."""
+    from email_service import format_local
+    from datetime import datetime, timezone
+    
+    dt = datetime(2026, 1, 15, 14, 30, tzinfo=timezone.utc)
+    result = format_local(dt, "Invalid/Timezone")
+    assert "UTC" in result or "GMT" in result
+
+
+def test_format_local_none_returns_default(monkeypatch):
+    """Test format_local with None datetime."""
+    from email_service import format_local
+    
+    result = format_local(None, "Asia/Kolkata")
+    assert result == "time to be confirmed"
+
+
+def test_stage_for_local_date_near_midnight_ist(monkeypatch):
+    """Test stage_for uses owner's local calendar date near midnight IST.
+    
+    Scenario: Meeting at 2026-08-30 18:30 UTC (which is 2026-08-31 00:00 IST).
+    In UTC: day_of (same day as NOW which is 2026-08-30 09:00 UTC)
+    In IST: day_of should be 2026-08-31 (next day)
+    """
+    from reminders import stage_for
+    from datetime import datetime, timezone, timedelta
+    
+    # NOW = 2026-08-30 09:00 UTC (Wednesday morning)
+    NOW = datetime(2026, 8, 30, 9, 0, tzinfo=timezone.utc)
+    
+    # Meeting at 18:30 UTC = 2026-08-31 00:00 IST (midnight IST, next calendar day)
+    meeting_utc = datetime(2026, 8, 30, 18, 30, tzinfo=timezone.utc)
+    
+    # With UTC timezone: same UTC date (Aug 30) -> day_of
+    stage_utc = stage_for(meeting_utc, NOW, "UTC")
+    assert stage_utc == "day_of"
+    
+    # With IST timezone: next calendar day (Aug 31) -> upcoming_24h (since delta < 24h but not same local date)
+    assert stage_for(meeting_utc, NOW, "Asia/Kolkata") == "upcoming_24h"
+    
+    # Meeting at 2026-08-30 10:30 UTC = 2026-08-30 16:00 IST (same local date, future meeting)
+    meeting_utc2 = datetime(2026, 8, 30, 10, 30, tzinfo=timezone.utc)
+    stage_utc2 = stage_for(meeting_utc2, NOW, "UTC")
+    stage_ist2 = stage_for(meeting_utc2, NOW, "Asia/Kolkata")
+    assert stage_utc2 == "day_of"  # Same UTC date
+    assert stage_ist2 == "day_of"  # Same IST date
+
+
+def test_stage_for_midnight_boundary(monkeypatch):
+    """Test stage_for correctly handles midnight boundary in owner's timezone.
+    
+    NOW = 2026-08-30 09:00 UTC
+    Meeting = 2026-08-30 18:30 UTC = 2026-08-31 00:00 IST (midnight IST)
+    In IST: next calendar day -> upcoming_24h (since delta < 24h but not same local date)
+    In UTC: same calendar day -> day_of
+    """
+    from reminders import stage_for
+    from datetime import datetime, timezone, timedelta
+    
+    NOW = datetime(2026, 8, 30, 9, 0, tzinfo=timezone.utc)
+    
+    # Meeting at 18:30 UTC = midnight IST (next day in IST)
+    meeting = datetime(2026, 8, 30, 18, 30, tzinfo=timezone.utc)
+    
+    # UTC: same date (Aug 30) -> day_of
+    assert stage_for(meeting, NOW, "UTC") == "day_of"
+    
+    # IST: next date (Aug 31) -> upcoming_24h (delta is 9.5h < 24h)
+    assert stage_for(meeting, NOW, "Asia/Kolkata") == "upcoming_24h"
+
+
+def test_timezone_manual_not_overwritten_by_auto(monkeypatch):
+    """Test manual timezone choice is not overwritten by auto-detection."""
+    db = FakeDB()
+    _seed(db)
+    _add_memory(db)
+    _add_meeting(db, "2026-08-30T09:30:00")
+    
+    # Manually set timezone to America/New_York via API
+    from bson import ObjectId
+    db.users.update_one(
+        {"_id": ObjectId("999999999999999999999999")},
+        {"$set": {"timezone": "America/New_York", "timezone_source": "manual"}}
+    )
+    
+    # Now trigger generation (which would try to auto-detect)
+    from reminders import ensure_reminder_notifications
+    from datetime import datetime, timezone
+    NOW = datetime(2026, 8, 30, 9, 0, tzinfo=timezone.utc)
+    created = ensure_reminder_notifications(db, "aaaaaaaaaaaaaaaaaaaaaaaa", NOW)
+    
+    # Verify user still has manual timezone
+    user = db.users.find_one({"_id": ObjectId("999999999999999999999999")})
+    assert user.get("timezone") == "America/New_York"
+    assert user.get("timezone_source") == "manual"
+
+
+def test_timezone_default_when_missing(monkeypatch):
+    """Test default timezone (Asia/Kolkata) is used when user has no timezone set."""
+    db = FakeDB()
+    _seed(db)
+    _add_memory(db)
+    _add_meeting(db, "2026-08-30T09:30:00")
+    
+    # Remove timezone from user
+    from bson import ObjectId
+    db.users.update_one(
+        {"_id": ObjectId("999999999999999999999999")},
+        {"$unset": {"timezone": "", "timezone_source": ""}}
+    )
+    
+    from reminders import ensure_reminder_notifications
+    from datetime import datetime, timezone
+    NOW = datetime(2026, 8, 30, 9, 0, tzinfo=timezone.utc)
+    created = ensure_reminder_notifications(db, "aaaaaaaaaaaaaaaaaaaaaaaa", NOW)
+    
+    # Verify notification has owner_timezone set to default
+    n = db.notifications.find_one({"type": "meeting_reminder"})
+    assert n.get("owner_timezone") == "Asia/Kolkata"

@@ -456,6 +456,44 @@ function accentFor(id) {
   return ACCENTS[hash % ACCENTS.length];
 }
 
+for (var i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+  return ACCENTS[hash % ACCENTS.length];
+}
+
+// ── Timezone auto-detection (runs on page load) ══════════════════════
+function maybeSyncTimezone() {
+  try {
+    var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!browserTz) return;
+    fetch('/api/me')
+      .then(function(res) { return res.ok ? res.json() : null; })
+      .then(function(data) {
+        if (data && data.timezone && data.timezone !== browserTz && data.timezone_source !== 'manual') {
+          // Auto-sync timezone
+          fetch('/api/settings/timezone', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.voovrCsrfToken || '' },
+            body: JSON.stringify({ timezone: browserTz, source: 'auto' })
+          }).catch(function(err) {
+            console.warn('meeting-tracker: timezone auto-sync failed:', err);
+          });
+        }
+      })
+      .catch(function() {
+        // Ignore errors - not critical
+      });
+  } catch (err) {
+    console.warn('meeting-tracker: timezone detection failed:', err);
+  }
+}
+
+// Run timezone sync after DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', maybeSyncTimezone);
+} else {
+  maybeSyncTimezone();
+}
+
 // ── Section (status) resolution for a person ──
 function personSection(p) {
   var nm = p.next_meeting;

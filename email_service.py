@@ -25,11 +25,42 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
+
 BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 OTP_SUBJECT = "Your VooVr verification code"
 
 # Bare-address check (rejects formats like "Name<email@example.com>").
 _SENDER_RE = re.compile(r"^[^<>\s]+@[^<>\s]+\.[^<>\s]+$")
+
+DEFAULT_TIMEZONE = os.environ.get("DEFAULT_TIMEZONE", "Asia/Kolkata")
+
+
+def format_local(dt: datetime, tzname: str | None = None) -> str:
+    """Format a UTC datetime in the given IANA timezone.
+    
+    Returns: "Sunday, 11 Oct · 2:08 PM IST" (localized with timezone abbrev)
+    Falls back to UTC on any error.
+    """
+    if dt is None:
+        return "time to be confirmed"
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    
+    tzname = tzname or DEFAULT_TIMEZONE
+    try:
+        tz = ZoneInfo(tzname)
+    except Exception:
+        tz = timezone.utc
+    
+    local_dt = dt.astimezone(tz)
+    # Format: "Sunday, 11 Oct · 2:08 PM IST"
+    # Note: %Z may be empty on some platforms, so we use the IANA name's common abbreviation
+    tz_abbrev = local_dt.strftime("%Z") or tzname.split("/")[-1].upper()
+    return local_dt.strftime(f"%A, %d %b · %I:%M %p {tz_abbrev}").lstrip("0").replace(" 0", " ")
 
 
 def _profile_avatar_headers() -> dict:
@@ -423,13 +454,19 @@ _REMINDER_STAGE_INTRO = {
 }
 
 
-def _format_meeting_time(meeting_time) -> str:
-    """Human-readable meeting time for email bodies, labelled UTC when the
-    value carries a UTC offset (scheduled_at is stored UTC)."""
+def _format_meeting_time(meeting_time, tzname: str | None = None) -> str:
+    """Human-readable meeting time for email bodies in the given timezone.
+    
+    Falls back to UTC formatting if timezone is invalid or not provided."""
     if meeting_time is None:
         return "time to be confirmed"
     if meeting_time.tzinfo is None:
         meeting_time = meeting_time.replace(tzinfo=timezone.utc)
+    
+    if tzname:
+        return format_local(meeting_time, tzname)
+    
+    # Fallback to UTC
     label = meeting_time.strftime("%A, %B %d · %I:%M %p").strip()
     if meeting_time.utcoffset() == timedelta(0):
         label += " (UTC)"
@@ -441,11 +478,12 @@ def _reminder_html(
     meeting_time,
     items_summaries: list,
     stage: str,
+    tzname: str | None = None,
 ) -> str:
     intro = _REMINDER_STAGE_INTRO.get(
         stage, _REMINDER_STAGE_INTRO["day_of"]
     ).format(employee=_escape_html(employee_name or "your colleague"))
-    when = _format_meeting_time(meeting_time)
+    when = _format_meeting_time(meeting_time, tzname)
     base = _site_base_url()
     meeting_url = f"{base}/meeting-tracker" if base else "/meeting-tracker"
 
@@ -475,6 +513,7 @@ def send_reminder_email(
     meeting_time,
     items_summaries: list,
     stage: str,
+    tzname: str | None = None,
 ) -> bool:
     """Send a meeting-reminder email via Brevo (mirrors the manager-invite
     pattern: same config guard, same POST, own subject/html per stage).
@@ -515,7 +554,7 @@ def send_reminder_email(
         "replyTo": {"email": "voovrhr@gmail.com", "name": "VooVr"},
         "to": [{"email": to_email}],
         "subject": subject,
-        "htmlContent": _reminder_html(employee_name, meeting_time, items_summaries, stage),
+        "htmlContent": _reminder_html(employee_name, meeting_time, items_summaries, stage, tzname),
         "headers": _profile_avatar_headers(),
     }
 

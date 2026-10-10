@@ -113,11 +113,35 @@
     } else {
       populate(data);
     }
+    // Auto-detect timezone on page load
+    maybeSyncTimezone(data);
   }).catch(function(err){
     console.error('settings boot error', err);
     revealPage();
   });
 })();
+
+// Timezone auto-detection and sync
+function maybeSyncTimezone(meData) {
+  try {
+    var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!browserTz) return;
+    var currentTz = meData.timezone;
+    var source = meData.timezone_source;
+    if (browserTz !== currentTz && source !== 'manual') {
+      // Auto-sync timezone
+      fetch('/api/settings/timezone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.voovrCsrfToken || '' },
+        body: JSON.stringify({ timezone: browserTz, source: 'auto' })
+      }).catch(function(err) {
+        console.warn('timezone auto-sync failed:', err);
+      });
+    }
+  } catch (err) {
+    console.warn('timezone detection failed:', err);
+  }
+}
 </script>
 <button class="mobile-toggle" id="mobileToggle">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
@@ -375,6 +399,22 @@
                   <span class="toggle-slider"></span>
                 </span>
               </label>
+            </div>
+          </div>
+
+          <!-- ═══ TIMEZONE ═══ -->
+          <div class="st-section st-card">
+            <div class="st-sec-head">
+              <h2 class="st-sec-title">Timezone</h2>
+              <span class="st-sec-desc">Meeting reminders and scheduled times will display in this timezone</span>
+            </div>
+            <div class="st-field">
+              <label for="timezoneSelect">Your timezone</label>
+              <select class="form-input" id="timezoneSelect" autocomplete="off"></select>
+              <span class="st-hint" id="timezoneHint"></span>
+            </div>
+            <div class="st-savebar">
+              <button class="btn btn-primary" id="timezoneSaveBtn" type="button">Save Timezone</button>
             </div>
           </div>
 
@@ -2501,6 +2541,104 @@ window.addEventListener('load', function() {
         });
     });
   }
+})();
+</script>
+
+<!-- ═══ TIMEZONE: populate dropdown + save handler ═══ -->
+<script>
+(function(){
+  var tzSelect = document.getElementById('timezoneSelect');
+  var tzHint = document.getElementById('timezoneHint');
+  var tzSaveBtn = document.getElementById('timezoneSaveBtn');
+  if (!tzSelect || !tzSaveBtn) return;
+
+  // Build timezone list from Intl.supportedValuesOf('timeZone') with fallback
+  var timezones = [];
+  try {
+    timezones = Intl.supportedValuesOf('timeZone');
+  } catch (e) {
+    // Fallback list of common timezones
+    timezones = [
+      'UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+      'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Rome',
+      'Asia/Kolkata', 'Asia/Shanghai', 'Asia/Tokyo', 'Asia/Singapore', 'Asia/Dubai',
+      'Australia/Sydney', 'Australia/Melbourne', 'Pacific/Auckland',
+      'America/Toronto', 'America/Vancouver', 'America/Mexico_City', 'America/Sao_Paulo',
+      'Africa/Johannesburg', 'Africa/Cairo', 'Asia/Seoul', 'Asia/Hong_Kong', 'Asia/Bangkok'
+    ];
+  }
+
+  // Populate select
+  timezones.forEach(function(tz) {
+    var opt = document.createElement('option');
+    opt.value = tz;
+    opt.textContent = tz.replace(/_/g, ' ');
+    tzSelect.appendChild(opt);
+  });
+
+  // Load current timezone from /api/me or use window.__voovrMe if available
+  function loadCurrentTimezone() {
+    fetch('/api/me')
+      .then(function(res) { return res.ok ? res.json() : null; })
+      .then(function(data) {
+        if (data && data.timezone) {
+          tzSelect.value = data.timezone;
+          updateHint(data.timezone, data.timezone_source);
+        }
+      })
+      .catch(function() {
+        // Fallback to browser timezone
+        var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (browserTz) tzSelect.value = browserTz;
+      });
+  }
+
+  function updateHint(tz, source) {
+    if (!tzHint) return;
+    if (source === 'manual') {
+      tzHint.textContent = 'Manually set — auto-detection disabled';
+      tzHint.style.color = 'var(--teal)';
+    } else if (source === 'auto') {
+      tzHint.textContent = 'Auto-detected from your browser';
+      tzHint.style.color = 'var(--ivory-dim)';
+    } else {
+      tzHint.textContent = 'Default timezone (Asia/Kolkata)';
+      tzHint.style.color = 'var(--ivory-dim)';
+    }
+  }
+
+  // Save handler
+  tzSaveBtn.addEventListener('click', function(){
+    var tz = tzSelect.value;
+    if (!tz) return;
+    tzSaveBtn.disabled = true;
+    tzSaveBtn.textContent = 'Saving…';
+    fetch('/api/settings/timezone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.voovrCsrfToken || '' },
+      body: JSON.stringify({ timezone: tz, source: 'manual' })
+    })
+    .then(function(res) { return res.json().catch(function() { return {}; }).then(function(b) { return { ok: res.ok, body: b }; }); })
+    .then(function(r) {
+      tzSaveBtn.disabled = false;
+      tzSaveBtn.textContent = 'Save Timezone';
+      if (!r.ok) {
+        var msg = (r.body && r.body.error === 'invalid_timezone') ? 'Invalid timezone selected'
+                : 'Couldn\u2019t save timezone. Please try again.';
+        showToast(msg, true);
+        return;
+      }
+      showToast('Timezone saved');
+      updateHint(r.body.timezone, r.body.source);
+    })
+    .catch(function() {
+      tzSaveBtn.disabled = false;
+      tzSaveBtn.textContent = 'Save Timezone';
+      showToast('Network error while saving timezone', true);
+    });
+  });
+
+  loadCurrentTimezone();
 })();
 </script>
 </body>
