@@ -476,11 +476,12 @@ class TestWhatsAppWebhookIntake:
         assert "isn't linked" in sent[0][1]
 
     def test_text_message_creates_session_and_notification(self, monkeypatch):
+        """Prefixed text (/note ...) should create a session."""
         client, db = _seeded_store(monkeypatch)
         sent = []
         monkeypatch.setattr(wr, "send_message", lambda phone, text: sent.append((phone, text)) or True)
 
-        r = client.post("/api/whatsapp/webhook", json=_text_payload(_PHONE, "Hi, this is a dictation."))
+        r = client.post("/api/whatsapp/webhook", json=_text_payload(_PHONE, "/note Hi, this is a dictation."))
         assert r.status_code == 200
 
         sessions = db.sessions.docs
@@ -499,10 +500,91 @@ class TestWhatsAppWebhookIntake:
         assert n["employee_id"] is None
         assert "WhatsApp dictation" in n["headline"]
 
-        # Immediate ack first, then the "Done!" completion message.
         assert sent[0][1] == wr._ACK_TEXT
         assert "Done!" in sent[-1][1]
         assert all(phone == _PHONE for phone, _ in sent)
+
+    def test_plain_text_without_prefix_sends_help_no_session(self, monkeypatch):
+        client, db = _seeded_store(monkeypatch)
+        sent = []
+        monkeypatch.setattr(wr, "send_message", lambda phone, text: sent.append((phone, text)) or True)
+
+        r = client.post("/api/whatsapp/webhook", json=_text_payload(_PHONE, "Hi"))
+        assert r.status_code == 200
+
+        # No session, no notification
+        assert db.sessions.docs == []
+        assert db.notifications.docs == []
+
+        # Help reply sent (once)
+        assert len(sent) == 1
+        assert sent[0][1] == wr._HELP_TEXT
+
+    def test_forwarded_text_creates_session(self, monkeypatch):
+        client, db = _seeded_store(monkeypatch)
+        sent = []
+        monkeypatch.setattr(wr, "send_message", lambda phone, text: sent.append((phone, text)) or True)
+
+        payload = _text_payload(_PHONE, "Forwarded note")
+        payload["entry"][0]["changes"][0]["value"]["messages"][0]["context"] = {"forwarded": True}
+        r = client.post("/api/whatsapp/webhook", json=payload)
+        assert r.status_code == 200
+
+        sessions = db.sessions.docs
+        assert len(sessions) == 1
+        s = sessions[0]
+        assert s["transcript"]["raw"] == "Forwarded note"
+        assert sent[0][1] == wr._ACK_TEXT
+        assert "Done!" in sent[-1][1]
+
+    def test_note_prefix_stripped(self, monkeypatch):
+        client, db = _seeded_store(monkeypatch)
+        sent = []
+        monkeypatch.setattr(wr, "send_message", lambda phone, text: sent.append((phone, text)) or True)
+
+        r = client.post("/api/whatsapp/webhook", json=_text_payload(_PHONE, "/note   kal meeting"))
+        assert r.status_code == 200
+
+        sessions = db.sessions.docs
+        assert len(sessions) == 1
+        assert sessions[0]["transcript"]["raw"] == "kal meeting"
+
+    def test_dictate_prefix_stripped(self, monkeypatch):
+        client, db = _seeded_store(monkeypatch)
+        sent = []
+        monkeypatch.setattr(wr, "send_message", lambda phone, text: sent.append((phone, text)) or True)
+
+        r = client.post("/api/whatsapp/webhook", json=_text_payload(_PHONE, "dictate:   reminder call"))
+        assert r.status_code == 200
+
+        sessions = db.sessions.docs
+        assert len(sessions) == 1
+        assert sessions[0]["transcript"]["raw"] == "reminder call"
+
+    def test_help_reply_rate_limited_once_per_6h(self, monkeypatch):
+        client, db = _seeded_store(monkeypatch)
+        sent = []
+        monkeypatch.setattr(wr, "send_message", lambda phone, text: sent.append((phone, text)) or True)
+
+        # First plain text -> help reply
+        r = client.post("/api/whatsapp/webhook", json=_text_payload(_PHONE, "Hello"))
+        assert r.status_code == 200
+        assert len(sent) == 1
+        assert sent[0][1] == wr._HELP_TEXT
+
+        # Second plain text within 6h -> no additional reply
+        sent.clear()
+        r = client.post("/api/whatsapp/webhook", json=_text_payload(_PHONE, "Hi again"))
+        assert r.status_code == 200
+        assert sent == []  # help suppressed
+
+        # Simulate expiry of help rate limit by clearing rate_limits collection
+        db.rate_limits.docs.clear()
+        sent.clear()
+        r = client.post("/api/whatsapp/webhook", json=_text_payload(_PHONE, "After expiry"))
+        assert r.status_code == 200
+        assert len(sent) == 1
+        assert sent[0][1] == wr._HELP_TEXT
 
     def test_audio_message_transcribes_and_creates_session(self, monkeypatch):
         client, db = _seeded_store(monkeypatch)
@@ -637,8 +719,9 @@ class TestWhatsAppWebhookIntake:
 
         assert db.sessions.docs == []
         assert db.notifications.docs == []
-        assert sent[0][1] == wr._ACK_TEXT
-        assert any(".txt" in text and "aren't supported yet" in text for _, text in sent)
+        # Only the not-supported reply, no ACK
+        assert len(sent) == 1
+        assert ".txt" in sent[0][1] and "aren't supported yet" in sent[0][1]
 
     def test_rate_limited_phone_gets_throttle_reply(self, monkeypatch):
         client, db = _seeded_store(monkeypatch)
@@ -672,7 +755,8 @@ class TestWhatsAppWebhookIntake:
                 "expire_at": now + timedelta(seconds=3600),
             })
 
-        r = client.post("/api/whatsapp/webhook", json=_text_payload(_PHONE, "One more"))
+        # Use a prefixed text so it is accepted
+        r = client.post("/api/whatsapp/webhook", json=_text_payload(_PHONE, "/note One more"))
         assert r.status_code == 200
         assert len(db.sessions.docs) == 1
         assert sent[0][1] == wr._ACK_TEXT

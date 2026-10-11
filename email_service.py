@@ -434,9 +434,9 @@ def send_manager_invite_email(to_email: str, org_name: str, invite_link: str) ->
 # escalates as the meeting nears: a heads-up tomorrow, an urgent line within
 # the hour, and a same-day nudge on the day itself.
 _REMINDER_STAGE_SUBJECT = {
-    "upcoming_24h": "Heads-up: {employee}'s meeting is coming up",
-    "soon_1h": "Starting soon — {employee}'s meeting is within the hour",
-    "day_of": "Today's meeting with {employee}",
+    "upcoming_24h": "VooVr · Heads-up: {employee}'s meeting is coming up",
+    "soon_1h": "VooVr · Starting soon — {employee}'s meeting is within the hour",
+    "day_of": "VooVr · Today's meeting with {employee}",
 }
 
 _REMINDER_STAGE_INTRO = {

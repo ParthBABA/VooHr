@@ -1028,8 +1028,7 @@ function mtOpenDetail(eid) {
     meetingInfo =
       '<div class="mt-d"><div class="mt-dtitle">' + (isMissed ? 'Missed meeting' : 'Meeting') + '</div>' +
       '<div class="mt-meetinfo"><span><b>Date:</b> ' + (meet.scheduled_at ? fmtFullDate(meet.scheduled_at) : '\u2014') + '</span>' +
-      '<span><b>Title:</b> ' + escHtml(meet.title || '\u2014') + '</span></div>' +
-      '<div class="mt-delzone">' + mtDelTrigger(meet.id, isMissed ? 'Delete missed meeting' : 'Delete meeting', 'mtDeleteMeetingBtn', meet.title || '', mtWhenTxt(meet.scheduled_at)) + '</div></div>';
+      '<span><b>Title:</b> ' + escHtml(meet.title || '\u2014') + '</span></div></div>';
     meetTxt = (meet.title || 'Meeting') + ' \u00b7 ' + (meet.scheduled_at ? fmtFullDate(meet.scheduled_at) : '');
   }
   var prevInfo = '';

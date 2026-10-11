@@ -4,8 +4,6 @@ Meta sends an HTTP POST to ``/api/whatsapp/webhook`` whenever someone messages
 the app's WhatsApp number. VooVr turns that message into a dictation session
 for the linked user's organization:
 
-  * text   -> used directly as the transcript (``recording_device
-              'whatsapp_text'``, STT skipped)
   * audio  -> downloaded and transcribed via the configured STT provider
               (``recording_device 'whatsapp'``)
   * document (plain text) -> file downloaded, decoded, and used directly as
@@ -13,21 +11,29 @@ for the linked user's organization:
               ``recording_type 'text'``)
   * document (audio) -> file downloaded and transcribed like voice notes
               (``recording_device 'whatsapp_document'``)
-  * document (other) -> acknowledged but politely declined (only .txt and
-              audio attachments are supported); no session is created
+  * document (other) -> politely declined (only .txt and audio attachments
+              are supported); no session is created
+  * text   -> accepted ONLY if the message is forwarded/frequently_forwarded
+              OR starts with a recognised prefix (``/note``, ``/dictate``,
+              ``note:``, ``dictate:``). The prefix is stripped and the rest
+              becomes the transcript (``recording_device 'whatsapp_text'``).
+              Plain greetings, "ok", "hi", Meta's default hello, etc. are
+              ignored — no session/notification/activity is created. A short
+              help reply is sent instead (rate‑limited to once per 6 h per
+              phone).
 
 Flow (mirrors jobs.py's background translation/TTS jobs):
 
   1. verify the ``X-Hub-Signature-256`` header on the raw request body
-  2. rate-limit per sender phone number (per hour, DB-backed)
+  2. rate‑limit per sender phone number (per hour, DB‑backed)
   3. look up the sender in ``db.users`` by ``phone_number``
-  4. acknowledge the sender immediately ("Got it — transcribing now...")
+  4. if the message is accepted, acknowledge immediately ("Got it — transcribing now...")
   5. do the heavy work (download + STT + session insert) on a daemon thread so
      the webhook answers Meta's POST quickly
-  6. on completion, create a "session_ready" in-app notification (same shape
+  6. on completion, create a "session_ready" in‑app notification (same shape
      as translation_ready / audio_ready) and a completion WhatsApp message
 
-The GET endpoint handles Meta's subscription-verification handshake, comparing
+The GET endpoint handles Meta's subscription‑verification handshake, comparing
 ``hub.verify_token`` against ``WHATSAPP_VERIFY_TOKEN``.
 """
 
@@ -53,7 +59,15 @@ logger = logging.getLogger(__name__)
 _WHATSAPP_INBOUND_MAX = 50      # messages per phone per window
 _WHATSAPP_INBOUND_WINDOW = 3600 # 1 hour
 
+# Help‑reply rate‑limit (once per 6 h per phone)
+_WHATSAPP_HELP_MAX = 1
+_WHATSAPP_HELP_WINDOW = 21600   # 6 hours
+
 _ACK_TEXT = "Got it — transcribing now..."
+_HELP_TEXT = (
+    "Hi! Employee ka voice note ya message forward kijiye, "
+    "ya '/note <text>' likh ke bhejiye. Isse VooVr me save hoga."
+)
 
 _VERIFY_TOKEN_ENV = "WHATSAPP_VERIFY_TOKEN"
 
@@ -151,8 +165,8 @@ def webhook_receive():
 
 
 def _handle_inbound_message(db, msg) -> None:
-    """Route a single inbound message: rate-limit, resolve the user, ack, then
-    dispatch the heavy work to a background thread."""
+    """Route a single inbound message: rate-limit, resolve the user,
+    decide whether to accept, ack only on acceptance, then dispatch work."""
     sender = msg.get("from") or ""
     phone = normalize_phone(sender)
     if not phone:
@@ -179,59 +193,83 @@ def _handle_inbound_message(db, msg) -> None:
         )
         return
 
-    record_rate_limit_event(db, key, ttl_seconds=_WHATSAPP_INBOUND_WINDOW)
-
     mtype = msg.get("type")
-    send_message(phone, _ACK_TEXT)
+    accepted = False
+    thread_target = None
+    thread_args = None
 
     if mtype == "audio":
         media_id = ((msg.get("audio") or {}).get("id") or "").strip()
         mime_type = ((msg.get("audio") or {}).get("mime_type") or "audio/ogg").strip()
-        if not media_id:
-            return
-        stt = get_stt_provider()
-        threading.Thread(
-            target=_process_voice_note,
-            args=(db, user, phone, media_id, mime_type, stt),
-            daemon=True,
-        ).start()
-    elif mtype == "text":
-        text = ((msg.get("text") or {}).get("body") or "").strip()
-        if not text:
-            return
-        threading.Thread(
-            target=_process_text,
-            args=(db, user, phone, text),
-            daemon=True,
-        ).start()
+        if media_id:
+            accepted = True
+            stt = get_stt_provider()
+            thread_target = _process_voice_note
+            thread_args = (db, user, phone, media_id, mime_type, stt)
     elif mtype == "document":
         document = msg.get("document") or {}
         media_id = (document.get("id") or "").strip()
         mime_type = (document.get("mime_type") or "").strip()
         filename = (document.get("filename") or "").strip()
-        if not media_id:
-            logger.debug("whatsapp_inbound=skipped reason=document_no_media_id")
-            return
-        if _is_text_document(mime_type, filename):
+        if media_id:
+            if _is_text_document(mime_type, filename):
+                accepted = True
+                thread_target = _process_document_text
+                thread_args = (db, user, phone, media_id)
+            elif _is_audio_document(mime_type):
+                accepted = True
+                stt = get_stt_provider()
+                thread_target = _process_document_audio
+                thread_args = (db, user, phone, media_id, mime_type, stt)
+            else:
+                # unsupported document type – polite decline, no session
+                send_message(
+                    phone,
+                    "Sorry, I can only process .txt text files and audio file "
+                    "attachments right now. PDFs, images, and other document "
+                    "types aren't supported yet.",
+                )
+    elif mtype == "text":
+        raw = ((msg.get("text") or {}).get("body") or "").strip()
+        if raw:
+            ctx = msg.get("context") or {}
+            forwarded = bool(ctx.get("forwarded") or ctx.get("frequently_forwarded"))
+            lowered = raw.lower()
+            prefixes = ("/note", "/dictate", "note:", "dictate:")
+            prefixed = any(lowered.startswith(p) for p in prefixes)
+            if forwarded or prefixed:
+                accepted = True
+                # strip prefix if present
+                text_to_save = raw
+                if prefixed:
+                    for p in prefixes:
+                        if lowered.startswith(p):
+                            text_to_save = raw[len(p):].lstrip()
+                            break
+                thread_target = _process_text
+                thread_args = (db, user, phone, text_to_save)
+            else:
+                # ignored plain text – send help reply rate‑limited
+                help_key = f"whatsapp_help:{phone}"
+                h_allowed, _ = check_rate_limit(db, help_key, _WHATSAPP_HELP_MAX, _WHATSAPP_HELP_WINDOW)
+                if h_allowed:
+                    send_message(phone, _HELP_TEXT)
+                    record_rate_limit_event(db, help_key, ttl_seconds=_WHATSAPP_HELP_WINDOW)
+                # do NOT count towards inbound rate limit
+                return
+    else:
+        # unknown type – ignore silently
+        return
+
+    if accepted:
+        record_rate_limit_event(db, key, ttl_seconds=_WHATSAPP_INBOUND_WINDOW)
+        send_message(phone, _ACK_TEXT)
+        if thread_target:
             threading.Thread(
-                target=_process_document_text,
-                args=(db, user, phone, media_id),
+                target=thread_target,
+                args=thread_args,
                 daemon=True,
             ).start()
-        elif _is_audio_document(mime_type):
-            stt = get_stt_provider()
-            threading.Thread(
-                target=_process_document_audio,
-                args=(db, user, phone, media_id, mime_type, stt),
-                daemon=True,
-            ).start()
-        else:
-            send_message(
-                phone,
-                "Sorry, I can only process .txt text files and audio file "
-                "attachments right now. PDFs, images, and other document "
-                "types aren't supported yet.",
-            )
 
 
 def _process_voice_note(db, user, phone, media_id, mime_type, stt) -> None:
