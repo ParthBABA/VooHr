@@ -266,13 +266,6 @@
   .mt-empnote{font-family:var(--font-m);font-size:0.66rem;color:var(--mt-teal);margin-top:0.45rem;display:none;}
   .mt-empnote.show{display:block;}
 
-  /* ── Card-level quick delete (footer) ── */
-  .mt-carddel{flex-direction:row;}
-  .mt-carddel .mt-deltbtn{font-family:var(--font-m);font-weight:600;font-size:0.68rem;letter-spacing:0.01em;text-transform:none;padding:0.4rem 0.75rem;border-radius:100px;display:inline-flex;align-items:center;gap:0.4rem;}
-  .mt-carddel .mt-deltbtn::before{content:'';width:13px;height:13px;flex-shrink:0;background:currentColor;-webkit-mask:var(--mt-trash);mask:var(--mt-trash);}
-  .mt-carddel .mt-delconfirm{padding:0.55rem 0.7rem;}
-  .mt-carddel .mt-delmsg{font-size:0.68rem;min-width:150px;}
-
   /* ── Avatar accent palette (deterministic per person) ── */
   .mt-accents{display:none;}
 </style>
@@ -567,7 +560,6 @@ function mtCardMeetings(p) {
           '<span class="mt-badge ' + (label === 'Upcoming' ? 'mt-badge--saved' : mtHistBadge(m.status)) + '">' + escHtml(label) + '</span>' +
           '<span class="mt-hmeta">' + escHtml(m.title || 'Meeting') + ' \u00b7 ' + (m.scheduled_at ? fmtFullDate(m.scheduled_at) : '\u2014') + '</span>' +
         '</div>' +
-        '<div class="mt-delzone">' + mtDelTrigger(m.id, 'Delete', '', m.title || '', mtWhenTxt(m.scheduled_at)) + '</div>' +
       '</div>'
     );
   }
@@ -581,7 +573,7 @@ function mtCardMeetings(p) {
   (p.meeting_history || []).forEach(function(m){ push(m, mtHistStatus(m)); });
   push(p.last_missed, 'Missed');
   if (!rows.length) return '';
-  return '<div class="mt-card-meetings"><div class="mt-dtitle">Meetings \u00b7 delete</div>' + rows.join('') + '</div>';
+  return '<div class="mt-card-meetings"><div class="mt-dtitle">Meetings</div>' + rows.join('') + '</div>';
 }
 
 function mdCard(p) {
