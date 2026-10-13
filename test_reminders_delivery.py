@@ -807,6 +807,7 @@ def test_api_me_returns_default_timezone_when_missing(monkeypatch):
     from api import api_bp
     from flask import Flask
     import json
+    import sys
 
     app = Flask(__name__)
     app.register_blueprint(api_bp, url_prefix="/api")
@@ -822,13 +823,25 @@ def test_api_me_returns_default_timezone_when_missing(monkeypatch):
         {"_id": ObjectId("999999999999999999999999")},
         {"$unset": {"timezone": "", "timezone_source": ""}}
     )
+    # Add active_sessions for _session_is_active check
+    db.active_sessions = db.sessions  # Reuse sessions collection
+    # Seed an active session for the user
+    import hashlib
+    session_token = "dummy"
+    db.active_sessions.insert_one({
+        "user_id": ObjectId("999999999999999999999999"),
+        "session_token": hashlib.sha256(session_token.encode()).hexdigest(),
+        "last_seen": datetime.now(timezone.utc),
+    })
 
     # Provide DB via app.extensions
     app.extensions = {"mongo_db": db}
 
-    # Bypass auth by patching _check_auth in api module
+    # Patch get_db in api and employees to return our test DB
     import api as api_mod
-    monkeypatch.setattr(api_mod, "_check_auth", lambda: "999999999999999999999999")
+    import employees as emp_mod
+    monkeypatch.setattr(api_mod, "get_db", lambda: db)
+    monkeypatch.setattr(emp_mod, "get_db", lambda: db)
 
     with app.test_client() as client:
         with client.session_transaction() as sess:

@@ -472,7 +472,7 @@ def test_gmail_send_fallback_to_brevo_on_failure(monkeypatch):
     monkeypatch.setattr(rm_mod, "get_db", lambda: db)
 
     brevo_called = []
-    def mock_brevo(email, emp_name, mt, summary, stage):
+    def mock_brevo(email, emp_name, mt, summary, stage, tzname=None):
         brevo_called.append(True)
         return True
     monkeypatch.setattr(email_mod, "send_reminder_email", mock_brevo)
@@ -561,7 +561,7 @@ def test_non_24h_stages_use_brevo_even_with_gmail(monkeypatch):
     monkeypatch.setattr(gs_mod, "send_html", mock_gmail_send)
 
     brevo_called = []
-    def mock_brevo(email, emp_name, mt, summary, stage):
+    def mock_brevo(email, emp_name, mt, summary, stage, tzname=None):
         brevo_called.append(stage)
         return True
     monkeypatch.setattr(email_mod, "send_reminder_email", mock_brevo)
@@ -570,8 +570,8 @@ def test_non_24h_stages_use_brevo_even_with_gmail(monkeypatch):
 
     _generate_reminders(db)
 
-    # Both soon_1h and day_of stages should use Gmail when connected
-    assert len(gmail_called) == 2
+    # Only soon_1h is an external stage; day_of creates in-app notification only
+    assert len(gmail_called) == 1
     assert len(brevo_called) == 0
 
 
@@ -589,7 +589,7 @@ def test_user_without_gmail_uses_brevo(monkeypatch):
     monkeypatch.setattr(gs_mod, "send_html", mock_gmail_send)
 
     brevo_called = []
-    def mock_brevo(email, emp_name, mt, summary, stage):
+    def mock_brevo(email, emp_name, mt, summary, stage, tzname=None):
         brevo_called.append(True)
         return True
     monkeypatch.setattr(email_mod, "send_reminder_email", mock_brevo)
@@ -616,7 +616,7 @@ def test_opted_out_user_gets_no_email(monkeypatch):
     monkeypatch.setattr(gs_mod, "send_html", mock_gmail_send)
 
     brevo_called = []
-    def mock_brevo(email, emp_name, mt, summary, stage):
+    def mock_brevo(email, emp_name, mt, summary, stage, tzname=None):
         brevo_called.append(True)
         return True
     monkeypatch.setattr(email_mod, "send_reminder_email", mock_brevo)

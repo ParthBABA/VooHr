@@ -136,16 +136,26 @@ _flask_app.config["TESTING"] = True
 # rebind those to the fake so this app instance stays hermetic regardless
 # of collection order.  (Tests elsewhere always patch get_db per-test, so
 # this is invisible to them.)
+# Save the REAL get_db from extensions before we patch it.
+_real_get_db = _extensions.get_db
+_patched_modules = []
 for _mod_name in ("employees", "api", "sessions", "notifications",
                   "auth_email", "auth", "totp_routes"):
     _mod = sys.modules.get(_mod_name)
     if _mod is not None and hasattr(_mod, "get_db"):
+        _patched_modules.append(_mod)
         _mod.get_db = lambda: _FAKE_DB
 
 # Restore everything we patched.
 _extensions.get_db = _orig_get_db
 _extensions.init_db = _orig_init_db
 _auth.register_google_oauth = _orig_register_oauth
+
+# Restore module get_db references NOW so subsequent test modules aren't affected.
+# We do this immediately after imports rather than in a fixture teardown,
+# because pytest imports all test modules upfront before running any tests.
+for _mod in _patched_modules:
+    _mod.get_db = _real_get_db
 
 # Our import chain (api/auth/employees -> field_encryption) pulled the REAL
 # kms module into sys.modules.  test_security_fixes.py installs its kms stub
