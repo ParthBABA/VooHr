@@ -25,7 +25,22 @@
 
   // "Label: text". Label must start with a letter so times like "10:30 ..."
   // are never mistaken for a speaker label; only the FIRST colon splits.
-  var LABEL_RE = /^([A-Za-z][A-Za-z .'\u2019_-]{0,38})\s*:\s*(.*)$/;
+  // "Speaker 1:" / "Person B:" style diarization labels are the one case where
+  // digits are allowed inside a label.
+  var SPEAKER_N = '(?:[Ss]peaker|SPEAKER|[Pp]erson|[Pp]articipant|Voice|Spk|SPK)\\s*[A-Za-z0-9]{1,2}';
+  var LABEL_RE = new RegExp('^(' + SPEAKER_N + '|[A-Za-z][A-Za-z .\'\\u2019_-]{0,38})\\s*:\\s*(.*)$');
+  var SPEAKER_N_RE = new RegExp('^' + SPEAKER_N + '$');
+
+  // Capitalised words that open a sentence-style note ("Note: ...") rather
+  // than naming a speaker; never treated as an inline speaker change.
+  var NOT_A_SPEAKER = ['note', 'example', 'remember', 'important', 'reminder', 'summary',
+    'action', 'question', 'answer', 'update', 'warning', 'tip', 'ps', 'agenda', 'topic'];
+
+  // Role words that describe a job, not the employee being spoken to; used by
+  // the two-party inference so "Manager:" is never promoted to employee.
+  var ROLE_WORDS = ['manager', 'lead', 'director', 'supervisor', 'boss', 'ceo', 'cto', 'cfo',
+    'head', 'vp', 'founder', 'mentor', 'coach', 'host', 'moderator', 'interviewer', 'recruiter',
+    'hr', 'admin', 'teammate', 'colleague', 'peer'];
 
   var MAX_UTTERANCES = 500;
   var CONF_EXPLICIT = 1.0;
@@ -74,6 +89,7 @@
   function isProperNameLabel(rawLabel) {
     var label = String(rawLabel || '').trim();
     if (!label || label.length > 40) return false;
+    if (SPEAKER_N_RE.test(label)) return true;
     var tokens = label.split(/\s+/);
     if (tokens.length > 4) return false;
     for (var i = 0; i < tokens.length; i++) {
@@ -142,15 +158,131 @@
     return String(text || '').split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
   }
 
+  // ── Label-format normalisation ─────────────────────────────────────────
+  // Real transcripts rarely look like a clean "Label: text". This rewrites the
+  // common variants into "Label: text" so the label logic below sees them:
+  //   "[00:12] HR: ..."   "**HR:** ..."   "[HR]: ..."   "HR - ..."
+  //   "Sakshi (Employee): ..."   "Priya (HR): ..."
+  // Only the label prefix is rewritten; the spoken text is never touched. If a
+  // line does not end up as a valid "Label: text", the ORIGINAL line is kept.
+  var NAME_CH = "[A-Za-z][A-Za-z .'\\u2019_-]{0,38}";
+  var TS_RE = /^\s*[\[(]?\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?[\])]?\s*[-–—]?\s*(?=\S)/;
+  var EMPH_RE = /^\s*[*_]{1,2}([^*_]{1,45}?)[*_]{1,2}/;
+  var BRACKET_RE = new RegExp('^\\s*\\[(' + NAME_CH + ')\\]\\s*([:\\-\\u2013\\u2014]?)\\s*');
+  var PAREN_RE = new RegExp('^(' + NAME_CH + '?)\\s*\\(([^)]{1,30})\\)\\s*[:\\-\\u2013\\u2014]\\s*(.*)$');
+  var DASH_RE = new RegExp('^(' + NAME_CH + '?)\\s+[-\\u2013\\u2014]\\s+(.*)$');
+
+  function normalizeLabelPrefix(line, empVariants) {
+    var w = line.replace(TS_RE, '');
+    w = w.replace(EMPH_RE, '$1');
+    var m = w.match(BRACKET_RE);
+    if (m && (m[2] === ':' || classifyLabel(m[1], empVariants))) {
+      w = m[1].trim() + ': ' + w.slice(m[0].length);
+    }
+    m = w.match(PAREN_RE);
+    if (m) {
+      var outer = m[1].trim();
+      var inner = m[2].trim();
+      var label = classifyLabel(outer, empVariants) ? outer : (classifyLabel(inner, empVariants) ? inner : outer);
+      w = label + ': ' + m[3];
+    }
+    m = w.match(DASH_RE);
+    if (m && classifyLabel(m[1], empVariants)) {
+      w = m[1].trim() + ': ' + m[2];
+    }
+    return LABEL_RE.test(w) ? w : line;
+  }
+
+  // A whole conversation pasted as ONE paragraph ("HR: ... Sakshi: ... HR: ...")
+  // is split at each speaker change. A change is only recognised right after a
+  // sentence end, and only for known HR/employee labels, or for a capitalised
+  // name when the paragraph demonstrably uses HR-style labels.
+  function splitInlineTurns(line, empVariants) {
+    var known = HR_LABELS.concat(EMPLOYEE_LABELS, Object.keys(empVariants))
+      .sort(function (a, b) { return b.length - a.length; })
+      .map(escapeRe);
+    // A mid-paragraph timestamp before the label ("... ok. [00:20] Sakshi: ...")
+    // is dropped along with the break; timestamps are not dialogue.
+    var END = '([.?!\\u2026\\u0964"\\u201d])\\s+(?:[\\[(]\\d{1,2}:\\d{2}(?::\\d{2})?[\\])]\\s*)?';
+    var out = line.replace(
+      new RegExp(END + '((?:' + known.join('|') + '))\\s*:', 'gi'),
+      function (m0, p, lab) { return p + '\n' + lab + ':'; }
+    );
+    var usesRoleLabels = new RegExp('(^|\\n)\\s*(?:' + known.join('|') + ')\\s*:', 'i').test(out);
+    if (usesRoleLabels) {
+      out = out.replace(
+        new RegExp(END + "([A-Z][A-Za-z'\\u2019-]{1,20}(?:\\s[A-Z][A-Za-z'\\u2019-]{1,20})?)\\s*:(?=\\s)", 'g'),
+        function (m0, p, lab, offset, str) {
+          if (NOT_A_SPEAKER.indexOf(norm(lab)) !== -1) return m0;
+          // "Dr. Rao:" / "Mr. Shah:" — the full stop belongs to a title.
+          if (p === '.' && /\b(?:Dr|Mr|Mrs|Ms|Prof|Sr|Jr|St)$/.test(str.slice(0, offset))) return m0;
+          return p + '\n' + lab + ':';
+        }
+      );
+    }
+    return out.split('\n');
+  }
+
+  function normalizeTurns(rawLines, empVariants) {
+    var out = [];
+    rawLines.forEach(function (line) {
+      splitInlineTurns(line, empVariants).forEach(function (piece) {
+        piece = piece.trim();
+        if (piece) out.push(normalizeLabelPrefix(piece, empVariants));
+      });
+    });
+    return out;
+  }
+
+  // HR conversation with exactly ONE other named speaker whose name did not
+  // match the employee record (renamed, nickname, no record loaded): that
+  // person is the employee. The written name is kept; role words ("Manager")
+  // and 3+ party transcripts are left untouched as "unknown".
+  function inferTwoParty(utterances) {
+    if (utterances.some(function (u) { return u.speakerType === 'employee'; })) return;
+    if (!utterances.some(function (u) { return u.speakerType === 'hr'; })) return;
+    var names = {};
+    utterances.forEach(function (u) {
+      if (u.speakerType === 'unknown' && u.source !== 'none') names[norm(u.speaker)] = true;
+    });
+    var keys = Object.keys(names);
+    if (keys.length !== 1) return;
+    var only = keys[0];
+    if (!only || ROLE_WORDS.indexOf(only) !== -1) return;
+    if (utterances.some(function (u) { return u.speakerType === 'unknown' && u.source === 'none'; })) return;
+    utterances.forEach(function (u) {
+      if (u.speakerType === 'unknown' && norm(u.speaker) === only) {
+        u.speakerType = 'employee';
+        u.confidence = 0.8;
+        u.source = u.source === 'explicit_label_continuation' ? 'inferred_two_party_continuation' : 'inferred_two_party';
+      }
+    });
+  }
+
   function parse(text, options) {
     options = options || {};
     var employeeName = (options.employeeName || '').trim();
     var duration = Number(options.duration) || 0;
     var empVariants = employeeVariants(employeeName);
     var firstNames = Object.keys(empVariants).filter(function (v) { return v.indexOf(' ') === -1; });
+    var ctx = { employeeName: employeeName, duration: duration, empVariants: empVariants, firstNames: firstNames };
 
     var rawLines = rawLinesOf(text);
     if (!rawLines.length) return { lines: [], hasExplicitLabels: false };
+
+    // Try the label-normalised form first. If that still is not an explicitly
+    // labelled transcript, fall back to the untouched lines so unlabelled
+    // text is preserved verbatim exactly as before.
+    var result = parseCore(normalizeTurns(rawLines, empVariants), ctx);
+    if (!result.hasExplicitLabels) result = parseCore(rawLines, ctx);
+    return result;
+  }
+
+  function parseCore(rawLines, ctx) {
+    var employeeName = ctx.employeeName;
+    var duration = ctx.duration;
+    var empVariants = ctx.empVariants;
+    var firstNames = ctx.firstNames;
 
     // Pass 1 — collect label candidates, then decide globally whether this
     // transcript is explicitly labelled. A transcript counts as labelled if
@@ -237,6 +369,8 @@
         push(inferred, parsed[j].raw);
       }
     }
+
+    if (hasExplicitLabels) inferTwoParty(utterances);
 
     if (utterances.length > MAX_UTTERANCES) utterances = utterances.slice(0, MAX_UTTERANCES);
 
