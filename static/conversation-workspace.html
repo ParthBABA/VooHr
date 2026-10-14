@@ -134,6 +134,78 @@ html[data-theme="light"]{color-scheme:light;}
 #analysisTab::after{content:'';position:absolute;top:0;left:-80%;width:46%;height:100%;transform:skewX(-20deg);background:linear-gradient(105deg,transparent,rgba(255,255,255,0.30) 50%,transparent);animation:analysisTabShine 2.8s ease-in-out infinite;pointer-events:none;}
 @keyframes analysisTabShine{0%{left:-80%;}55%{left:130%;}100%{left:130%;}}
 </style>
+<style>
+/* ── AT A GLANCE — visual summary strip (risk gauges · talk balance · flag map) ──
+   Sits above .ws-grid. Spacing mirrors the rest of the page: 1.2rem between
+   cards, 1.8rem card gutters, and a fixed 3-column tile grid so the tiles can
+   never drift out of alignment with each other. */
+.ws-glance{padding:1.4rem 1.8rem 1.5rem;margin-bottom:1.2rem;}
+.ws-glance-head{margin-bottom:1.25rem;}
+.ws-glance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;}
+.ws-glance-tile{display:flex;flex-direction:column;min-width:0;padding:0 1.6rem;border-left:1px solid var(--border);}
+.ws-glance-tile:first-child{padding-left:0;border-left:0;}
+.ws-glance-tile:last-child{padding-right:0;}
+.ws-gt-label{font-family:var(--font-m);font-weight:700;font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--ivory-dim);line-height:1.2;margin-bottom:1rem;}
+.ws-gt-body{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:116px;}
+.ws-gt-foot{margin-top:1rem;font-family:var(--font-m);font-size:0.66rem;line-height:1.5;color:var(--ivory-faint);}
+.ws-gt-empty{display:flex;flex-direction:column;align-items:flex-start;gap:0.7rem;font-size:0.82rem;line-height:1.6;color:var(--ivory-faint);}
+.ws-gt-action{font-family:var(--font-lato);font-weight:700;font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.5rem 0.9rem;border:1px solid var(--border);background:transparent;color:var(--ivory-dim);cursor:pointer;transition:all 0.2s;}
+.ws-gt-action:hover{border-color:var(--border-lit);color:var(--ivory);background:var(--ivory-ghost);}
+
+/* Risk gauges */
+.ws-gauges{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;}
+.ws-gauge{display:flex;flex-direction:column;align-items:center;min-width:0;}
+.ws-gauge svg{display:block;width:100%;max-width:132px;height:auto;overflow:visible;}
+.ws-gauge-track{fill:none;stroke:var(--surface);stroke-width:9;stroke-linecap:round;}
+.ws-gauge-fill{fill:none;stroke-width:9;stroke-linecap:round;animation:ws-gauge-in 0.9s var(--ease-out) both;}
+.ws-gauge-fill.good{stroke:var(--teal);}
+.ws-gauge-fill.mid{stroke:var(--amber);}
+.ws-gauge-fill.bad{stroke:var(--red);}
+.ws-gauge-num{font-family:var(--font-lato);font-weight:900;font-size:22px;fill:var(--ivory);text-anchor:middle;}
+.ws-gauge-name{margin-top:0.55rem;font-family:var(--font-m);font-weight:700;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ivory-dim);text-align:center;}
+@keyframes ws-gauge-in{from{stroke-dashoffset:var(--len);}}
+
+/* Talk balance */
+.ws-talkbar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--surface);gap:2px;}
+.ws-talkbar span{display:block;height:100%;min-width:3px;transition:width 0.6s var(--ease-out);}
+.ws-talkbar .hr{background:var(--violet);}
+.ws-talkbar .emp{background:var(--teal);}
+.ws-talkbar .oth{background:var(--ivory-faint);}
+.ws-talk-rows{display:flex;flex-direction:column;gap:0.6rem;margin-top:1.1rem;}
+.ws-talk-row{display:flex;align-items:center;gap:0.6rem;min-width:0;font-size:0.84rem;color:var(--ivory-dim);}
+.ws-talk-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.ws-talk-dot.hr{background:var(--violet);}
+.ws-talk-dot.emp{background:var(--teal);}
+.ws-talk-dot.oth{background:var(--ivory-faint);}
+.ws-talk-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ws-talk-pct{font-family:var(--font-lato);font-weight:800;font-size:0.98rem;color:var(--ivory);flex-shrink:0;}
+.ws-talk-words{font-family:var(--font-m);font-size:0.62rem;color:var(--ivory-faint);flex-shrink:0;min-width:3.6rem;text-align:right;}
+
+/* Flag map */
+.ws-fm{display:flex;align-items:stretch;gap:2px;height:40px;}
+.ws-fm-seg{flex:1;min-width:2px;padding:0;border:0;border-radius:2px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--border);cursor:pointer;transition:transform 0.15s,opacity 0.15s;}
+.ws-fm-seg:hover{transform:scaleY(1.12);}
+.ws-fm-seg.hr{background:var(--red);box-shadow:none;}
+.ws-fm-seg.emp{background:var(--violet);box-shadow:none;}
+.ws-fm-axis{display:flex;justify-content:space-between;margin-top:0.55rem;font-family:var(--font-m);font-size:0.58rem;letter-spacing:0.08em;color:var(--ivory-faint);}
+.ws-fm-legend{display:flex;flex-wrap:wrap;gap:0.4rem 1.1rem;margin-top:1rem;font-size:0.78rem;color:var(--ivory-dim);}
+.ws-fm-legend span{display:inline-flex;align-items:center;gap:0.5rem;}
+.ws-fm-legend i{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.ws-fm-legend .hr i{background:var(--red);}
+.ws-fm-legend .emp i{background:var(--violet);}
+
+@media(max-width:900px){
+  .ws-glance{padding:1.2rem 1.2rem 1.3rem;}
+  .ws-glance-grid{grid-template-columns:minmax(0,1fr);}
+  .ws-glance-tile,.ws-glance-tile:first-child,.ws-glance-tile:last-child{padding:1.2rem 0 0;margin-top:1.2rem;border-left:0;border-top:1px solid var(--border);}
+  .ws-glance-tile:first-child{padding-top:0;margin-top:0;border-top:0;}
+  .ws-gt-body{min-height:0;}
+}
+@media(prefers-reduced-motion:reduce){
+  .ws-gauge-fill{animation:none;}
+  .ws-talkbar span,.ws-fm-seg{transition:none;}
+}
+</style>
 </head>
 <body>
 <div id="page-skeleton" class="page-skeleton" aria-hidden="true"><div class="page-skeleton-spinner"></div></div>
@@ -266,6 +338,19 @@ withTimeout(fetch('/api/me').then(function(res){
         <div class="ws-loading-text" id="wsLoadingText"></div>
         <div class="ws-gate-note" id="wsGateNote" style="display:none;">Analyzing&hellip; this may take a few moments.</div>
       </div>
+
+      <!-- At a glance: visual summary of the analysis (filled by renderGlance) -->
+      <section class="card ws-glance protected-text" id="wsGlance" aria-label="Conversation at a glance" translate="no" style="display:none;">
+        <div class="wsx-section-head ws-glance-head">
+          <h3 class="wsx-section-title">At a Glance</h3>
+          <span class="wsx-section-rule"></span>
+        </div>
+        <div class="ws-glance-grid">
+          <div class="ws-glance-tile" id="wsGlanceRisk"></div>
+          <div class="ws-glance-tile" id="wsGlanceTalk"></div>
+          <div class="ws-glance-tile" id="wsGlanceFlags"></div>
+        </div>
+      </section>
 
       <!-- Workspace body -->
       <div class="ws-grid" id="wsBody" style="display:none;">
@@ -1241,6 +1326,156 @@ window.voovrInitWorkspace = function() {
   }
 
   // ── Main load ──
+  // ── At a Glance (visual summary) ──
+  // Same rule as the rest of this page: every figure comes from the stored
+  // analysis, the phrasing review, or a plain count over the transcript. No
+  // per-line emotion or sentiment is invented client-side.
+  function glanceEmpty(label, msg, actionHtml) {
+    return '<div class="ws-gt-label">' + label + '</div>' +
+      '<div class="ws-gt-body"><div class="ws-gt-empty"><span>' + msg + '</span>' + (actionHtml || '') + '</div></div>';
+  }
+
+  function riskCls(v) { return v < 30 ? 'good' : (v < 60 ? 'mid' : 'bad'); }
+
+  function gaugeHtml(name, v) {
+    var len = 157.08; // half circumference of the r=50 arc
+    var off = (len * (1 - v / 100)).toFixed(2);
+    return (
+      '<div class="ws-gauge">' +
+        '<svg viewBox="0 0 120 68" role="img" aria-label="' + esc(name) + ' ' + v + ' out of 100">' +
+          '<path class="ws-gauge-track" d="M10 60 A50 50 0 0 1 110 60"/>' +
+          '<path class="ws-gauge-fill ' + riskCls(v) + '" d="M10 60 A50 50 0 0 1 110 60" style="stroke-dasharray:' + len + ';stroke-dashoffset:' + off + ';--len:' + len + ';"/>' +
+          '<text class="ws-gauge-num" x="60" y="58">' + v + '</text>' +
+        '</svg>' +
+        '<div class="ws-gauge-name">' + esc(name) + '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderGlanceRisk(a) {
+    var el = document.getElementById('wsGlanceRisk');
+    var r = (a && a.risks && typeof a.risks === 'object' && !Array.isArray(a.risks)) ? a.risks : {};
+    var burn = (a && a.is_fallback) ? null : numVal(r.burnout_index);
+    var attr = (a && a.is_fallback) ? null : numVal(r.attrition_risk_pct);
+    if (burn === null && attr === null) {
+      el.innerHTML = glanceEmpty('Risk Signals', 'No risk indicators were produced for this analysis.');
+      return;
+    }
+    function clamp(v) { return v === null ? null : Math.max(0, Math.min(100, v)); }
+    burn = clamp(burn); attr = clamp(attr);
+    el.innerHTML =
+      '<div class="ws-gt-label">Risk Signals</div>' +
+      '<div class="ws-gt-body"><div class="ws-gauges">' +
+        (burn !== null ? gaugeHtml('Burnout signal', burn) : '') +
+        (attr !== null ? gaugeHtml('Attrition signal', attr) : '') +
+      '</div></div>' +
+      '<div class="ws-gt-foot">Indicators from this one conversation &mdash; not a judgement of the person.</div>';
+  }
+
+  function wordCount(t) { var m = String(t || '').match(/\S+/g); return m ? m.length : 0; }
+
+  function renderGlanceTalk() {
+    var el = document.getElementById('wsGlanceTalk');
+    var lines = state.lines || [];
+    var w = { hr: 0, emp: 0, oth: 0 };
+    var hrQuestions = 0;
+    lines.forEach(function(l) {
+      var k = l.speakerType === 'hr' ? 'hr' : (l.speakerType === 'employee' ? 'emp' : 'oth');
+      w[k] += wordCount(l.text);
+      if (k === 'hr' && String(l.text || '').indexOf('?') !== -1) hrQuestions++;
+    });
+    var total = w.hr + w.emp + w.oth;
+    if (!total) {
+      el.innerHTML = glanceEmpty('Talk Balance', 'No transcript to measure.');
+      return;
+    }
+    var keys = ['hr', 'emp', 'oth'].filter(function(k) { return w[k] > 0; });
+    var pct = {}, sum = 0, biggest = keys[0];
+    keys.forEach(function(k) {
+      pct[k] = Math.round(w[k] / total * 100);
+      sum += pct[k];
+      if (w[k] > w[biggest]) biggest = k;
+    });
+    pct[biggest] += 100 - sum; // keep the shown percentages adding up to exactly 100
+    var empName = (state.employee && state.employee.name) ? state.employee.name.trim().split(/\s+/)[0] : '';
+    var names = { hr: 'HR', emp: empName || 'Employee', oth: 'Unattributed' };
+    var bar = keys.map(function(k) { return '<span class="' + k + '" style="width:' + pct[k] + '%"></span>'; }).join('');
+    var rows = keys.map(function(k) {
+      return '<div class="ws-talk-row"><span class="ws-talk-dot ' + k + '"></span>' +
+        '<span class="ws-talk-name">' + esc(names[k]) + '</span>' +
+        '<span class="ws-talk-pct">' + pct[k] + '%</span>' +
+        '<span class="ws-talk-words">' + w[k] + ' words</span></div>';
+    }).join('');
+    el.innerHTML =
+      '<div class="ws-gt-label">Talk Balance</div>' +
+      '<div class="ws-gt-body"><div class="ws-talkbar" role="img" aria-label="Share of words spoken">' + bar + '</div>' +
+      '<div class="ws-talk-rows">' + rows + '</div></div>' +
+      '<div class="ws-gt-foot">' + lines.length + ' turns &middot; ' + hrQuestions + ' HR ' + (hrQuestions === 1 ? 'question' : 'questions') + ' asked</div>';
+  }
+
+  function renderGlanceFlags() {
+    var el = document.getElementById('wsGlanceFlags');
+    var lines = state.lines || [];
+    var pa = state.session && state.session.phrasing_analysis;
+    if (!lines.length) {
+      el.innerHTML = glanceEmpty('Flag Map', 'No transcript to map.');
+      return;
+    }
+    if (!pa) {
+      el.innerHTML = glanceEmpty('Flag Map', 'Run a Phrasing Review to see where flagged moments fall in the conversation.',
+        '<button type="button" class="ws-gt-action" data-glance-action="phrasing">Phrasing Review</button>');
+      return;
+    }
+    var hrN = (pa.hr_phrasing_flags || []).length;
+    var empN = (pa.employee_signals || []).length;
+    var n = lines.length;
+    var buckets = Math.min(n, 48);
+    var segs = '';
+    for (var b = 0; b < buckets; b++) {
+      var from = Math.floor(b * n / buckets);
+      var to = Math.floor((b + 1) * n / buckets);
+      var type = '', jump = lines[from].idx, label = fmtTime(lines[from].time);
+      for (var i = from; i < to; i++) {
+        var ms = state.flagMatches[lines[i].idx];
+        if (!ms || !ms.length) continue;
+        var hasHr = ms.some(function(m) { return m.type === 'hr'; });
+        if (hasHr && type !== 'hr') { type = 'hr'; jump = lines[i].idx; label = fmtTime(lines[i].time); }
+        else if (!hasHr && !type) { type = 'emp'; jump = lines[i].idx; label = fmtTime(lines[i].time); }
+      }
+      var tip = label + (type === 'hr' ? ' · HR phrasing flag' : (type === 'emp' ? ' · Employee signal' : ''));
+      segs += '<button type="button" class="ws-fm-seg ' + type + '" data-line-idx="' + jump + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '"></button>';
+    }
+    var first = lines[0].time, last = lines[n - 1].time;
+    el.innerHTML =
+      '<div class="ws-gt-label">Flag Map</div>' +
+      '<div class="ws-gt-body"><div class="ws-fm">' + segs + '</div>' +
+      '<div class="ws-fm-axis"><span>' + fmtTime(first) + '</span><span>' + fmtTime(last) + '</span></div>' +
+      '<div class="ws-fm-legend"><span class="hr"><i></i>' + hrN + ' HR phrasing</span><span class="emp"><i></i>' + empN + ' employee ' + (empN === 1 ? 'signal' : 'signals') + '</span></div></div>' +
+      '<div class="ws-gt-foot">Click a segment to jump to that moment.</div>';
+  }
+
+  function renderGlance(a) {
+    renderGlanceRisk(a);
+    renderGlanceTalk();
+    renderGlanceFlags();
+    document.getElementById('wsGlance').style.display = '';
+  }
+
+  document.getElementById('wsGlance').addEventListener('click', function(e) {
+    var act = e.target.closest('[data-glance-action="phrasing"]');
+    if (act) { document.getElementById('wsPhrasingBtn').click(); return; }
+    var seg = e.target.closest('.ws-fm-seg');
+    if (!seg) return;
+    var idx = parseInt(seg.getAttribute('data-line-idx'), 10);
+    var lineEl = isNaN(idx) ? null : document.querySelector('.ws-line[data-idx="' + idx + '"]');
+    if (!lineEl) { showToast('That passage is hidden by your current filters'); return; }
+    lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    lineEl.classList.remove('flash');
+    void lineEl.offsetWidth;
+    lineEl.classList.add('flash');
+    setTimeout(function() { lineEl.classList.remove('flash'); }, 2000);
+  });
+
   function renderAll() {
     var a = state.session.analysis || {};
     var wsLangSel = document.getElementById('wsAnalysisLang');
@@ -1257,12 +1492,13 @@ window.voovrInitWorkspace = function() {
     renderLines();
     renderScore(a);
     renderIntel(a);
+    renderGlance(a);
     wireAnalysisNudge();
 
     if (window.gsap) {
       var el = document.getElementById('wsLines');
       var lines = el.querySelectorAll('.ws-line');
-      var cards = bodyEl.querySelectorAll('.ws-hero, .ws-intel');
+      var cards = document.querySelectorAll('.ws-glance, .ws-hero, .ws-intel');
       gsap.fromTo('.ws-title-row', { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' });
       gsap.fromTo(cards, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, stagger: 0.08, ease: 'power3.out', delay: 0.1 });
       gsap.fromTo(lines, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.35, stagger: 0.02, ease: 'power3.out', delay: 0.15 });
@@ -1398,6 +1634,7 @@ window.voovrInitWorkspace = function() {
         state.session = s;
         computeFlagMatches();
         renderLines();
+        renderGlanceFlags();
         btn.classList.add('active');
         var pa = s.phrasing_analysis || {};
         var count = (pa.hr_phrasing_flags || []).length + (pa.employee_signals || []).length;
