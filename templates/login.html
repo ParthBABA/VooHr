@@ -506,17 +506,6 @@ h1,h2,h3,h4{
     url('{{ url_for("static", filename="img/hero-team-conversation.webp") }}');
 }
 
-#canvas3d{
-  position:absolute;
-  top:50%; left:50%;
-  width:140%; height:140%;
-  transform:translate(-46%, -50%);
-  z-index:1;
-  opacity:.7;
-  pointer-events:none;
-  mix-blend-mode:normal;
-}
-
 .hero-scrim{
   position:absolute; inset:0;
   z-index:1;
@@ -2084,7 +2073,6 @@ h1,h2,h3,h4{
 /* Keep the brand glow, but faint, so photos keep natural skin tones */
 .hero:has(.hero-photo)::before{ opacity:.35; }
 .hero:has(.hero-photo)::after{ opacity:.18; }
-.hero:has(.hero-photo) #canvas3d{ opacity:.25; } /* Spline scene: faint over the photo */
 .cta-box:has(.cta-photo)::before{ opacity:.25; }
 .cta-box:has(.cta-photo)::after{ opacity:.12; }
 .cta-photo{
@@ -2261,7 +2249,6 @@ h1,h2,h3,h4{
   .logo-row{ justify-content:center; gap:28px; }
   .hero-cta{ flex-direction:column; width:100%; }
   .hero-cta .btn{ width:100%; justify-content:center; }
-  #canvas3d{ opacity:.45; }
   .bento{ grid-template-columns:1fr; grid-template-rows:auto; }
   .bento-item{ grid-column:span 1 !important; grid-row:span 1 !important; }
   .footer-bottom{ flex-direction:column; gap:16px; text-align:center; }
@@ -2328,8 +2315,6 @@ h1,h2,h3,h4{
 #voovr-page-transition .vpt-dot:nth-child(2){animation-delay:.12s}.vpt-dot:nth-child(3){animation-delay:.24s}
 @keyframes vptPulse{0%,100%{transform:scale(.55);opacity:.3}50%{transform:scale(1);opacity:1}}
 </style>
-<link rel="preconnect" href="https://prod.spline.design" crossorigin>
-<link rel="dns-prefetch" href="//prod.spline.design">
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
 </head>
 <body>
@@ -2379,7 +2364,6 @@ h1,h2,h3,h4{
 <section class="hero">
   <div class="hero-photo" aria-hidden="true"></div>
   <div class="hero-grid-overlay"></div>
-  <canvas id="canvas3d" aria-hidden="true"></canvas>
   <div class="hero-scrim" aria-hidden="true"></div>
   <div class="container">
     <div class="hero-grid">
@@ -3156,10 +3140,6 @@ window.addEventListener('load', function() {
     var globalMax=new Promise(function(r){setTimeout(r,15000)});
     var ready=(async function(){
       try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
-      if(window.__splineReady && window.__splineReady.promise){
-        var fallback=new Promise(function(r){setTimeout(r,10000)});
-        await Promise.race([window.__splineReady.promise,fallback]);
-      }
     })();
     await Promise.race([ready,globalMax]);
     var tl = gsap.timeline({ defaults:{ ease:'power3.out' } });
@@ -3480,33 +3460,6 @@ window.addEventListener('scroll', function(){
 })();
 </script>
 
-<script>
-window.__splineReady=(function(){var p={};p.promise=new Promise(function(r,j){p.resolve=r;p.reject=j});return p})();
-</script>
-<script type="module">
-(function(){
- var canvas=document.getElementById('canvas3d');
- if(!canvas){window.__splineReady.resolve();return}
- var isMobile=('ontouchstart'in window||navigator.maxTouchPoints>0||navigator.maxTouchPoints===undefined)&&window.innerWidth<=768;
- var origDpr=window.devicePixelRatio;
- if(isMobile){window.devicePixelRatio=Math.min(origDpr,1.25)}
- function restoreDpr(){try{window.devicePixelRatio=origDpr}catch(e){}}
- import('https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js').then(function(m){
-   var app=new m.Application(canvas);
-   return app.load('https://prod.spline.design/jhs7cyJaMDYvVaFw/scene.splinecode').then(function(){
-     restoreDpr();
-     app.play();
-     window.__splineReady.resolve();
-     if('IntersectionObserver' in window){new IntersectionObserver(function(es){es.forEach(function(e){e.isIntersecting?app.play():app.stop()})},{threshold:0}).observe(canvas)}
-     document.addEventListener('visibilitychange',function(){document.visibilityState==='visible'?app.play():app.stop()});
-   });
- }).catch(function(e){
-   restoreDpr();
-   window.__splineReady.resolve();
-   console.warn('[Spline]',e);
- });
-})();
-</script>
 <script id="voovr-critical-navigation">
 (function(){
  var o=document.getElementById('voovr-page-transition'),seen=new Set(),ht,clearTimer=null;
