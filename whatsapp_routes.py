@@ -66,7 +66,10 @@ _WHATSAPP_HELP_WINDOW = 21600   # 6 hours
 _ACK_TEXT = "Got it — transcribing now..."
 _HELP_TEXT = (
     "Hi! Employee ka voice note ya message forward kijiye, "
-    "ya '/note <text>' likh ke bhejiye. Isse VooVr me save hoga."
+    "ya '/note <text>' likh ke bhejiye. Isse VooVr me save hoga.\n\n"
+    "Script bhej rahe hain? Har line ke shuru me bolne wale ka naam likhiye "
+    "(jaise 'HR: ...' aur 'Sakshi: ...'), ya WhatsApp me 'Export chat > Without media' "
+    "wali .txt file bhej dijiye."
 )
 
 _VERIFY_TOKEN_ENV = "WHATSAPP_VERIFY_TOKEN"

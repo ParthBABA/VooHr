@@ -20,6 +20,46 @@
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <script src="/csrf.js" defer></script>
+<script src="transcript-parser.js"></script>
+<style>
+/* ── Script format guide + live format check ──
+   Same card language as the rest of this page: surface background, 14px
+   radius, 1.3rem gutters between columns (matches .dictation-grid). */
+.fmt-guide{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-md);margin:0 0 1.4rem;}
+.fmt-guide > summary{display:flex;align-items:center;gap:0.9rem;padding:0.95rem 1.2rem;cursor:pointer;list-style:none;}
+.fmt-guide > summary::-webkit-details-marker{display:none;}
+.fmt-guide > summary::after{content:'';flex-shrink:0;width:7px;height:7px;margin-left:auto;border-right:2px solid var(--ivory-faint);border-bottom:2px solid var(--ivory-faint);transform:rotate(45deg);transition:transform 0.25s var(--ease-out);}
+.fmt-guide[open] > summary::after{transform:rotate(-135deg);}
+.fmt-guide > summary:focus-visible{outline:2px solid var(--violet);outline-offset:-2px;border-radius:14px;}
+.fmt-guide-title{font-family:var(--font-d);font-size:0.95rem;font-weight:600;color:var(--ivory);}
+.fmt-guide-sub{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.04em;color:var(--ivory-faint);}
+.fmt-guide-body{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.3rem;padding:0.2rem 1.2rem 1.3rem;border-top:1px solid var(--border);padding-top:1.2rem;}
+.fmt-col{min-width:0;}
+.fmt-h{font-family:var(--font-m);font-weight:700;font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--ivory-dim);margin:0 0 0.8rem;}
+.fmt-rules{margin:0;padding:0;list-style:none;counter-reset:fmt;display:flex;flex-direction:column;gap:0.65rem;}
+.fmt-rules li{position:relative;padding-left:1.6rem;font-size:0.8rem;line-height:1.55;color:var(--ivory-dim);counter-increment:fmt;}
+.fmt-rules li::before{content:counter(fmt);position:absolute;left:0;top:0.1rem;width:1.05rem;height:1.05rem;border-radius:50%;background:var(--violet-soft);border:1px solid rgba(123,79,255,0.35);color:var(--violet);font-family:var(--font-m);font-size:0.55rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.fmt-rules b,.fmt-types b{color:var(--ivory);font-weight:600;}
+.fmt-guide code{font-family:var(--font-m);font-size:0.74rem;padding:0.05rem 0.35rem;border-radius:4px;background:var(--ink);border:1px solid var(--border);color:var(--ivory);}
+.fmt-example{margin:0 0 0.8rem;padding:0.9rem 1rem;border-radius:10px;background:var(--ink);border:1px solid var(--border);font-family:var(--font-m);font-size:0.74rem;line-height:1.7;color:var(--ivory-dim);white-space:pre-wrap;word-break:break-word;}
+.fmt-example .who-hr{color:var(--violet);font-weight:700;}
+.fmt-example .who-emp{color:var(--teal);font-weight:700;}
+.fmt-types{margin:0;display:flex;flex-direction:column;gap:0.75rem;}
+.fmt-types div{font-size:0.8rem;line-height:1.55;color:var(--ivory-dim);}
+.fmt-types dt{display:inline;}
+.fmt-types dd{display:inline;margin:0;}
+
+.fmt-check{display:none;align-items:flex-start;gap:0.6rem;padding:0.7rem 1.2rem;border-top:1px solid var(--border);font-size:0.78rem;line-height:1.5;color:var(--ivory-dim);}
+.fmt-check.show{display:flex;}
+.fmt-check::before{content:'';flex-shrink:0;width:8px;height:8px;margin-top:0.4rem;border-radius:50%;background:var(--ivory-faint);}
+.fmt-check.ok::before{background:var(--teal);}
+.fmt-check.warn{background:var(--amber-soft);}
+.fmt-check.warn::before{background:var(--amber);}
+.fmt-check b{color:var(--ivory);font-weight:600;}
+.fmt-check a{color:var(--amber);cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+@media(max-width:1024px){.fmt-guide-body{grid-template-columns:minmax(0,1fr);}}
+@media(max-width:640px){.fmt-guide-sub{display:none;}}
+</style>
 <style>
 .page-skeleton{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--void);transition:opacity .3s var(--ease-out);}
 .page-skeleton-spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--ink);border-top-color:var(--amber);animation:page-skeleton-spin .8s linear infinite;}
@@ -60,6 +100,9 @@ withTimeout(fetch('/api/me').then(function(res){
 });
 
 var employeeId = new URLSearchParams(window.location.search).get('employee_id');
+var employeeName = '';
+var transcriptSource = '';   // 'audio' | 'text' | 'image' | '' (typed / pasted)
+var fmtTimer = null;
 var mediaRecorder = null;
 var audioChunks = [];
 var recordingTimer = null;
@@ -114,6 +157,9 @@ function loadEmployee() {
       if (!emp) return;
       document.getElementById('sessionEmployeeName').textContent = emp.name;
       document.getElementById('sessionBreadcrumb').textContent = emp.employee_id + ' — ' + (emp.department || '');
+      employeeName = emp.name || '';
+      renderFmtExample();
+      updateFormatCheck();
     });
 }
 
@@ -323,6 +369,7 @@ function processAudio() {
     return r.json();
   }).then(function(data) {
     document.getElementById('transcriptArea').value = data.text || '';
+    transcriptSource = 'audio';
     updateWordCount();
     setStatus('Transcription ready — edit if needed');
     document.getElementById('recordIcon').style.display = '';
@@ -341,6 +388,70 @@ function updateWordCount() {
   var count = text ? text.split(/\s+/).length : 0;
   var chars = area.value.length;
   document.getElementById('wordCount').textContent = count + ' words · ' + chars + ' characters';
+  clearTimeout(fmtTimer);
+  fmtTimer = setTimeout(updateFormatCheck, 250);
+}
+
+// ── Script format guide / live check ──
+// Uses the same parser as the Conversation Workspace, so what this says here
+// is exactly how the speakers will be read there.
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function renderFmtExample() {
+  var emp = employeeName ? employeeName.trim().split(/\s+/)[0] : 'Sakshi';
+  var rows = [
+    ['hr', 'HR', 'Hi ' + emp + ', how have the last few weeks been?'],
+    ['emp', emp, 'Honestly, quite heavy. The deadlines keep shifting.'],
+    ['hr', 'HR', 'Thanks for telling me. What would help most right now?'],
+    ['emp', emp, 'A clear priority list, and one weekend off a month.']
+  ];
+  document.getElementById('fmtExample').innerHTML = rows.map(function(r) {
+    return '<span class="who-' + r[0] + '">' + escHtml(r[1]) + ':</span> ' + escHtml(r[2]);
+  }).join('\n');
+  document.getElementById('fmtExample').setAttribute('data-plain', rows.map(function(r) { return r[1] + ': ' + r[2]; }).join('\n'));
+  var nameEl = document.getElementById('fmtEmpName');
+  nameEl.textContent = employeeName ? 'here: ' + employeeName.trim() : 'or Employee';
+}
+
+function updateFormatCheck() {
+  var el = document.getElementById('fmtCheck');
+  var text = document.getElementById('transcriptArea').value;
+  if (!text.trim() || !window.VooVrTranscript) { el.className = 'fmt-check'; el.innerHTML = ''; return; }
+  var res = window.VooVrTranscript.parse(text, { employeeName: employeeName, duration: 0 });
+  var lines = res.lines || [];
+  var named = {};
+  var loose = 0;
+  lines.forEach(function(l) {
+    if (l.speakerType === 'unknown' && (l.source === 'none' || l.speaker === 'Unknown')) loose++;
+    else named[l.speakerType === 'hr' ? 'HR' : (l.speaker || 'Unknown')] = true;
+  });
+  var names = Object.keys(named);
+  var link = ' <a id="fmtOpenGuide">See the format guide</a>';
+  var cls, html;
+  if (!res.hasExplicitLabels) {
+    if (transcriptSource === 'audio') {
+      cls = 'warn';
+      html = '<span><b>No speaker names in this recording.</b> That is normal for audio &mdash; you will set who is speaking in the Conversation Workspace.</span>';
+    } else {
+      cls = 'warn';
+      html = '<span><b>No speaker names found.</b> Start each turn with <b>HR:</b> or the person&rsquo;s name and a colon.' + link + '</span>';
+    }
+  } else if (names.length < 2) {
+    cls = 'warn';
+    html = '<span><b>Only one speaker found (' + escHtml(names[0] || '') + ').</b> Add the other person&rsquo;s name before their lines.' + link + '</span>';
+  } else if (loose > 0) {
+    cls = 'warn';
+    html = '<span><b>' + names.length + ' speakers found,</b> but ' + loose + ' ' + (loose === 1 ? 'line has' : 'lines have') + ' no name and will show as unknown.' + link + '</span>';
+  } else {
+    cls = 'ok';
+    html = '<span><b>' + names.length + ' speakers found:</b> ' + names.map(escHtml).join(', ') + ' &middot; ' + lines.length + ' turns</span>';
+  }
+  el.className = 'fmt-check show ' + cls;
+  el.innerHTML = html;
 }
 
 function copyTranscript() {
@@ -584,6 +695,7 @@ function readTextFile(file) {
   reader.onload = function(e) {
     var text = String(e.target.result || '').replace(/^\uFEFF/, '');
     document.getElementById('transcriptArea').value = text;
+    transcriptSource = 'text';
     updateWordCount();
     document.getElementById('saveBtn').disabled = false;
     setUploadStatus('textStatus', 'Loaded — edit below', 'success');
@@ -611,6 +723,7 @@ function transcribeUploadedAudio() {
     })
     .then(function(data) {
       document.getElementById('transcriptArea').value = data.text || '';
+      transcriptSource = 'audio';
       updateWordCount();
       document.getElementById('saveBtn').disabled = false;
       setUploadStatus('audioStatus', 'Done — edit below', 'success');
@@ -637,6 +750,7 @@ function extractUploadedImage() {
     })
     .then(function(data) {
       document.getElementById('transcriptArea').value = data.text || '';
+      transcriptSource = 'image';
       updateWordCount();
       document.getElementById('saveBtn').disabled = false;
       setUploadStatus('imageStatus', 'Done — edit below', 'success');
@@ -678,7 +792,30 @@ document.addEventListener('DOMContentLoaded', function() {
   var backBtn = document.getElementById('backBtn');
   if (backBtn) backBtn.addEventListener('click', function(e) { e.preventDefault(); discardSession(); });
   document.getElementById('micBtn').addEventListener('click', toggleRecording);
-  document.getElementById('transcriptArea').addEventListener('input', updateWordCount);
+  document.getElementById('transcriptArea').addEventListener('input', function() {
+    transcriptSource = '';   // typed or pasted by hand from here on
+    updateWordCount();
+  });
+
+  renderFmtExample();
+  var guide = document.getElementById('fmtGuide');
+  try {
+    // Open on a first visit so the rules are seen once, then stay out of the way.
+    if (!localStorage.getItem('voovr-fmt-guide-seen')) {
+      guide.open = true;
+      localStorage.setItem('voovr-fmt-guide-seen', '1');
+    }
+  } catch (e) {}
+  document.getElementById('fmtCopyBtn').addEventListener('click', function() {
+    var plain = document.getElementById('fmtExample').getAttribute('data-plain') || '';
+    if (navigator.clipboard) navigator.clipboard.writeText(plain);
+    if (window.showToast) showToast('Example copied');
+  });
+  document.getElementById('fmtCheck').addEventListener('click', function(e) {
+    if (e.target.id !== 'fmtOpenGuide') return;
+    guide.open = true;
+    guide.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   document.getElementById('saveBtn').addEventListener('click', saveSession);
   document.getElementById('discardBtn').addEventListener('click', discardSession);
 
@@ -803,6 +940,40 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="input-tab-caption" id="inputTabCaption">Live microphone — recording saved as WebM</div>
           <div class="input-tab-hint">Already have the text? Just paste it on the right &rarr;</div>
 
+          <details class="fmt-guide" id="fmtGuide">
+            <summary>
+              <span class="fmt-guide-title">Script format guide</span>
+              <span class="fmt-guide-sub">Write it this way so every speaker is picked up correctly</span>
+            </summary>
+            <div class="fmt-guide-body">
+              <div class="fmt-col">
+                <h4 class="fmt-h">The rules</h4>
+                <ol class="fmt-rules">
+                  <li>Start every turn with the speaker&rsquo;s <b>name and a colon</b>: <code>HR:</code> <code>Sakshi:</code></li>
+                  <li>Use <b>HR</b> for the HR person and the employee&rsquo;s name as in their profile (<span id="fmtEmpName">or Employee</span>).</li>
+                  <li>Spell each name <b>the same way</b> every time.</li>
+                  <li>A new speaker always gets a <b>new line</b> with their name. A long reply may wrap onto the next line without one.</li>
+                  <li>Names are letters only &mdash; no numbers, emoji or <code>Speaker 1</code>.</li>
+                  <li>A timestamp at the start is fine: <code>[00:12] HR: &hellip;</code></li>
+                </ol>
+              </div>
+              <div class="fmt-col">
+                <h4 class="fmt-h">Example</h4>
+                <pre class="fmt-example" id="fmtExample"></pre>
+                <button type="button" class="tc-icon-btn" id="fmtCopyBtn"><span>Copy example</span></button>
+              </div>
+              <div class="fmt-col">
+                <h4 class="fmt-h">By how you add it</h4>
+                <dl class="fmt-types">
+                  <div><dt><b>Paste or .txt &mdash; </b></dt><dd>follow the rules. Save files as plain text (.txt).</dd></div>
+                  <div><dt><b>WhatsApp chat &mdash; </b></dt><dd>in WhatsApp choose <b>Export chat &rarr; Without media</b> and upload the .txt. Keep the other person saved under their real name. Dates and system lines are removed for you.</dd></div>
+                  <div><dt><b>Image or photo &mdash; </b></dt><dd>the picture is read word for word, so the names must be visible: one turn per line, name first. Use good light and a flat shot, then check the extracted text.</dd></div>
+                  <div><dt><b>Audio &mdash; </b></dt><dd>recordings carry no speaker names. After saving, set who is speaking in one click in the Conversation Workspace.</dd></div>
+                </dl>
+              </div>
+            </div>
+          </details>
+
           <!-- Two-column layout -->
           <div class="dictation-grid">
 
@@ -925,6 +1096,7 @@ document.addEventListener('DOMContentLoaded', function() {
                   </div>
                 </div>
                 <textarea class="transcript-area" id="transcriptArea" placeholder="Paste or type your transcript here — or record audio, upload a file, or use an image on the left."></textarea>
+                <div class="fmt-check" id="fmtCheck" role="status" aria-live="polite"></div>
                 <div class="transcript-card-footer">
                   <div class="transcript-meta"><span id="wordCount">0 words · 0 characters</span></div>
                   <select class="transcript-lang-select" id="transcriptLang" aria-label="Transcript language">
