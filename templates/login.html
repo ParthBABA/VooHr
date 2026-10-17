@@ -492,6 +492,21 @@ h1,h2,h3,h4{
   opacity:.5;
 }
 
+
+/* Hero photo: natural-color human background under a neutral dark overlay.
+   Drop the file at static/img/hero-team-conversation.webp (see README note). */
+.hero-photo{
+  position:absolute; inset:0;
+  z-index:0;
+  background-image:
+    linear-gradient(180deg, rgba(9,9,11,.45) 0%, rgba(9,9,11,.68) 65%, var(--bg) 100%),
+    url('/static/img/hero-team-conversation.webp');
+  background-size:cover;
+  background-position:center 30%;
+  background-repeat:no-repeat;
+  pointer-events:none;
+}
+
 #canvas3d{
   position:absolute;
   top:50%; left:50%;
@@ -2066,6 +2081,24 @@ h1,h2,h3,h4{
   overflow:hidden;
   box-shadow:var(--shadow-xl), var(--shadow-glow);
 }
+
+/* Keep the brand glow, but faint, so photos keep natural skin tones */
+.hero:has(.hero-photo)::before{ opacity:.35; }
+.hero:has(.hero-photo)::after{ opacity:.18; }
+.hero:has(.hero-photo) #canvas3d{ opacity:.25; } /* Spline scene: faint over the photo */
+.cta-box:has(.cta-photo)::before{ opacity:.25; }
+.cta-box:has(.cta-photo)::after{ opacity:.12; }
+.cta-photo{
+  position:absolute; inset:0;
+  z-index:0;
+  background-image:
+    linear-gradient(160deg, rgba(23,23,26,.72), rgba(10,10,12,.82)),
+    url('/static/img/cta-hr-meeting.webp');
+  background-size:cover;
+  background-position:center;
+  pointer-events:none;
+}
+.cta-box > *:not(.cta-photo){ position:relative; z-index:1; }
 .cta-box::before{
   content:''; 
   position:absolute; inset:0;
@@ -2345,6 +2378,7 @@ h1,h2,h3,h4{
 
 <!-- HERO -->
 <section class="hero">
+  <div class="hero-photo" aria-hidden="true"></div>
   <div class="hero-grid-overlay"></div>
   <canvas id="canvas3d" aria-hidden="true"></canvas>
   <div class="hero-scrim" aria-hidden="true"></div>
@@ -2886,6 +2920,7 @@ h1,h2,h3,h4{
 <section class="section cta-section" id="pricing">
   <div class="container">
     <div class="cta-box">
+      <div class="cta-photo" aria-hidden="true"></div>
       <h2 class="grad-head" data-reveal>Stop losing the follow-up.</h2>
       <p data-reveal>Dictate the conversation. Get a note, the action items and a reminder — reviewed by you before it goes anywhere.</p>
       <div class="hero-cta" data-reveal>
