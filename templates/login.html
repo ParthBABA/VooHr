@@ -498,13 +498,12 @@ h1,h2,h3,h4{
 .hero-photo{
   position:absolute; inset:0;
   z-index:0;
-  background-image:
-    linear-gradient(180deg, rgba(9,9,11,.45) 0%, rgba(9,9,11,.68) 65%, var(--bg) 100%),
-    url('/static/img/hero-team-conversation.webp');
+  pointer-events:none;
   background-size:cover;
   background-position:center 30%;
-  background-repeat:no-repeat;
-  pointer-events:none;
+  background-image:
+    linear-gradient(180deg, rgba(9,9,11,.5) 0%, rgba(9,9,11,.7) 65%, var(--bg) 100%),
+    url('{{ url_for("static", filename="img/hero-team-conversation.webp") }}');
 }
 
 #canvas3d{
@@ -2091,12 +2090,12 @@ h1,h2,h3,h4{
 .cta-photo{
   position:absolute; inset:0;
   z-index:0;
-  background-image:
-    linear-gradient(160deg, rgba(23,23,26,.72), rgba(10,10,12,.82)),
-    url('/static/img/cta-hr-meeting.webp');
+  pointer-events:none;
   background-size:cover;
   background-position:center;
-  pointer-events:none;
+  background-image:
+    linear-gradient(160deg, rgba(23,23,26,.72), rgba(10,10,12,.82)),
+    url('{{ url_for("static", filename="img/cta-hr-meeting.webp") }}');
 }
 .cta-box > *:not(.cta-photo){ position:relative; z-index:1; }
 .cta-box::before{
