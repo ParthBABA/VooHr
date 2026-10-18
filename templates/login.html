@@ -13,13 +13,13 @@
    ROOT / DESIGN TOKENS
 ============================================================ */
 :root{
-  --bg:#09090B;
-  --bg-elevated:#0d0d10;
-  --surface:#111113;
-  --surface-2:#17171a;
-  --surface-3:#1e1e22;
-  --line:#212125;
-  --line-strong:#2a2a30;
+  --bg:#0B1120;
+  --bg-elevated:#0F172A;
+  --surface:#131C31;
+  --surface-2:#1A2540;
+  --surface-3:#223050;
+  --line:#1E293B;
+  --line-strong:#2B3A55;
   --primary:#6E56FF;
   --primary-dim:#5a45e0;
   --secondary:#4D9FFF;
@@ -277,7 +277,7 @@ h1,h2,h3,h4{
 }
 .navbar.scrolled{
   padding:12px 0;
-  background:rgba(9,9,11,.85);
+  background:rgba(11,17,32,.85);
   backdrop-filter:blur(24px) saturate(160%);
   border-bottom:1px solid var(--line);
   box-shadow:var(--shadow-sm);
@@ -389,7 +389,7 @@ h1,h2,h3,h4{
 .mobile-menu .mm-cta .btn{ width:100%; justify-content:center; }
 .mobile-menu-overlay{
   position:fixed; inset:0;
-  background:rgba(9,9,11,.6);
+  background:rgba(11,17,32,.6);
   backdrop-filter:blur(4px);
   opacity:0; pointer-events:none;
   transition:opacity var(--transition-base);
@@ -507,7 +507,7 @@ h1,h2,h3,h4{
 .hero-scrim{
   position:absolute; inset:0;
   z-index:1;
-  background:radial-gradient(ellipse 70% 65% at 50% 50%, rgba(9,9,11,.78) 0%, rgba(9,9,11,.45) 55%, transparent 80%);
+  background:radial-gradient(ellipse 70% 65% at 50% 50%, rgba(11,17,32,.78) 0%, rgba(11,17,32,.45) 55%, transparent 80%);
   pointer-events:none;
 }
 
@@ -846,7 +846,7 @@ h1,h2,h3,h4{
   display:inline-flex; align-items:center; gap:10px;
   padding:11px 16px; border-radius:14px;
   border:1px solid rgba(94,230,160,.4);
-  background:rgba(17,17,19,.95);
+  background:rgba(19,28,49,.95);
   backdrop-filter:blur(16px);
   font-size:12px; color:var(--white); font-weight:500;
   opacity:0; z-index:5; white-space:nowrap;
@@ -1189,7 +1189,7 @@ h1,h2,h3,h4{
   position:absolute; inset:0; z-index:-1; pointer-events:none;
   background-size:cover; background-position:center;
   background-image:
-    linear-gradient(rgba(9,9,11,var(--wf-tint)), rgba(9,9,11,var(--wf-tint))),
+    linear-gradient(rgba(11,17,32,var(--wf-tint)), rgba(11,17,32,var(--wf-tint))),
     url('{{ url_for("static", filename="img/hero-team-conversation.webp") }}');
   -webkit-mask-image:linear-gradient(to bottom, transparent 0%, #000 28%, #000 72%, transparent 100%);
           mask-image:linear-gradient(to bottom, transparent 0%, #000 28%, #000 72%, transparent 100%);
@@ -1199,7 +1199,7 @@ h1,h2,h3,h4{
   position:absolute; inset:0;
   z-index:0;
   pointer-events:none;
-  background:radial-gradient(ellipse 55% 60% at 50% 50%, rgba(9,9,11,.55), transparent 75%);
+  background:radial-gradient(ellipse 55% 60% at 50% 50%, rgba(11,17,32,.55), transparent 75%);
 }
 .workflow .container{ position:relative; z-index:1; }
 .workflow-head{ 
@@ -1367,7 +1367,7 @@ h1,h2,h3,h4{
 .bento-item::before{
   content:'';
   position:absolute; inset:0;
-  background:linear-gradient(180deg, rgba(9,9,11,0) 0%, rgba(9,9,11,.2) 40%, rgba(9,9,11,.85) 100%);
+  background:linear-gradient(180deg, rgba(11,17,32,0) 0%, rgba(11,17,32,.2) 40%, rgba(11,17,32,.85) 100%);
   z-index:1;
   pointer-events:none;
 }
@@ -2082,7 +2082,7 @@ h1,h2,h3,h4{
 .cta-box{
   border-radius:var(--radius-2xl);
   border:1px solid var(--line);
-  background:linear-gradient(160deg, var(--surface-2), #0a0a0c);
+  background:linear-gradient(160deg, var(--surface-2), var(--bg));
   padding:120px 60px;
   position:relative; 
   overflow:hidden;
@@ -2099,7 +2099,7 @@ h1,h2,h3,h4{
   background-size:cover;
   background-position:center;
   background-image:
-    linear-gradient(160deg, rgba(23,23,26,.72), rgba(10,10,12,.82)),
+    linear-gradient(160deg, rgba(19,28,49,.72), rgba(11,17,32,.82)),
     url('{{ url_for("static", filename="img/cta-hr-meeting.webp") }}');
 }
 .cta-box > *:not(.cta-photo){ position:relative; z-index:1; }
@@ -2331,7 +2331,7 @@ h1,h2,h3,h4{
 
 </style>
 <style id="voovr-critical-navigation">
-#voovr-page-transition{position:fixed;inset:0;z-index:99999;background:#09090b;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease}
+#voovr-page-transition{position:fixed;inset:0;z-index:99999;background:#0B1120;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease}
 #voovr-page-transition.is-active{opacity:1;visibility:visible;pointer-events:auto}
 #voovr-page-transition .vpt-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:9px}
 #voovr-page-transition .vpt-dot{width:7px;height:7px;border-radius:50%;background:#8b7cff;animation:vptPulse .9s ease-in-out infinite}
