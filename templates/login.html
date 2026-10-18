@@ -1185,15 +1185,23 @@ h1,h2,h3,h4{
 ============================================================ */
 .workflow{ position:relative; overflow:hidden; isolation:isolate; }
 .workflow-photo{
-  position:absolute; inset:0;
-  z-index:-1;
-  pointer-events:none;
-  background-size:cover;
-  background-position:center;
+  --wf-tint:.38;
+  position:absolute; inset:0; z-index:-1; pointer-events:none;
+  background-size:cover; background-position:center;
   background-image:
-    linear-gradient(180deg, var(--bg) 0%, rgba(9,9,11,.72) 20%, rgba(9,9,11,.72) 80%, var(--bg) 100%),
+    linear-gradient(rgba(9,9,11,var(--wf-tint)), rgba(9,9,11,var(--wf-tint))),
     url('{{ url_for("static", filename="img/hero-team-conversation.webp") }}');
+  -webkit-mask-image:linear-gradient(to bottom, transparent 0%, #000 28%, #000 72%, transparent 100%);
+          mask-image:linear-gradient(to bottom, transparent 0%, #000 28%, #000 72%, transparent 100%);
 }
+.workflow::after{
+  content:'';
+  position:absolute; inset:0;
+  z-index:0;
+  pointer-events:none;
+  background:radial-gradient(ellipse 55% 60% at 50% 50%, rgba(9,9,11,.55), transparent 75%);
+}
+.workflow .container{ position:relative; z-index:1; }
 .workflow-head{ 
   text-align:center; 
   max-width:700px; 
@@ -2253,6 +2261,11 @@ h1,h2,h3,h4{
   .container{ padding:0 20px; }
   .section{ padding:100px 0; }
   .section-tight{ padding:80px 0; }
+  .workflow-photo{
+    --wf-tint:.45;
+    -webkit-mask-image:linear-gradient(to bottom, transparent 0%, #000 22%, #000 78%, transparent 100%);
+            mask-image:linear-gradient(to bottom, transparent 0%, #000 22%, #000 78%, transparent 100%);
+  }
   .footer-top{ grid-template-columns:1fr 1fr; gap:36px; }
   .footer-brand{ grid-column:span 2; }
   .logo-row{ justify-content:center; gap:28px; }
