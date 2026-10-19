@@ -622,7 +622,6 @@ h1,h2,h3,h4{
   width:8px; height:8px; border-radius:50%;
   background:var(--success);
   box-shadow:0 0 14px var(--success), 0 0 28px rgba(94,230,160,.3);
-  animation:fuPulse 2s ease-in-out infinite;
 }
 @keyframes fuPulse{
   0%,100%{ opacity:1; transform:scale(1); box-shadow:0 0 14px var(--success), 0 0 28px rgba(94,230,160,.3); }
@@ -631,12 +630,13 @@ h1,h2,h3,h4{
 .fu-body{
   display:grid;
   grid-template-columns:1fr 210px;
-  min-height:460px;
+  height:460px;
 }
 .fu-stage{
   position:relative;
   padding:30px 26px;
   overflow:hidden;
+  min-height:0;
 }
 .fu-scene{
   position:absolute; inset:30px 26px;
@@ -797,20 +797,75 @@ h1,h2,h3,h4{
   animation:fuPulse 1.8s ease-in-out infinite;
 }
 
-/* --- Scene 6: closing strip --- */
-.fu-complete{
-  position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
-  display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px;
-  padding:14px 16px;
-  border-radius:12px;
-  background:rgba(255,255,255,.02);
-  border:1px solid var(--line);
-  font-size:11.5px; color:var(--muted-2); font-family:var(--font-num);
+/* --- Scene 6: closing vertical flowchart --- */
+.fu-flow{
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  align-items:flex-start; justify-content:center;
+  width:max-content; max-width:100%;
+  margin:auto;
   opacity:0;
 }
-.fu-complete .node{ color:var(--white); font-weight:500; }
-.fu-complete .arrow{ color:var(--muted-2); }
-.fu-complete .fu-done-tag{ color:var(--success); font-weight:600; }
+.fu-flow-row{
+  display:flex; align-items:center; gap:14px;
+  max-width:100%;
+}
+.fu-sphere{
+  width:48px; height:48px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.2), rgba(255,255,255,.03) 45%, rgba(110,86,255,.16) 100%);
+  border:1px solid var(--line);
+  font-family:var(--font-num); font-weight:600; font-size:15px; color:var(--white);
+  opacity:.35;
+  flex-shrink:0;
+}
+.fu-sphere.lit{
+  border-color:rgba(110,86,255,.5);
+  box-shadow:0 0 18px rgba(110,86,255,.35), 0 0 36px rgba(110,86,255,.12);
+}
+.fu-sphere.done{
+  border-color:rgba(94,230,160,.45);
+  box-shadow:0 0 14px rgba(94,230,160,.25);
+}
+.fu-sphere .fu-sphere-check{ display:none; color:var(--success); font-size:18px; line-height:1; }
+.fu-sphere.done .fu-sphere-num{ display:none; }
+.fu-sphere.done .fu-sphere-check{ display:block; }
+.fu-conn{
+  position:relative;
+  flex:none;
+  width:2px; height:16px;
+  margin-left:23px;
+  background:var(--line);
+  transform:scaleY(0);
+  transform-origin:top;
+}
+.fu-conn::after{
+  content:'';
+  position:absolute; left:50%; bottom:0;
+  transform:translateX(-50%);
+  border-left:4px solid transparent;
+  border-right:4px solid transparent;
+  border-top:5px solid var(--line);
+}
+.fu-flow-text{
+  display:flex; align-items:center; gap:10px;
+  min-width:0; max-width:210px;
+  opacity:.35;
+}
+.fu-flow-lines{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.fu-flow-label{ font-size:13.5px; font-weight:600; color:var(--white); line-height:1.25; }
+.fu-flow-cap{ font-size:11px; color:var(--muted-2); line-height:1.35; }
+.fu-flow-done{
+  display:inline-flex; align-items:center;
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid rgba(94,230,160,.4);
+  background:rgba(94,230,160,.08);
+  color:var(--success); font-size:10.5px; font-weight:600; font-family:var(--font-num);
+  white-space:nowrap;
+  opacity:0;
+  flex-shrink:0;
+}
 
 /* --- Side: Meeting Tracker mini-view --- */
 .fu-side{
@@ -818,6 +873,8 @@ h1,h2,h3,h4{
   background:rgba(255,255,255,.01);
   padding:24px 18px;
   display:flex; flex-direction:column; gap:13px;
+  min-height:0;
+  overflow:hidden;
 }
 .fu-side h5{
   font-size:11px; text-transform:uppercase; letter-spacing:.1em;
@@ -1051,6 +1108,7 @@ h1,h2,h3,h4{
 }
 
 .sc-media.m3{ aspect-ratio:auto; padding:10px; }
+.sc-media.m3:hover{ transform:none; }
 
 .sc-mini-ui{ 
   position:relative; 
@@ -2209,9 +2267,16 @@ h1,h2,h3,h4{
   .footer-bottom{ flex-direction:column; gap:16px; text-align:center; }
   .cta-box{ padding:70px 24px; }
   .cta-box h2{ font-size:clamp(28px,7vw,42px); }
-  .fu-body{ min-height:auto; }
-  .fu-stage{ padding:24px 20px; min-height:360px; }
+  .fu-body{ height:400px; }
+  .fu-stage{ padding:24px 20px; }
   .fu-scene{ inset:24px 20px; }
+  .fu-sphere{ width:38px; height:38px; font-size:13px; }
+  .fu-sphere .fu-sphere-check{ font-size:15px; }
+  .fu-conn{ height:14px; margin-left:18px; }
+  .fu-flow-row{ gap:12px; }
+  .fu-flow-text{ max-width:180px; gap:8px; }
+  .fu-flow-label{ font-size:12.5px; }
+  .fu-flow-cap{ font-size:10.5px; }
   .sc-media.m3{ aspect-ratio:auto; }
   .navbar.scrolled{ backdrop-filter:blur(12px) saturate(160%); }
   .mobile-menu{ backdrop-filter:blur(16px) saturate(160%); }
@@ -2473,6 +2538,7 @@ h1,h2,h3,h4{
         <div class="fu-demo" id="fuDemo">
           <div class="fu-header"><span class="fu-live-dot"></span>Sample data</div>
           <p class="sr-only">Sample demo: a conversation is analysed and two follow-ups are suggested. A person confirms them, reminders go to the meeting owner in-app, by email and WhatsApp, and a person marks an item completed.</p>
+          <p class="sr-only">The flow in order: a transcript becomes suggested items, confirmed by you, a reminder, then completed by you.</p>
           <div class="fu-body">
 
             <div class="fu-stage" aria-hidden="true">
@@ -2519,13 +2585,31 @@ h1,h2,h3,h4{
 
               <!-- Scene 6: the whole flow, end to end -->
               <div class="fu-scene" id="fuScene4">
-                <div class="fu-complete" id="fuComplete">
-                  <span class="node">Transcript</span><span class="arrow">→</span>
-                  <span class="node">Suggested</span><span class="arrow">→</span>
-                  <span class="node">Confirmed by you</span><span class="arrow">→</span>
-                  <span class="node">Reminder</span><span class="arrow">→</span>
-                  <span class="node">Completed by you</span>
-                  <span class="fu-done-tag">Done ✓</span>
+                <div class="fu-flow" id="fuFlow" aria-hidden="true">
+                  <div class="fu-flow-row">
+                    <div class="fu-sphere" id="fuSphere1"><span class="fu-sphere-num">1</span><span class="fu-sphere-check">✓</span></div>
+                    <div class="fu-flow-text" id="fuFlowText1"><div class="fu-flow-lines"><span class="fu-flow-label">Transcript</span><span class="fu-flow-cap">Conversation recorded</span></div></div>
+                  </div>
+                  <div class="fu-conn" id="fuConn1"></div>
+                  <div class="fu-flow-row">
+                    <div class="fu-sphere" id="fuSphere2"><span class="fu-sphere-num">2</span><span class="fu-sphere-check">✓</span></div>
+                    <div class="fu-flow-text" id="fuFlowText2"><div class="fu-flow-lines"><span class="fu-flow-label">Suggested</span><span class="fu-flow-cap">Promises and follow-ups found</span></div></div>
+                  </div>
+                  <div class="fu-conn" id="fuConn2"></div>
+                  <div class="fu-flow-row">
+                    <div class="fu-sphere" id="fuSphere3"><span class="fu-sphere-num">3</span><span class="fu-sphere-check">✓</span></div>
+                    <div class="fu-flow-text" id="fuFlowText3"><div class="fu-flow-lines"><span class="fu-flow-label">Confirmed by you</span><span class="fu-flow-cap">Nothing happens until you confirm</span></div></div>
+                  </div>
+                  <div class="fu-conn" id="fuConn3"></div>
+                  <div class="fu-flow-row">
+                    <div class="fu-sphere" id="fuSphere4"><span class="fu-sphere-num">4</span><span class="fu-sphere-check">✓</span></div>
+                    <div class="fu-flow-text" id="fuFlowText4"><div class="fu-flow-lines"><span class="fu-flow-label">Reminder</span><span class="fu-flow-cap">In-app, email and WhatsApp</span></div></div>
+                  </div>
+                  <div class="fu-conn" id="fuConn4"></div>
+                  <div class="fu-flow-row">
+                    <div class="fu-sphere" id="fuSphere5"><span class="fu-sphere-num">5</span><span class="fu-sphere-check">✓</span></div>
+                    <div class="fu-flow-text" id="fuFlowText5"><div class="fu-flow-lines"><span class="fu-flow-label">Completed by you</span><span class="fu-flow-cap">Open count drops to 1</span></div><span class="fu-flow-done" id="fuFlowDone">Done ✓</span></div>
+                  </div>
                 </div>
               </div>
 
@@ -2956,7 +3040,11 @@ ScrollTrigger.create({
   var note = fu('fuNote'), confirmBtn = fu('fuConfirm'), cursor = fu('fuCursor');
   var routeCenter = fu('fuRouteCenter'), routeTarget = fu('fuRouteTarget'), packet = fu('fuPacket'), toast = fu('fuToast');
   var dests = { inapp: fu('fuDestInapp'), email: fu('fuDestEmail'), whatsapp: fu('fuDestWhatsapp') };
-  var completeStrip = fu('fuComplete');
+  var flow = fu('fuFlow');
+  var spheres = [1,2,3,4,5].map(function(i){ return fu('fuSphere'+i); });
+  var conns = [1,2,3,4].map(function(i){ return fu('fuConn'+i); });
+  var flowTexts = [1,2,3,4,5].map(function(i){ return fu('fuFlowText'+i); });
+  var doneTag = fu('fuFlowDone');
   var openCount = fu('fuOpenCount');
   var itemPills = [fu('fuItemPill1'), fu('fuItemPill2')];
   var deliveries = { inapp: fu('fuDelInapp'), email: fu('fuDelEmail'), whatsapp: fu('fuDelWhatsapp') };
@@ -2999,7 +3087,12 @@ ScrollTrigger.create({
     gsap.set(Object.keys(dests).map(function(k){ return dests[k]; }), { opacity:0, scale:.92 });
     gsap.set(packet, { opacity:0 });
     gsap.set(toast, { opacity:0, y:-6 });
-    gsap.set(completeStrip, { opacity:0, y:10 });
+    gsap.set(flow, { opacity:0 });
+    gsap.set(spheres, { opacity:.35, scale:1 });
+    gsap.set(conns, { scaleY:0 });
+    gsap.set(flowTexts, { opacity:.35 });
+    gsap.set(doneTag, { opacity:0 });
+    spheres.forEach(function(s){ s.classList.remove('lit', 'done'); });
     stagePills.forEach(function(p){ fuSetPill(p, 'suggested'); });
     itemPills.forEach(function(p){ fuSetPill(p, 'suggested'); });
     Object.keys(dests).forEach(function(k){ dests[k].classList.remove('lit'); });
@@ -3009,14 +3102,16 @@ ScrollTrigger.create({
 
   function fuFinalState(){
     resetFuDemo();
-    gsap.set(scene2, { opacity:1 });
-    gsap.set(cards, { opacity:1, y:0 });
-    gsap.set(dues, { opacity:1, y:0 });
-    gsap.set(confirmBtn, { opacity:1, scale:1 });
-    stagePills.forEach(function(p){ fuSetPill(p, 'completed'); });
-    itemPills.forEach(function(p){ fuSetPill(p, 'completed'); });
-    Object.keys(deliveries).forEach(function(k){ deliveries[k].classList.add('done'); });
-    openCount.textContent = '1';
+    gsap.set(scene4, { opacity:1 });
+    gsap.set(flow, { opacity:1 });
+    gsap.set(spheres, { opacity:1, scale:1 });
+    gsap.set(conns, { scaleY:1 });
+    gsap.set(flowTexts, { opacity:1 });
+    spheres.forEach(function(s, i){
+      s.classList.add('lit');
+      if (i < 4) s.classList.add('done');
+    });
+    gsap.set(doneTag, { opacity:1 });
   }
 
   if (reduceMotion){ fuFinalState(); return; }
@@ -3121,9 +3216,22 @@ ScrollTrigger.create({
     .addLabel('closing')
     .to(scene2, { opacity:0, duration:.4 })
     .set(scene4, { opacity:1 })
-    .to(completeStrip, { opacity:1, y:0, duration:.5 })
-    .to({}, { duration:2.2 })
-    .to(completeStrip, { opacity:0, duration:.4 })
+    .to(flow, { opacity:1, duration:.45 });
+
+  function flowStep(i){
+    if (i > 1) fuTl.to(conns[i-2], { scaleY:1, duration:.2, ease:'power2.inOut' });
+    fuTl.to([spheres[i-1], flowTexts[i-1]], { opacity:1, duration:.26, ease:'power2.out' })
+      .call(function(){ spheres[i-1].classList.add('lit'); })
+      .fromTo(spheres[i-1], { scale:1 }, { scale:1.08, duration:.1, yoyo:true, repeat:1, ease:'power2.inOut', immediateRender:false }, '-=.16')
+      .call(function(){ if (i > 1) spheres[i-2].classList.add('done'); }, null, '-=.04');
+  }
+
+  for (var fi = 1; fi <= 5; fi++) flowStep(fi);
+
+  fuTl
+    .to(doneTag, { opacity:1, duration:.3 }, '+=.15')
+    .to({}, { duration:2 })
+    .to(flow, { opacity:0, duration:.45 })
     .call(resetFuDemo);
 
   /* Pause the loop while the demo is off-screen */
@@ -3132,8 +3240,6 @@ ScrollTrigger.create({
     start: 'top bottom', end: 'bottom top',
     onToggle: function(self){ if (self.isActive) fuTl.play(); else fuTl.pause(); }
   });
-
-  gsap.to(fuRoot, { y:-6, duration:3.6, ease:'sine.inOut', yoyo:true, repeat:-1 });
 })();
 
 window.addEventListener('load', function() {
@@ -3154,8 +3260,10 @@ window.addEventListener('load', function() {
       .from('.hero-inner .eyebrow', { opacity:0, y:16, duration:.7, clearProps:'all' }, .25)
       .from('.hero-inner h1', { opacity:0, y:26, filter:'blur(10px)', duration:.9, clearProps:'all' }, .35)
       .from('.hero-inner p', { opacity:0, y:20, duration:.8, clearProps:'all' }, .55)
-      .from('.hero-cta .btn', { opacity:0, y:16, stagger:.1, duration:.7, clearProps:'all' }, .68)
-      .from('#fuDemo', { opacity:0, y:40, duration:1, clearProps:'all' }, 1);
+      .from('.hero-cta .btn', { opacity:0, y:16, stagger:.1, duration:.7, clearProps:'all' }, .68);
+    if (!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)){
+      tl.from('#fuDemo', { opacity:0, y:40, duration:1, clearProps:'all' }, 1);
+    }
 })();
 });
 
