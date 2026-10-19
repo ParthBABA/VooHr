@@ -588,6 +588,282 @@ h1,h2,h3,h4{
 .hero-inner .hero-cta{ margin-top:12px; }
 
 /* ============================================================
+   FOLLOW-UPS DEMO — Smart Follow-ups showcase (sample data)
+============================================================ */
+.sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+}
+.fu-demo{
+  position:relative;
+  z-index:2;
+  border-radius:16px;
+  background:linear-gradient(180deg, var(--surface-2), var(--surface));
+  border:1px solid var(--line);
+  box-shadow:var(--shadow-xl), var(--shadow-glow), 0 0 0 1px rgba(255,255,255,.03) inset;
+  overflow:hidden;
+}
+.fu-demo::before{
+  content:'';
+  position:absolute; inset:0;
+  background:var(--grad-card);
+  pointer-events:none;
+  z-index:10;
+}
+.fu-header{
+  display:flex; align-items:center; gap:8px;
+  padding:16px 22px;
+  border-bottom:1px solid var(--line);
+  font-size:12px; font-weight:600; color:var(--muted);
+  font-family:var(--font-num);
+  background:rgba(255,255,255,.015);
+}
+.fu-live-dot{
+  width:8px; height:8px; border-radius:50%;
+  background:var(--success);
+  box-shadow:0 0 14px var(--success), 0 0 28px rgba(94,230,160,.3);
+  animation:fuPulse 2s ease-in-out infinite;
+}
+@keyframes fuPulse{
+  0%,100%{ opacity:1; transform:scale(1); box-shadow:0 0 14px var(--success), 0 0 28px rgba(94,230,160,.3); }
+  50%{ opacity:.6; transform:scale(.85); box-shadow:0 0 8px var(--success), 0 0 16px rgba(94,230,160,.2); }
+}
+.fu-body{
+  display:grid;
+  grid-template-columns:1fr 210px;
+  min-height:460px;
+}
+.fu-stage{
+  position:relative;
+  padding:30px 26px;
+  overflow:hidden;
+}
+.fu-scene{
+  position:absolute; inset:30px 26px;
+  opacity:0;
+}
+.fu-scene-items{
+  display:flex; flex-direction:column;
+  justify-content:center; gap:12px;
+}
+
+/* --- Scene 1: conversation analysed --- */
+.fu-chip{
+  position:absolute; left:0; right:0; top:38%; margin:0 auto; width:max-content;
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 14px; border-radius:999px;
+  border:1px solid rgba(110,86,255,.4);
+  background:rgba(110,86,255,.12);
+  font-size:12px; font-weight:600; color:var(--accent);
+  line-height:1; letter-spacing:.02em; white-space:nowrap;
+  opacity:0;
+  box-shadow:var(--shadow-sm), 0 0 20px rgba(110,86,255,.15);
+}
+.fu-chip-dot{
+  width:6px; height:6px; border-radius:50%;
+  background:var(--grad-primary); box-shadow:0 0 10px rgba(110,86,255,1);
+  flex-shrink:0;
+  animation:fuDot 1.5s ease-in-out infinite;
+}
+@keyframes fuDot{
+  0%,100%{ opacity:1; transform:scale(1); }
+  50%{ opacity:.5; transform:scale(.9); }
+}
+.fu-caption{
+  position:absolute; left:0; right:0; top:calc(38% + 42px); margin:0 auto; width:max-content;
+  font-size:11px; font-family:var(--font-num); font-weight:500;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--muted-2);
+  opacity:0;
+}
+
+/* --- Scenes 2 & 5: suggested items, confirm, completed --- */
+.fu-card{
+  border:1px solid var(--line); border-radius:14px;
+  padding:14px 16px;
+  background:var(--grad-card);
+  box-shadow:var(--shadow-sm), 0 0 0 1px rgba(255,255,255,.02) inset;
+  opacity:0;
+}
+.fu-card-top{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.fu-type{
+  font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em;
+  padding:4px 9px; border-radius:999px; line-height:1;
+}
+.fu-type-promise{ color:var(--accent); background:rgba(167,139,250,.1); border:1px solid rgba(167,139,250,.35); }
+.fu-type-followup{ color:var(--secondary); background:rgba(77,159,255,.08); border:1px solid rgba(77,159,255,.3); }
+.fu-pill{
+  margin-left:auto;
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:11px; font-family:var(--font-num); font-weight:600;
+  padding:5px 11px; border-radius:999px; line-height:1; white-space:nowrap;
+  border:1px solid var(--line); color:var(--muted); background:rgba(255,255,255,.02);
+  transition:border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+.fu-pill.is-pending{
+  border-color:rgba(245,197,66,.4); color:var(--warning); background:rgba(245,197,66,.08);
+}
+.fu-pill.is-completed{
+  border-color:rgba(94,230,160,.4); color:var(--success); background:rgba(94,230,160,.08);
+}
+.fu-pill .fu-pill-check{ display:none; font-weight:700; }
+.fu-pill.is-completed .fu-pill-check{ display:inline; }
+.fu-item-text{ font-size:13.5px; color:var(--white); font-weight:500; line-height:1.4; }
+.fu-due{
+  margin-top:6px; font-size:11px; font-family:var(--font-num); color:var(--muted-2);
+  opacity:0;
+}
+.fu-note{
+  text-align:center; font-size:11.5px; color:var(--muted-2); font-style:italic;
+  opacity:0;
+}
+.fu-confirm{
+  align-self:center;
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:9px 18px; border-radius:999px; cursor:default;
+  border:1px solid rgba(110,86,255,.5);
+  background:rgba(110,86,255,.14);
+  color:var(--accent); font-size:12px; font-weight:600; font-family:var(--font-num);
+  letter-spacing:.02em; opacity:0;
+  box-shadow:var(--shadow-sm), 0 0 20px rgba(110,86,255,.15);
+}
+.fu-cursor{
+  position:absolute; left:0; top:0;
+  width:16px; height:16px; margin:-8px 0 0 -8px;
+  border-radius:50%;
+  border:2px solid var(--white); background:rgba(167,139,250,.35);
+  box-shadow:0 0 12px rgba(110,86,255,.8);
+  opacity:0; z-index:6; pointer-events:none;
+}
+
+/* --- Scene 4: reminders routed to the meeting owner --- */
+.fu-route-center{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:7px 14px; border-radius:999px;
+  border:1px solid rgba(110,86,255,.45);
+  background:rgba(110,86,255,.12);
+  font-size:11.5px; font-weight:600; color:var(--accent);
+  line-height:1; letter-spacing:.02em; white-space:nowrap; z-index:3;
+  opacity:0;
+  box-shadow:var(--shadow-sm), 0 0 24px rgba(110,86,255,.2);
+}
+.fu-route-target{
+  position:absolute; left:50%; top:calc(50% + 30px); transform:translateX(-50%);
+  font-size:10.5px; font-family:var(--font-num); font-weight:500;
+  color:var(--muted-2); white-space:nowrap; z-index:3;
+  opacity:0;
+}
+.fu-dest{
+  position:absolute;
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:6px 12px; border-radius:999px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.02);
+  font-size:11px; font-family:var(--font-num); font-weight:500;
+  line-height:1; letter-spacing:.02em; color:var(--muted); white-space:nowrap;
+  opacity:0;
+  transition:filter var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+.fu-dest.lit{
+  border-color:rgba(110,86,255,.5);
+  background:rgba(110,86,255,.12);
+  color:var(--white);
+  box-shadow:var(--shadow-sm), 0 0 20px rgba(110,86,255,.25);
+}
+#fuDestInapp{ top:4%; left:0; }
+#fuDestEmail{ top:4%; right:0; }
+#fuDestWhatsapp{ bottom:4%; right:0; }
+.fu-route-packet{
+  position:absolute; width:8px; height:8px; border-radius:50%;
+  background:var(--grad-primary);
+  box-shadow:0 0 14px rgba(110,86,255,1), 0 0 28px rgba(110,86,255,.5);
+  opacity:0; z-index:4;
+}
+.fu-toast{
+  position:absolute; top:0; right:0;
+  display:inline-flex; align-items:center; gap:10px;
+  padding:10px 15px; border-radius:14px;
+  border:1px solid rgba(94,230,160,.4);
+  background:rgba(19,28,49,.95);
+  backdrop-filter:blur(16px);
+  font-size:12px; color:var(--white); font-weight:500;
+  opacity:0; z-index:5; white-space:nowrap;
+  box-shadow:var(--shadow-md), 0 0 30px rgba(94,230,160,.2);
+  transform:translateY(-8px);
+}
+.fu-toast-dot{
+  width:7px; height:7px; border-radius:50%;
+  background:var(--success); box-shadow:0 0 10px var(--success); flex-shrink:0;
+  animation:fuPulse 1.8s ease-in-out infinite;
+}
+
+/* --- Scene 6: closing strip --- */
+.fu-complete{
+  position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
+  display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px;
+  padding:14px 16px;
+  border-radius:12px;
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--line);
+  font-size:11.5px; color:var(--muted-2); font-family:var(--font-num);
+  opacity:0;
+}
+.fu-complete .node{ color:var(--white); font-weight:500; }
+.fu-complete .arrow{ color:var(--muted-2); }
+.fu-complete .fu-done-tag{ color:var(--success); font-weight:600; }
+
+/* --- Side: Meeting Tracker mini-view --- */
+.fu-side{
+  border-left:1px solid var(--line);
+  background:rgba(255,255,255,.01);
+  padding:24px 18px;
+  display:flex; flex-direction:column; gap:13px;
+}
+.fu-side h5{
+  font-size:11px; text-transform:uppercase; letter-spacing:.1em;
+  color:var(--muted-2); font-weight:600;
+}
+.fu-person{ display:flex; align-items:center; gap:11px; }
+.fu-person .fu-avatar{
+  width:32px; height:32px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-head); font-weight:600; font-size:12px; color:#fff;
+  background:var(--grad-accent);
+  box-shadow:0 0 16px rgba(167,139,250,.4);
+}
+.fu-person .fu-info{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.fu-person .fu-name{ font-size:13px; font-weight:600; color:var(--white); }
+.fu-person .fu-role{ font-size:11px; color:var(--muted-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fu-tiles{ display:flex; gap:10px; }
+.fu-tile{
+  flex:1; min-width:0; border:1px solid var(--line); border-radius:12px;
+  padding:10px 12px; background:var(--grad-card);
+}
+.fu-tile .fu-num{ font-family:var(--font-num); font-size:17px; font-weight:600; color:var(--white); }
+.fu-tile .fu-label{ font-size:9px; color:var(--muted-2); text-transform:uppercase; letter-spacing:.06em; margin-top:3px; }
+.fu-item{
+  font-size:12px; color:var(--muted);
+  display:flex; align-items:center; gap:8px;
+  padding:9px 11px; border-radius:10px;
+  border:1px solid var(--line); background:rgba(255,255,255,.015);
+}
+.fu-item .fu-item-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fu-item .fu-pill{ padding:4px 9px; font-size:10px; }
+.fu-del{
+  display:flex; align-items:center; gap:9px;
+  font-size:12px; color:var(--muted); padding:6px 2px;
+}
+.fu-del .fu-tick{
+  width:16px; height:16px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:700;
+  background:rgba(94,230,160,.15); color:var(--success);
+  transform:scale(0);
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+}
+.fu-del.done .fu-tick{ transform:scale(1); }
+
+/* ============================================================
    TRUSTED BY
 ============================================================ */
 .trusted{ 
@@ -1896,6 +2172,8 @@ h1,h2,h3,h4{
   .hero-inner{ max-width:100%; text-align:center; margin:0 auto; }
   .hero-inner p{ margin-left:auto; margin-right:auto; }
   .hero-inner .hero-cta{ justify-content:center; }
+  .fu-body{ grid-template-columns:1fr; }
+  .fu-side{ display:none; }
   .showcase-row{ grid-template-columns:1fr; gap:50px; }
   .showcase-row.reverse .sc-media{ order:1; }
   .showcase-row.reverse .sc-text{ order:2; }
@@ -1931,6 +2209,10 @@ h1,h2,h3,h4{
   .footer-bottom{ flex-direction:column; gap:16px; text-align:center; }
   .cta-box{ padding:70px 24px; }
   .cta-box h2{ font-size:clamp(28px,7vw,42px); }
+  .fu-body{ min-height:auto; }
+  .fu-stage{ padding:24px 20px; min-height:360px; }
+  .fu-scene{ inset:24px 20px; }
+  .sc-media.m3{ aspect-ratio:auto; }
   .navbar.scrolled{ backdrop-filter:blur(12px) saturate(160%); }
   .mobile-menu{ backdrop-filter:blur(16px) saturate(160%); }
   .glass{ backdrop-filter:blur(12px) saturate(150%); }
@@ -1943,6 +2225,7 @@ h1,h2,h3,h4{
   .hero{ padding:100px 0 60px; }
   .hero-inner h1{ font-size:clamp(28px,7.6vw,44px); }
   .hero-inner p{ font-size:16px; }
+  .fu-demo{ border-radius:14px; }
   .sc-media{ border-radius:var(--radius-lg); aspect-ratio:16/10; }
   .timeline-line{ left:20px; }
   .timeline-progress{ left:20px; }
@@ -2177,16 +2460,99 @@ h1,h2,h3,h4{
       <div class="sc-text">
         <span class="index">03 / SMART FOLLOW-UPS</span>
         <h3>Follow-ups without nagging anyone</h3>
-        <p>After a conversation is recorded, VooVr drafts a reminder for the next step and can send it by email or WhatsApp if you choose. You review it first. Suggestions, never verdicts.</p>
+        <p>VooVr spots the promises and follow-ups said in a conversation and suggests them. You confirm what is right, and reminders reach you by email and WhatsApp before the next meeting. Suggestions, never verdicts.</p>
         <ul>
-          <li>Email draft: Ready to review</li>
-          <li>WhatsApp message: Ready to review</li>
-          <li>Reminder: Created</li>
-          <li>Timeline: Updated</li>
+          <li>Suggested items: Spotted from the transcript</li>
+          <li>Confirmed by: You</li>
+          <li>Reminders: In-app, email, WhatsApp</li>
+          <li>Completed by: A person</li>
         </ul>
       </div>
       <div class="sc-media m3">
         <div class="glow"></div>
+        <div class="fu-demo" id="fuDemo">
+          <div class="fu-header"><span class="fu-live-dot"></span>Sample data</div>
+          <p class="sr-only">Sample demo: a conversation is analysed and two follow-ups are suggested. A person confirms them, reminders go to the meeting owner in-app, by email and WhatsApp, and a person marks an item completed.</p>
+          <div class="fu-body">
+
+            <div class="fu-stage" aria-hidden="true">
+
+              <!-- Scene 1: the conversation has been analysed -->
+              <div class="fu-scene" id="fuScene1">
+                <div class="fu-chip" id="fuAnalysed"><span class="fu-chip-dot"></span>Conversation analysed</div>
+                <div class="fu-caption" id="fuCaption">Transcript ready</div>
+              </div>
+
+              <!-- Scenes 2 & 5: suggestions, confirm, then one completed by a person -->
+              <div class="fu-scene fu-scene-items" id="fuScene2">
+                <div class="fu-card" id="fuCard1">
+                  <div class="fu-card-top">
+                    <span class="fu-type fu-type-promise">Promise</span>
+                    <span class="fu-pill is-suggested" id="fuPill1"><span class="fu-pill-check">✓</span><span class="fu-pill-text">Suggested</span></span>
+                  </div>
+                  <div class="fu-item-text">Share the revised role scope</div>
+                  <div class="fu-due" id="fuDue1">Due Thu</div>
+                </div>
+                <div class="fu-card" id="fuCard2">
+                  <div class="fu-card-top">
+                    <span class="fu-type fu-type-followup">Follow-up</span>
+                    <span class="fu-pill is-suggested" id="fuPill2"><span class="fu-pill-check">✓</span><span class="fu-pill-text">Suggested</span></span>
+                  </div>
+                  <div class="fu-item-text">Check in on workload next week</div>
+                  <div class="fu-due" id="fuDue2">Due Mon</div>
+                </div>
+                <div class="fu-note" id="fuNote">Nothing happens until you confirm.</div>
+                <button class="fu-confirm" id="fuConfirm" type="button" tabindex="-1">Confirm</button>
+                <span class="fu-cursor" id="fuCursor"></span>
+              </div>
+
+              <!-- Scene 4: reminders go to the meeting owner -->
+              <div class="fu-scene" id="fuScene3">
+                <span class="fu-dest" id="fuDestInapp">In-app</span>
+                <span class="fu-dest" id="fuDestEmail">Email · 24h + 1h before</span>
+                <span class="fu-dest" id="fuDestWhatsapp">WhatsApp · 24h + 1h before</span>
+                <div class="fu-route-center" id="fuRouteCenter">Reminder</div>
+                <div class="fu-route-target" id="fuRouteTarget">You (manager)</div>
+                <span class="fu-route-packet" id="fuPacket"></span>
+                <div class="fu-toast" id="fuToast"><span class="fu-toast-dot"></span>Reminder sent to you</div>
+              </div>
+
+              <!-- Scene 6: the whole flow, end to end -->
+              <div class="fu-scene" id="fuScene4">
+                <div class="fu-complete" id="fuComplete">
+                  <span class="node">Transcript</span><span class="arrow">→</span>
+                  <span class="node">Suggested</span><span class="arrow">→</span>
+                  <span class="node">Confirmed by you</span><span class="arrow">→</span>
+                  <span class="node">Reminder</span><span class="arrow">→</span>
+                  <span class="node">Completed by you</span>
+                  <span class="fu-done-tag">Done ✓</span>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="fu-side">
+              <h5>Meeting Tracker</h5>
+              <div class="fu-person">
+                <div class="fu-avatar">A</div>
+                <div class="fu-info">
+                  <span class="fu-name">Aman Verma</span>
+                  <span class="fu-role">Product Design</span>
+                </div>
+              </div>
+              <div class="fu-tiles">
+                <div class="fu-tile"><div class="fu-num" id="fuOpenCount">0</div><div class="fu-label">Open items</div></div>
+                <div class="fu-tile"><div class="fu-num" id="fuOverdueCount">0</div><div class="fu-label">Overdue</div></div>
+              </div>
+              <div class="fu-item"><span class="fu-item-name">Share the revised role scope</span><span class="fu-pill is-suggested" id="fuItemPill1"><span class="fu-pill-check">✓</span><span class="fu-pill-text">Suggested</span></span></div>
+              <div class="fu-item"><span class="fu-item-name">Check in on workload next week</span><span class="fu-pill is-suggested" id="fuItemPill2"><span class="fu-pill-check">✓</span><span class="fu-pill-text">Suggested</span></span></div>
+              <div class="fu-del" id="fuDelInapp"><span class="fu-tick">✓</span>In-app</div>
+              <div class="fu-del" id="fuDelEmail"><span class="fu-tick">✓</span>Email</div>
+              <div class="fu-del" id="fuDelWhatsapp"><span class="fu-tick">✓</span>WhatsApp</div>
+            </div>
+
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -2574,6 +2940,202 @@ ScrollTrigger.create({
   onUpdate: function(self){ navbar.classList.toggle('scrolled', self.scroll() > 20); }
 });
 
+/* ============================================================
+   SMART FOLLOW-UPS DEMO (sample data — mirrors Meeting Tracker)
+============================================================ */
+(function(){
+  var fuRoot = document.getElementById('fuDemo');
+  if (!fuRoot || typeof gsap === 'undefined') return;
+
+  var fu = function(id){ return document.getElementById(id); };
+  var scene1 = fu('fuScene1'), scene2 = fu('fuScene2'), scene3 = fu('fuScene3'), scene4 = fu('fuScene4');
+  var analysed = fu('fuAnalysed'), caption = fu('fuCaption');
+  var cards = [fu('fuCard1'), fu('fuCard2')];
+  var stagePills = [fu('fuPill1'), fu('fuPill2')];
+  var dues = [fu('fuDue1'), fu('fuDue2')];
+  var note = fu('fuNote'), confirmBtn = fu('fuConfirm'), cursor = fu('fuCursor');
+  var routeCenter = fu('fuRouteCenter'), routeTarget = fu('fuRouteTarget'), packet = fu('fuPacket'), toast = fu('fuToast');
+  var dests = { inapp: fu('fuDestInapp'), email: fu('fuDestEmail'), whatsapp: fu('fuDestWhatsapp') };
+  var completeStrip = fu('fuComplete');
+  var openCount = fu('fuOpenCount');
+  var itemPills = [fu('fuItemPill1'), fu('fuItemPill2')];
+  var deliveries = { inapp: fu('fuDelInapp'), email: fu('fuDelEmail'), whatsapp: fu('fuDelWhatsapp') };
+
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  function getRelPos(el, containerEl){
+    var c = containerEl.getBoundingClientRect();
+    var r = el.getBoundingClientRect();
+    return { x: r.left + r.width/2 - c.left, y: r.top + r.height/2 - c.top };
+  }
+
+  function fuCount(numEl, from, to, dur){
+    var obj = { val: from };
+    numEl.textContent = String(from);
+    gsap.to(obj, {
+      val: to, duration: dur || .8, ease: 'power1.inOut',
+      onUpdate: function(){ numEl.textContent = String(Math.round(obj.val)); }
+    });
+  }
+
+  function fuSetPill(pillEl, state){
+    pillEl.classList.remove('is-suggested', 'is-pending', 'is-completed');
+    pillEl.classList.add('is-' + state);
+    pillEl.querySelector('.fu-pill-text').textContent = state.charAt(0).toUpperCase() + state.slice(1);
+    if (!reduceMotion) gsap.fromTo(pillEl, { scale:.86 }, { scale:1, duration:.35, ease:'back.out(1.7)' });
+  }
+
+  function resetFuDemo(){
+    gsap.set([scene1, scene2, scene3, scene4], { opacity:0 });
+    gsap.set(analysed, { opacity:0, scale:.92, y:8 });
+    gsap.set(caption, { opacity:0 });
+    gsap.set(cards, { opacity:0, y:26 });
+    gsap.set([note, confirmBtn], { opacity:0 });
+    gsap.set(confirmBtn, { scale:.9 });
+    gsap.set(cursor, { opacity:0 });
+    gsap.set(dues, { opacity:0, y:4 });
+    gsap.set(routeCenter, { opacity:0, scale:.9 });
+    gsap.set(routeTarget, { opacity:0 });
+    gsap.set(Object.keys(dests).map(function(k){ return dests[k]; }), { opacity:0, scale:.92 });
+    gsap.set(packet, { opacity:0 });
+    gsap.set(toast, { opacity:0, y:-6 });
+    gsap.set(completeStrip, { opacity:0, y:10 });
+    stagePills.forEach(function(p){ fuSetPill(p, 'suggested'); });
+    itemPills.forEach(function(p){ fuSetPill(p, 'suggested'); });
+    Object.keys(dests).forEach(function(k){ dests[k].classList.remove('lit'); });
+    Object.keys(deliveries).forEach(function(k){ deliveries[k].classList.remove('done'); });
+    openCount.textContent = '0';
+  }
+
+  function fuFinalState(){
+    resetFuDemo();
+    gsap.set(scene2, { opacity:1 });
+    gsap.set(cards, { opacity:1, y:0 });
+    gsap.set(dues, { opacity:1, y:0 });
+    gsap.set(confirmBtn, { opacity:1, scale:1 });
+    stagePills.forEach(function(p){ fuSetPill(p, 'completed'); });
+    itemPills.forEach(function(p){ fuSetPill(p, 'completed'); });
+    Object.keys(deliveries).forEach(function(k){ deliveries[k].classList.add('done'); });
+    openCount.textContent = '1';
+  }
+
+  if (reduceMotion){ fuFinalState(); return; }
+
+  resetFuDemo();
+
+  var fuTl = gsap.timeline({
+    repeat: -1, paused: true,
+    defaults: { ease: 'power2.out' },
+    /* Rewind on repeat re-applies captured start values (cursor, toast, packet).
+       Reset on the next ticker tick — after the wrap render — so no stale
+       state leaks into the next loop. */
+    onRepeat: function(){ gsap.delayedCall(0, resetFuDemo); }
+  });
+
+  function routeTo(destEl, onArrive){
+    fuTl
+      .call(function(){
+        var c = getRelPos(routeCenter, scene3);
+        gsap.set(packet, { left:c.x, top:c.y, opacity:1 });
+      }, null, '+=.12')
+      .to(packet, {
+        left: function(){ return getRelPos(destEl, scene3).x; },
+        top:  function(){ return getRelPos(destEl, scene3).y; },
+        duration:.55, ease:'power2.inOut'
+      })
+      .call(function(){
+        destEl.classList.add('lit');
+        gsap.to(packet, { opacity:0, duration:.2 });
+        if (onArrive) onArrive();
+      });
+  }
+
+  fuTl
+    /* Scene 1 — the conversation has been analysed */
+    .addLabel('analysed')
+    .set(scene1, { opacity:1 })
+    .to(analysed, { opacity:1, scale:1, y:0, duration:.5, ease:'back.out(1.4)' })
+    .to(caption, { opacity:1, duration:.4 }, '-=.2')
+    .to({}, { duration:1.1 })
+
+    /* Scene 2 — promises and follow-ups are suggested */
+    .addLabel('suggested')
+    .to(scene1, { opacity:0, duration:.4 })
+    .set(scene2, { opacity:1 })
+    .fromTo(cards, { opacity:0, y:26 }, { opacity:1, y:0, duration:.5, stagger:.18 })
+    .to(note, { opacity:1, duration:.4 }, '-=.15')
+    .to(confirmBtn, { opacity:1, scale:1, duration:.4, ease:'back.out(1.4)' }, '-=.1')
+    .to({}, { duration:1 })
+
+    /* Scene 3 — a person clicks Confirm */
+    .addLabel('confirm')
+    .call(function(){
+      var start = getRelPos(note, scene2);
+      gsap.set(cursor, { left:start.x + 70, top:start.y + 52, opacity:1, scale:1 });
+    })
+    .to(cursor, {
+      left: function(){ return getRelPos(confirmBtn, scene2).x; },
+      top:  function(){ return getRelPos(confirmBtn, scene2).y; },
+      duration:.9, ease:'power2.inOut'
+    })
+    .to(cursor, { scale:.72, duration:.12, yoyo:true, repeat:1 })
+    .call(function(){
+      stagePills.forEach(function(p){ fuSetPill(p, 'pending'); });
+      itemPills.forEach(function(p){ fuSetPill(p, 'pending'); });
+      fuCount(openCount, 0, 2, .8);
+    })
+    .to(dues, { opacity:1, y:0, duration:.4, stagger:.1 })
+    .to(note, { opacity:0, duration:.3 }, '-=.2')
+    .to(cursor, { opacity:0, duration:.35 }, '+=.35')
+
+    /* Scene 4 — reminders go to the meeting owner */
+    .addLabel('reminders')
+    .to(scene2, { opacity:0, duration:.4 })
+    .set(scene3, { opacity:1 })
+    .to(routeCenter, { opacity:1, scale:1, duration:.45, ease:'back.out(1.4)' })
+    .to(routeTarget, { opacity:1, duration:.35 }, '-=.2')
+    .to([dests.inapp, dests.email, dests.whatsapp], { opacity:1, scale:1, duration:.35, stagger:.08, ease:'back.out(1.4)' }, '-=.1');
+
+  routeTo(dests.inapp, function(){ deliveries.inapp.classList.add('done'); });
+  routeTo(dests.email, function(){ deliveries.email.classList.add('done'); });
+  routeTo(dests.whatsapp, function(){ deliveries.whatsapp.classList.add('done'); });
+
+  fuTl
+    .to(toast, { opacity:1, y:0, duration:.4 })
+    .to({}, { duration:1.1 })
+    .to(toast, { opacity:0, duration:.4 })
+
+    /* Scene 5 — a person marks an item completed */
+    .addLabel('completed')
+    .to(scene3, { opacity:0, duration:.45 })
+    .set(scene2, { opacity:1 })
+    .fromTo(cards, { opacity:0, y:26 }, { opacity:1, y:0, duration:.45, stagger:.1 })
+    .call(function(){
+      fuSetPill(stagePills[0], 'completed');
+      fuSetPill(itemPills[0], 'completed');
+      fuCount(openCount, 2, 1, .7);
+    })
+    .to({}, { duration:1.4 })
+
+    /* Scene 6 — the whole flow, end to end */
+    .addLabel('closing')
+    .to(scene2, { opacity:0, duration:.4 })
+    .set(scene4, { opacity:1 })
+    .to(completeStrip, { opacity:1, y:0, duration:.5 })
+    .to({}, { duration:2.2 })
+    .to(completeStrip, { opacity:0, duration:.4 })
+    .call(resetFuDemo);
+
+  /* Pause the loop while the demo is off-screen */
+  ScrollTrigger.create({
+    trigger: fuRoot,
+    start: 'top bottom', end: 'bottom top',
+    onToggle: function(self){ if (self.isActive) fuTl.play(); else fuTl.pause(); }
+  });
+
+  gsap.to(fuRoot, { y:-6, duration:3.6, ease:'sine.inOut', yoyo:true, repeat:-1 });
+})();
+
 window.addEventListener('load', function() {
   (async function(){
     var globalMax=new Promise(function(r){setTimeout(r,15000)});
@@ -2592,7 +3154,8 @@ window.addEventListener('load', function() {
       .from('.hero-inner .eyebrow', { opacity:0, y:16, duration:.7, clearProps:'all' }, .25)
       .from('.hero-inner h1', { opacity:0, y:26, filter:'blur(10px)', duration:.9, clearProps:'all' }, .35)
       .from('.hero-inner p', { opacity:0, y:20, duration:.8, clearProps:'all' }, .55)
-      .from('.hero-cta .btn', { opacity:0, y:16, stagger:.1, duration:.7, clearProps:'all' }, .68);
+      .from('.hero-cta .btn', { opacity:0, y:16, stagger:.1, duration:.7, clearProps:'all' }, .68)
+      .from('#fuDemo', { opacity:0, y:40, duration:1, clearProps:'all' }, 1);
 })();
 });
 
