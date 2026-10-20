@@ -49,6 +49,18 @@
 .fmt-types dt{display:inline;}
 .fmt-types dd{display:inline;margin:0;}
 
+/* ── Speaker tag bar: appears after 3s idle; highlight text, then pick who said it ── */
+.tag-bar{display:none;align-items:center;gap:0.7rem;flex-wrap:wrap;padding:0.65rem 1.2rem;border-top:1px solid var(--border);font-size:0.78rem;line-height:1.5;color:var(--ivory-dim);}
+.tag-bar.show{display:flex;}
+.tag-bar-msg{flex:1 1 220px;min-width:0;}
+.tag-bar-msg b{color:var(--ivory);font-weight:600;}
+.tag-bar-sel{display:block;margin-top:0.15rem;font-family:var(--font-m);font-size:0.72rem;color:var(--ivory-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tag-bar-btns{display:flex;gap:0.5rem;flex-shrink:0;}
+.tag-btn{font:inherit;font-weight:600;font-size:0.76rem;padding:0.38rem 0.85rem;border-radius:999px;cursor:pointer;border:1px solid var(--border-lit);background:var(--surface);color:var(--ivory);transition:opacity .15s,border-color .15s,background .15s;}
+.tag-btn.hr{color:var(--violet);border-color:rgba(123,79,255,0.35);}
+.tag-btn.emp{color:var(--teal);border-color:rgba(51,160,143,0.4);}
+.tag-btn:hover:not(:disabled){background:var(--ivory-ghost);}
+.tag-btn:disabled{opacity:.4;cursor:not-allowed;}
 .fmt-check{display:none;align-items:flex-start;gap:0.6rem;padding:0.7rem 1.2rem;border-top:1px solid var(--border);font-size:0.78rem;line-height:1.5;color:var(--ivory-dim);}
 .fmt-check.show{display:flex;}
 .fmt-check::before{content:'';flex-shrink:0;width:8px;height:8px;margin-top:0.4rem;border-radius:50%;background:var(--ivory-faint);}
@@ -788,6 +800,115 @@ function switchInputTab(name) {
   updateTabCaption();
 }
 
+// ── Speaker tagging: after 3s of no typing, offer to tag highlighted text as HR / Employee ──
+var TAG_IDLE_MS = 3000;
+var tagTimer = null;
+var tagRange = null;       // last non-empty selection {s, e} made inside the transcript
+var tagApplying = false;   // true while we write the label ourselves
+
+function empLabel() {
+  var first = employeeName ? employeeName.trim().split(/\s+/)[0] : '';
+  return first || 'Employee';
+}
+
+function tagBarNeeded() {
+  var text = document.getElementById('transcriptArea').value;
+  if (!text.trim()) return false;
+  if (!window.VooVrTranscript) return true;
+  var res = window.VooVrTranscript.parse(text, { employeeName: employeeName, duration: 0 });
+  if (!res.hasExplicitLabels) return true;
+  return (res.lines || []).some(function(l) {
+    return l.speakerType === 'unknown' && (l.source === 'none' || l.speaker === 'Unknown');
+  });
+}
+
+function showTagBar() {
+  var bar = document.getElementById('tagBar');
+  if (!tagBarNeeded()) { bar.classList.remove('show'); return; }
+  document.getElementById('tagEmpBtn').textContent = employeeName ? employeeName.trim() : 'Employee';
+  bar.classList.add('show');
+  refreshTagSelection();
+}
+
+function hideTagBar() {
+  document.getElementById('tagBar').classList.remove('show');
+  tagRange = null;
+  refreshTagSelection();
+}
+
+function refreshTagSelection() {
+  var area = document.getElementById('transcriptArea');
+  var has = !!tagRange && tagRange.e > tagRange.s;
+  document.getElementById('tagHrBtn').disabled = !has;
+  document.getElementById('tagEmpBtn').disabled = !has;
+  var sel = document.getElementById('tagSel');
+  if (has) {
+    var t = area.value.slice(tagRange.s, tagRange.e).replace(/\s+/g, ' ').trim();
+    sel.textContent = '\u201c' + (t.length > 70 ? t.slice(0, 70) + '\u2026' : t) + '\u201d';
+  } else {
+    sel.textContent = '';
+  }
+}
+
+function captureTagSelection() {
+  var area = document.getElementById('transcriptArea');
+  if (!document.getElementById('tagBar').classList.contains('show')) return;
+  if (area.selectionEnd > area.selectionStart) {
+    tagRange = { s: area.selectionStart, e: area.selectionEnd };
+    refreshTagSelection();
+  }
+}
+
+function applySpeakerTag(label) {
+  var area = document.getElementById('transcriptArea');
+  if (!tagRange) return;
+  var v = area.value;
+  var s = tagRange.s, e = tagRange.e;
+  var sel = v.slice(s, e);
+  // Drop an existing HR/Employee/<name> label so re-tagging replaces it.
+  var known = ['hr', 'employee', 'emp'];
+  var en = (employeeName || '').trim().toLowerCase();
+  if (en) { known.push(en); en.split(/\s+/).forEach(function(p) { if (p.length >= 3) known.push(p); }); }
+  var m = sel.replace(/^\s+/, '').match(/^([A-Za-z][A-Za-z .'_-]{0,38}?)\s*:\s*/);
+  if (m && known.indexOf(m[1].trim().toLowerCase()) !== -1) sel = sel.replace(/^\s+/, '').slice(m[0].length);
+  sel = sel.replace(/^\s+|\s+$/g, '');
+  if (!sel) return;
+  var before = v.slice(0, s), after = v.slice(e);
+  var lead = (before.length && before.charAt(before.length - 1) !== '\n') ? '\n' : '';
+  var tail = (after.length && after.charAt(0) !== '\n') ? '\n' : '';
+  var inserted = lead + label + ': ' + sel + tail;
+  tagApplying = true;
+  area.value = before + inserted + after;
+  var caret = before.length + inserted.length;
+  area.focus();
+  area.setSelectionRange(caret, caret);
+  area.dispatchEvent(new Event('input', { bubbles: true }));
+  tagApplying = false;
+  tagRange = null;
+  showTagBar();
+  showToast('Tagged as ' + label);
+}
+
+function initSpeakerTagging() {
+  var area = document.getElementById('transcriptArea');
+  var hrBtn = document.getElementById('tagHrBtn');
+  var empBtn = document.getElementById('tagEmpBtn');
+  area.addEventListener('input', function() {
+    if (tagApplying) return;
+    clearTimeout(tagTimer);
+    hideTagBar();
+    tagTimer = setTimeout(showTagBar, TAG_IDLE_MS);
+  });
+  ['select', 'mouseup', 'keyup', 'touchend'].forEach(function(ev) {
+    area.addEventListener(ev, function() { setTimeout(captureTagSelection, 0); });
+  });
+  [hrBtn, empBtn].forEach(function(b) {
+    b.addEventListener('mousedown', function(e) { e.preventDefault(); });   // keep the highlight
+  });
+  hrBtn.addEventListener('click', function() { applySpeakerTag('HR'); });
+  empBtn.addEventListener('click', function() { applySpeakerTag(empLabel()); });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   var backBtn = document.getElementById('backBtn');
   if (backBtn) backBtn.addEventListener('click', function(e) { e.preventDefault(); discardSession(); });
@@ -797,6 +918,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateWordCount();
   });
 
+  initSpeakerTagging();
   renderFmtExample();
   var guide = document.getElementById('fmtGuide');
   try {
@@ -1096,6 +1218,13 @@ document.addEventListener('DOMContentLoaded', function() {
                   </div>
                 </div>
                 <textarea class="transcript-area" id="transcriptArea" placeholder="Paste or type your transcript here — or record audio, upload a file, or use an image on the left."></textarea>
+                <div class="tag-bar" id="tagBar" role="group" aria-label="Tag who said a line">
+                  <div class="tag-bar-msg"><b>Tag who said it:</b> highlight a line in the transcript, then choose the speaker.<span class="tag-bar-sel" id="tagSel"></span></div>
+                  <div class="tag-bar-btns">
+                    <button type="button" class="tag-btn hr" id="tagHrBtn" disabled>HR</button>
+                    <button type="button" class="tag-btn emp" id="tagEmpBtn" disabled>Employee</button>
+                  </div>
+                </div>
                 <div class="fmt-check" id="fmtCheck" role="status" aria-live="polite"></div>
                 <div class="transcript-card-footer">
                   <div class="transcript-meta"><span id="wordCount">0 words · 0 characters</span></div>
