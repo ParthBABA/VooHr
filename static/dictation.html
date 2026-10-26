@@ -22,7 +22,7 @@
 <script src="/csrf.js" defer></script>
 <script src="transcript-parser.js"></script>
 <style>
-/* ── Script format guide + live format check ──
+/* ── Script format guide ──
    Same card language as the rest of this page: surface background, 14px
    radius, 1.3rem gutters between columns (matches .dictation-grid). */
 .fmt-guide{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-md);margin:0 0 1.4rem;}
@@ -40,25 +40,59 @@
 .fmt-rules li{position:relative;padding-left:1.6rem;font-size:0.8rem;line-height:1.55;color:var(--ivory-dim);counter-increment:fmt;}
 .fmt-rules li::before{content:counter(fmt);position:absolute;left:0;top:0.1rem;width:1.05rem;height:1.05rem;border-radius:50%;background:var(--violet-soft);border:1px solid rgba(123,79,255,0.35);color:var(--violet);font-family:var(--font-m);font-size:0.55rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
 .fmt-rules b,.fmt-types b{color:var(--ivory);font-weight:600;}
-.fmt-guide code{font-family:var(--font-m);font-size:0.74rem;padding:0.05rem 0.35rem;border-radius:4px;background:var(--ink);border:1px solid var(--border);color:var(--ivory);}
-.fmt-example{margin:0 0 0.8rem;padding:0.9rem 1rem;border-radius:10px;background:var(--ink);border:1px solid var(--border);font-family:var(--font-m);font-size:0.74rem;line-height:1.7;color:var(--ivory-dim);white-space:pre-wrap;word-break:break-word;}
-.fmt-example .who-hr{color:var(--violet);font-weight:700;}
-.fmt-example .who-emp{color:var(--teal);font-weight:700;}
 .fmt-types{margin:0;display:flex;flex-direction:column;gap:0.75rem;}
 .fmt-types div{font-size:0.8rem;line-height:1.55;color:var(--ivory-dim);}
 .fmt-types dt{display:inline;}
 .fmt-types dd{display:inline;margin:0;}
 
-.fmt-check{display:none;align-items:flex-start;gap:0.6rem;padding:0.7rem 1.2rem;border-top:1px solid var(--border);font-size:0.78rem;line-height:1.5;color:var(--ivory-dim);}
-.fmt-check.show{display:flex;}
-.fmt-check::before{content:'';flex-shrink:0;width:8px;height:8px;margin-top:0.4rem;border-radius:50%;background:var(--ivory-faint);}
-.fmt-check.ok::before{background:var(--teal);}
-.fmt-check.warn{background:var(--amber-soft);}
-.fmt-check.warn::before{background:var(--amber);}
-.fmt-check b{color:var(--ivory);font-weight:600;}
-.fmt-check a{color:var(--amber);cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
 @media(max-width:1024px){.fmt-guide-body{grid-template-columns:minmax(0,1fr);}}
 @media(max-width:640px){.fmt-guide-sub{display:none;}}
+</style>
+<style>
+/* ── Speaker turns: pick a speaker, type, tick to switch ── */
+.transcript-turn-list{flex:0 0 auto;max-height:220px;overflow-y:auto;padding:1rem 1.2rem;display:flex;flex-direction:column;gap:0.75rem;border-bottom:1px solid var(--border);background:var(--ink);}
+.transcript-turn-list[hidden]{display:none;}
+.turn-row{display:flex;align-items:flex-start;gap:0.7rem;font-size:0.88rem;line-height:1.6;}
+.turn-chip{flex-shrink:0;display:inline-flex;align-items:center;padding:0.18rem 0.55rem;border-radius:999px;border:1px solid var(--border-lit);font-family:var(--font-m);font-size:0.62rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap;}
+.turn-chip.hr{color:var(--violet);border-color:rgba(123,79,255,0.4);background:var(--violet-soft);}
+.turn-chip.emp{color:var(--teal);border-color:rgba(51,160,143,0.4);background:rgba(51,160,143,0.12);}
+.turn-text{min-width:0;color:var(--ivory);white-space:pre-wrap;overflow-wrap:anywhere;}
+.transcript-editor{position:relative;display:flex;flex:1;min-height:0;}
+.transcript-editor .transcript-area{flex:1;min-height:260px;}
+.textarea-mirror{position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;overflow:hidden;z-index:-1;}
+.turn-tick{position:absolute;z-index:4;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border-radius:50%;border:1px solid rgba(123,79,255,0.6);background:var(--violet);color:#fff;box-shadow:0 4px 14px var(--violet-glow);cursor:pointer;transition:transform .15s,box-shadow .15s;}
+.turn-tick svg{width:15px;height:15px;}
+.turn-tick:hover{transform:scale(1.08);box-shadow:0 6px 18px var(--violet-glow);}
+.turn-tick:focus-visible{outline:2px solid var(--ivory);outline-offset:2px;}
+.turn-tick[hidden]{display:none;}
+.turn-picker{position:absolute;left:50%;bottom:1.1rem;transform:translateX(-50%);z-index:5;width:min(340px,calc(100% - 2rem));padding:0.9rem;border:1px solid var(--border-lit);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-md);}
+.turn-picker[hidden]{display:none;}
+.turn-picker-title{font-family:var(--font-d);font-size:0.88rem;font-weight:600;color:var(--ivory);margin-bottom:0.6rem;text-align:center;}
+.turn-picker-options{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;}
+.turn-choice{display:flex;flex-direction:column;align-items:flex-start;gap:0.15rem;padding:0.55rem 0.7rem;border-radius:9px;border:1px solid var(--border);background:var(--ink);cursor:pointer;text-align:left;transition:border-color .15s,background .15s;}
+.turn-choice:hover,.turn-choice:focus-visible{border-color:var(--violet);background:var(--elevated);outline:none;}
+.turn-choice-role{font-family:var(--font-m);font-size:0.55rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);}
+.turn-choice-name{font-size:0.82rem;font-weight:600;color:var(--ivory);overflow-wrap:anywhere;}
+.turn-choice.hr .turn-choice-name{color:var(--violet);}
+.turn-choice.emp .turn-choice-name{color:var(--teal);}
+.turn-picker-hint{margin-top:0.55rem;font-family:var(--font-m);font-size:0.56rem;letter-spacing:0.04em;color:var(--ivory-faint);text-align:center;}
+.speaker-modal-overlay{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,0.68);backdrop-filter:blur(6px);}
+.speaker-modal-overlay[hidden]{display:none;}
+.speaker-modal{width:min(460px,100%);padding:1.6rem;border:1px solid var(--border-lit);border-radius:16px;background:var(--surface);box-shadow:var(--shadow-md);}
+.speaker-modal-kicker{font-family:var(--font-m);font-size:0.58rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--violet);margin-bottom:0.5rem;}
+.speaker-modal-title{font-family:var(--font-d);font-size:1.35rem;font-weight:600;color:var(--ivory);margin:0 0 0.45rem;}
+.speaker-modal-sub{margin:0 0 1.2rem;font-size:0.84rem;line-height:1.55;color:var(--ivory-dim);}
+.speaker-options{display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;}
+.speaker-option{display:flex;flex-direction:column;align-items:flex-start;gap:0.2rem;padding:0.85rem 0.9rem;border-radius:11px;border:1px solid var(--border);background:var(--ink);cursor:pointer;text-align:left;transition:border-color .15s,background .15s,transform .15s;}
+.speaker-option:hover,.speaker-option:focus-visible{border-color:var(--violet);background:var(--elevated);outline:none;transform:translateY(-1px);}
+.speaker-option.hr{border-color:rgba(123,79,255,0.3);}
+.speaker-option.emp{border-color:rgba(51,160,143,0.3);}
+.speaker-option-role{font-family:var(--font-m);font-size:0.56rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ivory-faint);}
+.speaker-option-name{font-family:var(--font-d);font-size:1rem;font-weight:600;color:var(--ivory);overflow-wrap:anywhere;}
+.speaker-option.hr .speaker-option-name{color:var(--violet);}
+.speaker-option.emp .speaker-option-name{color:var(--teal);}
+body.modal-open{overflow:hidden;}
+@media(max-width:640px){.speaker-options{grid-template-columns:1fr;}.transcript-turn-list{max-height:180px;}}
 </style>
 <style>
 .page-skeleton{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--void);transition:opacity .3s var(--ease-out);}
@@ -93,7 +127,9 @@ withTimeout(fetch('/api/me').then(function(res){
   if (nameEl) nameEl.textContent = data.name;
   if (roleEl) roleEl.textContent = data.role === 'admin' ? 'HR Admin' : data.role;
   if (avatarEl) avatarEl.textContent = (data.name || 'U').trim().charAt(0).toUpperCase();
+  hrName = (data.name || '').trim();
   revealPage();
+  updateSpeakerLabels();
   loadEmployee();
 }).catch(function(){
   window.location.href = '/signin';
@@ -101,8 +137,13 @@ withTimeout(fetch('/api/me').then(function(res){
 
 var employeeId = new URLSearchParams(window.location.search).get('employee_id');
 var employeeName = '';
-var transcriptSource = '';   // 'audio' | 'text' | 'image' | '' (typed / pasted)
-var fmtTimer = null;
+var hrName = '';
+var turns = [];               // finished turns: { type: 'hr' | 'employee', text: string }
+var activeSpeaker = null;     // { type: 'hr' | 'employee' } for the turn being typed
+var pendingLoad = null;       // loaded text waiting for the first speaker choice
+var turnPickerPrevious = null;
+var tickRaf = null;
+var mirrorEl = null;
 var mediaRecorder = null;
 var audioChunks = [];
 var recordingTimer = null;
@@ -138,17 +179,11 @@ var TAB_CAPTIONS = {
   'upload-text': 'Plain text (.TXT) — drops straight into the transcript'
 };
 
-function escHtml(str) {
-  if (!str) return '';
-  var d = document.createElement('div');
-  d.appendChild(document.createTextNode(str));
-  return d.innerHTML;
-}
-
 function loadEmployee() {
   if (!employeeId) {
     document.getElementById('sessionEmployeeName').textContent = 'No employee selected';
     document.getElementById('sessionBreadcrumb').textContent = 'Select an employee from the list';
+    updateSpeakerLabels();
     return;
   }
   fetch('/api/employees/' + employeeId)
@@ -158,8 +193,7 @@ function loadEmployee() {
       document.getElementById('sessionEmployeeName').textContent = emp.name;
       document.getElementById('sessionBreadcrumb').textContent = emp.employee_id + ' — ' + (emp.department || '');
       employeeName = emp.name || '';
-      renderFmtExample();
-      updateFormatCheck();
+      updateSpeakerLabels();
     });
 }
 
@@ -368,13 +402,10 @@ function processAudio() {
     if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'transcription failed'); });
     return r.json();
   }).then(function(data) {
-    document.getElementById('transcriptArea').value = data.text || '';
-    transcriptSource = 'audio';
-    updateWordCount();
+    loadTranscriptText(data.text || '', 'audio');
     setStatus('Transcription ready — edit if needed');
     document.getElementById('recordIcon').style.display = '';
     document.getElementById('stopIcon').style.display = 'none';
-    document.getElementById('saveBtn').disabled = false;
   }).catch(function(err) {
     setStatus('Error: ' + err.message);
     document.getElementById('recordIcon').style.display = '';
@@ -382,104 +413,384 @@ function processAudio() {
   });
 }
 
-function updateWordCount() {
+/* ── Speaker turns ─────────────────────────────────────────────────
+   HR picks who starts, types that speaker's dialog, then presses the
+   tick to close the turn and choose who speaks next. Finished turns are
+   shown as labelled rows above the input and serialized on save as
+   "HR: ..." / "<EmployeeName>: ..." lines.                            */
+
+function speakerDisplayName(type) {
+  if (type === 'hr') return hrName || 'HR';
+  return (employeeName || '').trim() || 'Employee';
+}
+
+function speakerSerialLabel(type) {
+  if (type === 'hr') return 'HR';
+  return (employeeName || '').trim() || 'Employee';
+}
+
+function normalizeSpokenText(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim();
+}
+
+function updateSpeakerLabels() {
+  var hr = speakerDisplayName('hr');
+  var emp = speakerDisplayName('employee');
+  ['startHrName', 'turnHrName'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = hr;
+  });
+  ['startEmpName', 'turnEmpName'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = emp;
+  });
+  updatePlaceholder();
+  renderTurns();
+  scheduleTurnTick();
+}
+
+function updatePlaceholder() {
   var area = document.getElementById('transcriptArea');
-  var text = area.value.trim();
-  var count = text ? text.split(/\s+/).length : 0;
-  var chars = area.value.length;
-  document.getElementById('wordCount').textContent = count + ' words · ' + chars + ' characters';
-  clearTimeout(fmtTimer);
-  fmtTimer = setTimeout(updateFormatCheck, 250);
+  if (!area) return;
+  area.placeholder = activeSpeaker
+    ? 'Write what ' + speakerDisplayName(activeSpeaker.type) + ' says…'
+    : 'Choose who speaks first…';
 }
 
-// ── Script format guide / live check ──
-// Uses the same parser as the Conversation Workspace, so what this says here
-// is exactly how the speakers will be read there.
-function escHtml(s) {
-  return String(s).replace(/[&<>"']/g, function(c) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-  });
-}
-
-function renderFmtExample() {
-  var emp = employeeName ? employeeName.trim().split(/\s+/)[0] : 'Sakshi';
-  var rows = [
-    ['hr', 'HR', 'Hi ' + emp + ', how have the last few weeks been?'],
-    ['emp', emp, 'Honestly, quite heavy. The deadlines keep shifting.'],
-    ['hr', 'HR', 'Thanks for telling me. What would help most right now?'],
-    ['emp', emp, 'A clear priority list, and one weekend off a month.']
-  ];
-  document.getElementById('fmtExample').innerHTML = rows.map(function(r) {
-    return '<span class="who-' + r[0] + '">' + escHtml(r[1]) + ':</span> ' + escHtml(r[2]);
-  }).join('\n');
-  document.getElementById('fmtExample').setAttribute('data-plain', rows.map(function(r) { return r[1] + ': ' + r[2]; }).join('\n'));
-  var nameEl = document.getElementById('fmtEmpName');
-  nameEl.textContent = employeeName ? 'here: ' + employeeName.trim() : 'or Employee';
-}
-
-function updateFormatCheck() {
-  var el = document.getElementById('fmtCheck');
-  var text = document.getElementById('transcriptArea').value;
-  if (!text.trim() || !window.VooVrTranscript) { el.className = 'fmt-check'; el.innerHTML = ''; return; }
-  var res = window.VooVrTranscript.parse(text, { employeeName: employeeName, duration: 0 });
-  var lines = res.lines || [];
-  var named = {};
-  var loose = 0;
-  lines.forEach(function(l) {
-    if (l.speakerType === 'unknown' && (l.source === 'none' || l.speaker === 'Unknown')) loose++;
-    else named[l.speakerType === 'hr' ? 'HR' : (l.speaker || 'Unknown')] = true;
-  });
-  var names = Object.keys(named);
-  var link = ' <a id="fmtOpenGuide">See the format guide</a>';
-  var cls, html;
-  if (!res.hasExplicitLabels) {
-    if (transcriptSource === 'audio') {
-      cls = 'warn';
-      html = '<span><b>No speaker names in this recording.</b> That is normal for audio &mdash; you will set who is speaking in the Conversation Workspace.</span>';
-    } else {
-      cls = 'warn';
-      html = '<span><b>No speaker names found.</b> Start each turn with <b>HR:</b> or the person&rsquo;s name and a colon.' + link + '</span>';
-    }
-  } else if (names.length < 2) {
-    cls = 'warn';
-    html = '<span><b>Only one speaker found (' + escHtml(names[0] || '') + ').</b> Add the other person&rsquo;s name before their lines.' + link + '</span>';
-  } else if (loose > 0) {
-    cls = 'warn';
-    html = '<span><b>' + names.length + ' speakers found,</b> but ' + loose + ' ' + (loose === 1 ? 'line has' : 'lines have') + ' no name and will show as unknown.' + link + '</span>';
-  } else {
-    cls = 'ok';
-    html = '<span><b>' + names.length + ' speakers found:</b> ' + names.map(escHtml).join(', ') + ' &middot; ' + lines.length + ' turns</span>';
+function buildTranscriptText() {
+  var list = turns.slice();
+  var area = document.getElementById('transcriptArea');
+  var current = normalizeSpokenText(area ? area.value : '');
+  if (current && activeSpeaker) {
+    list.push({ type: activeSpeaker.type, text: current });
   }
-  el.className = 'fmt-check show ' + cls;
-  el.innerHTML = html;
+  return list.map(function(t) {
+    return speakerSerialLabel(t.type) + ': ' + t.text;
+  }).join('\n');
+}
+
+function renderTurns() {
+  var list = document.getElementById('turnList');
+  if (!list) return;
+  list.innerHTML = '';
+  turns.forEach(function(t) {
+    var row = document.createElement('div');
+    row.className = 'turn-row';
+    var chip = document.createElement('span');
+    chip.className = 'turn-chip ' + (t.type === 'hr' ? 'hr' : 'emp');
+    chip.textContent = speakerDisplayName(t.type);
+    var body = document.createElement('span');
+    body.className = 'turn-text';
+    body.textContent = t.text;
+    row.appendChild(chip);
+    row.appendChild(body);
+    list.appendChild(row);
+  });
+  list.hidden = turns.length === 0;
+  if (turns.length) list.scrollTop = list.scrollHeight;
+}
+
+function updateSaveState() {
+  var btn = document.getElementById('saveBtn');
+  if (!btn || btn.textContent === 'Saving...') return;
+  btn.disabled = !buildTranscriptText().trim();
+}
+
+function updateWordCount() {
+  var text = buildTranscriptText();
+  var trimmed = text.trim();
+  var count = trimmed ? trimmed.split(/\s+/).length : 0;
+  document.getElementById('wordCount').textContent = count + ' words · ' + text.length + ' characters';
+  updateSaveState();
+  scheduleTurnTick();
+}
+
+function scheduleTurnTick() {
+  if (tickRaf) return;
+  tickRaf = requestAnimationFrame(function() {
+    tickRaf = null;
+    positionTurnTick();
+  });
+}
+
+function ensureMirror() {
+  var editor = document.getElementById('transcriptEditor');
+  var area = document.getElementById('transcriptArea');
+  if (!editor || !area) return null;
+  if (!mirrorEl) {
+    mirrorEl = document.createElement('div');
+    mirrorEl.className = 'textarea-mirror';
+    mirrorEl.setAttribute('aria-hidden', 'true');
+    editor.appendChild(mirrorEl);
+  }
+  var cs = window.getComputedStyle(area);
+  ['fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing','wordSpacing','textTransform','textIndent','paddingTop','paddingRight','paddingBottom','paddingLeft','borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth','borderTopStyle','borderRightStyle','borderBottomStyle','borderLeftStyle'].forEach(function(prop) {
+    mirrorEl.style[prop] = cs[prop];
+  });
+  mirrorEl.style.boxSizing = 'border-box';
+  mirrorEl.style.whiteSpace = 'pre-wrap';
+  mirrorEl.style.overflowWrap = 'break-word';
+  mirrorEl.style.wordBreak = 'break-word';
+  mirrorEl.style.width = area.clientWidth + 'px';
+  return mirrorEl;
+}
+
+function positionTurnTick() {
+  var editor = document.getElementById('transcriptEditor');
+  var area = document.getElementById('transcriptArea');
+  var btn = document.getElementById('turnTickBtn');
+  if (!editor || !area || !btn) return;
+  var text = area.value;
+  if (!activeSpeaker || area.readOnly || !text.trim() || !area.offsetWidth) {
+    btn.hidden = true;
+    return;
+  }
+  var mirror = ensureMirror();
+  if (!mirror) { btn.hidden = true; return; }
+  var caret = area.selectionEnd;
+  if (caret == null || caret < 0) caret = text.length;
+  mirror.textContent = text.slice(0, caret);
+  var marker = document.createElement('span');
+  marker.textContent = '\u200b';
+  mirror.appendChild(marker);
+  btn.hidden = false;
+  var markerRect = marker.getBoundingClientRect();
+  var editorRect = editor.getBoundingClientRect();
+  var x = markerRect.left - editorRect.left - area.scrollLeft;
+  var y = markerRect.top - editorRect.top - area.scrollTop;
+  var bw = btn.offsetWidth || 30;
+  var bh = btn.offsetHeight || 30;
+  x = Math.max(6, Math.min(editor.clientWidth - bw - 6, x + 8));
+  y = Math.max(6, Math.min(editor.clientHeight - bh - 6, y));
+  btn.style.left = x + 'px';
+  btn.style.top = y + 'px';
+}
+
+function setActiveSpeaker(type) {
+  activeSpeaker = { type: type };
+  var area = document.getElementById('transcriptArea');
+  if (area) area.readOnly = false;
+  updatePlaceholder();
+  updateWordCount();
+}
+
+function openStartModal() {
+  var modal = document.getElementById('speakerModal');
+  if (!modal) return;
+  updateSpeakerLabels();
+  if (!modal.hidden) return;
+  modal.hidden = false;
+  document.body.classList.add('modal-open');
+  var first = modal.querySelector('.speaker-option');
+  if (first) setTimeout(function() { first.focus(); }, 0);
+}
+
+function closeStartModal() {
+  var modal = document.getElementById('speakerModal');
+  if (!modal) return;
+  modal.hidden = true;
+  document.body.classList.remove('modal-open');
+}
+
+function chooseStartSpeaker(type) {
+  closeStartModal();
+  setActiveSpeaker(type);
+  if (pendingLoad) {
+    var pending = pendingLoad;
+    pendingLoad = null;
+    addTurn(type, pending.text);
+    openTurnPicker(type);
+  } else {
+    var area = document.getElementById('transcriptArea');
+    if (area) area.focus();
+  }
+}
+
+function addTurn(type, text) {
+  text = normalizeSpokenText(text);
+  if (!text) return;
+  turns.push({ type: type, text: text });
+  renderTurns();
+  updateWordCount();
+}
+
+function finishTurn() {
+  var area = document.getElementById('transcriptArea');
+  if (!area || !activeSpeaker) return;
+  var text = normalizeSpokenText(area.value);
+  if (!text) return;
+  var finishedType = activeSpeaker.type;
+  area.value = '';
+  area.setSelectionRange(0, 0);
+  addTurn(finishedType, text);
+  openTurnPicker(finishedType);
+}
+
+function openTurnPicker(previousType) {
+  var picker = document.getElementById('turnPicker');
+  if (!picker) return;
+  turnPickerPrevious = previousType;
+  updateSpeakerLabels();
+  picker.hidden = false;
+  var area = document.getElementById('transcriptArea');
+  if (area) area.readOnly = true;
+  var btn = document.getElementById('turnTickBtn');
+  if (btn) btn.hidden = true;
+  var first = picker.querySelector('.turn-choice');
+  if (first) setTimeout(function() { first.focus(); }, 0);
+}
+
+function closeTurnPicker(cancel) {
+  var picker = document.getElementById('turnPicker');
+  if (!picker) return;
+  picker.hidden = true;
+  if (cancel && turnPickerPrevious) {
+    activeSpeaker = { type: turnPickerPrevious };
+  }
+  var area = document.getElementById('transcriptArea');
+  if (area) area.readOnly = false;
+  updatePlaceholder();
+  updateWordCount();
+  if (area) area.focus();
+}
+
+function chooseNextSpeaker(type) {
+  var picker = document.getElementById('turnPicker');
+  if (!picker || picker.hidden) return;
+  picker.hidden = true;
+  turnPickerPrevious = null;
+  setActiveSpeaker(type);
+  var area = document.getElementById('transcriptArea');
+  if (area) area.focus();
+}
+
+function loadTranscriptText(text, source) {
+  text = String(text || '').replace(/\r\n?/g, '\n').trim();
+  if (!text) return;
+  var parsed = null;
+  try {
+    if (window.VooVrTranscript) {
+      parsed = window.VooVrTranscript.parse(text, { employeeName: employeeName, duration: 0 });
+    }
+  } catch (e) { parsed = null; }
+
+  if (parsed && parsed.hasExplicitLabels && parsed.lines && parsed.lines.length) {
+    turns = parsed.lines.map(function(line) {
+      return {
+        type: line.speakerType === 'hr' ? 'hr' : 'employee',
+        text: normalizeSpokenText(line.text)
+      };
+    }).filter(function(t) { return t.text; });
+    activeSpeaker = turns.length ? { type: turns[turns.length - 1].type } : null;
+    renderTurns();
+    updateWordCount();
+    if (activeSpeaker) {
+      openTurnPicker(activeSpeaker.type);
+      showToast(turns.length + (turns.length === 1 ? ' turn' : ' turns') + ' loaded');
+    } else {
+      openStartModal();
+    }
+    return;
+  }
+
+  if (!activeSpeaker) {
+    pendingLoad = { text: normalizeSpokenText(text), source: source };
+    openStartModal();
+    return;
+  }
+
+  var loadedType = activeSpeaker.type;
+  addTurn(loadedType, text);
+  openTurnPicker(loadedType);
+  showToast('Text added as ' + speakerDisplayName(loadedType) + '’s turn');
+}
+
+function resetTurns() {
+  turns = [];
+  activeSpeaker = null;
+  pendingLoad = null;
+  turnPickerPrevious = null;
+  var area = document.getElementById('transcriptArea');
+  if (area) {
+    area.value = '';
+    area.readOnly = true;
+    area.setSelectionRange(0, 0);
+  }
+  var picker = document.getElementById('turnPicker');
+  if (picker) picker.hidden = true;
+  var btn = document.getElementById('turnTickBtn');
+  if (btn) btn.hidden = true;
+  renderTurns();
+  updatePlaceholder();
+  updateWordCount();
+}
+
+function focusableIn(container) {
+  return Array.prototype.slice.call(container.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(function(el) {
+    return el.offsetParent !== null;
+  });
+}
+
+function trapFocus(container, e) {
+  var items = focusableIn(container);
+  if (!items.length) { e.preventDefault(); return; }
+  var first = items[0];
+  var last = items[items.length - 1];
+  if (!container.contains(document.activeElement)) {
+    e.preventDefault();
+    first.focus();
+  } else if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+function moveChoiceFocus(container, key) {
+  var items = Array.prototype.slice.call(container.querySelectorAll('.speaker-option, .turn-choice'));
+  if (!items.length) return;
+  var idx = items.indexOf(document.activeElement);
+  var forward = key === 'ArrowRight' || key === 'ArrowDown';
+  var next = idx < 0 ? 0 : (idx + (forward ? 1 : -1) + items.length) % items.length;
+  items[next].focus();
+}
+
+function fallbackCopyText(text, done) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  ta.remove();
+  done();
 }
 
 function copyTranscript() {
-  var area = document.getElementById('transcriptArea');
-  if (!area) return;
-  if (!area.value) { showToast('Nothing to copy yet'); return; }
+  var text = buildTranscriptText().trim();
+  if (!text) { showToast('Nothing to copy yet'); return; }
   var done = function() { showToast('Transcript copied to clipboard'); };
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(area.value).then(done).catch(function() {
-      area.select(); document.execCommand('copy'); done();
+    navigator.clipboard.writeText(text).then(done).catch(function() {
+      fallbackCopyText(text, done);
     });
   } else {
-    area.select(); document.execCommand('copy'); done();
+    fallbackCopyText(text, done);
   }
-  area.setSelectionRange(0, 0);
 }
 
 async function clearTranscript() {
-  var area = document.getElementById('transcriptArea');
-  if (!area) return;
-  if (area.value.trim() && !await VooVrUI.ask('This will remove the transcript text.', {title: 'Clear transcript?', accept: 'Clear transcript'})) return;
-  area.value = '';
-  updateWordCount();
-  document.getElementById('saveBtn').disabled = true;
+  if (buildTranscriptText().trim() && !await VooVrUI.ask('This will remove the transcript text.', {title: 'Clear transcript?', accept: 'Clear transcript'})) return;
+  resetTurns();
+  openStartModal();
 }
 
 function saveSession() {
-  var text = document.getElementById('transcriptArea').value.trim();
+  var text = buildTranscriptText().trim();
   if (!text) {
     VooVrUI.show('Transcript is empty. Record, upload, or type something first.');
     return;
@@ -508,15 +819,17 @@ function saveSession() {
     }, 2000);
   }).catch(function(err) {
     document.getElementById('saveBtn').disabled = false;
-    document.getElementById('saveBtn').textContent = 'Save Session';
+    document.getElementById('saveBtn').textContent = 'Save Transcript';
     VooVrUI.show('Failed to save: ' + err.message);
   });
 }
 
 async function discardSession() {
-  if (document.getElementById('transcriptArea').value.trim()) {
+  if (buildTranscriptText().trim()) {
     if (!await VooVrUI.ask('Your unsaved recording and transcript will be discarded.', {title: 'Discard recording?', accept: 'Discard recording'})) return;
   }
+  resetTurns();
+  openStartModal();
   window.location.href = '/dashboard';
 }
 
@@ -694,10 +1007,7 @@ function readTextFile(file) {
   var reader = new FileReader();
   reader.onload = function(e) {
     var text = String(e.target.result || '').replace(/^\uFEFF/, '');
-    document.getElementById('transcriptArea').value = text;
-    transcriptSource = 'text';
-    updateWordCount();
-    document.getElementById('saveBtn').disabled = false;
+    loadTranscriptText(text, 'text');
     setUploadStatus('textStatus', 'Loaded — edit below', 'success');
     showToast('Text loaded into transcript');
   };
@@ -722,10 +1032,7 @@ function transcribeUploadedAudio() {
       return r.json();
     })
     .then(function(data) {
-      document.getElementById('transcriptArea').value = data.text || '';
-      transcriptSource = 'audio';
-      updateWordCount();
-      document.getElementById('saveBtn').disabled = false;
+      loadTranscriptText(data.text || '', 'audio');
       setUploadStatus('audioStatus', 'Done — edit below', 'success');
       showToast('Audio transcribed successfully');
     })
@@ -749,10 +1056,7 @@ function extractUploadedImage() {
       return r.json();
     })
     .then(function(data) {
-      document.getElementById('transcriptArea').value = data.text || '';
-      transcriptSource = 'image';
-      updateWordCount();
-      document.getElementById('saveBtn').disabled = false;
+      loadTranscriptText(data.text || '', 'image');
       setUploadStatus('imageStatus', 'Done — edit below', 'success');
       showToast('Text extracted from image');
     })
@@ -792,12 +1096,108 @@ document.addEventListener('DOMContentLoaded', function() {
   var backBtn = document.getElementById('backBtn');
   if (backBtn) backBtn.addEventListener('click', function(e) { e.preventDefault(); discardSession(); });
   document.getElementById('micBtn').addEventListener('click', toggleRecording);
-  document.getElementById('transcriptArea').addEventListener('input', function() {
-    transcriptSource = '';   // typed or pasted by hand from here on
-    updateWordCount();
-  });
 
-  renderFmtExample();
+  var transcriptArea = document.getElementById('transcriptArea');
+  transcriptArea.addEventListener('input', updateWordCount);
+  transcriptArea.addEventListener('paste', function(e) {
+    if (transcriptArea.value.trim()) return;
+    var clip = e.clipboardData && e.clipboardData.getData('text/plain');
+    if (!clip || !window.VooVrTranscript) return;
+    var res = null;
+    try { res = window.VooVrTranscript.parse(clip, { employeeName: employeeName, duration: 0 }); } catch (err) { res = null; }
+    if (res && res.hasExplicitLabels) {
+      e.preventDefault();
+      loadTranscriptText(clip, 'text');
+    }
+  });
+  ['scroll', 'click', 'keyup', 'select'].forEach(function(ev) {
+    transcriptArea.addEventListener(ev, scheduleTurnTick);
+  });
+  transcriptArea.addEventListener('focus', function() {
+    var modal = document.getElementById('speakerModal');
+    var picker = document.getElementById('turnPicker');
+    if (modal && !modal.hidden) {
+      var firstModal = modal.querySelector('.speaker-option');
+      if (firstModal) firstModal.focus();
+      return;
+    }
+    if (picker && !picker.hidden) {
+      var firstPicker = picker.querySelector('.turn-choice');
+      if (firstPicker) firstPicker.focus();
+      return;
+    }
+    if (!activeSpeaker) openStartModal();
+  });
+  transcriptArea.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      finishTurn();
+    }
+  });
+  document.addEventListener('selectionchange', function() {
+    if (document.activeElement === transcriptArea) scheduleTurnTick();
+  });
+  window.addEventListener('resize', scheduleTurnTick);
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(scheduleTurnTick);
+    ro.observe(transcriptArea);
+    var editorEl = document.getElementById('transcriptEditor');
+    if (editorEl) ro.observe(editorEl);
+  }
+
+  var tickBtn = document.getElementById('turnTickBtn');
+  if (tickBtn) {
+    tickBtn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+    tickBtn.addEventListener('click', finishTurn);
+  }
+
+  var picker = document.getElementById('turnPicker');
+  if (picker) {
+    picker.addEventListener('click', function(e) {
+      var choice = e.target.closest('.turn-choice');
+      if (choice) chooseNextSpeaker(choice.getAttribute('data-speaker'));
+    });
+    picker.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        closeTurnPicker(true);
+        return;
+      }
+      if (e.key === 'Tab') { trapFocus(picker, e); return; }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveChoiceFocus(picker, e.key);
+        return;
+      }
+      if (e.key === 'Enter' && e.target.classList.contains('turn-choice')) {
+        e.preventDefault();
+        chooseNextSpeaker(e.target.getAttribute('data-speaker'));
+      }
+    });
+  }
+
+  var startModal = document.getElementById('speakerModal');
+  if (startModal) {
+    startModal.addEventListener('click', function(e) {
+      var choice = e.target.closest('.speaker-option');
+      if (choice) chooseStartSpeaker(choice.getAttribute('data-speaker'));
+    });
+    startModal.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); return; }
+      if (e.key === 'Tab') { trapFocus(startModal, e); return; }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveChoiceFocus(startModal, e.key);
+        return;
+      }
+      if (e.key === 'Enter' && e.target.classList.contains('speaker-option')) {
+        e.preventDefault();
+        chooseStartSpeaker(e.target.getAttribute('data-speaker'));
+      }
+    });
+  }
+
   var guide = document.getElementById('fmtGuide');
   try {
     // Open on a first visit so the rules are seen once, then stay out of the way.
@@ -806,16 +1206,6 @@ document.addEventListener('DOMContentLoaded', function() {
       localStorage.setItem('voovr-fmt-guide-seen', '1');
     }
   } catch (e) {}
-  document.getElementById('fmtCopyBtn').addEventListener('click', function() {
-    var plain = document.getElementById('fmtExample').getAttribute('data-plain') || '';
-    if (navigator.clipboard) navigator.clipboard.writeText(plain);
-    if (window.showToast) showToast('Example copied');
-  });
-  document.getElementById('fmtCheck').addEventListener('click', function(e) {
-    if (e.target.id !== 'fmtOpenGuide') return;
-    guide.open = true;
-    guide.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
   document.getElementById('saveBtn').addEventListener('click', saveSession);
   document.getElementById('discardBtn').addEventListener('click', discardSession);
 
@@ -853,13 +1243,26 @@ document.addEventListener('DOMContentLoaded', function() {
   wfBuildBars();
 
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') discardSession();
+    if (e.key === 'Escape') {
+      var modal = document.getElementById('speakerModal');
+      var picker = document.getElementById('turnPicker');
+      if (modal && !modal.hidden) { e.preventDefault(); return; }
+      if (picker && !picker.hidden) { e.preventDefault(); closeTurnPicker(true); return; }
+      discardSession();
+    }
     var tag = e.target.tagName;
     if (e.key === ' ' && activeInputTab === 'record' && tag !== 'TEXTAREA' && tag !== 'INPUT' && tag !== 'BUTTON') {
+      var modalOpen = document.getElementById('speakerModal') && !document.getElementById('speakerModal').hidden;
+      var pickerOpen = document.getElementById('turnPicker') && !document.getElementById('turnPicker').hidden;
+      if (modalOpen || pickerOpen) return;
       e.preventDefault();
       toggleRecording();
     }
   });
+
+  updateSpeakerLabels();
+  updateWordCount();
+  openStartModal();
 });
 </script>
 
@@ -942,33 +1345,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
           <details class="fmt-guide" id="fmtGuide">
             <summary>
-              <span class="fmt-guide-title">Script format guide</span>
-              <span class="fmt-guide-sub">Write it this way so every speaker is picked up correctly</span>
+              <span class="fmt-guide-title">How speaker turns work</span>
+              <span class="fmt-guide-sub">Pick who speaks; every turn is labelled for you</span>
             </summary>
             <div class="fmt-guide-body">
               <div class="fmt-col">
-                <h4 class="fmt-h">The rules</h4>
+                <h4 class="fmt-h">The flow</h4>
                 <ol class="fmt-rules">
-                  <li>Start every turn with the speaker&rsquo;s <b>name and a colon</b>: <code>HR:</code> <code>Sakshi:</code></li>
-                  <li>Use <b>HR</b> for the HR person and the employee&rsquo;s name as in their profile (<span id="fmtEmpName">or Employee</span>).</li>
-                  <li>Spell each name <b>the same way</b> every time.</li>
-                  <li>A new speaker always gets a <b>new line</b> with their name. A long reply may wrap onto the next line without one.</li>
-                  <li>Names are letters only &mdash; no numbers, emoji or <code>Speaker 1</code>.</li>
-                  <li>A timestamp at the start is fine: <code>[00:12] HR: &hellip;</code></li>
+                  <li>Choose who <b>started the conversation</b>.</li>
+                  <li>Type what they said in the transcript box.</li>
+                  <li>Press the <b>&#10003; tick</b> to finish the turn and choose who speaks next.</li>
+                  <li>Repeat for every turn. Each finished turn shows its speaker&rsquo;s name.</li>
                 </ol>
               </div>
               <div class="fmt-col">
-                <h4 class="fmt-h">Example</h4>
-                <pre class="fmt-example" id="fmtExample"></pre>
-                <button type="button" class="tc-icon-btn" id="fmtCopyBtn"><span>Copy example</span></button>
+                <h4 class="fmt-h">Good to know</h4>
+                <dl class="fmt-types">
+                  <div><dt><b>No labels needed &mdash; </b></dt><dd>names are added automatically when you save or copy.</dd></div>
+                  <div><dt><b>Recordings &mdash; </b></dt><dd>audio is added as one turn for the speaker you picked. Press the tick to split it into more turns.</dd></div>
+                  <div><dt><b>Already labelled text &mdash; </b></dt><dd>upload or paste it and the existing speaker labels are converted into turns.</dd></div>
+                </dl>
               </div>
               <div class="fmt-col">
                 <h4 class="fmt-h">By how you add it</h4>
                 <dl class="fmt-types">
-                  <div><dt><b>Paste or .txt &mdash; </b></dt><dd>follow the rules. Save files as plain text (.txt).</dd></div>
-                  <div><dt><b>WhatsApp chat &mdash; </b></dt><dd>in WhatsApp choose <b>Export chat &rarr; Without media</b> and upload the .txt. Keep the other person saved under their real name. Dates and system lines are removed for you.</dd></div>
-                  <div><dt><b>Image or photo &mdash; </b></dt><dd>the picture is read word for word, so the names must be visible: one turn per line, name first. Use good light and a flat shot, then check the extracted text.</dd></div>
-                  <div><dt><b>Audio &mdash; </b></dt><dd>recordings carry no speaker names. After saving, set who is speaking in one click in the Conversation Workspace.</dd></div>
+                  <div><dt><b>Paste or .txt &mdash; </b></dt><dd>drop in plain text (.txt).</dd></div>
+                  <div><dt><b>WhatsApp chat &mdash; </b></dt><dd>in WhatsApp choose <b>Export chat &rarr; Without media</b> and upload the .txt.</dd></div>
+                  <div><dt><b>Image or photo &mdash; </b></dt><dd>the picture is read word for word; check the extracted text, then press the tick between speakers.</dd></div>
+                  <div><dt><b>Audio &mdash; </b></dt><dd>record or upload, then press the tick whenever the speaker changes.</dd></div>
                 </dl>
               </div>
             </div>
@@ -1095,8 +1499,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                   </div>
                 </div>
-                <textarea class="transcript-area" id="transcriptArea" placeholder="Paste or type your transcript here — or record audio, upload a file, or use an image on the left."></textarea>
-                <div class="fmt-check" id="fmtCheck" role="status" aria-live="polite"></div>
+                <div class="transcript-turn-list" id="turnList" aria-live="polite" aria-label="Finished turns" hidden></div>
+                <div class="transcript-editor" id="transcriptEditor">
+                  <textarea class="transcript-area" id="transcriptArea" placeholder="Choose who speaks first…" readonly></textarea>
+                  <button type="button" class="turn-tick" id="turnTickBtn" title="End turn (Ctrl+Enter)" aria-label="End this turn and choose the next speaker" hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"/></svg>
+                  </button>
+                  <div class="turn-picker" id="turnPicker" role="dialog" aria-modal="true" aria-labelledby="turnPickerTitle" hidden>
+                    <div class="turn-picker-title" id="turnPickerTitle">Who speaks next?</div>
+                    <div class="turn-picker-options">
+                      <button type="button" class="turn-choice hr" data-speaker="hr"><span class="turn-choice-role">HR</span><span class="turn-choice-name" id="turnHrName">HR</span></button>
+                      <button type="button" class="turn-choice emp" data-speaker="employee"><span class="turn-choice-role">Employee</span><span class="turn-choice-name" id="turnEmpName">Employee</span></button>
+                    </div>
+                    <div class="turn-picker-hint">Enter to choose &middot; Esc to keep the same speaker</div>
+                  </div>
+                </div>
                 <div class="transcript-card-footer">
                   <div class="transcript-meta"><span id="wordCount">0 words · 0 characters</span></div>
                   <select class="transcript-lang-select" id="transcriptLang" aria-label="Transcript language">
@@ -1152,6 +1569,24 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     </div>
   </main>
+</div>
+
+<div class="speaker-modal-overlay" id="speakerModal" hidden>
+  <div class="speaker-modal" role="dialog" aria-modal="true" aria-labelledby="speakerModalTitle" aria-describedby="speakerModalSub">
+    <div class="speaker-modal-kicker">Speaker setup</div>
+    <h2 class="speaker-modal-title" id="speakerModalTitle">Who started the conversation?</h2>
+    <p class="speaker-modal-sub" id="speakerModalSub">Choose the first speaker. Every turn is labelled automatically, so you can just write what they say.</p>
+    <div class="speaker-options" id="speakerOptions">
+      <button type="button" class="speaker-option hr" data-speaker="hr">
+        <span class="speaker-option-role">HR</span>
+        <span class="speaker-option-name" id="startHrName">HR</span>
+      </button>
+      <button type="button" class="speaker-option emp" data-speaker="employee">
+        <span class="speaker-option-role">Employee</span>
+        <span class="speaker-option-name" id="startEmpName">Employee</span>
+      </button>
+    </div>
+  </div>
 </div>
 </body>
 </html>
