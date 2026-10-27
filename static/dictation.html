@@ -49,50 +49,48 @@
 @media(max-width:640px){.fmt-guide-sub{display:none;}}
 </style>
 <style>
-/* ── Speaker turns: pick a speaker, type, tick to switch ── */
+/* ── Speaker turns: select a speaker, type, press OK ── */
 .transcript-turn-list{flex:0 0 auto;max-height:220px;overflow-y:auto;padding:1rem 1.2rem;display:flex;flex-direction:column;gap:0.75rem;border-bottom:1px solid var(--border);background:var(--ink);}
 .transcript-turn-list[hidden]{display:none;}
 .turn-row{display:flex;align-items:flex-start;gap:0.7rem;font-size:0.88rem;line-height:1.6;}
 .turn-chip{flex-shrink:0;display:inline-flex;align-items:center;padding:0.18rem 0.55rem;border-radius:999px;border:1px solid var(--border-lit);font-family:var(--font-m);font-size:0.62rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap;}
 .turn-chip.hr{color:var(--violet);border-color:rgba(123,79,255,0.4);background:var(--violet-soft);}
 .turn-chip.emp{color:var(--teal);border-color:rgba(51,160,143,0.4);background:rgba(51,160,143,0.12);}
-.turn-text{min-width:0;color:var(--ivory);white-space:pre-wrap;overflow-wrap:anywhere;}
-.transcript-editor{position:relative;display:flex;flex:1;min-height:0;}
+.turn-text{min-width:0;flex:1;color:var(--ivory);white-space:pre-wrap;overflow-wrap:anywhere;}
+.turn-actions{flex-shrink:0;display:flex;gap:0.35rem;}
+.turn-action{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--ivory-faint);cursor:pointer;transition:border-color .15s,color .15s,background .15s;}
+.turn-action svg{width:13px;height:13px;}
+.turn-action:hover,.turn-action:focus-visible{border-color:var(--violet);color:var(--ivory);background:var(--elevated);outline:none;}
+.turn-action.delete:hover,.turn-action.delete:focus-visible{border-color:#d9534f;color:#ff8b87;}
+.turn-edit{flex:1;min-width:0;display:flex;flex-direction:column;gap:0.4rem;}
+.turn-edit-area{width:100%;min-height:64px;padding:0.5rem 0.65rem;border-radius:9px;border:1px solid var(--border-lit);background:var(--void);color:var(--ivory);font-family:inherit;font-size:0.88rem;line-height:1.5;resize:vertical;}
+.turn-edit-area:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 2px var(--violet-soft);}
+.turn-edit-actions{display:flex;gap:0.4rem;}
+.transcript-editor{position:relative;display:flex;flex-direction:column;flex:1;min-height:0;}
 .transcript-editor .transcript-area{flex:1;min-height:260px;}
-.textarea-mirror{position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;overflow:hidden;z-index:-1;}
-.turn-tick{position:absolute;z-index:4;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border-radius:50%;border:1px solid rgba(123,79,255,0.6);background:var(--violet);color:#fff;box-shadow:0 4px 14px var(--violet-glow);cursor:pointer;transition:transform .15s,box-shadow .15s;}
-.turn-tick svg{width:15px;height:15px;}
-.turn-tick:hover{transform:scale(1.08);box-shadow:0 6px 18px var(--violet-glow);}
-.turn-tick:focus-visible{outline:2px solid var(--ivory);outline-offset:2px;}
-.turn-tick[hidden]{display:none;}
-.turn-picker{position:absolute;left:50%;bottom:1.1rem;transform:translateX(-50%);z-index:5;width:min(340px,calc(100% - 2rem));padding:0.9rem;border:1px solid var(--border-lit);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-md);}
-.turn-picker[hidden]{display:none;}
-.turn-picker-title{font-family:var(--font-d);font-size:0.88rem;font-weight:600;color:var(--ivory);margin-bottom:0.6rem;text-align:center;}
-.turn-picker-options{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;}
-.turn-choice{display:flex;flex-direction:column;align-items:flex-start;gap:0.15rem;padding:0.55rem 0.7rem;border-radius:9px;border:1px solid var(--border);background:var(--ink);cursor:pointer;text-align:left;transition:border-color .15s,background .15s;}
-.turn-choice:hover,.turn-choice:focus-visible{border-color:var(--violet);background:var(--elevated);outline:none;}
-.turn-choice-role{font-family:var(--font-m);font-size:0.55rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);}
-.turn-choice-name{font-size:0.82rem;font-weight:600;color:var(--ivory);overflow-wrap:anywhere;}
-.turn-choice.hr .turn-choice-name{color:var(--violet);}
-.turn-choice.emp .turn-choice-name{color:var(--teal);}
-.turn-picker-hint{margin-top:0.55rem;font-family:var(--font-m);font-size:0.56rem;letter-spacing:0.04em;color:var(--ivory-faint);text-align:center;}
-.speaker-modal-overlay{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,0.68);backdrop-filter:blur(6px);}
-.speaker-modal-overlay[hidden]{display:none;}
-.speaker-modal{width:min(460px,100%);padding:1.6rem;border:1px solid var(--border-lit);border-radius:16px;background:var(--surface);box-shadow:var(--shadow-md);}
-.speaker-modal-kicker{font-family:var(--font-m);font-size:0.58rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--violet);margin-bottom:0.5rem;}
-.speaker-modal-title{font-family:var(--font-d);font-size:1.35rem;font-weight:600;color:var(--ivory);margin:0 0 0.45rem;}
-.speaker-modal-sub{margin:0 0 1.2rem;font-size:0.84rem;line-height:1.55;color:var(--ivory-dim);}
-.speaker-options{display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;}
-.speaker-option{display:flex;flex-direction:column;align-items:flex-start;gap:0.2rem;padding:0.85rem 0.9rem;border-radius:11px;border:1px solid var(--border);background:var(--ink);cursor:pointer;text-align:left;transition:border-color .15s,background .15s,transform .15s;}
-.speaker-option:hover,.speaker-option:focus-visible{border-color:var(--violet);background:var(--elevated);outline:none;transform:translateY(-1px);}
-.speaker-option.hr{border-color:rgba(123,79,255,0.3);}
-.speaker-option.emp{border-color:rgba(51,160,143,0.3);}
-.speaker-option-role{font-family:var(--font-m);font-size:0.56rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ivory-faint);}
-.speaker-option-name{font-family:var(--font-d);font-size:1rem;font-weight:600;color:var(--ivory);overflow-wrap:anywhere;}
-.speaker-option.hr .speaker-option-name{color:var(--violet);}
-.speaker-option.emp .speaker-option-name{color:var(--teal);}
-body.modal-open{overflow:hidden;}
-@media(max-width:640px){.speaker-options{grid-template-columns:1fr;}.transcript-turn-list{max-height:180px;}}
+
+/* Inline speaker selection bar */
+.inline-speaker-bar{padding:0.85rem 1.2rem;border-bottom:1px solid var(--border);background:var(--elevated);}
+.inline-speaker-prompt{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--ivory-faint);margin-bottom:0.55rem;}
+.inline-speaker-buttons{display:grid;grid-template-columns:1fr 1fr;gap:0.55rem;}
+.inline-speaker-btn{display:flex;flex-direction:column;align-items:flex-start;gap:0.15rem;padding:0.6rem 0.8rem;border-radius:10px;border:1px solid var(--border);background:var(--ink);cursor:pointer;text-align:left;transition:border-color .15s,background .15s,box-shadow .15s;}
+.inline-speaker-btn:hover,.inline-speaker-btn:focus-visible{outline:none;border-color:var(--violet);background:var(--elevated);}
+.inline-speaker-btn.hr.is-selected{border-color:var(--violet);background:var(--violet-soft);box-shadow:0 0 0 2px rgba(123,79,255,0.25);}
+.inline-speaker-btn.emp.is-selected{border-color:var(--teal);background:rgba(51,160,143,0.12);box-shadow:0 0 0 2px rgba(51,160,143,0.22);}
+.inline-speaker-role{font-family:var(--font-m);font-size:0.55rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ivory-faint);}
+.inline-speaker-name{font-size:0.85rem;font-weight:600;color:var(--ivory);overflow-wrap:anywhere;}
+.inline-speaker-btn.hr .inline-speaker-name{color:var(--violet);}
+.inline-speaker-btn.emp .inline-speaker-name{color:var(--teal);}
+
+/* Input row with OK button */
+.inline-input-row{position:relative;display:flex;flex:1;min-height:0;}
+.inline-input-row .transcript-area{flex:1;min-height:260px;padding-right:4.6rem;}
+.inline-input-row .transcript-area[readonly]{opacity:0.65;cursor:not-allowed;}
+.inline-ok-btn{position:absolute;right:0.85rem;bottom:0.85rem;padding:0.5rem 1.1rem;border-radius:9px;border:1px solid var(--violet);background:var(--violet);color:#fff;font-family:var(--font-d);font-size:0.82rem;font-weight:600;cursor:pointer;box-shadow:0 4px 14px var(--violet-glow);transition:opacity .15s,transform .15s;}
+.inline-ok-btn:hover:not(:disabled){transform:translateY(-1px);}
+.inline-ok-btn:focus-visible{outline:2px solid var(--ivory);outline-offset:2px;}
+.inline-ok-btn:disabled{opacity:0.35;cursor:not-allowed;box-shadow:none;}
+@media(max-width:640px){.inline-speaker-buttons{grid-template-columns:1fr;}.transcript-turn-list{max-height:180px;}}
 </style>
 <style>
 .page-skeleton{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--void);transition:opacity .3s var(--ease-out);}
@@ -139,11 +137,9 @@ var employeeId = new URLSearchParams(window.location.search).get('employee_id');
 var employeeName = '';
 var hrName = '';
 var turns = [];               // finished turns: { type: 'hr' | 'employee', text: string }
-var activeSpeaker = null;     // { type: 'hr' | 'employee' } for the turn being typed
-var pendingLoad = null;       // loaded text waiting for the first speaker choice
-var turnPickerPrevious = null;
-var tickRaf = null;
-var mirrorEl = null;
+var currentSpeaker = null;    // 'hr' | 'employee' for the turn being typed
+var pendingLoad = null;       // loaded text waiting for a speaker choice
+var editingIndex = null;      // index of the finished turn being edited
 var mediaRecorder = null;
 var audioChunks = [];
 var recordingTimer = null;
@@ -414,10 +410,10 @@ function processAudio() {
 }
 
 /* ── Speaker turns ─────────────────────────────────────────────────
-   HR picks who starts, types that speaker's dialog, then presses the
-   tick to close the turn and choose who speaks next. Finished turns are
-   shown as labelled rows above the input and serialized on save as
-   "HR: ..." / "<EmployeeName>: ..." lines.                            */
+   HR selects the speaker for the turn, types their dialog, then presses
+   OK to save the turn as a labelled row. Finished rows can be edited or
+   deleted. On save the transcript serializes to "HR: ..." /
+   "<EmployeeName>: ..." lines.                                        */
 
 function speakerDisplayName(type) {
   if (type === 'hr') return hrName || 'HR';
@@ -436,58 +432,161 @@ function normalizeSpokenText(text) {
 function updateSpeakerLabels() {
   var hr = speakerDisplayName('hr');
   var emp = speakerDisplayName('employee');
-  ['startHrName', 'turnHrName'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.textContent = hr;
-  });
-  ['startEmpName', 'turnEmpName'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.textContent = emp;
-  });
+  var hrEl = document.getElementById('inlineHrName');
+  if (hrEl) hrEl.textContent = hr;
+  var empEl = document.getElementById('inlineEmpName');
+  if (empEl) empEl.textContent = emp;
   updatePlaceholder();
+  updateSpeakerPressed();
   renderTurns();
-  scheduleTurnTick();
+  updateWordCount();
+}
+
+function updateSpeakerPrompt() {
+  var el = document.getElementById('inlineSpeakerPrompt');
+  if (!el) return;
+  if (currentSpeaker) {
+    el.textContent = 'Typing as ' + speakerDisplayName(currentSpeaker);
+  } else if (pendingLoad) {
+    el.textContent = 'Select a speaker for the loaded text';
+  } else if (turns.length) {
+    el.textContent = 'Whose dialog is next?';
+  } else {
+    el.textContent = 'Who speaks first?';
+  }
+}
+
+function updateSpeakerPressed() {
+  var hrBtn = document.getElementById('inlineHrBtn');
+  var empBtn = document.getElementById('inlineEmpBtn');
+  if (hrBtn) {
+    var hrOn = currentSpeaker === 'hr';
+    hrBtn.classList.toggle('is-selected', hrOn);
+    hrBtn.setAttribute('aria-pressed', hrOn ? 'true' : 'false');
+  }
+  if (empBtn) {
+    var empOn = currentSpeaker === 'employee';
+    empBtn.classList.toggle('is-selected', empOn);
+    empBtn.setAttribute('aria-pressed', empOn ? 'true' : 'false');
+  }
+  updateSpeakerPrompt();
 }
 
 function updatePlaceholder() {
   var area = document.getElementById('transcriptArea');
   if (!area) return;
-  area.placeholder = activeSpeaker
-    ? 'Write what ' + speakerDisplayName(activeSpeaker.type) + ' says…'
-    : 'Choose who speaks first…';
+  area.placeholder = currentSpeaker
+    ? 'Write what ' + speakerDisplayName(currentSpeaker) + ' says…'
+    : 'Select a speaker to start typing…';
 }
 
 function buildTranscriptText() {
-  var list = turns.slice();
-  var area = document.getElementById('transcriptArea');
-  var current = normalizeSpokenText(area ? area.value : '');
-  if (current && activeSpeaker) {
-    list.push({ type: activeSpeaker.type, text: current });
-  }
-  return list.map(function(t) {
+  return turns.map(function(t) {
     return speakerSerialLabel(t.type) + ': ' + t.text;
   }).join('\n');
 }
 
-function renderTurns() {
+var EDIT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>';
+var DELETE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
+
+function makeTurnAction(label, cls, icon, onClick) {
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'turn-action' + (cls ? ' ' + cls : '');
+  btn.title = label;
+  btn.setAttribute('aria-label', label);
+  btn.innerHTML = icon;
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+function renderTurns(keepScroll) {
   var list = document.getElementById('turnList');
   if (!list) return;
+  var prevScroll = list.scrollTop;
   list.innerHTML = '';
-  turns.forEach(function(t) {
+  turns.forEach(function(t, idx) {
     var row = document.createElement('div');
     row.className = 'turn-row';
+
     var chip = document.createElement('span');
     chip.className = 'turn-chip ' + (t.type === 'hr' ? 'hr' : 'emp');
     chip.textContent = speakerDisplayName(t.type);
+    row.appendChild(chip);
+
+    if (editingIndex === idx) {
+      var wrap = document.createElement('div');
+      wrap.className = 'turn-edit';
+      var editArea = document.createElement('textarea');
+      editArea.className = 'turn-edit-area';
+      editArea.value = t.text;
+      var actions = document.createElement('div');
+      actions.className = 'turn-edit-actions';
+      var save = document.createElement('button');
+      save.type = 'button';
+      save.className = 'btn btn-primary btn-sm';
+      save.textContent = 'Save';
+      var cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'btn btn-outline btn-sm';
+      cancel.textContent = 'Cancel';
+      save.addEventListener('click', function() {
+        var v = normalizeSpokenText(editArea.value);
+        if (!v) { editArea.focus(); return; }
+        turns[idx].text = v;
+        editingIndex = null;
+        renderTurns(true);
+        updateWordCount();
+      });
+      cancel.addEventListener('click', function() {
+        editingIndex = null;
+        renderTurns(true);
+      });
+      editArea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          e.stopPropagation();
+          save.click();
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          cancel.click();
+        }
+      });
+      actions.appendChild(save);
+      actions.appendChild(cancel);
+      wrap.appendChild(editArea);
+      wrap.appendChild(actions);
+      row.appendChild(wrap);
+      list.appendChild(row);
+      setTimeout(function() { editArea.focus(); }, 0);
+      return;
+    }
+
     var body = document.createElement('span');
     body.className = 'turn-text';
     body.textContent = t.text;
-    row.appendChild(chip);
     row.appendChild(body);
+
+    var tools = document.createElement('div');
+    tools.className = 'turn-actions';
+    tools.appendChild(makeTurnAction('Edit turn', '', EDIT_ICON, function() {
+      editingIndex = idx;
+      renderTurns(true);
+    }));
+    tools.appendChild(makeTurnAction('Delete turn', 'delete', DELETE_ICON, function() {
+      turns.splice(idx, 1);
+      if (editingIndex === idx) editingIndex = null;
+      else if (editingIndex !== null && editingIndex > idx) editingIndex--;
+      renderTurns(true);
+      updateWordCount();
+    }));
+    row.appendChild(tools);
     list.appendChild(row);
   });
   list.hidden = turns.length === 0;
-  if (turns.length) list.scrollTop = list.scrollHeight;
+  if (turns.length) list.scrollTop = keepScroll ? prevScroll : list.scrollHeight;
 }
 
 function updateSaveState() {
@@ -496,172 +595,66 @@ function updateSaveState() {
   btn.disabled = !buildTranscriptText().trim();
 }
 
+function updateOkState() {
+  var area = document.getElementById('transcriptArea');
+  var btn = document.getElementById('inlineOkBtn');
+  if (!btn || !area) return;
+  btn.disabled = !currentSpeaker || area.readOnly || !normalizeSpokenText(area.value);
+}
+
 function updateWordCount() {
-  var text = buildTranscriptText();
+  var lines = turns.map(function(t) {
+    return speakerSerialLabel(t.type) + ': ' + t.text;
+  });
+  var area = document.getElementById('transcriptArea');
+  if (area && currentSpeaker) {
+    var draft = normalizeSpokenText(area.value);
+    if (draft) lines.push(speakerSerialLabel(currentSpeaker) + ': ' + draft);
+  }
+  var text = lines.join('\n');
   var trimmed = text.trim();
   var count = trimmed ? trimmed.split(/\s+/).length : 0;
-  document.getElementById('wordCount').textContent = count + ' words · ' + text.length + ' characters';
+  var el = document.getElementById('wordCount');
+  if (el) el.textContent = count + ' words · ' + text.length + ' characters';
   updateSaveState();
-  scheduleTurnTick();
+  updateOkState();
 }
 
-function scheduleTurnTick() {
-  if (tickRaf) return;
-  tickRaf = requestAnimationFrame(function() {
-    tickRaf = null;
-    positionTurnTick();
-  });
-}
-
-function ensureMirror() {
-  var editor = document.getElementById('transcriptEditor');
+function selectSpeaker(type) {
+  currentSpeaker = type;
+  editingIndex = null;
   var area = document.getElementById('transcriptArea');
-  if (!editor || !area) return null;
-  if (!mirrorEl) {
-    mirrorEl = document.createElement('div');
-    mirrorEl.className = 'textarea-mirror';
-    mirrorEl.setAttribute('aria-hidden', 'true');
-    editor.appendChild(mirrorEl);
+  if (area) {
+    if (pendingLoad) {
+      area.value = pendingLoad.text;
+      pendingLoad = null;
+    }
+    area.readOnly = false;
+    area.setSelectionRange(area.value.length, area.value.length);
   }
-  var cs = window.getComputedStyle(area);
-  ['fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing','wordSpacing','textTransform','textIndent','paddingTop','paddingRight','paddingBottom','paddingLeft','borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth','borderTopStyle','borderRightStyle','borderBottomStyle','borderLeftStyle'].forEach(function(prop) {
-    mirrorEl.style[prop] = cs[prop];
-  });
-  mirrorEl.style.boxSizing = 'border-box';
-  mirrorEl.style.whiteSpace = 'pre-wrap';
-  mirrorEl.style.overflowWrap = 'break-word';
-  mirrorEl.style.wordBreak = 'break-word';
-  mirrorEl.style.width = area.clientWidth + 'px';
-  return mirrorEl;
-}
-
-function positionTurnTick() {
-  var editor = document.getElementById('transcriptEditor');
-  var area = document.getElementById('transcriptArea');
-  var btn = document.getElementById('turnTickBtn');
-  if (!editor || !area || !btn) return;
-  var text = area.value;
-  if (!activeSpeaker || area.readOnly || !text.trim() || !area.offsetWidth) {
-    btn.hidden = true;
-    return;
-  }
-  var mirror = ensureMirror();
-  if (!mirror) { btn.hidden = true; return; }
-  var caret = area.selectionEnd;
-  if (caret == null || caret < 0) caret = text.length;
-  mirror.textContent = text.slice(0, caret);
-  var marker = document.createElement('span');
-  marker.textContent = '\u200b';
-  mirror.appendChild(marker);
-  btn.hidden = false;
-  var markerRect = marker.getBoundingClientRect();
-  var editorRect = editor.getBoundingClientRect();
-  var x = markerRect.left - editorRect.left - area.scrollLeft;
-  var y = markerRect.top - editorRect.top - area.scrollTop;
-  var bw = btn.offsetWidth || 30;
-  var bh = btn.offsetHeight || 30;
-  x = Math.max(6, Math.min(editor.clientWidth - bw - 6, x + 8));
-  y = Math.max(6, Math.min(editor.clientHeight - bh - 6, y));
-  btn.style.left = x + 'px';
-  btn.style.top = y + 'px';
-}
-
-function setActiveSpeaker(type) {
-  activeSpeaker = { type: type };
-  var area = document.getElementById('transcriptArea');
-  if (area) area.readOnly = false;
+  updateSpeakerPressed();
   updatePlaceholder();
   updateWordCount();
+  if (area) area.focus();
 }
 
-function openStartModal() {
-  var modal = document.getElementById('speakerModal');
-  if (!modal) return;
-  updateSpeakerLabels();
-  if (!modal.hidden) return;
-  modal.hidden = false;
-  document.body.classList.add('modal-open');
-  var first = modal.querySelector('.speaker-option');
-  if (first) setTimeout(function() { first.focus(); }, 0);
-}
-
-function closeStartModal() {
-  var modal = document.getElementById('speakerModal');
-  if (!modal) return;
-  modal.hidden = true;
-  document.body.classList.remove('modal-open');
-}
-
-function chooseStartSpeaker(type) {
-  closeStartModal();
-  setActiveSpeaker(type);
-  if (pendingLoad) {
-    var pending = pendingLoad;
-    pendingLoad = null;
-    addTurn(type, pending.text);
-    openTurnPicker(type);
-  } else {
-    var area = document.getElementById('transcriptArea');
-    if (area) area.focus();
-  }
-}
-
-function addTurn(type, text) {
-  text = normalizeSpokenText(text);
-  if (!text) return;
-  turns.push({ type: type, text: text });
-  renderTurns();
-  updateWordCount();
-}
-
-function finishTurn() {
+function saveTurn() {
   var area = document.getElementById('transcriptArea');
-  if (!area || !activeSpeaker) return;
+  if (!area || !currentSpeaker) return;
   var text = normalizeSpokenText(area.value);
   if (!text) return;
-  var finishedType = activeSpeaker.type;
+  turns.push({ type: currentSpeaker, text: text });
+  currentSpeaker = null;
+  editingIndex = null;
   area.value = '';
   area.setSelectionRange(0, 0);
-  addTurn(finishedType, text);
-  openTurnPicker(finishedType);
-}
-
-function openTurnPicker(previousType) {
-  var picker = document.getElementById('turnPicker');
-  if (!picker) return;
-  turnPickerPrevious = previousType;
-  updateSpeakerLabels();
-  picker.hidden = false;
-  var area = document.getElementById('transcriptArea');
-  if (area) area.readOnly = true;
-  var btn = document.getElementById('turnTickBtn');
-  if (btn) btn.hidden = true;
-  var first = picker.querySelector('.turn-choice');
-  if (first) setTimeout(function() { first.focus(); }, 0);
-}
-
-function closeTurnPicker(cancel) {
-  var picker = document.getElementById('turnPicker');
-  if (!picker) return;
-  picker.hidden = true;
-  if (cancel && turnPickerPrevious) {
-    activeSpeaker = { type: turnPickerPrevious };
-  }
-  var area = document.getElementById('transcriptArea');
-  if (area) area.readOnly = false;
+  area.readOnly = true;
+  updateSpeakerPressed();
   updatePlaceholder();
+  renderTurns();
   updateWordCount();
-  if (area) area.focus();
-}
-
-function chooseNextSpeaker(type) {
-  var picker = document.getElementById('turnPicker');
-  if (!picker || picker.hidden) return;
-  picker.hidden = true;
-  turnPickerPrevious = null;
-  setActiveSpeaker(type);
-  var area = document.getElementById('transcriptArea');
-  if (area) area.focus();
+  var first = document.getElementById('inlineHrBtn');
+  if (first) first.focus();
 }
 
 function loadTranscriptText(text, source) {
@@ -681,80 +674,41 @@ function loadTranscriptText(text, source) {
         text: normalizeSpokenText(line.text)
       };
     }).filter(function(t) { return t.text; });
-    activeSpeaker = turns.length ? { type: turns[turns.length - 1].type } : null;
+    currentSpeaker = null;
+    pendingLoad = null;
+    editingIndex = null;
+    var area = document.getElementById('transcriptArea');
+    if (area) { area.value = ''; area.readOnly = true; }
+    updateSpeakerPressed();
+    updatePlaceholder();
     renderTurns();
     updateWordCount();
-    if (activeSpeaker) {
-      openTurnPicker(activeSpeaker.type);
-      showToast(turns.length + (turns.length === 1 ? ' turn' : ' turns') + ' loaded');
-    } else {
-      openStartModal();
-    }
+    showToast(turns.length + (turns.length === 1 ? ' turn' : ' turns') + ' loaded');
     return;
   }
 
-  if (!activeSpeaker) {
-    pendingLoad = { text: normalizeSpokenText(text), source: source };
-    openStartModal();
-    return;
-  }
-
-  var loadedType = activeSpeaker.type;
-  addTurn(loadedType, text);
-  openTurnPicker(loadedType);
-  showToast('Text added as ' + speakerDisplayName(loadedType) + '’s turn');
+  pendingLoad = { text: normalizeSpokenText(text), source: source };
+  var prompt = document.getElementById('inlineSpeakerPrompt');
+  if (prompt && !currentSpeaker) prompt.textContent = 'Select a speaker for the loaded text';
+  showToast('Select a speaker, then press OK to save this text');
 }
 
 function resetTurns() {
   turns = [];
-  activeSpeaker = null;
+  currentSpeaker = null;
   pendingLoad = null;
-  turnPickerPrevious = null;
+  editingIndex = null;
   var area = document.getElementById('transcriptArea');
   if (area) {
     area.value = '';
     area.readOnly = true;
     area.setSelectionRange(0, 0);
   }
-  var picker = document.getElementById('turnPicker');
-  if (picker) picker.hidden = true;
-  var btn = document.getElementById('turnTickBtn');
-  if (btn) btn.hidden = true;
-  renderTurns();
+  updateSpeakerPressed();
   updatePlaceholder();
+  updateOkState();
+  renderTurns();
   updateWordCount();
-}
-
-function focusableIn(container) {
-  return Array.prototype.slice.call(container.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(function(el) {
-    return el.offsetParent !== null;
-  });
-}
-
-function trapFocus(container, e) {
-  var items = focusableIn(container);
-  if (!items.length) { e.preventDefault(); return; }
-  var first = items[0];
-  var last = items[items.length - 1];
-  if (!container.contains(document.activeElement)) {
-    e.preventDefault();
-    first.focus();
-  } else if (e.shiftKey && document.activeElement === first) {
-    e.preventDefault();
-    last.focus();
-  } else if (!e.shiftKey && document.activeElement === last) {
-    e.preventDefault();
-    first.focus();
-  }
-}
-
-function moveChoiceFocus(container, key) {
-  var items = Array.prototype.slice.call(container.querySelectorAll('.speaker-option, .turn-choice'));
-  if (!items.length) return;
-  var idx = items.indexOf(document.activeElement);
-  var forward = key === 'ArrowRight' || key === 'ArrowDown';
-  var next = idx < 0 ? 0 : (idx + (forward ? 1 : -1) + items.length) % items.length;
-  items[next].focus();
 }
 
 function fallbackCopyText(text, done) {
@@ -786,7 +740,6 @@ function copyTranscript() {
 async function clearTranscript() {
   if (buildTranscriptText().trim() && !await VooVrUI.ask('This will remove the transcript text.', {title: 'Clear transcript?', accept: 'Clear transcript'})) return;
   resetTurns();
-  openStartModal();
 }
 
 function saveSession() {
@@ -829,7 +782,6 @@ async function discardSession() {
     if (!await VooVrUI.ask('Your unsaved recording and transcript will be discarded.', {title: 'Discard recording?', accept: 'Discard recording'})) return;
   }
   resetTurns();
-  openStartModal();
   window.location.href = '/dashboard';
 }
 
@@ -1098,7 +1050,10 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('micBtn').addEventListener('click', toggleRecording);
 
   var transcriptArea = document.getElementById('transcriptArea');
-  transcriptArea.addEventListener('input', updateWordCount);
+  transcriptArea.addEventListener('input', function() {
+    updateOkState();
+    updateWordCount();
+  });
   transcriptArea.addEventListener('paste', function(e) {
     if (transcriptArea.value.trim()) return;
     var clip = e.clipboardData && e.clipboardData.getData('text/plain');
@@ -1108,95 +1063,30 @@ document.addEventListener('DOMContentLoaded', function() {
     if (res && res.hasExplicitLabels) {
       e.preventDefault();
       loadTranscriptText(clip, 'text');
+      return;
     }
-  });
-  ['scroll', 'click', 'keyup', 'select'].forEach(function(ev) {
-    transcriptArea.addEventListener(ev, scheduleTurnTick);
+    if (!currentSpeaker) {
+      e.preventDefault();
+      loadTranscriptText(clip, 'text');
+    }
   });
   transcriptArea.addEventListener('focus', function() {
-    var modal = document.getElementById('speakerModal');
-    var picker = document.getElementById('turnPicker');
-    if (modal && !modal.hidden) {
-      var firstModal = modal.querySelector('.speaker-option');
-      if (firstModal) firstModal.focus();
-      return;
-    }
-    if (picker && !picker.hidden) {
-      var firstPicker = picker.querySelector('.turn-choice');
-      if (firstPicker) firstPicker.focus();
-      return;
-    }
-    if (!activeSpeaker) openStartModal();
+    if (!currentSpeaker && !pendingLoad) updateSpeakerPrompt();
   });
   transcriptArea.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      finishTurn();
+      saveTurn();
     }
   });
-  document.addEventListener('selectionchange', function() {
-    if (document.activeElement === transcriptArea) scheduleTurnTick();
-  });
-  window.addEventListener('resize', scheduleTurnTick);
-  if (window.ResizeObserver) {
-    var ro = new ResizeObserver(scheduleTurnTick);
-    ro.observe(transcriptArea);
-    var editorEl = document.getElementById('transcriptEditor');
-    if (editorEl) ro.observe(editorEl);
-  }
 
-  var tickBtn = document.getElementById('turnTickBtn');
-  if (tickBtn) {
-    tickBtn.addEventListener('mousedown', function(e) { e.preventDefault(); });
-    tickBtn.addEventListener('click', finishTurn);
-  }
+  var hrBtn = document.getElementById('inlineHrBtn');
+  if (hrBtn) hrBtn.addEventListener('click', function() { selectSpeaker('hr'); });
+  var empBtn = document.getElementById('inlineEmpBtn');
+  if (empBtn) empBtn.addEventListener('click', function() { selectSpeaker('employee'); });
+  var okBtn = document.getElementById('inlineOkBtn');
+  if (okBtn) okBtn.addEventListener('click', saveTurn);
 
-  var picker = document.getElementById('turnPicker');
-  if (picker) {
-    picker.addEventListener('click', function(e) {
-      var choice = e.target.closest('.turn-choice');
-      if (choice) chooseNextSpeaker(choice.getAttribute('data-speaker'));
-    });
-    picker.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        closeTurnPicker(true);
-        return;
-      }
-      if (e.key === 'Tab') { trapFocus(picker, e); return; }
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        moveChoiceFocus(picker, e.key);
-        return;
-      }
-      if (e.key === 'Enter' && e.target.classList.contains('turn-choice')) {
-        e.preventDefault();
-        chooseNextSpeaker(e.target.getAttribute('data-speaker'));
-      }
-    });
-  }
-
-  var startModal = document.getElementById('speakerModal');
-  if (startModal) {
-    startModal.addEventListener('click', function(e) {
-      var choice = e.target.closest('.speaker-option');
-      if (choice) chooseStartSpeaker(choice.getAttribute('data-speaker'));
-    });
-    startModal.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); return; }
-      if (e.key === 'Tab') { trapFocus(startModal, e); return; }
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        moveChoiceFocus(startModal, e.key);
-        return;
-      }
-      if (e.key === 'Enter' && e.target.classList.contains('speaker-option')) {
-        e.preventDefault();
-        chooseStartSpeaker(e.target.getAttribute('data-speaker'));
-      }
-    });
-  }
 
   var guide = document.getElementById('fmtGuide');
   try {
@@ -1244,17 +1134,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-      var modal = document.getElementById('speakerModal');
-      var picker = document.getElementById('turnPicker');
-      if (modal && !modal.hidden) { e.preventDefault(); return; }
-      if (picker && !picker.hidden) { e.preventDefault(); closeTurnPicker(true); return; }
+      if (editingIndex !== null) {
+        editingIndex = null;
+        renderTurns(true);
+        e.preventDefault();
+        return;
+      }
+      if (document.activeElement === transcriptArea && currentSpeaker) {
+        currentSpeaker = null;
+        transcriptArea.value = '';
+        transcriptArea.readOnly = true;
+        updateSpeakerPressed();
+        updatePlaceholder();
+        updateOkState();
+        updateWordCount();
+        e.preventDefault();
+        return;
+      }
       discardSession();
     }
     var tag = e.target.tagName;
     if (e.key === ' ' && activeInputTab === 'record' && tag !== 'TEXTAREA' && tag !== 'INPUT' && tag !== 'BUTTON') {
-      var modalOpen = document.getElementById('speakerModal') && !document.getElementById('speakerModal').hidden;
-      var pickerOpen = document.getElementById('turnPicker') && !document.getElementById('turnPicker').hidden;
-      if (modalOpen || pickerOpen) return;
       e.preventDefault();
       toggleRecording();
     }
@@ -1262,7 +1162,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   updateSpeakerLabels();
   updateWordCount();
-  openStartModal();
+  updateSpeakerPressed();
+  updatePlaceholder();
 });
 </script>
 
@@ -1346,24 +1247,23 @@ document.addEventListener('DOMContentLoaded', function() {
           <details class="fmt-guide" id="fmtGuide">
             <summary>
               <span class="fmt-guide-title">How speaker turns work</span>
-              <span class="fmt-guide-sub">Pick who speaks; every turn is labelled for you</span>
+              <span class="fmt-guide-sub">Select speaker, type dialog, press OK</span>
             </summary>
             <div class="fmt-guide-body">
               <div class="fmt-col">
                 <h4 class="fmt-h">The flow</h4>
                 <ol class="fmt-rules">
-                  <li>Choose who <b>started the conversation</b>.</li>
-                  <li>Type what they said in the transcript box.</li>
-                  <li>Press the <b>&#10003; tick</b> to finish the turn and choose who speaks next.</li>
-                  <li>Repeat for every turn. Each finished turn shows its speaker&rsquo;s name.</li>
+                  <li>Select <b>HR</b> or <b>Employee</b> for the turn.</li>
+                  <li>Type the dialog in the textbox after selecting a speaker.</li>
+                  <li>Press <b>OK</b> to save the turn.</li>
+                  <li>Repeat for every turn. You can edit or delete finished turns.</li>
                 </ol>
               </div>
               <div class="fmt-col">
                 <h4 class="fmt-h">Good to know</h4>
                 <dl class="fmt-types">
-                  <div><dt><b>No labels needed &mdash; </b></dt><dd>names are added automatically when you save or copy.</dd></div>
-                  <div><dt><b>Recordings &mdash; </b></dt><dd>audio is added as one turn for the speaker you picked. Press the tick to split it into more turns.</dd></div>
-                  <div><dt><b>Already labelled text &mdash; </b></dt><dd>upload or paste it and the existing speaker labels are converted into turns.</dd></div>
+                  <div><dt><b>Automatic labels &mdash; </b></dt><dd>Turns are saved as labeled lines automatically.</dd></div>
+                  <div><dt><b>Reset &mdash; </b></dt><dd>Clear or Discard will reset all turns.</dd></div>
                 </dl>
               </div>
               <div class="fmt-col">
@@ -1371,8 +1271,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <dl class="fmt-types">
                   <div><dt><b>Paste or .txt &mdash; </b></dt><dd>drop in plain text (.txt).</dd></div>
                   <div><dt><b>WhatsApp chat &mdash; </b></dt><dd>in WhatsApp choose <b>Export chat &rarr; Without media</b> and upload the .txt.</dd></div>
-                  <div><dt><b>Image or photo &mdash; </b></dt><dd>the picture is read word for word; check the extracted text, then press the tick between speakers.</dd></div>
-                  <div><dt><b>Audio &mdash; </b></dt><dd>record or upload, then press the tick whenever the speaker changes.</dd></div>
+                  <div><dt><b>Image or photo &mdash; </b></dt><dd>the picture is read word for word; review the extracted text.</dd></div>
+                  <div><dt><b>Audio &mdash; </b></dt><dd>record or upload to transcribe audio.</dd></div>
                 </dl>
               </div>
             </div>
@@ -1500,18 +1400,23 @@ document.addEventListener('DOMContentLoaded', function() {
                   </div>
                 </div>
                 <div class="transcript-turn-list" id="turnList" aria-live="polite" aria-label="Finished turns" hidden></div>
+                <div class="inline-speaker-bar" id="inlineSpeakerBar">
+                  <div class="inline-speaker-prompt" id="inlineSpeakerPrompt">Who speaks first?</div>
+                  <div class="inline-speaker-buttons">
+                    <button type="button" class="inline-speaker-btn hr" id="inlineHrBtn" data-speaker="hr" aria-pressed="false">
+                      <span class="inline-speaker-role">HR</span>
+                      <span class="inline-speaker-name" id="inlineHrName">HR</span>
+                    </button>
+                    <button type="button" class="inline-speaker-btn emp" id="inlineEmpBtn" data-speaker="employee" aria-pressed="false">
+                      <span class="inline-speaker-role">Employee</span>
+                      <span class="inline-speaker-name" id="inlineEmpName">Employee</span>
+                    </button>
+                  </div>
+                </div>
                 <div class="transcript-editor" id="transcriptEditor">
-                  <textarea class="transcript-area" id="transcriptArea" placeholder="Choose who speaks first…" readonly></textarea>
-                  <button type="button" class="turn-tick" id="turnTickBtn" title="End turn (Ctrl+Enter)" aria-label="End this turn and choose the next speaker" hidden>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"/></svg>
-                  </button>
-                  <div class="turn-picker" id="turnPicker" role="dialog" aria-modal="true" aria-labelledby="turnPickerTitle" hidden>
-                    <div class="turn-picker-title" id="turnPickerTitle">Who speaks next?</div>
-                    <div class="turn-picker-options">
-                      <button type="button" class="turn-choice hr" data-speaker="hr"><span class="turn-choice-role">HR</span><span class="turn-choice-name" id="turnHrName">HR</span></button>
-                      <button type="button" class="turn-choice emp" data-speaker="employee"><span class="turn-choice-role">Employee</span><span class="turn-choice-name" id="turnEmpName">Employee</span></button>
-                    </div>
-                    <div class="turn-picker-hint">Enter to choose &middot; Esc to keep the same speaker</div>
+                  <div class="inline-input-row">
+                    <textarea class="transcript-area" id="transcriptArea" placeholder="Select a speaker to start typing…" readonly></textarea>
+                    <button type="button" class="inline-ok-btn" id="inlineOkBtn" disabled aria-label="Save this turn">OK</button>
                   </div>
                 </div>
                 <div class="transcript-card-footer">
@@ -1569,24 +1474,6 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     </div>
   </main>
-</div>
-
-<div class="speaker-modal-overlay" id="speakerModal" hidden>
-  <div class="speaker-modal" role="dialog" aria-modal="true" aria-labelledby="speakerModalTitle" aria-describedby="speakerModalSub">
-    <div class="speaker-modal-kicker">Speaker setup</div>
-    <h2 class="speaker-modal-title" id="speakerModalTitle">Who started the conversation?</h2>
-    <p class="speaker-modal-sub" id="speakerModalSub">Choose the first speaker. Every turn is labelled automatically, so you can just write what they say.</p>
-    <div class="speaker-options" id="speakerOptions">
-      <button type="button" class="speaker-option hr" data-speaker="hr">
-        <span class="speaker-option-role">HR</span>
-        <span class="speaker-option-name" id="startHrName">HR</span>
-      </button>
-      <button type="button" class="speaker-option emp" data-speaker="employee">
-        <span class="speaker-option-role">Employee</span>
-        <span class="speaker-option-name" id="startEmpName">Employee</span>
-      </button>
-    </div>
-  </div>
 </div>
 </body>
 </html>
