@@ -22,33 +22,6 @@
 <script src="/csrf.js" defer></script>
 <script src="transcript-parser.js"></script>
 <style>
-/* ── Script format guide ──
-   Same card language as the rest of this page: surface background, 14px
-   radius, 1.3rem gutters between columns (matches .dictation-grid). */
-.fmt-guide{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-md);margin:0 0 1.4rem;}
-.fmt-guide > summary{display:flex;align-items:center;gap:0.9rem;padding:0.95rem 1.2rem;cursor:pointer;list-style:none;}
-.fmt-guide > summary::-webkit-details-marker{display:none;}
-.fmt-guide > summary::after{content:'';flex-shrink:0;width:7px;height:7px;margin-left:auto;border-right:2px solid var(--ivory-faint);border-bottom:2px solid var(--ivory-faint);transform:rotate(45deg);transition:transform 0.25s var(--ease-out);}
-.fmt-guide[open] > summary::after{transform:rotate(-135deg);}
-.fmt-guide > summary:focus-visible{outline:2px solid var(--violet);outline-offset:-2px;border-radius:14px;}
-.fmt-guide-title{font-family:var(--font-d);font-size:0.95rem;font-weight:600;color:var(--ivory);}
-.fmt-guide-sub{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.04em;color:var(--ivory-faint);}
-.fmt-guide-body{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.3rem;padding:0.2rem 1.2rem 1.3rem;border-top:1px solid var(--border);padding-top:1.2rem;}
-.fmt-col{min-width:0;}
-.fmt-h{font-family:var(--font-m);font-weight:700;font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--ivory-dim);margin:0 0 0.8rem;}
-.fmt-rules{margin:0;padding:0;list-style:none;counter-reset:fmt;display:flex;flex-direction:column;gap:0.65rem;}
-.fmt-rules li{position:relative;padding-left:1.6rem;font-size:0.8rem;line-height:1.55;color:var(--ivory-dim);counter-increment:fmt;}
-.fmt-rules li::before{content:counter(fmt);position:absolute;left:0;top:0.1rem;width:1.05rem;height:1.05rem;border-radius:50%;background:var(--violet-soft);border:1px solid rgba(123,79,255,0.35);color:var(--violet);font-family:var(--font-m);font-size:0.55rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
-.fmt-rules b,.fmt-types b{color:var(--ivory);font-weight:600;}
-.fmt-types{margin:0;display:flex;flex-direction:column;gap:0.75rem;}
-.fmt-types div{font-size:0.8rem;line-height:1.55;color:var(--ivory-dim);}
-.fmt-types dt{display:inline;}
-.fmt-types dd{display:inline;margin:0;}
-
-@media(max-width:1024px){.fmt-guide-body{grid-template-columns:minmax(0,1fr);}}
-@media(max-width:640px){.fmt-guide-sub{display:none;}}
-</style>
-<style>
 /* ── Speaker turns: select a speaker, type, press OK ── */
 .transcript-turn-list{flex:0 0 auto;max-height:220px;overflow-y:auto;padding:1rem 1.2rem;display:flex;flex-direction:column;gap:0.75rem;border-bottom:1px solid var(--border);background:var(--ink);}
 .transcript-turn-list[hidden]{display:none;}
@@ -81,6 +54,7 @@
 .inline-speaker-name{font-size:0.85rem;font-weight:600;color:var(--ivory);overflow-wrap:anywhere;}
 .inline-speaker-btn.hr .inline-speaker-name{color:var(--violet);}
 .inline-speaker-btn.emp .inline-speaker-name{color:var(--teal);}
+.inline-speaker-shortcut{font-family:var(--font-m);font-size:0.52rem;letter-spacing:0.06em;color:var(--ivory-faint);}
 
 /* Input row with OK button */
 .inline-input-row{position:relative;display:flex;flex:1;min-height:0;}
@@ -97,6 +71,13 @@
 .draft-banner button:focus-visible,.dictation-retry:focus-visible,.pause-recording-btn:focus-visible{outline:2px solid var(--violet);outline-offset:2px;}
 .recording-controls{display:flex;align-items:center;justify-content:center;gap:0.75rem;}
 .audio-status-row{display:flex;align-items:center;justify-content:center;gap:0.55rem;flex-wrap:wrap;}
+.speaker-source-hint{padding:0.65rem 1rem;color:var(--ivory-faint);font-family:var(--font-m);font-size:0.58rem;letter-spacing:0.04em;line-height:1.5;}
+.speaker-source-hint[hidden],.undo-turn-row[hidden],.undo-turn-btn[hidden]{display:none;}
+.undo-turn-row{display:flex;justify-content:flex-end;padding:0.45rem 1rem;}
+.undo-turn-btn{padding:0.35rem 0.65rem;border:1px solid var(--border-lit);border-radius:7px;background:var(--ink);color:var(--ivory-dim);font:inherit;font-size:0.75rem;cursor:pointer;}
+.undo-turn-btn:hover:not(:disabled){border-color:var(--violet);color:var(--violet);}
+.undo-turn-btn:focus-visible{outline:2px solid var(--violet);outline-offset:2px;}
+.undo-turn-btn:disabled{opacity:0.4;cursor:not-allowed;}
 @media(max-width:640px){.inline-speaker-buttons{grid-template-columns:1fr;}.transcript-turn-list{max-height:180px;}}
 </style>
 <style>
@@ -511,11 +492,12 @@ function appendTranscriptLanguage(fd) {
   if (sel && sel.value) fd.append('language', sel.value.toLowerCase());
 }
 
-function appendTranscribedText(text) {
+function appendTranscribedText(text, source) {
   text = String(text || '').replace(/\r\n?/g, '\n');
+  if (source === 'audio-upload' && text.trim()) setSpeakerSourceHint(true);
   var area = document.getElementById('transcriptArea');
   if (!area) {
-    loadTranscriptText(text, 'audio');
+    loadTranscriptText(text, source || 'audio');
     return;
   }
   var current = area.value || '';
@@ -617,6 +599,11 @@ function updateSpeakerPrompt() {
   } else {
     el.textContent = 'Who speaks first?';
   }
+}
+
+function setSpeakerSourceHint(visible) {
+  var hint = document.getElementById('speakerSourceHint');
+  if (hint) hint.hidden = !visible;
 }
 
 function updateSpeakerPressed() {
@@ -749,18 +736,24 @@ function renderTurns(keepScroll) {
     list.appendChild(row);
   });
   list.hidden = turns.length === 0;
+  updateUndoButton();
   if (turns.length) list.scrollTop = keepScroll ? prevScroll : list.scrollHeight;
+}
+
+function updateUndoButton() {
+  var btn = document.getElementById('undoTurnBtn');
+  if (!btn) return;
+  btn.hidden = turns.length === 0;
+  if (btn.parentNode) btn.parentNode.hidden = turns.length === 0;
+  var saveBtn = document.getElementById('saveBtn');
+  btn.disabled = !!saveBtn && saveBtn.textContent === 'Saving...';
 }
 
 function updateSaveState() {
   var btn = document.getElementById('saveBtn');
   if (!btn || btn.textContent === 'Saving...') return;
   var area = document.getElementById('transcriptArea');
-  if (area) {
-    btn.disabled = !area.value.trim();
-    return;
-  }
-  btn.disabled = !buildTranscriptText().trim();
+  btn.disabled = !(area && area.value.trim()) && !buildTranscriptText().trim();
 }
 
 function updateOkState() {
@@ -833,6 +826,33 @@ function saveTurn() {
   if (first) first.focus();
 }
 
+async function undoLastTurn() {
+  if (!turns.length) return;
+  var undoBtn = document.getElementById('undoTurnBtn');
+  if (undoBtn && undoBtn.disabled) return;
+  var area = document.getElementById('transcriptArea');
+  if (!area) return;
+  if (area.value.trim() && !await VooVrUI.ask('Replace what you are typing?', {
+    title: 'Undo last turn?',
+    accept: 'Replace text'
+  })) return;
+
+  var lastTurn = turns.pop();
+  currentSpeaker = lastTurn.type;
+  pendingLoad = null;
+  editingIndex = null;
+  area.value = lastTurn.text;
+  area.readOnly = false;
+  area.setSelectionRange(area.value.length, area.value.length);
+  updateSpeakerPressed();
+  updatePlaceholder();
+  renderTurns();
+  updateWordCount();
+  clearTimeout(draftSaveTimer);
+  saveDraft();
+  area.focus();
+}
+
 function loadTranscriptText(text, source) {
   text = String(text || '').replace(/\r\n?/g, '\n').trim();
   if (!text) return;
@@ -844,6 +864,7 @@ function loadTranscriptText(text, source) {
   } catch (e) { parsed = null; }
 
   if (parsed && parsed.hasExplicitLabels && parsed.lines && parsed.lines.length) {
+    setSpeakerSourceHint(false);
     turns = parsed.lines.map(function(line) {
       return {
         type: line.speakerType === 'hr' ? 'hr' : 'employee',
@@ -863,6 +884,7 @@ function loadTranscriptText(text, source) {
     return;
   }
 
+  setSpeakerSourceHint(source === 'image-upload' || source === 'file-upload');
   pendingLoad = { text: normalizeSpokenText(text), source: source };
   var prompt = document.getElementById('inlineSpeakerPrompt');
   if (prompt && !currentSpeaker) prompt.textContent = 'Select a speaker for the loaded text';
@@ -874,6 +896,7 @@ function resetTurns() {
   currentSpeaker = null;
   pendingLoad = null;
   editingIndex = null;
+  setSpeakerSourceHint(false);
   var area = document.getElementById('transcriptArea');
   if (area) {
     area.value = '';
@@ -949,6 +972,7 @@ function saveSession() {
   }
   document.getElementById('saveBtn').disabled = true;
   document.getElementById('saveBtn').textContent = 'Saving...';
+  updateUndoButton();
   fetch('/api/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -980,6 +1004,7 @@ function saveSession() {
   }).catch(function(err) {
     document.getElementById('saveBtn').disabled = false;
     document.getElementById('saveBtn').textContent = 'Save Transcript';
+    updateUndoButton();
     VooVrUI.show('Failed to save: ' + err.message);
   });
 }
@@ -1171,7 +1196,7 @@ function readTextFile(file) {
   var reader = new FileReader();
   reader.onload = function(e) {
     var text = String(e.target.result || '').replace(/^\uFEFF/, '');
-    loadTranscriptText(text, 'text');
+    loadTranscriptText(text, 'file-upload');
     setUploadStatus('textStatus', 'Loaded — edit below', 'success');
     showToast('Text loaded into transcript');
   };
@@ -1198,7 +1223,7 @@ function transcribeUploadedAudio() {
       return r.json();
     })
     .then(function(data) {
-      appendTranscribedText(data.text || '');
+      appendTranscribedText(data.text || '', 'audio-upload');
       setUploadStatus('audioStatus', 'Done — edit below', 'success');
       if (retryBtn) retryBtn.hidden = true;
       showToast('Audio transcribed successfully');
@@ -1224,7 +1249,7 @@ function extractUploadedImage() {
       return r.json();
     })
     .then(function(data) {
-      loadTranscriptText(data.text || '', 'image');
+      loadTranscriptText(data.text || '', 'image-upload');
       setUploadStatus('imageStatus', 'Done — edit below', 'success');
       showToast('Text extracted from image');
     })
@@ -1238,6 +1263,49 @@ function extractUploadedImage() {
 function updateTabCaption() {
   var caption = document.getElementById('inputTabCaption');
   if (caption) caption.textContent = TAB_CAPTIONS[activeInputTab] || '';
+}
+
+function hasOpenDialog() {
+  var modals = document.querySelectorAll('[role="dialog"], .modal, .popup, .dialog');
+  for (var i = 0; i < modals.length; i++) {
+    var modal = modals[i];
+    var style = window.getComputedStyle ? window.getComputedStyle(modal) : null;
+    if (modal.hidden || (style && (style.display === 'none' || style.visibility === 'hidden'))) continue;
+    if (modal.offsetWidth > 0 || modal.offsetHeight > 0 || modal.getClientRects().length > 0) return true;
+  }
+  return false;
+}
+
+function handleSpeakerShortcuts(e) {
+  if (e.altKey || e.defaultPrevented || hasOpenDialog()) return;
+  var target = e.target;
+  var transcriptArea = document.getElementById('transcriptArea');
+  var targetTag = target && target.tagName;
+  if (target !== transcriptArea && (targetTag === 'INPUT' || targetTag === 'TEXTAREA' || targetTag === 'SELECT')) return;
+  if (target && target.isContentEditable) return;
+
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    var okBtn = document.getElementById('inlineOkBtn');
+    if (okBtn && !okBtn.disabled) {
+      e.preventDefault();
+      okBtn.click();
+    }
+    return;
+  }
+  if (e.ctrlKey || e.metaKey || e.shiftKey || target === transcriptArea) return;
+
+  var speakerBar = document.getElementById('inlineSpeakerBar');
+  var speakerStyle = speakerBar && window.getComputedStyle ? window.getComputedStyle(speakerBar) : null;
+  if (!speakerBar || speakerBar.hidden ||
+      (speakerStyle && (speakerStyle.display === 'none' || speakerStyle.visibility === 'hidden')) ||
+      !(speakerBar.offsetWidth > 0 || speakerBar.offsetHeight > 0 || speakerBar.getClientRects().length > 0)) return;
+
+  var speakerBtn = e.key === '1' ? document.getElementById('inlineHrBtn') :
+    e.key === '2' ? document.getElementById('inlineEmpBtn') : null;
+  if (speakerBtn) {
+    e.preventDefault();
+    speakerBtn.click();
+  }
 }
 
 function switchInputTab(name) {
@@ -1303,7 +1371,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {
       if (saveBtn.textContent === 'Saving...') return;
-      saveBtn.disabled = !transcriptArea.value.trim();
+      updateSaveState();
     }
   });
   transcriptArea.addEventListener('paste', function(e) {
@@ -1327,8 +1395,10 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   transcriptArea.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      var okBtn = document.getElementById('inlineOkBtn');
+      if (e.altKey || hasOpenDialog() || !okBtn || okBtn.disabled) return;
       e.preventDefault();
-      saveTurn();
+      okBtn.click();
     }
   });
 
@@ -1340,16 +1410,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (okBtn) okBtn.addEventListener('click', saveTurn);
 
 
-  var guide = document.getElementById('fmtGuide');
-  try {
-    // Open on a first visit so the rules are seen once, then stay out of the way.
-    if (!localStorage.getItem('voovr-fmt-guide-seen')) {
-      guide.open = true;
-      localStorage.setItem('voovr-fmt-guide-seen', '1');
-    }
-  } catch (e) {}
   document.getElementById('saveBtn').addEventListener('click', saveSession);
   document.getElementById('discardBtn').addEventListener('click', discardSession);
+  document.getElementById('undoTurnBtn').addEventListener('click', undoLastTurn);
 
   document.querySelectorAll('.input-tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
@@ -1384,6 +1447,7 @@ document.addEventListener('DOMContentLoaded', function() {
   updateTabCaption();
   wfBuildBars();
 
+  document.addEventListener('keydown', handleSpeakerShortcuts);
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       if (e.defaultPrevented) return;
@@ -1529,40 +1593,6 @@ function warnBeforeUnload(e) {
           <div class="input-tab-caption" id="inputTabCaption">Live microphone — recording saved as WebM</div>
           <div class="input-tab-hint">Already have the text? Just paste it on the right &rarr;</div>
 
-          <details class="fmt-guide" id="fmtGuide">
-            <summary>
-              <span class="fmt-guide-title">How speaker turns work</span>
-              <span class="fmt-guide-sub">Select speaker, type dialog, press OK</span>
-            </summary>
-            <div class="fmt-guide-body">
-              <div class="fmt-col">
-                <h4 class="fmt-h">The flow</h4>
-                <ol class="fmt-rules">
-                  <li>Select <b>HR</b> or <b>Employee</b> for the turn.</li>
-                  <li>Type the dialog in the textbox after selecting a speaker.</li>
-                  <li>Press <b>OK</b> to save the turn.</li>
-                  <li>Repeat for every turn. You can edit or delete finished turns.</li>
-                </ol>
-              </div>
-              <div class="fmt-col">
-                <h4 class="fmt-h">Good to know</h4>
-                <dl class="fmt-types">
-                  <div><dt><b>Automatic labels &mdash; </b></dt><dd>Turns are saved as labeled lines automatically.</dd></div>
-                  <div><dt><b>Reset &mdash; </b></dt><dd>Clear or Discard will reset all turns.</dd></div>
-                </dl>
-              </div>
-              <div class="fmt-col">
-                <h4 class="fmt-h">By how you add it</h4>
-                <dl class="fmt-types">
-                  <div><dt><b>Paste or .txt &mdash; </b></dt><dd>drop in plain text (.txt).</dd></div>
-                  <div><dt><b>WhatsApp chat &mdash; </b></dt><dd>in WhatsApp choose <b>Export chat &rarr; Without media</b> and upload the .txt.</dd></div>
-                  <div><dt><b>Image or photo &mdash; </b></dt><dd>the picture is read word for word; review the extracted text.</dd></div>
-                  <div><dt><b>Audio &mdash; </b></dt><dd>record or upload to transcribe audio.</dd></div>
-                </dl>
-              </div>
-            </div>
-          </details>
-
           <!-- Two-column layout -->
           <div class="dictation-grid">
 
@@ -1698,12 +1728,17 @@ function warnBeforeUnload(e) {
                     <button type="button" class="inline-speaker-btn hr" id="inlineHrBtn" data-speaker="hr" aria-pressed="false">
                       <span class="inline-speaker-role">HR</span>
                       <span class="inline-speaker-name" id="inlineHrName">HR</span>
+                      <span class="inline-speaker-shortcut">HR&nbsp;&nbsp;1</span>
                     </button>
                     <button type="button" class="inline-speaker-btn emp" id="inlineEmpBtn" data-speaker="employee" aria-pressed="false">
                       <span class="inline-speaker-role">Employee</span>
                       <span class="inline-speaker-name" id="inlineEmpName">Employee</span>
+                      <span class="inline-speaker-shortcut">Employee&nbsp;&nbsp;2</span>
                     </button>
                   </div>
+                </div>
+                <div class="undo-turn-row" hidden>
+                  <button type="button" class="undo-turn-btn" id="undoTurnBtn" hidden>Undo last turn</button>
                 </div>
                 <div class="transcript-editor" id="transcriptEditor">
                   <div class="draft-banner" id="draftBanner" hidden>
@@ -1713,9 +1748,10 @@ function warnBeforeUnload(e) {
                   </div>
                   <div class="inline-input-row">
                     <textarea class="transcript-area" id="transcriptArea" placeholder="Select a speaker to start typing…" readonly></textarea>
-                    <button type="button" class="inline-ok-btn" id="inlineOkBtn" disabled aria-label="Save this turn">OK</button>
+                    <button type="button" class="inline-ok-btn" id="inlineOkBtn" disabled aria-label="Save this turn">OK <span class="inline-speaker-shortcut">Ctrl+Enter</span></button>
                   </div>
                 </div>
+                <div class="speaker-source-hint" id="speakerSourceHint" hidden>Speaker names are set in the Conversation Workspace after saving.</div>
                 <div class="transcript-card-footer">
                   <div class="transcript-meta"><span id="wordCount">0 words · 0 characters</span></div>
                   <select class="transcript-lang-select" id="transcriptLang" aria-label="Transcript language">
