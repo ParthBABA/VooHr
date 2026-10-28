@@ -90,6 +90,13 @@
 .inline-ok-btn:hover:not(:disabled){transform:translateY(-1px);}
 .inline-ok-btn:focus-visible{outline:2px solid var(--ivory);outline-offset:2px;}
 .inline-ok-btn:disabled{opacity:0.35;cursor:not-allowed;box-shadow:none;}
+.draft-banner{display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;padding:0.65rem 1rem;border-bottom:1px solid var(--border);background:var(--elevated);color:var(--ivory-dim);font-size:0.78rem;}
+.draft-banner[hidden],.dictation-retry[hidden],.pause-recording-btn[hidden]{display:none;}
+.draft-banner button,.dictation-retry,.pause-recording-btn{padding:0.35rem 0.65rem;border:1px solid var(--border-lit);border-radius:7px;background:var(--ink);color:var(--ivory);font:inherit;cursor:pointer;}
+.draft-banner button:hover,.dictation-retry:hover,.pause-recording-btn:hover{border-color:var(--violet);color:var(--violet);}
+.draft-banner button:focus-visible,.dictation-retry:focus-visible,.pause-recording-btn:focus-visible{outline:2px solid var(--violet);outline-offset:2px;}
+.recording-controls{display:flex;align-items:center;justify-content:center;gap:0.75rem;}
+.audio-status-row{display:flex;align-items:center;justify-content:center;gap:0.55rem;flex-wrap:wrap;}
 @media(max-width:640px){.inline-speaker-buttons{grid-template-columns:1fr;}.transcript-turn-list{max-height:180px;}}
 </style>
 <style>
@@ -145,6 +152,9 @@ var audioChunks = [];
 var recordingTimer = null;
 var recordingSeconds = 0;
 var isRecording = false;
+var recordingMimeType = '';
+var recordingExtension = 'webm';
+var draftSaveTimer = null;
 
 /* ── Live waveform visualizer (Web Audio API) ── */
 var wfAudioCtx = null;
@@ -169,7 +179,7 @@ var AUDIO_MAX_BYTES = 25 * 1024 * 1024;
 var IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 
 var TAB_CAPTIONS = {
-  record: 'Live microphone — recording saved as WebM',
+  record: 'Live microphone recording',
   'upload-audio': 'MP3, WAV, M4A, OGG, WEBM · up to 25MB',
   'upload-image': 'PNG, JPG, JPEG, WEBP · up to 10MB',
   'upload-text': 'Plain text (.TXT) — drops straight into the transcript'
@@ -201,6 +211,39 @@ function formatTime(sec) {
 
 function updateTimer() {
   document.getElementById('recordingTimer').textContent = formatTime(recordingSeconds);
+}
+
+/* 1. Draft autosave */
+function draftStorageKey() {
+  return 'voovr-dictation-draft-' + employeeId;
+}
+
+function saveDraft() {
+  var area = document.getElementById('transcriptArea');
+  if (!area) return;
+  try {
+    if (area.value) localStorage.setItem(draftStorageKey(), area.value);
+    else localStorage.removeItem(draftStorageKey());
+  } catch (e) {}
+}
+
+function removeDraft() {
+  clearTimeout(draftSaveTimer);
+  draftSaveTimer = null;
+  try {
+    localStorage.removeItem(draftStorageKey());
+  } catch (e) {}
+}
+
+function hideDraftBanner() {
+  var banner = document.getElementById('draftBanner');
+  if (banner) banner.hidden = true;
+}
+
+function getSyncUrl() {
+  return employeeId
+    ? '/sync?employee_id=' + encodeURIComponent(employeeId)
+    : '/dashboard';
 }
 
 function setStatus(text) {
@@ -326,15 +369,66 @@ function wfStopVisualizer() {
   wfSettle(false);
 }
 
+/* 6. Pause / resume recording */
+function wfPauseVisualizer() {
+  if (wfRafId) { cancelAnimationFrame(wfRafId); wfRafId = null; }
+  wfRunning = false;
+}
+
+function wfResumeVisualizer() {
+  if (!wfAnalyser || wfRunning) return;
+  wfRunning = true;
+  if (wfReducedMotion) {
+    wfSettle(false);
+    return;
+  }
+  wfRafId = requestAnimationFrame(wfTick);
+}
+
+/* 3. Recording format for Safari / iPhone */
+function getRecordingExtension(mimeType) {
+  if (mimeType.indexOf('mp4') !== -1) return 'm4a';
+  if (mimeType.indexOf('ogg') !== -1) return 'ogg';
+  return 'webm';
+}
+
 function startRecording() {
   if (isRecording) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    var secureMessage = 'Recording needs a secure (HTTPS) connection.';
+    setStatus(secureMessage);
+    VooVrUI.show(secureMessage);
+    return;
+  }
   navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
     isRecording = true;
     audioChunks = [];
     recordingSeconds = 0;
     updateTimer();
     wfStartVisualizer(stream);
-    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    var supportedTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
+    var selectedType = '';
+    if (MediaRecorder.isTypeSupported) {
+      for (var i = 0; i < supportedTypes.length; i++) {
+        if (MediaRecorder.isTypeSupported(supportedTypes[i])) {
+          selectedType = supportedTypes[i];
+          break;
+        }
+      }
+    }
+    mediaRecorder = selectedType
+      ? new MediaRecorder(stream, { mimeType: selectedType })
+      : new MediaRecorder(stream);
+    recordingMimeType = mediaRecorder.mimeType || selectedType || '';
+    recordingExtension = getRecordingExtension(recordingMimeType);
+    var retryBtn = document.getElementById('recordRetryBtn');
+    if (retryBtn) retryBtn.hidden = true;
+    var pauseBtn = document.getElementById('pauseRecordingBtn');
+    if (pauseBtn) {
+      pauseBtn.hidden = false;
+      pauseBtn.textContent = 'Pause';
+      pauseBtn.setAttribute('aria-label', 'Pause recording');
+    }
     mediaRecorder.ondataavailable = function(e) {
       if (e.data.size > 0) audioChunks.push(e.data);
     };
@@ -345,6 +439,7 @@ function startRecording() {
       clearInterval(recordingTimer);
       setStatus('Processing audio...');
       document.getElementById('micBtn').classList.remove('recording');
+      if (pauseBtn) pauseBtn.hidden = true;
       processAudio();
     };
     mediaRecorder.start(250);
@@ -357,13 +452,49 @@ function startRecording() {
     document.getElementById('recordIcon').style.display = 'none';
     document.getElementById('stopIcon').style.display = '';
   }).catch(function(err) {
-    VooVrUI.show('Microphone access denied. Please allow microphone permissions.');
+    /* 4. Specific microphone errors */
+    var message;
+    if (err.name === 'NotAllowedError') {
+      message = "Microphone permission is blocked. Allow it in your browser's site settings.";
+    } else if (err.name === 'NotFoundError') {
+      message = 'No microphone found. Connect one and try again.';
+    } else if (err.name === 'NotReadableError') {
+      message = 'Your microphone is being used by another app. Close it and try again.';
+    } else {
+      message = 'Could not start recording: ' + err.message;
+    }
+    setStatus(message);
+    VooVrUI.show(message);
   });
 }
 
 function stopRecording() {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
     mediaRecorder.stop();
+  }
+}
+
+function togglePauseRecording() {
+  if (!mediaRecorder || !isRecording) return;
+  var pauseBtn = document.getElementById('pauseRecordingBtn');
+  if (mediaRecorder.state === 'recording') {
+    mediaRecorder.pause();
+    clearInterval(recordingTimer);
+    recordingTimer = null;
+    wfPauseVisualizer();
+    setStatus('Paused');
+    pauseBtn.textContent = 'Resume';
+    pauseBtn.setAttribute('aria-label', 'Resume recording');
+  } else if (mediaRecorder.state === 'paused') {
+    mediaRecorder.resume();
+    recordingTimer = setInterval(function() {
+      recordingSeconds++;
+      updateTimer();
+    }, 1000);
+    wfResumeVisualizer();
+    setStatus('Recording... tap to stop');
+    pauseBtn.textContent = 'Pause';
+    pauseBtn.setAttribute('aria-label', 'Pause recording');
   }
 }
 
@@ -380,17 +511,47 @@ function appendTranscriptLanguage(fd) {
   if (sel && sel.value) fd.append('language', sel.value.toLowerCase());
 }
 
+function appendTranscribedText(text) {
+  text = String(text || '').replace(/\r\n?/g, '\n');
+  var area = document.getElementById('transcriptArea');
+  if (!area) {
+    loadTranscriptText(text, 'audio');
+    return;
+  }
+  var current = area.value || '';
+  if (current.trim()) {
+    var newText = (current.replace(/\s+$/, '') + '\n' + text.replace(/^\s+/, '')).trim();
+    area.value = newText;
+    updateWordCount();
+    updateOkState();
+    var saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) saveBtn.disabled = !area.value.trim();
+    return;
+  }
+  area.value = text.trim();
+  updateWordCount();
+  updateOkState();
+  var saveBtn2 = document.getElementById('saveBtn');
+  if (saveBtn2) saveBtn2.disabled = !area.value.trim();
+}
+
+/* 5. Retry transcription from the retained recording chunks or selected upload */
 function processAudio() {
+  var retryBtn = document.getElementById('recordRetryBtn');
+  if (retryBtn) retryBtn.hidden = true;
   if (audioChunks.length === 0) {
     setStatus('No audio recorded');
     document.getElementById('recordIcon').style.display = '';
     document.getElementById('stopIcon').style.display = 'none';
     return;
   }
-  var blob = new Blob(audioChunks, { type: 'audio/webm' });
+  var audioType = recordingMimeType || (audioChunks[0] && audioChunks[0].type) || '';
+  var blob = audioType ? new Blob(audioChunks, { type: audioType }) : new Blob(audioChunks);
+  recordingExtension = getRecordingExtension(blob.type || audioType);
   var formData = new FormData();
-  formData.append('audio', blob, 'recording.webm');
+  formData.append('audio', blob, 'recording.' + recordingExtension);
   appendTranscriptLanguage(formData);
+  setStatus('Processing audio...');
   fetch('/api/transcribe', {
     method: 'POST',
     body: formData,
@@ -398,12 +559,14 @@ function processAudio() {
     if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'transcription failed'); });
     return r.json();
   }).then(function(data) {
-    loadTranscriptText(data.text || '', 'audio');
+    appendTranscribedText(data.text || '');
     setStatus('Transcription ready — edit if needed');
+    if (retryBtn) retryBtn.hidden = true;
     document.getElementById('recordIcon').style.display = '';
     document.getElementById('stopIcon').style.display = 'none';
   }).catch(function(err) {
     setStatus('Error: ' + err.message);
+    if (retryBtn) retryBtn.hidden = false;
     document.getElementById('recordIcon').style.display = '';
     document.getElementById('stopIcon').style.display = 'none';
   });
@@ -592,6 +755,11 @@ function renderTurns(keepScroll) {
 function updateSaveState() {
   var btn = document.getElementById('saveBtn');
   if (!btn || btn.textContent === 'Saving...') return;
+  var area = document.getElementById('transcriptArea');
+  if (area) {
+    btn.disabled = !area.value.trim();
+    return;
+  }
   btn.disabled = !buildTranscriptText().trim();
 }
 
@@ -616,6 +784,14 @@ function updateWordCount() {
   var count = trimmed ? trimmed.split(/\s+/).length : 0;
   var el = document.getElementById('wordCount');
   if (el) el.textContent = count + ' words · ' + text.length + ' characters';
+  var saveBtn = document.getElementById('saveBtn');
+  if (saveBtn && saveBtn.textContent !== 'Saving...') {
+    if (area) {
+      saveBtn.disabled = !area.value.trim();
+    } else {
+      saveBtn.disabled = !trimmed;
+    }
+  }
   updateSaveState();
   updateOkState();
 }
@@ -709,6 +885,8 @@ function resetTurns() {
   updateOkState();
   renderTurns();
   updateWordCount();
+  var saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) saveBtn.disabled = true;
 }
 
 function fallbackCopyText(text, done) {
@@ -738,12 +916,33 @@ function copyTranscript() {
 }
 
 async function clearTranscript() {
-  if (buildTranscriptText().trim() && !await VooVrUI.ask('This will remove the transcript text.', {title: 'Clear transcript?', accept: 'Clear transcript'})) return;
+  var area = document.getElementById('transcriptArea');
+  if ((area && area.value.trim()) || buildTranscriptText().trim()) {
+    if (!await VooVrUI.ask('This will remove the transcript text.', {title: 'Clear transcript?', accept: 'Clear transcript'})) return;
+  }
+  if (area) {
+    area.value = '';
+  }
   resetTurns();
+  removeDraft();
+  hideDraftBanner();
+  var saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) saveBtn.disabled = true;
 }
 
+/* 2. Redirect after save / discard */
 function saveSession() {
   var text = buildTranscriptText().trim();
+  var area = document.getElementById('transcriptArea');
+  var activeDraft = area ? normalizeSpokenText(area.value) : '';
+  if (activeDraft && !currentSpeaker) {
+    VooVrUI.show('Select a speaker before saving the current text.');
+    return;
+  }
+  if (activeDraft) {
+    var activeTurn = speakerSerialLabel(currentSpeaker) + ': ' + activeDraft;
+    text = text ? text + '\n' + activeTurn : activeTurn;
+  }
   if (!text) {
     VooVrUI.show('Transcript is empty. Record, upload, or type something first.');
     return;
@@ -760,15 +959,23 @@ function saveSession() {
       duration_seconds: recordingSeconds,
       source: 'voice_dictation',
       recording_device: 'browser',
-      recording_type: 'webm',
+      recording_type: recordingExtension,
     }),
   }).then(function(r) {
     if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'save failed'); });
     return r.json();
-  }).then(function() {
-    showToast('Session saved successfully. Ready for AI Sync.');
+  }).then(function(data) {
+    removeDraft();
+    hideDraftBanner();
+    showToast('Transcript saved');
     setTimeout(function() {
-      window.location.href = '/dashboard';
+      window.removeEventListener('beforeunload', warnBeforeUnload);
+      if (data && data.id !== undefined && data.id !== null && data.id !== '') {
+        window.location.href = '/workspace?session_id=' + encodeURIComponent(data.id) +
+          '&employee_id=' + encodeURIComponent(employeeId || '');
+      } else {
+        window.location.href = '/sync?employee_id=' + encodeURIComponent(employeeId || '');
+      }
     }, 2000);
   }).catch(function(err) {
     document.getElementById('saveBtn').disabled = false;
@@ -778,11 +985,14 @@ function saveSession() {
 }
 
 async function discardSession() {
-  if (buildTranscriptText().trim()) {
+  var area = document.getElementById('transcriptArea');
+  if (buildTranscriptText().trim() || (area && area.value.trim())) {
     if (!await VooVrUI.ask('Your unsaved recording and transcript will be discarded.', {title: 'Discard recording?', accept: 'Discard recording'})) return;
   }
   resetTurns();
-  window.location.href = '/dashboard';
+  removeDraft();
+  window.removeEventListener('beforeunload', warnBeforeUnload);
+  window.location.href = getSyncUrl();
 }
 
 function showToast(msg, type) {
@@ -887,6 +1097,8 @@ function onAudioSelected(file) {
   var dz = document.getElementById('audioDropzone');
   var meta = document.getElementById('audioFileMeta');
   var btn = document.getElementById('transcribeAudioBtn');
+  var retryBtn = document.getElementById('uploadAudioRetryBtn');
+  if (retryBtn) retryBtn.hidden = true;
   var err = validateAudioFile(file);
   if (err) {
     audioFile = null;
@@ -973,6 +1185,8 @@ function readTextFile(file) {
 function transcribeUploadedAudio() {
   if (!audioFile) return;
   var btn = document.getElementById('transcribeAudioBtn');
+  var retryBtn = document.getElementById('uploadAudioRetryBtn');
+  if (retryBtn) retryBtn.hidden = true;
   btn.disabled = true;
   setUploadStatus('audioStatus', 'Transcribing…', '');
   var fd = new FormData();
@@ -984,13 +1198,15 @@ function transcribeUploadedAudio() {
       return r.json();
     })
     .then(function(data) {
-      loadTranscriptText(data.text || '', 'audio');
+      appendTranscribedText(data.text || '');
       setUploadStatus('audioStatus', 'Done — edit below', 'success');
+      if (retryBtn) retryBtn.hidden = true;
       showToast('Audio transcribed successfully');
     })
     .catch(function(err) {
       btn.disabled = false;
       setUploadStatus('audioStatus', 'Error: ' + err.message, 'error');
+      if (retryBtn) retryBtn.hidden = false;
       showToast('Transcription failed: ' + err.message, 'error');
     });
 }
@@ -1045,14 +1261,50 @@ function switchInputTab(name) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  var transcriptArea = document.getElementById('transcriptArea');
+  var draftBanner = document.getElementById('draftBanner');
+  var restoreDraftBtn = document.getElementById('restoreDraftBtn');
+  var discardDraftBtn = document.getElementById('discardDraftBtn');
+  var savedDraft = '';
+  try {
+    savedDraft = localStorage.getItem(draftStorageKey()) || '';
+  } catch (e) {}
+  if (savedDraft && !transcriptArea.value.trim() && draftBanner) {
+    draftBanner.hidden = false;
+    if (restoreDraftBtn) restoreDraftBtn.addEventListener('click', function() {
+      transcriptArea.value = savedDraft;
+      transcriptArea.readOnly = false;
+      hideDraftBanner();
+      updateWordCount();
+      updateOkState();
+      transcriptArea.focus();
+    });
+    if (discardDraftBtn) discardDraftBtn.addEventListener('click', function() {
+      removeDraft();
+      hideDraftBanner();
+    });
+  }
+  transcriptArea.addEventListener('input', function() {
+    clearTimeout(draftSaveTimer);
+    draftSaveTimer = setTimeout(saveDraft, 3000);
+  });
+  window.addEventListener('beforeunload', warnBeforeUnload);
+
   var backBtn = document.getElementById('backBtn');
   if (backBtn) backBtn.addEventListener('click', function(e) { e.preventDefault(); discardSession(); });
   document.getElementById('micBtn').addEventListener('click', toggleRecording);
+  document.getElementById('pauseRecordingBtn').addEventListener('click', togglePauseRecording);
+  document.getElementById('recordRetryBtn').addEventListener('click', processAudio);
+  document.getElementById('uploadAudioRetryBtn').addEventListener('click', transcribeUploadedAudio);
 
-  var transcriptArea = document.getElementById('transcriptArea');
   transcriptArea.addEventListener('input', function() {
     updateOkState();
     updateWordCount();
+    var saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+      if (saveBtn.textContent === 'Saving...') return;
+      saveBtn.disabled = !transcriptArea.value.trim();
+    }
   });
   transcriptArea.addEventListener('paste', function(e) {
     if (transcriptArea.value.trim()) return;
@@ -1134,6 +1386,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
+      if (e.defaultPrevented) return;
+      var target = e.target;
+      var tag = target ? target.tagName : '';
+      if (tag === 'TEXTAREA' || tag === 'INPUT') {
+        return;
+      }
+      var openModal = false;
+      var modals = document.querySelectorAll('[role="dialog"], .modal, .popup, .dialog');
+      for (var mi = 0; mi < modals.length; mi++) {
+        var m = modals[mi];
+        var style = window.getComputedStyle ? window.getComputedStyle(m) : null;
+        if (style && style.display === 'none') continue;
+        if (style && style.visibility === 'hidden') continue;
+        if (m.hidden) continue;
+        if (m.offsetWidth > 0 || m.offsetHeight > 0 || m.getClientRects().length > 0) {
+          openModal = true;
+          break;
+        }
+      }
+      if (openModal) {
+        return;
+      }
       if (editingIndex !== null) {
         editingIndex = null;
         renderTurns(true);
@@ -1148,13 +1422,15 @@ document.addEventListener('DOMContentLoaded', function() {
         updatePlaceholder();
         updateOkState();
         updateWordCount();
+        var saveBtnEsc = document.getElementById('saveBtn');
+        if (saveBtnEsc) saveBtnEsc.disabled = true;
         e.preventDefault();
         return;
       }
       discardSession();
     }
-    var tag = e.target.tagName;
-    if (e.key === ' ' && activeInputTab === 'record' && tag !== 'TEXTAREA' && tag !== 'INPUT' && tag !== 'BUTTON') {
+    var tag2 = e.target.tagName;
+    if (e.key === ' ' && activeInputTab === 'record' && tag2 !== 'TEXTAREA' && tag2 !== 'INPUT' && tag2 !== 'BUTTON') {
       e.preventDefault();
       toggleRecording();
     }
@@ -1165,6 +1441,15 @@ document.addEventListener('DOMContentLoaded', function() {
   updateSpeakerPressed();
   updatePlaceholder();
 });
+
+/* 1. Draft autosave */
+function warnBeforeUnload(e) {
+  var area = document.getElementById('transcriptArea');
+  if (area && area.value.trim()) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+}
 </script>
 
 <div class="page-wrapper">
@@ -1290,11 +1575,15 @@ document.addEventListener('DOMContentLoaded', function() {
                   <div class="rec-status">
                     <span class="rec-status-dot"></span>
                     <span id="recordingStatus">Tap to start recording</span>
+                    <button type="button" class="dictation-retry" id="recordRetryBtn" hidden>Retry</button>
                   </div>
-                  <button class="mic-btn" id="micBtn" title="Tap to record">
-                    <svg id="recordIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                    <svg id="stopIcon" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none;"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-                  </button>
+                  <div class="recording-controls">
+                    <button class="mic-btn" id="micBtn" title="Tap to record">
+                      <svg id="recordIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                      <svg id="stopIcon" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none;"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                    </button>
+                    <button type="button" class="pause-recording-btn" id="pauseRecordingBtn" hidden>Pause</button>
+                  </div>
                   <div class="timer" id="recordingTimer">00:00</div>
                   <div class="waveform" id="waveform" role="img" aria-label="Live audio waveform" aria-hidden="false">
                     <div class="wf-baseline"></div>
@@ -1334,7 +1623,10 @@ document.addEventListener('DOMContentLoaded', function() {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                       Transcribe
                     </button>
-                    <div class="status-text" id="audioStatus">No file selected</div>
+                    <div class="audio-status-row">
+                      <div class="status-text" id="audioStatus">No file selected</div>
+                      <button type="button" class="dictation-retry" id="uploadAudioRetryBtn" hidden>Retry</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1414,6 +1706,11 @@ document.addEventListener('DOMContentLoaded', function() {
                   </div>
                 </div>
                 <div class="transcript-editor" id="transcriptEditor">
+                  <div class="draft-banner" id="draftBanner" hidden>
+                    <span>Restore your unsaved draft?</span>
+                    <button type="button" id="restoreDraftBtn">Restore</button>
+                    <button type="button" id="discardDraftBtn">Discard</button>
+                  </div>
                   <div class="inline-input-row">
                     <textarea class="transcript-area" id="transcriptArea" placeholder="Select a speaker to start typing…" readonly></textarea>
                     <button type="button" class="inline-ok-btn" id="inlineOkBtn" disabled aria-label="Save this turn">OK</button>
