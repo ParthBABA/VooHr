@@ -71,6 +71,9 @@
 .draft-banner button:focus-visible,.dictation-retry:focus-visible,.pause-recording-btn:focus-visible{outline:2px solid var(--violet);outline-offset:2px;}
 .recording-controls{display:flex;align-items:center;justify-content:center;gap:0.75rem;}
 .audio-status-row{display:flex;align-items:center;justify-content:center;gap:0.55rem;flex-wrap:wrap;}
+.no-employee-message{margin:0 0 1rem;padding:0.75rem 1rem;border:1px solid var(--border);border-radius:9px;background:var(--elevated);color:var(--ivory);font-size:0.85rem;}
+.no-employee-message[hidden]{display:none;}
+.no-employee-message a{color:var(--violet);font-weight:600;}
 .speaker-source-hint{padding:0.65rem 1rem;color:var(--ivory-faint);font-family:var(--font-m);font-size:0.58rem;letter-spacing:0.04em;line-height:1.5;}
 .speaker-source-hint[hidden],.undo-turn-row[hidden],.undo-turn-btn[hidden]{display:none;}
 .undo-turn-row{display:flex;justify-content:flex-end;padding:0.45rem 1rem;}
@@ -136,6 +139,9 @@ var isRecording = false;
 var recordingMimeType = '';
 var recordingExtension = 'webm';
 var draftSaveTimer = null;
+var transcriptSource = '';
+var transcriptRecordingType = '';
+var transcriptDurationSeconds = 0;
 
 /* ── Live waveform visualizer (Web Audio API) ── */
 var wfAudioCtx = null;
@@ -165,6 +171,26 @@ var TAB_CAPTIONS = {
   'upload-image': 'PNG, JPG, JPEG, WEBP · up to 10MB',
   'upload-text': 'Plain text (.TXT) — drops straight into the transcript'
 };
+
+function configureEmployeeControls() {
+  var noEmployee = !employeeId;
+  var message = document.getElementById('noEmployeeMessage');
+  if (message) message.hidden = !noEmployee;
+  if (!noEmployee) return;
+
+  ['micBtn', 'tabBtn-upload-audio', 'tabBtn-upload-image', 'tabBtn-upload-text',
+    'transcribeAudioBtn', 'extractImageBtn', 'uploadAudioRetryBtn',
+    'audioInput', 'imageInput', 'textInput', 'saveBtn'].forEach(function(id) {
+    var control = document.getElementById(id);
+    if (control) control.disabled = true;
+  });
+  ['audioDropzone', 'imageDropzone', 'textDropzone'].forEach(function(id) {
+    var dropzone = document.getElementById(id);
+    if (!dropzone) return;
+    dropzone.setAttribute('aria-disabled', 'true');
+    dropzone.tabIndex = -1;
+  });
+}
 
 function loadEmployee() {
   if (!employeeId) {
@@ -492,9 +518,13 @@ function appendTranscriptLanguage(fd) {
   if (sel && sel.value) fd.append('language', sel.value.toLowerCase());
 }
 
-function appendTranscribedText(text, source) {
+function appendTranscribedText(text, source, recordingType, recordedLive) {
   text = String(text || '').replace(/\r\n?/g, '\n');
-  if (source === 'audio-upload' && text.trim()) setSpeakerSourceHint(true);
+  if (source === 'audio' && text.trim()) {
+    transcriptSource = 'audio';
+    transcriptRecordingType = recordingType || recordingExtension;
+    transcriptDurationSeconds = recordedLive ? recordingSeconds : 0;
+  }
   var area = document.getElementById('transcriptArea');
   if (!area) {
     loadTranscriptText(text, source || 'audio');
@@ -541,7 +571,7 @@ function processAudio() {
     if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'transcription failed'); });
     return r.json();
   }).then(function(data) {
-    appendTranscribedText(data.text || '');
+    appendTranscribedText(data.text || '', 'audio', recordingExtension, true);
     setStatus('Transcription ready — edit if needed');
     if (retryBtn) retryBtn.hidden = true;
     document.getElementById('recordIcon').style.display = '';
@@ -752,6 +782,10 @@ function updateUndoButton() {
 function updateSaveState() {
   var btn = document.getElementById('saveBtn');
   if (!btn || btn.textContent === 'Saving...') return;
+  if (!employeeId) {
+    btn.disabled = true;
+    return;
+  }
   var area = document.getElementById('transcriptArea');
   btn.disabled = !(area && area.value.trim()) && !buildTranscriptText().trim();
 }
@@ -856,6 +890,9 @@ async function undoLastTurn() {
 function loadTranscriptText(text, source) {
   text = String(text || '').replace(/\r\n?/g, '\n').trim();
   if (!text) return;
+  transcriptSource = source === 'text' || source === 'image' || source === 'audio' ? source : '';
+  transcriptRecordingType = transcriptSource === 'audio' ? transcriptRecordingType : '';
+  if (transcriptSource !== 'audio') transcriptDurationSeconds = 0;
   var parsed = null;
   try {
     if (window.VooVrTranscript) {
@@ -884,7 +921,7 @@ function loadTranscriptText(text, source) {
     return;
   }
 
-  setSpeakerSourceHint(source === 'image-upload' || source === 'file-upload');
+  setSpeakerSourceHint(source === 'image' || source === 'text');
   pendingLoad = { text: normalizeSpokenText(text), source: source };
   var prompt = document.getElementById('inlineSpeakerPrompt');
   if (prompt && !currentSpeaker) prompt.textContent = 'Select a speaker for the loaded text';
@@ -896,6 +933,9 @@ function resetTurns() {
   currentSpeaker = null;
   pendingLoad = null;
   editingIndex = null;
+  transcriptSource = '';
+  transcriptRecordingType = '';
+  transcriptDurationSeconds = 0;
   setSpeakerSourceHint(false);
   var area = document.getElementById('transcriptArea');
   if (area) {
@@ -955,6 +995,7 @@ async function clearTranscript() {
 
 /* 2. Redirect after save / discard */
 function saveSession() {
+  if (!employeeId) return;
   var text = buildTranscriptText().trim();
   var area = document.getElementById('transcriptArea');
   var activeDraft = area ? normalizeSpokenText(area.value) : '';
@@ -970,23 +1011,42 @@ function saveSession() {
     VooVrUI.show('Transcript is empty. Record, upload, or type something first.');
     return;
   }
+  var tooLongMessage = 'This transcript is too long to save (limit 512 KB). Please shorten or split it.';
+  if (new Blob([text]).size > 512 * 1024) {
+    VooVrUI.show(tooLongMessage);
+    return;
+  }
+  var languageSelect = document.getElementById('transcriptLang');
+  var sourceNames = {
+    audio: 'voice_dictation',
+    text: 'text_upload',
+    image: 'image_upload',
+    '': 'typed'
+  };
+  var source = sourceNames[transcriptSource] || 'typed';
+  var payload = {
+    employee_id: employeeId,
+    raw_text: text,
+    edited_text: text,
+    duration_seconds: source === 'voice_dictation' && transcriptDurationSeconds > 0 ? transcriptDurationSeconds : 0,
+    source: source,
+    language: (languageSelect ? languageSelect.value : 'en').toLowerCase()
+  };
+  if (source === 'voice_dictation') {
+    payload.recording_device = 'browser';
+    if (transcriptRecordingType) payload.recording_type = transcriptRecordingType;
+  }
   document.getElementById('saveBtn').disabled = true;
   document.getElementById('saveBtn').textContent = 'Saving...';
   updateUndoButton();
   fetch('/api/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      employee_id: employeeId,
-      raw_text: text,
-      edited_text: text,
-      duration_seconds: recordingSeconds,
-      source: 'voice_dictation',
-      recording_device: 'browser',
-      recording_type: recordingExtension,
-    }),
+    body: JSON.stringify(payload),
   }).then(function(r) {
-    if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'save failed'); });
+    if (!r.ok) return r.json().catch(function() { return {}; }).then(function(e) {
+      throw new Error(e.error || e.code || 'save_failed');
+    });
     return r.json();
   }).then(function(data) {
     removeDraft();
@@ -1002,10 +1062,32 @@ function saveSession() {
       }
     }, 2000);
   }).catch(function(err) {
-    document.getElementById('saveBtn').disabled = false;
-    document.getElementById('saveBtn').textContent = 'Save Transcript';
+    var saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Transcript';
     updateUndoButton();
-    VooVrUI.show('Failed to save: ' + err.message);
+    var errorMessages = {
+      raw_text_too_large: tooLongMessage,
+      edited_text_too_large: tooLongMessage,
+      employee_not_found: 'This employee could not be found. Go back and select the employee again.',
+      invalid_employee_id: 'This employee could not be found. Go back and select the employee again.',
+      not_authenticated: 'Your session has expired. Please sign in again.',
+      raw_text_required: 'Transcript is empty.'
+    };
+    var errorCode = err.message || '';
+    VooVrUI.show(errorMessages[errorCode] || 'Could not save the transcript. Please try again.');
+    if (errorCode === 'not_authenticated') {
+      var area = document.getElementById('transcriptArea');
+      if (area && area.value) {
+        try {
+          localStorage.setItem(draftStorageKey(), area.value);
+        } catch (e) {}
+      }
+      setTimeout(function() {
+        window.removeEventListener('beforeunload', warnBeforeUnload);
+        window.location.href = '/signin';
+      }, 2000);
+    }
   });
 }
 
@@ -1058,6 +1140,21 @@ function validateAudioFile(file) {
   }
   if (file.size > AUDIO_MAX_BYTES) return 'Audio file is too large — maximum 25MB.';
   return null;
+}
+
+function audioFileExtension(file) {
+  var ext = fileExt(file.name);
+  if (AUDIO_EXT.indexOf(ext) !== -1) return ext;
+  var mimeExtensions = {
+    'audio/mpeg': 'mp3',
+    'audio/mp3': 'mp3',
+    'audio/wav': 'wav',
+    'audio/x-wav': 'wav',
+    'audio/mp4': 'm4a',
+    'audio/ogg': 'ogg',
+    'audio/webm': 'webm'
+  };
+  return mimeExtensions[(file.type || '').toLowerCase()] || '';
 }
 
 function validateImageFile(file) {
@@ -1196,7 +1293,7 @@ function readTextFile(file) {
   var reader = new FileReader();
   reader.onload = function(e) {
     var text = String(e.target.result || '').replace(/^\uFEFF/, '');
-    loadTranscriptText(text, 'file-upload');
+    loadTranscriptText(text, 'text');
     setUploadStatus('textStatus', 'Loaded — edit below', 'success');
     showToast('Text loaded into transcript');
   };
@@ -1223,7 +1320,8 @@ function transcribeUploadedAudio() {
       return r.json();
     })
     .then(function(data) {
-      appendTranscribedText(data.text || '', 'audio-upload');
+      appendTranscribedText(data.text || '', 'audio', audioFileExtension(audioFile));
+      if (String(data.text || '').trim()) setSpeakerSourceHint(true);
       setUploadStatus('audioStatus', 'Done — edit below', 'success');
       if (retryBtn) retryBtn.hidden = true;
       showToast('Audio transcribed successfully');
@@ -1249,7 +1347,7 @@ function extractUploadedImage() {
       return r.json();
     })
     .then(function(data) {
-      loadTranscriptText(data.text || '', 'image-upload');
+      loadTranscriptText(data.text || '', 'image');
       setUploadStatus('imageStatus', 'Done — edit below', 'success');
       showToast('Text extracted from image');
     })
@@ -1329,6 +1427,7 @@ function switchInputTab(name) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  configureEmployeeControls();
   var transcriptArea = document.getElementById('transcriptArea');
   var draftBanner = document.getElementById('draftBanner');
   var restoreDraftBtn = document.getElementById('restoreDraftBtn');
@@ -1382,12 +1481,12 @@ document.addEventListener('DOMContentLoaded', function() {
     try { res = window.VooVrTranscript.parse(clip, { employeeName: employeeName, duration: 0 }); } catch (err) { res = null; }
     if (res && res.hasExplicitLabels) {
       e.preventDefault();
-      loadTranscriptText(clip, 'text');
+      loadTranscriptText(clip, '');
       return;
     }
     if (!currentSpeaker) {
       e.preventDefault();
-      loadTranscriptText(clip, 'text');
+      loadTranscriptText(clip, '');
     }
   });
   transcriptArea.addEventListener('focus', function() {
@@ -1570,6 +1669,10 @@ function warnBeforeUnload(e) {
     <div class="content-area">
       <div class="dictation-page">
         <div class="dictation-main">
+
+          <div class="no-employee-message" id="noEmployeeMessage" role="status" hidden>
+            Select an employee first. <a href="/dashboard">Go to the dashboard</a>
+          </div>
 
           <!-- Mode selector -->
           <div class="input-tabs" id="inputTabs" role="tablist" aria-label="How to add a transcript">
