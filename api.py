@@ -310,12 +310,17 @@ def delete_me():
     password = data.get("password") or ""
     totp_code = data.get("totpCode") or ""
 
+    org_doc = db.organizations.find_one({"_id": user["org_id"]}) if user.get("org_id") else None
+    if org_doc is not None:
+        if (data.get("orgName") or "").strip() != (org_doc.get("name") or "").strip():
+            return jsonify({"error": "org_name_mismatch"}), 400
+
     has_password = bool(user.get("password_hash"))
     totp_enabled = user.get("totp_enabled") is True
 
     # Re-confirmation is required only if the account has a configurable
     # factor (password and/or TOTP).  A Google-OAuth-only account has no
-    # password_hash and no TOTP, so there is nothing further to verify —
+    # password_hash and no TOTP, so there is nothing further to verify —"
     # the already-validated session is the confirmation.
     needs_confirmation = has_password or totp_enabled
     method = None

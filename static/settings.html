@@ -753,9 +753,9 @@ function maybeSyncTimezone(meData) {
             <div class="st-section st-card">
               <div class="st-sec-head">
                 <h2 class="st-sec-title">Your Data</h2>
-                <span class="st-sec-desc">Download, review, or delete your account data.</span>
+                <span class="st-sec-desc">Download a copy of your account data.</span>
               </div>
-              <p class="st-data-intro">Download a copy of what VooVr holds about you, review the categories below, or permanently delete your account at any time. Exports only include your own account and organization details &mdash; never other employees&rsquo; HR data. Deletion is immediate and irreversible: your account is removed on confirmation and, if you&rsquo;re the only member of your organization, the organization is removed with it.</p>
+              <p class="st-data-intro">Download a copy of what VooVr holds about you. Exports only include your own account and organization details &mdash; never other employees&rsquo; HR data.</p>
 
               <div class="st-row">
                 <div class="st-row-main">
@@ -767,17 +767,31 @@ function maybeSyncTimezone(meData) {
                 </div>
               </div>
             </div>
+          </div>
 
+          <!-- EMPLOYEE DIRECTORY (CSV) �?" org-wide admin action. Deliberately a
+               sibling of #dangerZoneCard, not a child: that card holds only
+               personal "Your Data" / "Delete account" content available to every
+               user, whereas this exports/imports the whole workforce. -->
+          <div class="st-section st-card admin-only" style="display:none;">
+            <div class="st-sec-head">
+              <h2 class="st-sec-title">Employee directory</h2>
+              <span class="st-sec-desc">Organization-wide. Visible to admins only.</span>
+            </div>
+            <p class="st-data-intro">Export the full employee directory as a CSV file, or add employees in bulk by importing a CSV in the same format. These actions cover everyone in your organization &mdash; unlike the personal export above, they are limited to admins.</p>
+
+          <div id="dangerZone" class="st-stack" style="display:none;">
             <!-- DELETE ACCOUNT: isolated in its own card so the destructive
                  action is never mixed in with routine data settings. -->
             <div class="st-section st-card st-card--danger">
               <div class="st-sec-head">
-                <h2 class="st-sec-title">Delete your account</h2>
-                <span class="st-sec-desc">Permanent &mdash; removes your account and, if you&rsquo;re the only member, your organization.</span>
+                <h2 class="st-sec-title">Danger zone</h2>
+                <span class="st-sec-desc">Deleting your account is permanent &mdash; it removes your account and, if you&rsquo;re the only member, your organization.</span>
               </div>
 
               <div class="st-row">
                 <div class="st-row-main">
+                  <div class="st-row-title">Delete account</div>
                   <div class="st-row-desc">Deletion is immediate and irreversible. You will be asked to confirm with your password or a 6-digit authenticator code.</div>
                 </div>
                 <div class="st-row-actions">
@@ -799,24 +813,14 @@ function maybeSyncTimezone(meData) {
                     <input type="text" id="deleteTotpCode" class="form-input" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code">
                   </div>
                 </div>
+                <div class="st-confirm-fields"><div class="st-field" id="deleteOrgWrap"><label for="deleteOrgName">Type your organization name to confirm: <strong id="deleteOrgExpected"></strong></label><input type="text" id="deleteOrgName" class="form-input" placeholder="Organization name" autocomplete="off" autocapitalize="off" spellcheck="false"></div></div>
                 <div class="st-actions st-actions--tight">
                   <button class="btn btn-sm btn-outline" id="cancelDeleteBtn" type="button">Cancel</button>
-                  <button class="btn btn-sm st-danger-btn" id="confirmDeleteBtn" type="button">Delete account</button>
+                  <button class="btn btn-sm st-danger-btn" id="confirmDeleteBtn" type="button" disabled>Delete account</button>
                 </div>
               </div>
             </div>
           </div>
-
-          <!-- EMPLOYEE DIRECTORY (CSV) — org-wide admin action. Deliberately a
-               sibling of #dangerZoneCard, not a child: that card holds only
-               personal "Your Data" / "Delete account" content available to every
-               user, whereas this exports/imports the whole workforce. -->
-          <div class="st-section st-card admin-only" style="display:none;">
-            <div class="st-sec-head">
-              <h2 class="st-sec-title">Employee directory</h2>
-              <span class="st-sec-desc">Organization-wide. Visible to admins only.</span>
-            </div>
-            <p class="st-data-intro">Export the full employee directory as a CSV file, or add employees in bulk by importing a CSV in the same format. These actions cover everyone in your organization &mdash; unlike the personal exports below, they are limited to admins.</p>
 
             <div class="st-row">
               <div class="st-row-main">
@@ -1927,6 +1931,9 @@ function formatRelativeSessionTime(iso){
   var totpWrap = document.getElementById('deleteTotpWrap');
   var pwInp = document.getElementById('deletePassword');
   var totpInp = document.getElementById('deleteTotpCode');
+  var orgWrap = document.getElementById('deleteOrgWrap');
+  var orgInp = document.getElementById('deleteOrgName');
+  var orgExpected = document.getElementById('deleteOrgExpected');
   if (!card || !exportBtn || !deleteBtn) return;
 
   // The server re-verifies whichever configured factor applies. Show the
@@ -1941,7 +1948,9 @@ function formatRelativeSessionTime(iso){
     if (pwInp) pwInp.placeholder = hasTotp ? 'Current password (optional)' : 'Current password';
     if (totpInp) totpInp.placeholder = '6-digit code';
   }).catch(function(){}).finally(function(){
-    card.style.display = '';
+    if (card) card.style.display = '';
+    var dz = document.getElementById('dangerZone');
+    if (dz) dz.style.display = '';
   });
 
   // "Export my data" -> trigger the same-origin GET attachment download.
@@ -1961,18 +1970,63 @@ function formatRelativeSessionTime(iso){
     });
   }
 
+  function getExpectedOrgName(){
+    if (window.__voovrMeOrg && window.__voovrMeOrg.name) {
+      return String(window.__voovrMeOrg.name);
+    }
+    return '';
+  }
+
+  function updateConfirmDeleteState(){
+    if (!confirmBtn) return;
+    if (!orgInp) { confirmBtn.disabled = false; return; }
+    var expected = (orgExpected && orgExpected.textContent) ? orgExpected.textContent : getExpectedOrgName();
+    var expectedTrim = (expected || '').trim();
+    if (!expectedTrim) { confirmBtn.disabled = false; return; }
+    confirmBtn.disabled = orgInp.value.trim() !== expectedTrim;
+  }
+
   if (deleteBtn) {
     deleteBtn.addEventListener('click', function(){
       confirmWrap.style.display = '';
       deleteBtn.disabled = true;
       deleteBtn.style.opacity = '0.5';
+      var expected = getExpectedOrgName();
+      if (orgExpected) orgExpected.textContent = expected || '';
+      if (orgWrap) {
+        if (expected) orgWrap.style.display = '';
+        else orgWrap.style.display = 'none';
+      }
+      if (orgInp) {
+        orgInp.value = '';
+        setTimeout(function(){ orgInp.focus(); }, 0);
+      }
+      if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Delete account'; }
+      if (!expected) {
+        fetch('/api/me').then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+          if (d && d.organization && d.organization.name) {
+            window.__voovrMeOrg = d.organization;
+            if (orgExpected) orgExpected.textContent = d.organization.name;
+            if (orgWrap) orgWrap.style.display = '';
+            if (orgInp) orgInp.value = '';
+            updateConfirmDeleteState();
+          }
+        }).catch(function(){});
+      }
+      updateConfirmDeleteState();
     });
+  }
+
+  if (orgInp) {
+    orgInp.addEventListener('input', updateConfirmDeleteState);
   }
 
   function closeConfirm(){
     confirmWrap.style.display = 'none';
     if (pwInp) pwInp.value = '';
     if (totpInp) totpInp.value = '';
+    if (orgInp) orgInp.value = '';
+    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Delete account'; }
     if (deleteBtn) { deleteBtn.disabled = false; deleteBtn.style.opacity = ''; }
   }
 
@@ -1982,12 +2036,14 @@ function formatRelativeSessionTime(iso){
     confirmBtn.addEventListener('click', function(){
       confirmBtn.disabled = true;
       confirmBtn.textContent = 'Deleting\u2026';
+      var orgVal = orgInp ? orgInp.value.trim() : '';
       fetch('/api/me', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           password: pwInp ? pwInp.value : '',
-          totpCode: totpInp ? totpInp.value : ''
+          totpCode: totpInp ? totpInp.value : '',
+          orgName: orgVal
         })
       }).then(function(res){
         if (res.ok) { window.location.href = '/signin'; return; }
@@ -1999,7 +2055,12 @@ function formatRelativeSessionTime(iso){
       }).catch(function(err){
         confirmBtn.disabled = false;
         confirmBtn.textContent = 'Delete account';
+        updateConfirmDeleteState();
         if (err && err.code === 'not_authenticated') { window.location.href = '/signin'; return; }
+        if (err && err.code === 'org_name_mismatch') {
+          showToast("The organization name you typed doesn't match. Check it and try again.");
+          return;
+        }
         showToast(err && err.code === 'reconfirmation_required'
           ? 'Couldn\u2019t verify your identity. Check your password or authenticator code and try again.'
           : 'Couldn\u2019t delete your account. Please try again.');
