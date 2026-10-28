@@ -229,9 +229,24 @@ function saveDraft() {
   var area = document.getElementById('transcriptArea');
   if (!area) return;
   try {
-    if (area.value) localStorage.setItem(draftStorageKey(), area.value);
-    else localStorage.removeItem(draftStorageKey());
+    var draftText = area.value || '';
+    if (!turns.length && !draftText.trim()) {
+      localStorage.removeItem(draftStorageKey());
+      return;
+    }
+    localStorage.setItem(draftStorageKey(), JSON.stringify({
+      turns: turns,
+      currentSpeaker: currentSpeaker,
+      draftText: draftText,
+      source: transcriptSource,
+      savedAt: Date.now()
+    }));
   } catch (e) {}
+}
+
+function scheduleDraftSave() {
+  clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(saveDraft, 3000);
 }
 
 function removeDraft() {
@@ -597,7 +612,8 @@ function speakerDisplayName(type) {
 
 function speakerSerialLabel(type) {
   if (type === 'hr') return 'HR';
-  return (employeeName || '').trim() || 'Employee';
+  var name = (employeeName || '').trim();
+  return /^[A-Za-z][A-Za-z .'-]{0,37}$/.test(name) ? name : 'Employee';
 }
 
 function normalizeSpokenText(text) {
@@ -717,6 +733,7 @@ function renderTurns(keepScroll) {
         editingIndex = null;
         renderTurns(true);
         updateWordCount();
+        scheduleDraftSave();
       });
       cancel.addEventListener('click', function() {
         editingIndex = null;
@@ -761,6 +778,7 @@ function renderTurns(keepScroll) {
       else if (editingIndex !== null && editingIndex > idx) editingIndex--;
       renderTurns(true);
       updateWordCount();
+      scheduleDraftSave();
     }));
     row.appendChild(tools);
     list.appendChild(row);
@@ -856,6 +874,7 @@ function saveTurn() {
   updatePlaceholder();
   renderTurns();
   updateWordCount();
+  scheduleDraftSave();
   var first = document.getElementById('inlineHrBtn');
   if (first) first.focus();
 }
@@ -882,8 +901,7 @@ async function undoLastTurn() {
   updatePlaceholder();
   renderTurns();
   updateWordCount();
-  clearTimeout(draftSaveTimer);
-  saveDraft();
+  scheduleDraftSave();
   area.focus();
 }
 
@@ -917,6 +935,7 @@ function loadTranscriptText(text, source) {
     updatePlaceholder();
     renderTurns();
     updateWordCount();
+    scheduleDraftSave();
     showToast(turns.length + (turns.length === 1 ? ' turn' : ' turns') + ' loaded');
     return;
   }
@@ -925,6 +944,7 @@ function loadTranscriptText(text, source) {
   pendingLoad = { text: normalizeSpokenText(text), source: source };
   var prompt = document.getElementById('inlineSpeakerPrompt');
   if (prompt && !currentSpeaker) prompt.textContent = 'Select a speaker for the loaded text';
+  scheduleDraftSave();
   showToast('Select a speaker, then press OK to save this text');
 }
 
@@ -1077,12 +1097,7 @@ function saveSession() {
     var errorCode = err.message || '';
     VooVrUI.show(errorMessages[errorCode] || 'Could not save the transcript. Please try again.');
     if (errorCode === 'not_authenticated') {
-      var area = document.getElementById('transcriptArea');
-      if (area && area.value) {
-        try {
-          localStorage.setItem(draftStorageKey(), area.value);
-        } catch (e) {}
-      }
+      saveDraft();
       setTimeout(function() {
         window.removeEventListener('beforeunload', warnBeforeUnload);
         window.location.href = '/signin';
@@ -1432,18 +1447,60 @@ document.addEventListener('DOMContentLoaded', function() {
   var draftBanner = document.getElementById('draftBanner');
   var restoreDraftBtn = document.getElementById('restoreDraftBtn');
   var discardDraftBtn = document.getElementById('discardDraftBtn');
-  var savedDraft = '';
+  var savedDraft = null;
+  var savedDraftText = '';
   try {
-    savedDraft = localStorage.getItem(draftStorageKey()) || '';
+    var storedDraft = localStorage.getItem(draftStorageKey());
+    if (storedDraft) {
+      try {
+        var parsedDraft = JSON.parse(storedDraft);
+        if (parsedDraft && typeof parsedDraft === 'object' && !Array.isArray(parsedDraft)) {
+          savedDraft = parsedDraft;
+        } else {
+          savedDraftText = storedDraft;
+        }
+      } catch (e) {
+        savedDraftText = storedDraft;
+      }
+    }
   } catch (e) {}
-  if (savedDraft && !transcriptArea.value.trim() && draftBanner) {
+  if (savedDraft) {
+    savedDraft.turns = Array.isArray(savedDraft.turns) ? savedDraft.turns.filter(function(turn) {
+      return turn && (turn.type === 'hr' || turn.type === 'employee') && typeof turn.text === 'string';
+    }) : [];
+    savedDraft.draftText = typeof savedDraft.draftText === 'string' ? savedDraft.draftText : '';
+    savedDraft.currentSpeaker = savedDraft.currentSpeaker === 'hr' || savedDraft.currentSpeaker === 'employee'
+      ? savedDraft.currentSpeaker
+      : null;
+    savedDraft.source = savedDraft.source === 'audio' || savedDraft.source === 'text' || savedDraft.source === 'image'
+      ? savedDraft.source
+      : '';
+  }
+  var hasSavedDraft = (savedDraft && (savedDraft.turns.length || savedDraft.draftText.trim())) || savedDraftText.trim();
+  if (hasSavedDraft && !transcriptArea.value.trim() && draftBanner) {
     draftBanner.hidden = false;
     if (restoreDraftBtn) restoreDraftBtn.addEventListener('click', function() {
-      transcriptArea.value = savedDraft;
+      if (savedDraft) {
+        turns = savedDraft.turns;
+        currentSpeaker = savedDraft.currentSpeaker;
+        transcriptArea.value = savedDraft.draftText;
+        transcriptSource = savedDraft.source;
+      } else {
+        turns = [];
+        currentSpeaker = null;
+        transcriptArea.value = savedDraftText;
+        transcriptSource = '';
+      }
+      pendingLoad = null;
+      editingIndex = null;
       transcriptArea.readOnly = false;
       hideDraftBanner();
-      updateWordCount();
+      renderTurns();
+      updateSpeakerPressed();
+      updatePlaceholder();
       updateOkState();
+      updateWordCount();
+      scheduleDraftSave();
       transcriptArea.focus();
     });
     if (discardDraftBtn) discardDraftBtn.addEventListener('click', function() {
@@ -1452,8 +1509,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   transcriptArea.addEventListener('input', function() {
-    clearTimeout(draftSaveTimer);
-    draftSaveTimer = setTimeout(saveDraft, 3000);
+    scheduleDraftSave();
   });
   window.addEventListener('beforeunload', warnBeforeUnload);
 
@@ -1608,7 +1664,7 @@ document.addEventListener('DOMContentLoaded', function() {
 /* 1. Draft autosave */
 function warnBeforeUnload(e) {
   var area = document.getElementById('transcriptArea');
-  if (area && area.value.trim()) {
+  if (turns.length > 0 || (area && area.value.trim())) {
     e.preventDefault();
     e.returnValue = '';
   }
