@@ -292,7 +292,17 @@
 }
 .settings-page .st-card--danger{
   border-color:color-mix(in srgb, var(--s-danger) 34%, transparent);
+  border-left:3px solid var(--s-danger);
   background:color-mix(in srgb, var(--s-danger) 5%, var(--s-bg));
+}
+.settings-page .st-danger-title{
+  display:flex;
+  align-items:center;
+  gap:var(--s-2);
+  color:var(--s-danger);
+}
+.settings-page .st-danger-icon{
+  width:18px;height:18px;flex:0 0 18px;
 }
 
 /* Card header: title + description stacked on the left, action on the right. */
@@ -621,6 +631,34 @@
   color:var(--s-danger);
 }
 .settings-page .btn-danger:hover{background:var(--red-soft);}
+.settings-page .st-danger-btn{
+  background:transparent;
+  border:1px solid color-mix(in srgb, var(--s-danger) 55%, transparent);
+  color:var(--s-danger);
+}
+.settings-page .st-danger-btn:hover{
+  background:var(--s-danger);
+  border-color:var(--s-danger);
+  color:var(--s-bg);
+  box-shadow:0 0 0 3px var(--red-glow);
+}
+.settings-page #confirmDeleteBtn{
+  background:var(--s-danger);
+  border-color:var(--s-danger);
+  color:var(--s-bg);
+  font-weight:700;
+}
+.settings-page #confirmDeleteBtn:hover{
+  background:var(--s-danger);
+  border-color:var(--s-danger);
+  color:var(--s-bg);
+  box-shadow:0 0 0 3px var(--red-glow);
+}
+.settings-page #confirmDeleteBtn[disabled],
+.settings-page #confirmDeleteBtn:disabled{
+  opacity:.45;
+  box-shadow:none;
+}
 .settings-page .btn[disabled],
 .settings-page .btn:disabled{opacity:.5;cursor:not-allowed;}
 /* Default (non-compact) height for primary form actions. */
@@ -1029,6 +1067,48 @@
   line-height:var(--lh-body);
   color:var(--s-text-dim);
 }
+.settings-page .st-subhead{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:var(--s-2);
+  margin:0 0 var(--s-3);
+  font-size:var(--fs-eyebrow);
+  font-weight:600;
+  line-height:var(--lh-tight);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--s-text-faint);
+}
+.settings-page .st-chip{
+  display:inline-flex;
+  align-items:center;
+  max-width:100%;
+  height:22px;
+  padding:0 var(--s-2);
+  border:1px solid var(--red-glow);
+  border-radius:var(--r-pill);
+  background:var(--red-soft);
+  color:var(--s-danger);
+  font-size:var(--fs-small);
+  font-weight:600;
+  letter-spacing:normal;
+  text-transform:none;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.settings-page .st-danger-section{
+  padding-top:var(--s-4);
+  margin-top:var(--s-4);
+  border-top:var(--card-border);
+}
+.settings-page .st-danger-section:first-child{
+  padding-top:0;
+  margin-top:0;
+  border-top:0;
+}
+.settings-page .st-danger-section:has(#deleteOrgWrap[style*="display: none"]){display:none;}
 
 /* 18 - EMPTY + SKELETON ──────────────────────────────────────────────── */
 .settings-page .st-empty{
@@ -1352,6 +1432,11 @@
     flex:1 1 auto;
   }
   .settings-page .st-row-actions{flex-wrap:wrap;}
+  .settings-page .st-danger-row{
+    grid-template-columns:minmax(0,1fr);
+    row-gap:var(--s-3);
+  }
+  .settings-page .st-danger-row .st-row-actions{justify-content:flex-start;}
   .settings-page .st-actions,
   .settings-page .st-savebar{justify-content:stretch;}
 

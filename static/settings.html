@@ -769,7 +769,7 @@ function maybeSyncTimezone(meData) {
             </div>
           </div>
 
-          <!-- EMPLOYEE DIRECTORY (CSV) �?" org-wide admin action. Deliberately a
+          <!-- EMPLOYEE DIRECTORY (CSV) — org-wide admin action. Deliberately a
                sibling of #dangerZoneCard, not a child: that card holds only
                personal "Your Data" / "Delete account" content available to every
                user, whereas this exports/imports the whole workforce. -->
@@ -779,48 +779,6 @@ function maybeSyncTimezone(meData) {
               <span class="st-sec-desc">Organization-wide. Visible to admins only.</span>
             </div>
             <p class="st-data-intro">Export the full employee directory as a CSV file, or add employees in bulk by importing a CSV in the same format. These actions cover everyone in your organization &mdash; unlike the personal export above, they are limited to admins.</p>
-
-          <div id="dangerZone" class="st-stack" style="display:none;">
-            <!-- DELETE ACCOUNT: isolated in its own card so the destructive
-                 action is never mixed in with routine data settings. -->
-            <div class="st-section st-card st-card--danger">
-              <div class="st-sec-head">
-                <h2 class="st-sec-title">Danger zone</h2>
-                <span class="st-sec-desc">Deleting your account is permanent &mdash; it removes your account and, if you&rsquo;re the only member, your organization.</span>
-              </div>
-
-              <div class="st-row">
-                <div class="st-row-main">
-                  <div class="st-row-title">Delete account</div>
-                  <div class="st-row-desc">Deletion is immediate and irreversible. You will be asked to confirm with your password or a 6-digit authenticator code.</div>
-                </div>
-                <div class="st-row-actions">
-                  <button class="btn btn-sm st-danger-btn" id="deleteAccountBtn" type="button">Delete Account</button>
-                </div>
-              </div>
-
-              <div id="deleteAccountConfirm" class="st-confirm-zone" style="display:none;">
-                <div class="st-confirm-note">
-                  Re-confirm to continue. This action is permanent and cannot be undone. Provide your password or a 6-digit authenticator code to verify it&rsquo;s really you.
-                </div>
-                <div class="st-confirm-fields">
-                  <div class="st-field" id="deletePasswordWrap">
-                    <label>Password</label>
-                    <input type="password" id="deletePassword" class="form-input" placeholder="Current password" autocomplete="current-password">
-                  </div>
-                  <div class="st-field" id="deleteTotpWrap">
-                    <label>Authenticator code</label>
-                    <input type="text" id="deleteTotpCode" class="form-input" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code">
-                  </div>
-                </div>
-                <div class="st-confirm-fields"><div class="st-field" id="deleteOrgWrap"><label for="deleteOrgName">Type your organization name to confirm: <strong id="deleteOrgExpected"></strong></label><input type="text" id="deleteOrgName" class="form-input" placeholder="Organization name" autocomplete="off" autocapitalize="off" spellcheck="false"></div></div>
-                <div class="st-actions st-actions--tight">
-                  <button class="btn btn-sm btn-outline" id="cancelDeleteBtn" type="button">Cancel</button>
-                  <button class="btn btn-sm st-danger-btn" id="confirmDeleteBtn" type="button" disabled>Delete account</button>
-                </div>
-              </div>
-            </div>
-          </div>
 
             <div class="st-row">
               <div class="st-row-main">
@@ -842,6 +800,61 @@ function maybeSyncTimezone(meData) {
               </div>
             </div>
             <input type="file" id="settingsImportCsvInput" accept=".csv,text/csv" style="display:none;">
+          </div>
+
+          <!-- DANGER ZONE: last card in the panel and never nested inside
+               another card, so it stays visible to every account. -->
+          <div id="dangerZone" class="st-stack" style="display:none;">
+            <div class="st-section st-card st-card--danger">
+              <div class="st-sec-head">
+                <h2 class="st-sec-title st-danger-title">
+                  <svg class="st-danger-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  Danger zone
+                </h2>
+                <span class="st-sec-desc">Deleting your account is permanent &mdash; it removes your account and, if you&rsquo;re the only member, your organization.</span>
+              </div>
+
+              <div class="st-row st-danger-row">
+                <div class="st-row-main">
+                  <div class="st-row-title">Delete account</div>
+                  <div class="st-row-desc">Permanently delete your account and all associated data.</div>
+                </div>
+                <div class="st-row-actions">
+                  <button class="btn btn-sm st-danger-btn" id="deleteAccountBtn" type="button">Delete Account</button>
+                </div>
+              </div>
+
+              <div id="deleteAccountConfirm" class="st-confirm-zone" style="display:none;">
+                <div class="st-danger-section">
+                  <h3 class="st-subhead">Verify it&rsquo;s you</h3>
+                  <div class="st-confirm-fields">
+                    <div class="st-field" id="deletePasswordWrap">
+                      <label>Password</label>
+                      <input type="password" id="deletePassword" class="form-input" placeholder="Current password" autocomplete="current-password">
+                    </div>
+                    <div class="st-field" id="deleteTotpWrap">
+                      <label>Authenticator code</label>
+                      <input type="text" id="deleteTotpCode" class="form-input" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="st-danger-section" id="deleteOrgSection">
+                  <h3 class="st-subhead">Confirm your organization <span class="st-chip" id="deleteOrgExpected"></span></h3>
+                  <div class="st-confirm-fields">
+                    <div class="st-field span-2" id="deleteOrgWrap">
+                      <label for="deleteOrgName">Type your organization name to confirm</label>
+                      <input type="text" id="deleteOrgName" class="form-input" placeholder="Organization name" autocomplete="off" autocapitalize="off" spellcheck="false">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="st-actions">
+                  <button class="btn btn-sm btn-outline" id="cancelDeleteBtn" type="button">Cancel</button>
+                  <button class="btn btn-sm st-danger-btn" id="confirmDeleteBtn" type="button" disabled>Delete account</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
