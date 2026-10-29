@@ -135,6 +135,80 @@ html[data-theme="light"]{color-scheme:light;}
 @keyframes analysisTabShine{0%{left:-80%;}55%{left:130%;}100%{left:130%;}}
 </style>
 <style>
+/* Phase 1: conversation score, insight and follow-up cards */
+.wsx-score-main{display:grid;grid-template-columns:128px minmax(0,1fr);align-items:center;gap:16px;}
+.wsx-gauge{position:relative;width:128px;max-width:100%;}
+.wsx-gauge svg{display:block;width:100%;height:auto;overflow:visible;}
+.wsx-gauge-track,.wsx-gauge-arc{fill:none;stroke-width:10;stroke-linecap:round;}
+.wsx-gauge-track{stroke:var(--surface);}
+.wsx-gauge-arc{stroke:var(--amber);transition:stroke .3s,stroke-dasharray .8s var(--ease-out);}
+.wsx-gauge-arc.high{stroke:var(--teal);}
+.wsx-gauge-arc.medium{stroke:var(--amber);}
+.wsx-gauge-arc.low{stroke:var(--red);}
+.wsx-gauge-arc.unmeasured{stroke:var(--ivory-faint);}
+.wsx-gauge-val{position:absolute;left:0;right:0;bottom:14px;display:flex;align-items:baseline;justify-content:center;gap:2px;line-height:1;}
+.wsx-gauge-val .ws-score-num{font-size:clamp(2.2rem,4vw,2.7rem);line-height:1;}
+.wsx-gauge-val .wsx-score-denom{font-size:.62rem;margin:0;color:var(--ivory-faint);}
+
+.wsx-facts.wsx-score-chips{display:flex;flex-wrap:nowrap;gap:8px;margin-top:16px;padding-top:16px;border-top:1px dashed var(--border-lit);}
+.wsx-fact-chip{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 0;padding:8px;border:1px solid var(--border);border-radius:12px;background:var(--surface);}
+.wsx-fact-icon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--violet-soft);color:var(--violet);flex-shrink:0;}
+.wsx-fact-icon svg{width:18px;height:18px;}
+.wsx-fact-copy{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.wsx-fact-label{font-family:var(--font-m);font-size:.54rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ivory-faint);}
+.wsx-fact-value{font-family:var(--font-lato);font-size:.8rem;font-weight:700;line-height:1.3;color:var(--ivory-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:capitalize;}
+.wsx-fact-chip.high .wsx-fact-value{color:var(--teal);}
+.wsx-fact-chip.medium .wsx-fact-value{color:var(--amber);}
+.wsx-fact-chip.low .wsx-fact-value{color:var(--red);}
+.wsx-fact-chip.muted .wsx-fact-value{color:var(--ivory-faint);}
+
+.wsx-icon-tile{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--violet-soft);color:var(--violet);flex-shrink:0;}
+.wsx-icon-tile svg{width:18px;height:18px;}
+.wsx-insight.wsx-insight-card{padding:12px;border:1px solid var(--border);border-left:2px solid rgba(123,79,255,0.45);border-radius:12px;background:linear-gradient(135deg,var(--violet-soft),rgba(130,160,210,0.02) 62%);}
+.wsx-insight-card+.wsx-insight-card{margin-top:8px;}
+.wsx-insight-card .wsx-insight-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.wsx-insight-card .wsx-insight-title{flex:1;min-width:0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wsx-insight-card .wsx-body{margin:0;}
+.wsx-conf-dots{display:inline-flex;align-items:center;gap:3px;flex-shrink:0;margin-left:4px;}
+.wsx-conf-dots i{display:block;width:5px;height:5px;border-radius:50%;background:var(--border-lit);}
+.wsx-conf-dots i.on{background:var(--violet);box-shadow:0 0 6px var(--violet-glow);}
+
+.wsx-lead-wrap{margin-bottom:16px;}
+.wsx-lead-wrap .wsx-lead{margin:0;padding:12px;border-radius:12px;line-height:1.55;}
+.wsx-clamp-1,.wsx-clamp-2{display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;}
+.wsx-clamp-1{-webkit-line-clamp:1;line-clamp:1;}
+.wsx-clamp-2{-webkit-line-clamp:2;line-clamp:2;}
+.wsx-clamp-1.is-expanded,.wsx-clamp-2.is-expanded{display:block;overflow:visible;-webkit-line-clamp:unset;line-clamp:unset;}
+.wsx-more{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:0;border:0;background:none;color:var(--violet);font-family:var(--font-m);font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;}
+.wsx-more:hover{color:var(--ivory);}
+.wsx-more svg{width:12px;height:12px;transition:transform .2s;}
+.wsx-more[aria-expanded="true"] svg{transform:rotate(180deg);}
+.wsx-more[hidden]{display:none!important;}
+.wsx-more-panel{margin-top:8px;display:flex;flex-direction:column;gap:8px;}
+.wsx-more-panel[hidden]{display:none!important;}
+
+.wsx-steps.wsx-timeline{display:flex;flex-direction:column;align-items:stretch;gap:0;margin-top:8px;}
+.wsx-timeline .wsx-step{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:start;gap:8px;width:100%;flex:none;text-align:left;}
+.wsx-timeline .wsx-step-dot{width:32px;height:32px;border-radius:8px;border:1px solid rgba(212,136,74,0.35);background:var(--amber-soft);color:var(--amber);box-shadow:none;font-size:0;}
+.wsx-timeline .wsx-step-dot svg{width:18px;height:18px;color:currentColor;}
+.wsx-timeline .wsx-step-copy{min-width:0;}
+.wsx-timeline .wsx-step-kick{margin:0 0 2px;font-size:.68rem;line-height:1.3;}
+.wsx-timeline .wsx-step-body{margin:0;font-size:.86rem;line-height:1.5;}
+.wsx-timeline .wsx-step-connector{flex:none;width:2px;height:16px;margin:0 0 0 15px;border-radius:1px;background:var(--border);}
+.wsx-timeline .wsx-step-connector-dest{background:var(--teal);box-shadow:0 0 8px var(--teal-glow);}
+.wsx-timeline .wsx-step-dest .wsx-step-dot{border-color:rgba(51,160,143,0.35);background:var(--teal-soft);color:var(--teal);box-shadow:none;}
+.wsx-timeline .wsx-step-dest .wsx-step-kick{color:var(--teal);}
+
+@media(max-width:560px){
+  .wsx-score-main{grid-template-columns:112px minmax(0,1fr);gap:12px;}
+  .wsx-gauge-val .ws-score-num{font-size:2.05rem;}
+  .wsx-facts.wsx-score-chips{flex-direction:column;}
+  .wsx-fact-chip{width:100%;}
+  .wsx-insight-card .wsx-insight-top{flex-wrap:wrap;}
+  .wsx-conf-dots{margin-left:auto;}
+}
+</style>
+<style>
 /* ── AT A GLANCE — visual summary strip (risk gauges · talk balance · flag map) ──
    Sits above .ws-grid. Spacing mirrors the rest of the page: 1.2rem between
    cards, 1.8rem card gutters, and a fixed 3-column tile grid so the tiles can
@@ -397,17 +471,33 @@ withTimeout(fetch('/api/me').then(function(res){
               </span>
             </div>
             <div class="wsx-score-main">
-              <span class="ws-score-num unmeasured" id="wsScoreNum">--</span>
-              <span class="wsx-score-denom">/ 100</span>
+              <div class="wsx-gauge">
+                <svg viewBox="0 0 120 74" aria-hidden="true" focusable="false">
+                  <path class="wsx-gauge-track" d="M10 64 A50 50 0 0 1 110 64" pathLength="100"></path>
+                  <path class="wsx-gauge-arc unmeasured" id="wsScoreArc" d="M10 64 A50 50 0 0 1 110 64" pathLength="100" stroke-dasharray="0 100"></path>
+                </svg>
+                <div class="wsx-gauge-val">
+                  <span class="ws-score-num unmeasured" id="wsScoreNum">--</span>
+                  <span class="wsx-score-denom">/ 100</span>
+                </div>
+              </div>
               <div class="ws-score-meta">
                 <div class="ws-score-label" id="wsScoreLabel">Not measured</div>
                 <div class="ws-score-sub">Psychological safety read of this conversation</div>
               </div>
             </div>
-            <p class="wsx-score-note" id="wsScoreNote" style="display:none;"></p>
-            <div class="wsx-score-evidence" id="wsScoreEvidence" style="display:none;"></div>
+            <div class="wsx-facts wsx-score-chips" id="wsScoreFacts" style="display:none;"></div>
             <div class="wsx-dims" id="wsScoreDims" style="display:none;"></div>
-            <div class="wsx-facts" id="wsScoreFacts" style="display:none;"></div>
+            <div class="wsx-score-details" id="wsScoreDetails" hidden>
+              <button type="button" class="wsx-more" data-wsx-more data-more-target="wsScoreDetailsPanel" aria-expanded="false" aria-controls="wsScoreDetailsPanel">
+                <span class="wsx-more-label">Details</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="wsx-more-panel" id="wsScoreDetailsPanel" hidden>
+                <p class="wsx-score-note" id="wsScoreNote" style="display:none;"></p>
+                <div class="wsx-score-evidence" id="wsScoreEvidence" style="display:none;"></div>
+              </div>
+            </div>
           </section>
 
           <!-- INTELLIGENCE PANEL — secondary insights -->
@@ -928,6 +1018,7 @@ window.voovrInitWorkspace = function() {
     var band = scoreBand(safety);
     var numEl = document.getElementById('wsScoreNum');
     var labelEl = document.getElementById('wsScoreLabel');
+    var arcEl = document.getElementById('wsScoreArc');
 
     if (safety === null) {
       numEl.textContent = '--';
@@ -937,6 +1028,12 @@ window.voovrInitWorkspace = function() {
       numEl.textContent = safety;
       numEl.className = 'ws-score-num ' + band.cls;
       labelEl.textContent = 'Psychological Safety';
+    }
+
+    if (arcEl) {
+      var pct = safety === null ? 0 : Math.max(0, Math.min(100, safety));
+      arcEl.style.strokeDasharray = pct + ' 100';
+      arcEl.setAttribute('class', 'wsx-gauge-arc ' + (band.cls || 'unmeasured'));
     }
 
     var statusEl = document.getElementById('wsScoreStatus');
@@ -950,18 +1047,34 @@ window.voovrInitWorkspace = function() {
       }
     }
 
+    var note = buildScoreNote(ps, psych);
+    var ev = cleanVal(ps.evidence);
     var noteEl = document.getElementById('wsScoreNote');
     if (noteEl) {
-      var note = buildScoreNote(ps, psych);
       noteEl.style.display = note ? '' : 'none';
       noteEl.textContent = note;
     }
 
     var evidenceEl = document.getElementById('wsScoreEvidence');
     if (evidenceEl) {
-      var ev = cleanVal(ps.evidence);
       evidenceEl.style.display = ev ? '' : 'none';
       evidenceEl.innerHTML = ev ? '<div class="wsx-quote">&ldquo;' + esc(ev) + '&rdquo;<span class="wsx-quote-foot">' + evLink(ev) + '</span></div>' : '';
+    }
+
+    var detailsEl = document.getElementById('wsScoreDetails');
+    if (detailsEl) detailsEl.hidden = !(note || ev);
+
+    var factsEl = document.getElementById('wsScoreFacts');
+    if (factsEl) {
+      var openness = cleanVal(ps.openness);
+      var trust = cleanVal(ps.trust_level);
+      var sentLbl = cleanVal(psych.sentiment_label) || cleanVal(psych.sentiment);
+      var facts = [];
+      if (openness) facts.push(scoreFact('openness', 'Openness', openness));
+      if (trust) facts.push(scoreFact('trust', 'Trust', trust));
+      if (sentLbl && !/^(unknown|n\/a|not measured)$/i.test(sentLbl)) facts.push(scoreFact('tone', 'Tone', sentLbl));
+      factsEl.style.display = facts.length ? '' : 'none';
+      factsEl.innerHTML = facts.join('');
     }
 
     var dimsEl = document.getElementById('wsScoreDims');
@@ -971,27 +1084,6 @@ window.voovrInitWorkspace = function() {
       if (tone !== null) dims.push({ label: 'Phrasing tone', value: tone, suffix: '', cls: scoreBand(tone).cls });
       dimsEl.style.display = dims.length ? '' : 'none';
       dimsEl.innerHTML = dims.map(dimRow).join('');
-    }
-
-    var factsEl = document.getElementById('wsScoreFacts');
-    if (factsEl) {
-      var defs = cleanVal(ps.defensive_behaviour);
-      var confLbl = ps && ps.confidence_label;
-      var sentLbl = cleanVal(psych.sentiment_label) || cleanVal(psych.sentiment);
-      var facts = '';
-      if (defs) {
-        facts += '<span class="wsx-fact warn"><b>Watch for</b>' + esc(defs) + '</span>';
-      } else {
-        facts += '<span class="wsx-fact"><b>Noted</b>Nothing flagged in this conversation.</span>';
-      }
-      if (confLbl) {
-        facts += '<span class="wsx-fact"><b>Signal</b>' + confBadge(confLbl) + '</span>';
-      }
-      if (sentLbl) {
-        facts += '<span class="wsx-fact"><b>Tone</b>' + confBadge(sentLbl) + '</span>';
-      }
-      factsEl.style.display = facts ? '' : 'none';
-      factsEl.innerHTML = facts;
     }
   }
 
@@ -1045,13 +1137,154 @@ window.voovrInitWorkspace = function() {
     return '<span class="wsx-conf">' + esc(s) + '</span>';
   }
 
+  function iconSvg(paths) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+  }
+
+  var MATTER_ICONS = {
+    stress: '<path d="M12 3 3 20h18L12 3z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    relationship: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    growth: '<polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/>',
+    wellbeing: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/>',
+    communication: '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>',
+    generic: '<path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/>'
+  };
+
+  function matterIcon(title) {
+    var s = String(title || '').toLowerCase();
+    var key = 'generic';
+    if (/(stress|workload|overload|pressure|burnout|capacity|busy|exhaust)/.test(s)) key = 'stress';
+    else if (/(relationship|manager|team|conflict|colleague|coworker|trust)/.test(s)) key = 'relationship';
+    else if (/(growth|career|development|promotion|learning|role|opportunit)/.test(s)) key = 'growth';
+    else if (/(wellbeing|well-being|health|balance|self-care|wellness)/.test(s)) key = 'wellbeing';
+    else if (/(communication|feedback|clarity|listen|conversation|expectation)/.test(s)) key = 'communication';
+    return '<span class="wsx-icon-tile" aria-hidden="true">' + iconSvg(MATTER_ICONS[key]) + '</span>';
+  }
+
+  var STEP_ICONS = {
+    clock: '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>',
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>',
+    person: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/>',
+    building: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 21v-4h6v4"/><path d="M8 7h.01M12 7h.01M16 7h.01M8 11h.01M12 11h.01M16 11h.01"/>',
+    flag: '<path d="M5 21V4"/><path d="M5 4h9l2 4h3v8h-3l-2-4H5"/>',
+    chat: '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>'
+  };
+
+  function stepIcon(kick) {
+    var s = String(kick || '').toLowerCase();
+    var key = 'chat';
+    if (/do right now/.test(s)) key = 'clock';
+    else if (/this week/.test(s)) key = 'calendar';
+    else if (/manager/.test(s)) key = 'person';
+    else if (/environment/.test(s)) key = 'building';
+    else if (/notice next time/.test(s)) key = 'flag';
+    return iconSvg(STEP_ICONS[key]);
+  }
+
+  var SCORE_ICONS = {
+    openness: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/>',
+    trust: '<path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="m9 12 2 2 4-4"/>',
+    tone: '<path d="M3 12h3l2-5 3 10 2-7 2 2h6"/>'
+  };
+
+  function valueTone(v) {
+    var s = String(v || '').toLowerCase();
+    if (!s || /insufficient|unknown|not measured|n\/a|none/.test(s)) return 'muted';
+    if (/low|guarded|closed|defensive|negative|tense|hostile|withdraw|limited|reserved|cautious|distant|avoid/.test(s)) return 'low';
+    if (/high|strong|open|positive|clear|trust|support|warm|collaborative|engaged/.test(s)) return 'high';
+    return 'medium';
+  }
+
+  function scoreFact(kind, label, value) {
+    return (
+      '<div class="wsx-fact-chip ' + valueTone(value) + '">' +
+        '<span class="wsx-fact-icon" aria-hidden="true">' + iconSvg(SCORE_ICONS[kind]) + '</span>' +
+        '<span class="wsx-fact-copy">' +
+          '<span class="wsx-fact-label">' + esc(label) + '</span>' +
+          '<span class="wsx-fact-value">' + esc(value) + '</span>' +
+        '</span>' +
+      '</div>'
+    );
+  }
+
+  function confLevel(c) {
+    var s = String(c == null ? '' : c).trim().toLowerCase();
+    if (!s) return null;
+    if (s.indexOf('strong') !== -1) return 5;
+    if (s.indexOf('moderate') !== -1) return 3;
+    if (s.indexOf('light') !== -1) return 2;
+    var n = parseFloat(s);
+    if (isNaN(n)) return null;
+    return Math.max(0, Math.min(5, Math.ceil(n / 20)));
+  }
+
+  function confDots(c) {
+    var level = confLevel(c);
+    if (level === null) return '';
+    var dots = '';
+    for (var i = 0; i < 5; i++) dots += '<i' + (i < level ? ' class="on"' : '') + '></i>';
+    return '<span class="wsx-conf-dots wsx-nr-skip" role="img" aria-label="Confidence: ' + esc(String(c)) + '">' + dots + '</span>';
+  }
+
+  var MORE_CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
+
+  function moreButton(targets, auto) {
+    var ids = targets.join(' ');
+    return '<button type="button" class="wsx-more" data-wsx-more' + (auto ? ' data-more-auto' : '') + ' data-more-target="' + ids + '" aria-expanded="false" aria-controls="' + ids + '"><span class="wsx-more-label">Details</span>' + MORE_CHEVRON + '</button>';
+  }
+
+  function setMoreButton(btn, open) {
+    var ids = String(btn.getAttribute('data-more-target') || '').split(/\s+/);
+    for (var i = 0; i < ids.length; i++) {
+      var target = document.getElementById(ids[i]);
+      if (!target) continue;
+      if (target.hasAttribute('data-more-clamp')) target.classList.toggle('is-expanded', open);
+      else target.hidden = !open;
+    }
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    var label = btn.querySelector('.wsx-more-label');
+    if (label) label.textContent = open ? 'Less' : 'Details';
+  }
+
+  function refreshMoreButtons(scope) {
+    var btns = (scope || document).querySelectorAll('[data-more-auto]');
+    for (var i = 0; i < btns.length; i++) {
+      var btn = btns[i];
+      var ids = String(btn.getAttribute('data-more-target') || '').split(/\s+/);
+      var need = false;
+      for (var j = 0; j < ids.length; j++) {
+        var target = document.getElementById(ids[j]);
+        if (!target) continue;
+        if (target.hasAttribute('data-more-clamp')) {
+          if (target.scrollHeight > target.clientHeight + 1) need = true;
+        } else if (target.hidden) {
+          need = true;
+        }
+      }
+      btn.hidden = !need;
+    }
+  }
+
+  function bindMoreButtons() {
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-wsx-more]');
+      if (!btn) return;
+      setMoreButton(btn, btn.getAttribute('aria-expanded') !== 'true');
+    });
+  }
+
   // ── WHAT MATTERS: behavioural interpretations, topped up from the
   // behavioural/root-cause steps when the conversation supports it ──
   function renderMatters(a) {
     var host = document.getElementById('wsMatters');
     var html = '';
     var lead = cleanVal(a.summary);
-    if (lead) html += '<p class="wsx-lead">' + esc(lead) + '</p>';
+    if (lead) {
+      html += '<div class="wsx-lead-wrap">' +
+        '<p class="wsx-lead wsx-clamp-2" id="wsMattersLead" data-more-clamp="1">' + esc(lead) + '</p>' +
+        moreButton(['wsMattersLead'], true) +
+      '</div>';
+    }
 
     var insights = [];
     ((a.psychology && a.psychology.behavioural_interpretation) || []).forEach(function(o) {
@@ -1085,21 +1318,29 @@ window.voovrInitWorkspace = function() {
       host.innerHTML = '<div class="wsx-empty">Not enough analysed evidence yet for this conversation.</div>';
       return;
     }
-    html += insights.map(function(ins) {
+    html += insights.map(function(ins, i) {
+      var bodyId = 'wsxInsightBody' + i;
+      var evId = 'wsxInsightEvidence' + i;
+      var targets = [];
+      if (ins.body) targets.push(bodyId);
+      if (ins.evidence) targets.push(evId);
       return (
-        '<article class="wsx-insight">' +
+        '<article class="wsx-insight wsx-insight-card">' +
           '<div class="wsx-insight-top">' +
+            matterIcon(ins.title) +
             '<h4 class="wsx-insight-title' + (ins.title.length <= 48 ? ' upper' : '') + '">' + esc(ins.title) + '</h4>' +
-            confBadge(ins.conf) +
+            confDots(ins.conf) +
           '</div>' +
-          (ins.body ? '<p class="wsx-body">' + esc(ins.body) + '</p>' : '') +
+          (ins.body ? '<p class="wsx-body wsx-clamp-1" id="' + bodyId + '" data-more-clamp="1">' + esc(ins.body) + '</p>' : '') +
+          (targets.length ? moreButton(targets, true) : '') +
           (ins.evidence ?
-            '<div class="wsx-quote">&ldquo;' + esc(ins.evidence) + '&rdquo;' +
+            '<div class="wsx-quote" id="' + evId + '" hidden>&ldquo;' + esc(ins.evidence) + '&rdquo;' +
               '<span class="wsx-quote-foot">' + evLink(ins.evidence) + '</span></div>' : '') +
         '</article>'
       );
     }).join('');
     host.innerHTML = html;
+    refreshMoreButtons(host);
   }
 
   // ── FOLLOW-UP PLAN: action blueprint first, realistic solutions as
@@ -1130,27 +1371,35 @@ window.voovrInitWorkspace = function() {
       return;
     }
 
-    var html = '<div class="wsx-steps">';
+    var html = '<div class="wsx-steps wsx-timeline">';
     acts.forEach(function(x, i) {
+      var bodyId = 'wsxStepBody' + i;
       if (i > 0) html += '<div class="wsx-step-connector"></div>';
       html +=
         '<div class="wsx-step">' +
-          '<div class="wsx-step-dot">' + (i + 1) + '</div>' +
-          '<div class="wsx-step-kick">' + esc(x.kick) + '</div>' +
-          '<div class="wsx-step-body">' + esc(x.text) + '</div>' +
+          '<div class="wsx-step-dot" aria-hidden="true">' + stepIcon(x.kick) + '</div>' +
+          '<div class="wsx-step-copy">' +
+            '<div class="wsx-step-kick">' + esc(x.kick) + '</div>' +
+            '<p class="wsx-step-body wsx-clamp-1" id="' + bodyId + '" data-more-clamp="1">' + esc(x.text) + '</p>' +
+            moreButton([bodyId], true) +
+          '</div>' +
         '</div>';
     });
     if (metric) {
       if (acts.length) html += '<div class="wsx-step-connector wsx-step-connector-dest"></div>';
       html +=
         '<div class="wsx-step wsx-step-dest">' +
-          '<div class="wsx-step-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>' +
-          '<div class="wsx-step-kick">What to notice next time</div>' +
-          '<div class="wsx-step-body">' + esc(metric) + '</div>' +
+          '<div class="wsx-step-dot" aria-hidden="true">' + stepIcon('What to notice next time') + '</div>' +
+          '<div class="wsx-step-copy">' +
+            '<div class="wsx-step-kick">What to notice next time</div>' +
+            '<p class="wsx-step-body wsx-clamp-1" id="wsxStepMetric" data-more-clamp="1">' + esc(metric) + '</p>' +
+            moreButton(['wsxStepMetric'], true) +
+          '</div>' +
         '</div>';
     }
     html += '</div>';
     host.innerHTML = html;
+    refreshMoreButtons(host);
   }
 
   // ── CONVERSATION SIGNALS: compact indicator rows, never clinical claims.
@@ -1885,7 +2134,7 @@ window.voovrInitWorkspace = function() {
     if (!el) return '';
     var clone = el.cloneNode(true);
     var drop = clone.querySelectorAll(
-      'button, select, input, script, style, textarea, .wsx-narr, .wsx-ev, .wsx-score-title, .wsx-score-status, .wsx-section-title, a.wsx-footer'
+      'button, select, input, script, style, textarea, .wsx-narr, .wsx-ev, .wsx-nr-skip, .wsx-score-title, .wsx-score-status, .wsx-section-title, a.wsx-footer'
     );
     for (var i = 0; i < drop.length; i++) drop[i].remove();
     var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
@@ -2251,6 +2500,7 @@ window.voovrInitWorkspace = function() {
     if (!e.target.closest('.wsx-narr')) closeAllSelects();
   });
 
+  bindMoreButtons();
   setup();
   resumeJobs();
 
